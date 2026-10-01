@@ -35,3 +35,10 @@ export {
   applySettingsToMonth,
   validatePersistedState,
 } from './state.js';
+
+// ---------------------------------------------------------------------------
+// Domaine « Maison / Forêt » (A² Home) — état applicatif modulaire V2,
+// migration V1 → V2, tâches à occurrences explicites, forêt.
+// Sémantique et cas limites : docs/DOMAIN_CONTRACTS.md.
+// ---------------------------------------------------------------------------
+export * from './home/index.js';

@@ -38,7 +38,7 @@ async function monthKey(page: Page): Promise<string> {
 
 test.describe('Calcul de référence', () => {
   test('2200/3675 => 880/1335/2215 ; dépenses 1845 => reste 370', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2200');
     await setAmount(page, 'salary-b', '3675');
 
@@ -56,7 +56,7 @@ test.describe('Calcul de référence', () => {
   test('2200/3000 + réserve 500 : 880/1200/2080, reste 235, loisirs 0, non couvert 265', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2200');
     await setAmount(page, 'salary-b', '3000');
     await setAmount(page, 'cm-reserve', '500');
@@ -76,7 +76,7 @@ test.describe('Régressions de saisie', () => {
   test('brouillon invalide bloque Ajouter (même après blur) ; vide refusé ; 0 accepté', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     const key = await monthKey(page);
     const label = page.locator('.expense-add__label');
     const amount = page.locator(`#m-${key}-add-amount`);
@@ -114,7 +114,7 @@ test.describe('Régressions de saisie', () => {
   test('salaire depuis un champ nouvellement focalisé : focus/curseur conservés', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     const salary = page.locator('#salary-a');
 
     // Première saisie depuis un champ vierge.
@@ -134,7 +134,7 @@ test.describe('Régressions de saisie', () => {
 
 test.describe('Persistance', () => {
   test('les données survivent à la fermeture/rechargement', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2200');
     await setAmount(page, 'salary-b', '3675');
     const key = await monthKey(page);
@@ -153,7 +153,7 @@ test.describe('Persistance', () => {
 
 test.describe('Isolation historique / réglages', () => {
   test('changer les réglages n’altère pas les mois existants', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2200');
 
     await page.getByRole('button', { name: 'Réglages', exact: true }).click();
@@ -166,7 +166,7 @@ test.describe('Isolation historique / réglages', () => {
   });
 
   test('l’historique liste les mois sans les modifier', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2250');
 
     await page.getByRole('button', { name: 'Historique', exact: true }).click();
@@ -181,7 +181,7 @@ test.describe('Isolation historique / réglages', () => {
 
 test.describe('Import / export', () => {
   test('export puis import valide confirmé ; import invalide inchangé', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await setAmount(page, 'salary-a', '2200');
 
     await page.getByRole('button', { name: 'Réglages', exact: true }).click();
@@ -230,7 +230,7 @@ test.describe('Récupération des données corrompues', () => {
       },
       [STORAGE_KEY, corrupted],
     );
-    await page.goto('/');
+    await page.goto('/a2-budget/');
 
     // Bandeau de récupération visible.
     await expect(page.locator('.load-notice')).toBeVisible();
@@ -260,7 +260,7 @@ test.describe('Récupération des données corrompues', () => {
       },
       [STORAGE_KEY, unknownVersion],
     );
-    await page.goto('/');
+    await page.goto('/a2-budget/');
     await expect(page.locator('.load-notice')).toBeVisible();
     expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(unknownVersion);
   });

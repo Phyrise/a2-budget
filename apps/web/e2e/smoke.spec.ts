@@ -10,7 +10,7 @@ test('la page de production se charge', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
 
-  await page.goto('/');
+  await page.goto('/a2-budget/');
   await expect(page).toHaveTitle('A² Budget');
   await expect(page.locator('#contenu-principal')).toBeVisible();
   expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);

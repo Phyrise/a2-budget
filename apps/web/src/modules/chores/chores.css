@@ -1,0 +1,376 @@
+/* Module Maison — scène de forêt, tâches, répartition, feedback.
+   Les 4 états de vitalité sont visuellement distincts (couleurs, densité,
+   mouvement) sans aucun nombre affiché. */
+
+/* ------------------------------------------------------------------ */
+/* Scène de forêt                                                      */
+/* ------------------------------------------------------------------ */
+
+.forest-scene {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(220, 220, 200, .9);
+  box-shadow: var(--shadow-card);
+  aspect-ratio: 16 / 10;
+  margin-bottom: 18px;
+  /* valeurs par défaut (quiet) */
+  --sky-top: #d8e0d0;
+  --sky-bottom: #c5d0bd;
+  --ground: #b8c4a8;
+  --particle: #9aab8a;
+  --particle-opacity: .58;
+  --canopy-sat: .8;
+}
+
+.forest-scene--peaceful {
+  --sky-top: #dce8cc;
+  --sky-bottom: #c8d8b4;
+  --ground: #b4c89c;
+  --particle: #8aab6f;
+  --particle-opacity: .62;
+  --canopy-sat: .9;
+}
+
+.forest-scene--lively {
+  --sky-top: #d4e6c0;
+  --sky-bottom: #bcd8a4;
+  --ground: #a8c48c;
+  --particle: #7aa85f;
+  --particle-opacity: .78;
+  --canopy-sat: 1;
+}
+
+.forest-scene--flourishing {
+  --sky-top: #c8e4b4;
+  --sky-bottom: #aed494;
+  --ground: #9cc47c;
+  --particle: #6a9a4f;
+  --particle-opacity: .9;
+  --canopy-sat: 1.08;
+}
+
+.forest-scene__sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom) 70%);
+  transition: background 600ms ease;
+}
+
+.forest-scene__ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(180deg, transparent, var(--ground));
+  transition: background 600ms ease;
+}
+
+.forest-scene__canopy {
+  filter: saturate(var(--canopy-sat));
+  transform-origin: 100px 120px;
+  transition: filter 600ms ease;
+}
+
+.forest-scene__tree {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  width: 46%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.forest-scene__flowers {
+  animation: forest-bloom 2.4s ease-in-out infinite alternate;
+}
+@keyframes forest-bloom {
+  from { opacity: .7; transform: scale(.96); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+
+/* Particules ambiantes (feuilles / lucioles) */
+.forest-scene__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--particle);
+  opacity: var(--particle-opacity);
+  animation-name: forest-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes forest-drift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  20% { opacity: var(--particle-opacity); }
+  80% { opacity: var(--particle-opacity); }
+  100% { transform: translate(14px, -26px); opacity: 0; }
+}
+
+/* Créatures */
+.forest-scene__creature {
+  position: absolute;
+  animation: forest-hop 3.2s ease-in-out infinite;
+}
+@keyframes forest-hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Gardien (événement rare) */
+.forest-scene__guardian {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  width: 62%;
+  transform: translateX(-50%);
+  animation: guardian-appear 2.6s ease-out both;
+  pointer-events: none;
+}
+@keyframes guardian-appear {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.96); }
+  35% { opacity: .9; }
+  80% { opacity: .9; }
+  100% { opacity: .75; transform: translateX(-50%) translateY(0) scale(1); }
+}
+.forest-scene.is-guardian .forest-scene__sky {
+  background: linear-gradient(180deg, #e8e2c8, #cdd8b4 70%);
+}
+
+/* Pause : la forêt s'endort (jamais morte) */
+.forest-scene__pause {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(40, 52, 60, .18), rgba(40, 52, 60, .34));
+  backdrop-filter: saturate(.7);
+}
+
+/* ------------------------------------------------------------------ */
+/* Feedback de complétion                                              */
+/* ------------------------------------------------------------------ */
+
+.completion-feedback {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  animation: feedback-in 220ms ease-out;
+}
+@keyframes feedback-in {
+  from { opacity: 0; transform: translateY(6px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.completion-feedback__companions {
+  display: flex;
+  gap: 4px;
+}
+.completion-feedback__companion {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  animation: companion-bounce 700ms ease-out;
+}
+.completion-feedback__companion + .completion-feedback__companion {
+  animation-delay: 90ms;
+}
+@keyframes companion-bounce {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-8px) scale(1.08); }
+  70% { transform: translateY(0) scale(.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+.completion-feedback__leaves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.completion-feedback__leaves span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50% 0 50% 50%;
+  background: var(--particle, #7aa85f);
+  opacity: 0;
+  animation: leaf-fly 1.1s ease-out forwards;
+}
+.completion-feedback__leaves span:nth-child(1) { left: 20%; top: 40%; animation-delay: 0s; }
+.completion-feedback__leaves span:nth-child(2) { left: 45%; top: 30%; animation-delay: .1s; }
+.completion-feedback__leaves span:nth-child(3) { left: 65%; top: 45%; animation-delay: .2s; }
+.completion-feedback__leaves span:nth-child(4) { left: 80%; top: 35%; animation-delay: .3s; }
+@keyframes leaf-fly {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0); }
+  20% { opacity: .9; }
+  100% { opacity: 0; transform: translate(10px, -30px) rotate(120deg); }
+}
+.completion-feedback__text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 550;
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Liste de tâches                                                     */
+/* ------------------------------------------------------------------ */
+
+.task-list { margin-bottom: 18px; }
+.task-list__section {
+  margin: 0 0 8px;
+  font: 500 15px/1.3 Georgia, 'Times New Roman', serif;
+  color: var(--text-muted);
+  letter-spacing: .01em;
+}
+.task-list__items {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid rgba(221, 221, 199, .94);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.task-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #eae9d9;
+}
+.task-row:last-child { border-bottom: 0; }
+.task-row__check {
+  display: inline-flex;
+  cursor: pointer;
+}
+.task-row__check input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.task-row__box {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 2px solid var(--border);
+  background: #faf9ed;
+  color: transparent;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.task-row__check input:focus-visible + .task-row__box {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.task-row.is-done .task-row__box {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.task-row__body { min-width: 0; }
+.task-row__title {
+  display: block;
+  font-size: 16px;
+  font-weight: 550;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-row.is-done .task-row__title {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+.task-row__meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+.task-row__who {
+  display: flex;
+  gap: 2px;
+}
+.task-row__who .person-dot { width: 30px; height: 30px; }
+.task-row__who .person-dot img { width: 29px; height: 29px; }
+.task-list__empty {
+  margin: 0;
+  padding: 18px;
+  text-align: center;
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Répartition hebdomadaire (factuelle)                                */
+/* ------------------------------------------------------------------ */
+
+.weekly-dist {
+  background: var(--surface);
+  border: 1px solid rgba(221, 221, 199, .94);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+}
+.weekly-dist__title {
+  margin: 0 0 10px;
+  font: 500 17px/1.3 Georgia, 'Times New Roman', serif;
+}
+.weekly-dist__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.weekly-dist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid #eae9d9;
+}
+.weekly-dist__row:last-child { border-bottom: 0; }
+.weekly-dist__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.weekly-dist__label .person-dot { width: 26px; height: 26px; }
+.weekly-dist__label .person-dot img { width: 25px; height: 25px; }
+.weekly-dist__value {
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.weekly-dist__hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------------------------ */
+/* Mouvement réduit                                                    */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .forest-scene__particle,
+  .forest-scene__creature,
+  .forest-scene__flowers,
+  .forest-scene__guardian,
+  .completion-feedback,
+  .completion-feedback__companion,
+  .completion-feedback__leaves span {
+    animation: none !important;
+  }
+  .forest-scene__guardian { opacity: .8; }
+}

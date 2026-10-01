@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dev-dist/
+dist-preview/
+qa-forest/
 *.local
 .DS_Store
 playwright-report/

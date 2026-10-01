@@ -43,7 +43,13 @@ export default defineConfig({
       },
       workbox: {
         // Précache uniquement la coquille de l'app et les assets locaux.
-        globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webmanifest}'],
+      },
+      // En mode injectManifest, c'est ce bloc qui configure le manifest de
+      // précache (le bloc workbox ci-dessus ne le fait pas) : jpg/png inclus
+      // (forêt, avatars) pour le mode hors ligne.
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webmanifest}'],
       },
     }),
   ],

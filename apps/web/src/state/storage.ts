@@ -1,6 +1,21 @@
 import type { PersistedState } from '@a2/core';
 
 /**
+ * Résultat d'une lecture de stockage.
+ *
+ * - `absent` : aucune clé (premier lancement).
+ * - `ok` : contenu lisible et parsable (la validation du contenu est faite
+ *   par le store via validatePersistedState).
+ * - `error` : contenu illisible (JSON corrompu) ou accès au stockage refusé.
+ *   `raw` préserve le contenu brut quand il est disponible : il ne doit
+ *   jamais être perdu ni écrasé sans action explicite.
+ */
+export type LoadResult =
+  | { status: 'absent' }
+  | { status: 'ok'; state: PersistedState }
+  | { status: 'error'; raw: string | null; reason: 'parse' | 'access' };
+
+/**
  * Contrat de stockage minimal, asynchrone.
  *
  * V1 ne fournit que LocalStorageAdapter. Une future ApiStorageAdapter (V2)
@@ -8,8 +23,10 @@ import type { PersistedState } from '@a2/core';
  * seule la synchronisation multi-appareils ni la résolution de conflits.
  */
 export interface StorageAdapter {
-  load(): Promise<PersistedState | null>;
+  load(): Promise<LoadResult>;
   save(state: PersistedState): Promise<void>;
+  /** Supprime uniquement la clé de cette application (jamais localStorage.clear()). */
+  clear(): Promise<void>;
 }
 
 /**
@@ -22,28 +39,32 @@ const STORAGE_KEY = 'a2-budget:state:v1';
 /**
  * Adaptateur basé sur localStorage.
  *
- * - N'appelle JAMAIS localStorage.clear() : seul sa propre clé est écrite
- *   (ou retirée).
+ * - N'appelle JAMAIS localStorage.clear() : seule sa propre clé est écrite
+ *   (ou supprimée).
+ * - Distingue l'absence de clé, le contenu lisible et l'échec (JSON corrompu
+ *   ou accès refusé) ; le contenu brut est préservé dans `raw`.
  * - Les écritures sont sérialisées sur une seule chaîne de promesses.
- * - load() résout null si la clé est absente, si le JSON est illisible ou si
- *   le stockage est refusé. La validation du contenu est faite par
- *   validatePersistedState (@a2/core) côté store.
  * - save() rejette en cas d'échec (quota, stockage désactivé) : le store
  *   doit alors indiquer que les modifications ne sont pas sauvegardées.
  */
 export class LocalStorageAdapter implements StorageAdapter {
   private chain: Promise<void> = Promise.resolve();
 
-  load(): Promise<PersistedState | null> {
+  load(): Promise<LoadResult> {
+    let raw: string | null;
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw === null) {
-        return Promise.resolve(null);
-      }
-      const parsed: unknown = JSON.parse(raw);
-      return Promise.resolve(parsed as PersistedState);
+      raw = window.localStorage.getItem(STORAGE_KEY);
     } catch {
-      return Promise.resolve(null);
+      return Promise.resolve({ status: 'error', raw: null, reason: 'access' });
+    }
+    if (raw === null) {
+      return Promise.resolve({ status: 'absent' });
+    }
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return Promise.resolve({ status: 'ok', state: parsed as PersistedState });
+    } catch {
+      return Promise.resolve({ status: 'error', raw, reason: 'parse' });
     }
   }
 
@@ -55,6 +76,12 @@ export class LocalStorageAdapter implements StorageAdapter {
     return attempt;
   }
 
+  clear(): Promise<void> {
+    const attempt = this.chain.then(() => this.doClear());
+    this.chain = attempt.catch(() => undefined);
+    return attempt;
+  }
+
   private doSave(state: PersistedState): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
@@ -62,6 +89,17 @@ export class LocalStorageAdapter implements StorageAdapter {
         resolve();
       } catch (error) {
         reject(error instanceof Error ? error : new Error('Échec de la sauvegarde locale'));
+      }
+    });
+  }
+
+  private doClear(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+        resolve();
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error('Échec de la suppression locale'));
       }
     });
   }

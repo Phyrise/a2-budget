@@ -16,14 +16,14 @@ describe('defaultSettings', () => {
     const s = defaultSettings();
     expect(s.personA).toEqual({
       id: 'a',
-      name: 'A',
+      name: 'AL',
       baseSalaryCents: 220_000,
       baseRateBps: 4000,
       variableRateBps: 2000,
     });
     expect(s.personB).toEqual({
       id: 'b',
-      name: 'B',
+      name: 'AC',
       baseSalaryCents: 300_000,
       baseRateBps: 4000,
       variableRateBps: 2000,

@@ -11,6 +11,7 @@ import {
 import {
   applySettingsToMonth as coreApplySettingsToMonth,
   computeMonthSummary,
+  currentMonthKey,
   ensureMonth as coreEnsureMonth,
   emptyState,
   validatePersistedState,
@@ -25,18 +26,35 @@ import { buildExportJson, parseImportJson, type ImportSummary } from './exportIm
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+/**
+ * Mode de récupération : les données locales existantes sont illisibles
+ * (JSON corrompu, version inconnue) ou le stockage est inaccessible.
+ *
+ * - L'état en mémoire reste utilisable (état neuf), mais AUCUNE écriture n'est
+ *   persistée tant qu'une action de récupération n'a pas été explicitement
+ *   confirmée (reset ou import).
+ * - Le contenu existant de la clé n'est jamais remplacé automatiquement.
+ */
+export type Recovery =
+  | { kind: 'none' }
+  | { kind: 'unreadable'; message: string }
+  | { kind: 'storage-unavailable'; message: string };
+
 export interface AppContextValue {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   state: PersistedState | null;
   saveStatus: SaveStatus;
-  /**
-   * Message de charge à afficher sobrement : les données locales étaient
-   * illisibles et une session neuve a été démarrée. null sinon.
-   */
-  loadNotice: string | null;
+  /** Mode de récupération actif (données illisibles ou stockage indisponible). */
+  recovery: Recovery;
   /** Mois sélectionné, garanti présent dans state.months une fois chargé. */
   currentMonth: MonthRecord | null;
   currentSummary: MonthSummary | null;
+
+  // Récupération explicite
+  /** Confirme la remise à zéro : supprime la clé de l'app, démarre un état neuf. */
+  confirmReset: () => void;
+  /** Réessaie le chargement (stockage temporairement inaccessible). */
+  retryLoad: () => void;
 
   // Sélection de mois
   selectMonth: (monthKey: string) => void;
@@ -65,6 +83,15 @@ export interface AppContextValue {
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
+
+const UNREADABLE_MESSAGE =
+  'Les données enregistrées sur cet appareil sont illisibles (format inattendu ou version inconnue). ' +
+  'Elles n’ont pas été modifiées. Vos modifications actuelles ne seront pas sauvegardées ' +
+  'tant que vous n’aurez pas confirmé une action : importer une sauvegarde (Réglages) ou recommencer à zéro.';
+
+const STORAGE_UNAVAILABLE_MESSAGE =
+  'Le stockage local de ce navigateur est inaccessible. L’application reste utilisable, ' +
+  'mais aucune modification ne sera sauvegardée. Réessayez, ou vérifiez les paramètres du navigateur.';
 
 /** Identifiant stable, avec repli hors contexte sécurisé (LAN en HTTP). */
 function newId(): string {
@@ -99,48 +126,79 @@ export function AppProvider({
 
   const [state, setState] = useState<PersistedState | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [loadNotice, setLoadNotice] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState<Recovery>({ kind: 'none' });
   const hydratedRef = useRef(false);
+  const recoveryRef = useRef<Recovery>(recovery);
+  recoveryRef.current = recovery;
+
+  // Application d'un résultat de chargement à l'état du store.
+  const applyLoadResult = useCallback((result: Awaited<ReturnType<StorageAdapter['load']>>) => {
+    if (result.status === 'absent') {
+      const fresh = emptyState();
+      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setRecovery({ kind: 'none' });
+      hydratedRef.current = true;
+      return;
+    }
+
+    if (result.status === 'ok') {
+      const check = validatePersistedState(result.state);
+      if (check.ok) {
+        setState(coreEnsureMonth(check.state, check.state.selectedMonth));
+        setRecovery({ kind: 'none' });
+        hydratedRef.current = true;
+        return;
+      }
+      // Contenu lisible mais invalide (version inconnue, champs invalides) :
+      // mode de récupération. L'état en mémoire est neuf et utilisable, mais
+      // rien n'est persisté ; la clé existante n'est pas touchée.
+      const fresh = emptyState();
+      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setRecovery({ kind: 'unreadable', message: UNREADABLE_MESSAGE });
+      hydratedRef.current = true;
+      return;
+    }
+
+    // result.status === 'error' : JSON corrompu (raw préservé dans la clé)
+    // ou accès au stockage refusé.
+    const fresh = emptyState();
+    setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+    setRecovery(
+      result.reason === 'access'
+        ? { kind: 'storage-unavailable', message: STORAGE_UNAVAILABLE_MESSAGE }
+        : { kind: 'unreadable', message: UNREADABLE_MESSAGE },
+    );
+    hydratedRef.current = true;
+  }, []);
 
   // Chargement AVANT d'autoriser toute sauvegarde. Compatible StrictMode
-  // (double montage) : le garde-fou hydratedRef empêche qu'un état initial
-  // vide écrase les données persistées au démarrage.
+  // (double montage) : le premier montage annulé n'applique rien ; le
+  // garde-fou hydratedRef empêche qu'un état initial vide écrase les données
+  // persistées au démarrage.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const loaded = await adapterRef.current?.load();
-      if (cancelled) return;
-      let next: PersistedState;
-      if (loaded !== null && loaded !== undefined) {
-        const check = validatePersistedState(loaded);
-        if (check.ok) {
-          next = check.state;
-        } else {
-          // Données illisibles : pas de remise à zéro silencieuse. On démarre
-          // une session neuve et on le signale ; l'ancienne clé ne sera
-          // réécrite qu'après une modification explicite de l'utilisateur.
-          setLoadNotice(
-            'Les données enregistrées sur cet appareil sont illisibles. Une session neuve a été démarrée ; pensez à importer une sauvegarde si vous en avez une.',
-          );
-          next = emptyState();
-        }
-      } else {
-        next = emptyState();
-      }
-      // Garantit le contrat du store : le mois sélectionné existe toujours
-      // (créé depuis les réglages si absent — ex. premier démarrage).
-      next = coreEnsureMonth(next, next.selectedMonth);
-      setState(next);
-      hydratedRef.current = true;
+      const result = await adapterRef.current?.load();
+      if (cancelled || result === undefined) return;
+      applyLoadResult(result);
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyLoadResult]);
+
+  const doLoad = useCallback(async () => {
+    const result = await adapterRef.current?.load();
+    if (result !== undefined) {
+      applyLoadResult(result);
+    }
+  }, [applyLoadResult]);
 
   // Sauvegarde de chaque modification valide, sans debounce fragile.
+  // Bloquée en mode de récupération : aucune écriture avant action explicite.
   useEffect(() => {
     if (state === null || !hydratedRef.current) return;
+    if (recoveryRef.current.kind !== 'none') return;
     setSaveStatus('saving');
     void adapterRef.current?.save(state).then(
       () => setSaveStatus('saved'),
@@ -151,6 +209,20 @@ export function AppProvider({
   const mutate = useCallback((fn: (s: PersistedState) => PersistedState) => {
     setState((prev) => (prev === null ? prev : fn(prev)));
   }, []);
+
+  // --- Récupération explicite ---------------------------------------------
+
+  const confirmReset = useCallback(() => {
+    void adapterRef.current?.clear().then(() => {
+      const fresh = emptyState();
+      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setRecovery({ kind: 'none' });
+    });
+  }, []);
+
+  const retryLoad = useCallback(() => {
+    void doLoad();
+  }, [doLoad]);
 
   // --- Sélection de mois -------------------------------------------------
 
@@ -324,7 +396,10 @@ export function AppProvider({
       if (!result.ok) {
         return result;
       }
-      setState(result.state);
+      // Import confirmé par l'utilisateur : remplacement explicite de l'état
+      // (et sortie du mode de récupération, si actif).
+      setState(coreEnsureMonth(result.state, result.state.selectedMonth));
+      setRecovery({ kind: 'none' });
       return { ok: true, summary: result.summary };
     },
     [],
@@ -346,9 +421,11 @@ export function AppProvider({
     () => ({
       state,
       saveStatus,
-      loadNotice,
+      recovery,
       currentMonth,
       currentSummary,
+      confirmReset,
+      retryLoad,
       selectMonth,
       selectCurrentMonth,
       setSalary,
@@ -369,9 +446,11 @@ export function AppProvider({
     [
       state,
       saveStatus,
-      loadNotice,
+      recovery,
       currentMonth,
       currentSummary,
+      confirmReset,
+      retryLoad,
       selectMonth,
       selectCurrentMonth,
       setSalary,

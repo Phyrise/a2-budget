@@ -12,7 +12,7 @@
  * - Une mise à jour de l'application ne touche jamais au stockage financier
  *   (localStorage, clé a2-budget:state:v1).
  */
-import { clientsClaim, setCacheNameDetails } from 'workbox-core';
+import { clientsClaim, setCacheNameDetails, skipWaiting } from 'workbox-core';
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -38,5 +38,16 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fallback({ event, request: event.request, url: new URL(event.request.url) }),
     );
+  }
+});
+
+// Mise à jour volontaire : workbox-window (updateServiceWorker(true)) envoie
+// SKIP_WAITING au service worker en attente ; on l'active alors. Sans ce
+// message, le nouveau worker reste en attente et l'ancienne version sert.
+self.addEventListener('message', (event) => {
+  if (event.data !== null && typeof event.data === 'object' && 'type' in event.data) {
+    if ((event.data as { type: unknown }).type === 'SKIP_WAITING') {
+      skipWaiting();
+    }
   }
 });

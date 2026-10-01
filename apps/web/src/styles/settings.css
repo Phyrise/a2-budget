@@ -1,0 +1,110 @@
+/* Vue « Réglages ». */
+
+.settings-person__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.settings-name {
+  margin-top: var(--space-2);
+}
+
+.settings-rates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.settings-rates .amount-input {
+  margin-bottom: 0;
+}
+
+.settings-apply {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+/* --- Données : export / import ------------------------------------------ */
+
+.settings-data-actions {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.settings-data-actions .btn {
+  width: 100%;
+}
+
+.import-confirm {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-control);
+  animation: view-fade-in 160ms ease-out;
+}
+
+.import-confirm__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.import-confirm__summary {
+  margin: var(--space-1) 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.import-confirm__actions {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.import-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.import-note--error {
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.import-note--success {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--text);
+}
+
+.import-note__dismiss {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.settings-person__title { gap: 12px; margin-bottom: 18px; font-size: 26px; }
+.settings-person__title .person-dot { width: 48px; height: 48px; }
+.settings-person__title .person-dot img { width: 48px; height: 48px; }
+.settings-name { margin-top: 0; }
+.settings-rates { margin-top: 4px; margin-bottom: 14px; }
+.settings-data-actions { margin-top: 20px; gap: 10px; }
+.import-confirm:focus { outline: 2px solid var(--focus-ring); outline-offset: 3px; }

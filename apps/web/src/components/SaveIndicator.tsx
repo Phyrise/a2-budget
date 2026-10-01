@@ -1,13 +1,32 @@
+import { useEffect, useState } from 'react';
 import { useApp } from '../state/store';
 
 /**
- * Indicateur de sauvegarde (lead). N'affirme « Enregistré » qu'après un
- * succès ; en cas d'échec, indique que les modifications ne sont pas
- * sauvegardées.
+ * Indicateur de sauvegarde (lead).
+ *
+ * - « Enregistrement… » pendant l'écriture, « Enregistré » après un succès.
+ * - « Modifications non sauvegardées » en cas d'échec (reste visible).
+ * - Le succès est visible brièvement (auto-masqué) pour ne pas masquer le
+ *   contenu ; l'erreur, elle, persiste jusqu'à la prochaine modification.
  */
 export function SaveIndicator() {
   const { saveStatus } = useApp();
-  if (saveStatus === 'idle') {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (saveStatus === 'idle') {
+      setVisible(false);
+      return;
+    }
+    setVisible(true);
+    if (saveStatus === 'saved') {
+      const timer = setTimeout(() => setVisible(false), 1500);
+      return () => clearTimeout(timer);
+    }
+    // 'saving' et 'error' restent affichés.
+  }, [saveStatus]);
+
+  if (!visible || saveStatus === 'idle') {
     return null;
   }
   return (

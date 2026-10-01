@@ -164,11 +164,20 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
   « Budget », start_url et scope `/a2-budget/`, display `standalone`, couleurs
   cohérentes. Toutes les ressources et l'enregistrement du service worker
   respectent ce sous-chemin.
-- `vite-plugin-pwa` : précache de l'interface et des assets locaux. Vraies
-  icônes locales 192/512 + maskable + apple-touch-icon (pas de placeholders).
-- Service worker limité à `/a2-budget/` ; caches préfixés ; ne jamais effacer
-  les caches des autres projets. Une mise à jour de l'application ne doit pas
-  toucher au stockage financier.
+- `vite-plugin-pwa` (mode `injectManifest`, SW custom `src/sw.ts`) : précache
+  de l'interface et des assets locaux. Vraies icônes locales 192/512 + maskable
+  + apple-touch-icon (pas de placeholders). `injectManifest.globPatterns`
+  inclut `jpg`/`png` (forêt, avatars) pour le mode hors ligne ; le bloc
+  `workbox.globPatterns` seul ne configure pas le manifest en mode
+  `injectManifest`.
+- Service worker limité à `/a2-budget/` ; caches préfixés `a2-budget` ; ne
+  jamais effacer les caches des autres projets. Une mise à jour de l'application
+  ne doit pas toucher au stockage financier.
+- **Mise à jour volontaire** : le nouveau worker reste en attente (pas de
+  `skipWaiting` automatique). Le bouton « Actualiser » envoie le message
+  `SKIP_WAITING` (workbox-window `messageSkipWaiting`) ; le SW l'active alors
+  (`skipWaiting()` du handler `message`). Sans ce handler, le bouton ne ferait
+  rien.
 - Proposition discrète « Mise à jour disponible » avec bouton d'application ;
   pas de rechargement automatique pendant une saisie. Disponibilité hors ligne
   annoncée seulement après préparation effective du cache.

@@ -94,9 +94,10 @@ Sémantique :
 - `validatePersistedState` : ne lève jamais ; valide version, types, entiers,
   plages, clés de mois, identifiants (uniques dans chaque liste), relations.
 - `defaultSettings` : A = 2200 € / 4000 / 2000, B = 3000 € / 4000 / 2000,
-  noms « A » et « B », dépenses récurrentes : loyer + charges 130000,
-  électricité 10000, courses 40000, internet 3000, assurance 1500, autres 0 ;
-  réserve par défaut 0.
+  noms par défaut « AL » et « AC » (ids `a`/`b` inchangés ; les noms
+  personnalisés déjà saisis sont préservés), dépenses récurrentes : loyer +
+  charges 130000, électricité 10000, courses 40000, internet 3000, assurance
+  1500, autres 0 ; réserve par défaut 0.
 - `createMonthRecord` : copie des personnes, salaires = salaires de base
   (prévision à ajuster), copie des dépenses récurrentes (mêmes ids), réserve =
   `defaultReserveTargetCents`.
@@ -104,13 +105,24 @@ Sémantique :
 ## 4. Stockage (lead)
 
 - `apps/web/src/state/storage.ts` : `StorageAdapter`
-  (`load(): Promise<PersistedState | null>`, `save(state): Promise<void>`) +
-  `LocalStorageAdapter`. Clé : `a2-budget:state:v1`. Jamais
-  `localStorage.clear()`. Écritures sérialisées. `save` rejette en cas
-  d'échec.
+  (`load(): Promise<LoadResult>`, `save(state): Promise<void>`,
+  `clear(): Promise<void>`) + `LocalStorageAdapter`. Clé : `a2-budget:state:v1`.
+  Jamais `localStorage.clear()` (seule la clé de l'app est touchée).
+  Écritures sérialisées. `save` rejette en cas d'échec.
+  - `LoadResult` : `{ status: 'absent' }` | `{ status: 'ok'; state }` |
+    `{ status: 'error'; reason: 'parse' | 'access'; raw? }`. Le contenu brut
+    illisible est **préservé** dans la clé (jamais remplacé automatiquement).
 - `apps/web/src/state/store.tsx` : `AppProvider` + `useApp()`. Charge avant de
   sauvegarder (garde-fou StrictMode). Sauvegarde à chaque modification valide.
   `saveStatus: 'idle' | 'saving' | 'saved' | 'error'`.
+  - **Mode de récupération** (`recovery`) : si les données locales sont
+    illisibles (JSON corrompu, version inconnue) ou le stockage inaccessible,
+    l'état en mémoire reste utilisable (état neuf) mais **aucune écriture n'est
+    persistée** tant qu'une action n'a pas été explicitement confirmée :
+    `confirmReset()` (supprime la clé, état neuf) ou `retryLoad()` (stockage
+    temporairement inaccessible). Un import réussi sort aussi du mode.
+    `recovery: { kind: 'none' } | { kind: 'unreadable'; message } | { kind:
+    'storage-unavailable'; message }`.
 - `apps/web/src/state/exportImport.ts` : export enveloppe
   `{ app: 'a2-budget', schemaVersion, exportedAt, state }`, nom de fichier
   `a2-budget-AAAA-MM-JJ.json` ; import validé via `validatePersistedState`.

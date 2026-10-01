@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -10,10 +11,14 @@ import path from 'node:path';
  * Deux builds sont préparés avant la suite (scripts/pwa-builds.sh) :
  * - dist-v1 : la version courante ;
  * - dist-v2 : un rebuild avec un marqueur dans le titre (précache différent).
+ * Sans ces builds, les tests sont sautés (message explicite).
  */
 
 const V1 = '/tmp/a2-budget/pwa/dist-v1';
 const V2 = '/tmp/a2-budget/pwa/dist-v2';
+const pwaReady = existsSync(V1) && existsSync(V2);
+const pwaSkipReason =
+  'builds PWA absents : lancer apps/web/scripts/pwa-builds.sh avant la suite';
 const PORT = 4210;
 const BASE = `http://127.0.0.1:${PORT}/a2-budget/`;
 
@@ -112,6 +117,7 @@ async function waitPrecacheReady(page: import('@playwright/test').Page): Promise
 
 test.describe('PWA', () => {
   test('hors ligne après préparation du cache', async ({ browser }) => {
+    test.skip(!pwaReady, pwaSkipReason);
     const server = createServer(V1);
     await listen(server);
     const context = await browser.newContext();
@@ -150,6 +156,7 @@ test.describe('PWA', () => {
   });
 
   test('mise à jour volontaire : SKIP_WAITING active le nouveau worker', async ({ browser }) => {
+    test.skip(!pwaReady, pwaSkipReason);
     let server = createServer(V1);
     await listen(server);
     const context = await browser.newContext();

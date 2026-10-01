@@ -110,21 +110,27 @@ export function AppProvider({
     void (async () => {
       const loaded = await adapterRef.current?.load();
       if (cancelled) return;
+      let next: PersistedState;
       if (loaded !== null && loaded !== undefined) {
         const check = validatePersistedState(loaded);
         if (check.ok) {
-          setState(check.state);
-          hydratedRef.current = true;
-          return;
+          next = check.state;
+        } else {
+          // Données illisibles : pas de remise à zéro silencieuse. On démarre
+          // une session neuve et on le signale ; l'ancienne clé ne sera
+          // réécrite qu'après une modification explicite de l'utilisateur.
+          setLoadNotice(
+            'Les données enregistrées sur cet appareil sont illisibles. Une session neuve a été démarrée ; pensez à importer une sauvegarde si vous en avez une.',
+          );
+          next = emptyState();
         }
-        // Données illisibles : pas de remise à zéro silencieuse. On démarre
-        // une session neuve et on le signale ; l'ancienne clé ne sera
-        // réécrite qu'après une modification explicite de l'utilisateur.
-        setLoadNotice(
-          'Les données enregistrées sur cet appareil sont illisibles. Une session neuve a été démarrée ; pensez à importer une sauvegarde si vous en avez une.',
-        );
+      } else {
+        next = emptyState();
       }
-      setState(emptyState());
+      // Garantit le contrat du store : le mois sélectionné existe toujours
+      // (créé depuis les réglages si absent — ex. premier démarrage).
+      next = coreEnsureMonth(next, next.selectedMonth);
+      setState(next);
       hydratedRef.current = true;
     })();
     return () => {

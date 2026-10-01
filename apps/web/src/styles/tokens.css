@@ -1,0 +1,44 @@
+/* Jetons de design — voir docs/DESIGN.md. Fichier lead. */
+:root {
+  /* Palette */
+  --bg: #f7f5ef;
+  --surface: #ffffff;
+  --text: #21362d;
+  --text-muted: #5c6b62;
+  --text-faint: #77857c;
+  --primary: #254b3d;
+  --primary-strong: #1d3d31;
+  --on-primary: #f7f5ef;
+  --accent: #dcc9a3;
+  --accent-soft: #f0e6d2;
+  --border: #e4dfd3;
+  --danger: #9c3b2e;
+  --danger-soft: #f6e4e0;
+  --focus-ring: #254b3d;
+
+  /* Formes */
+  --radius-card: 20px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+
+  /* Espacements (8/12/16/24/32) */
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+
+  /* Typographie */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --text-base: 16px;
+  --amount-lg: 40px;
+  --amount-md: 32px;
+  --amount-sm: 24px;
+
+  /* Ombres très légères */
+  --shadow-card: 0 1px 2px rgba(33, 54, 45, 0.05), 0 4px 12px rgba(33, 54, 45, 0.04);
+
+  /* Navigation */
+  --nav-height: 64px;
+}

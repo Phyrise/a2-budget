@@ -1,0 +1,20 @@
+{
+  "name": "a2-budget",
+  "private": true,
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @a2/web dev",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm --filter @a2/core test",
+    "build": "pnpm --filter @a2/web build",
+    "preview": "pnpm --filter @a2/web preview"
+  }
+}

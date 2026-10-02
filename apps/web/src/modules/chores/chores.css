@@ -1,344 +1,166 @@
-/* Module Maison — scène de forêt, tâches, répartition, feedback.
-   Les 4 états de vitalité sont visuellement distincts (couleurs, densité,
-   mouvement) sans aucun nombre affiché. */
+/* Module Maison — scène de forêt (fenêtre sur le monde), tâches compactes,
+   répartition factuelle, feedback discret, sheet d'ajout.
+   Direction : sanctuaire forestier, ancien, mystérieux, vivant. */
 
 /* ------------------------------------------------------------------ */
-/* Scène de forêt                                                      */
+/* Scène de forêt — edge-to-edge, pas une carte                        */
 /* ------------------------------------------------------------------ */
 
 .forest-scene {
   position: relative;
   overflow: hidden;
-  border-radius: 24px;
-  border: 1px solid rgba(220, 220, 200, .9);
-  box-shadow: var(--shadow-card);
-  aspect-ratio: 16 / 8;
-  margin-bottom: 18px;
-  /* valeurs par défaut (quiet) — histoire chaud/froid */
-  --sky-warm: #ece2c0;
-  --sky-mid: #d6e4c2;
-  --sky-cool: #b4cfa6;
-  --hills: #93b29a;
-  --ground: #8fb070;
-  --particle: #82a068;
-  --particle-opacity: .6;
-  --canopy-sat: .85;
+  width: calc(100% + 32px);
+  aspect-ratio: 16 / 11;
+  margin: 0 -16px 18px;
+  background: #243529;
 }
 
-.forest-scene--peaceful {
-  --sky-warm: #ece4c2;
-  --sky-mid: #d8e6be;
-  --sky-cool: #b6d09c;
-  --hills: #90b190;
-  --ground: #8bb066;
-  --particle: #7a9c5e;
-  --particle-opacity: .66;
-  --canopy-sat: .95;
-}
-
-.forest-scene--lively {
-  --sky-warm: #e8e2ba;
-  --sky-mid: #d2e4b2;
-  --sky-cool: #aed08e;
-  --hills: #88ae84;
-  --ground: #80a85c;
-  --particle: #6f9a52;
-  --particle-opacity: .8;
-  --canopy-sat: 1.05;
-}
-
-.forest-scene--flourishing {
-  --sky-warm: #ece2a4;
-  --sky-mid: #c8dc94;
-  --sky-cool: #98c474;
-  --hills: #74a268;
-  --ground: #6a9a48;
-  --particle: #5a8a40;
-  --particle-opacity: .95;
-  --canopy-sat: 1.08;
-}
-
-.forest-scene__sky {
+.forest-scene__svg {
   position: absolute;
   inset: 0;
-  /* Ciel : chaud près du soleil (haut-droite) → plus frais en bas-gauche */
-  background: linear-gradient(225deg, var(--sky-warm) 0%, var(--sky-mid) 46%, var(--sky-cool) 100%);
-  transition: background 600ms ease;
-  overflow: hidden;
-}
-
-/* Soleil : cœur lumineux + halo (haut à droite) */
-.forest-scene__sun {
-  position: absolute;
-  top: -6%;
-  right: 10%;
-  width: 34%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fffef2 0%, #fff6cf 22%, rgba(255, 246, 200, .55) 46%, rgba(255, 250, 224, 0) 72%);
-}
-
-/* Collines lointaines (profondeur, horizon doux) */
-.forest-scene__hills {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 22%;
   width: 100%;
-  height: 34%;
+  height: 100%;
   display: block;
-  color: var(--hills);
 }
 
-.forest-scene__ground {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 30%;
-  background: linear-gradient(180deg, transparent, var(--ground));
-  transition: background 600ms ease;
-  color: var(--ground);
+/* Balancement très doux de l'arbre (origine à la base du tronc) */
+.forest-scene__tree-sway {
+  transform-origin: 188px 284px;
+  animation: forest-sway 9s ease-in-out infinite;
 }
-
-/* Herbe le long du sol */
-.forest-scene__grass {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 26px;
-  display: block;
+@keyframes forest-sway {
+  0%, 100% { transform: rotate(-0.4deg); }
+  50% { transform: rotate(0.4deg); }
 }
 
 .forest-scene__canopy {
-  transition: transform 600ms ease;
-}
-
-.forest-scene__tree {
-  position: absolute;
-  left: 50%;
-  bottom: 3%;
-  width: 46%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-/* Balancement doux de l'arbre (origine à la base du tronc) */
-.forest-scene__tree-sway {
-  transform-origin: 110px 248px;
-  animation: forest-sway 7s ease-in-out infinite;
-}
-@keyframes forest-sway {
-  0%, 100% { transform: rotate(-0.6deg); }
-  50% { transform: rotate(0.6deg); }
+  transition: transform 700ms ease;
 }
 
 .forest-scene__flowers {
-  animation: forest-bloom 2.4s ease-in-out infinite alternate;
+  animation: forest-bloom 3s ease-in-out infinite alternate;
 }
 @keyframes forest-bloom {
-  from { opacity: .7; transform: scale(.96); }
-  to { opacity: 1; transform: scale(1.04); }
+  from { opacity: .7; }
+  to { opacity: 1; }
 }
 
-/* Particules ambiantes (feuilles / lucioles) */
+/* Esprit caché — apparition lente, discrète */
+.forest-scene__spirit {
+  animation: spirit-breathe 5s ease-in-out infinite;
+}
+@keyframes spirit-breathe {
+  0%, 100% { opacity: .5; }
+  50% { opacity: .8; }
+}
+
+/* Particules (lucioles) — en HTML au-dessus du SVG */
+.forest-scene__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 .forest-scene__particle {
   position: absolute;
   border-radius: 50%;
-  background: var(--particle);
-  opacity: var(--particle-opacity);
+  background: var(--particle, #e0cf8c);
+  box-shadow: 0 0 6px 1px rgba(224, 207, 140, 0.5);
+  opacity: 0;
   animation-name: forest-drift;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
 @keyframes forest-drift {
   0% { transform: translate(0, 0); opacity: 0; }
-  20% { opacity: var(--particle-opacity); }
-  80% { opacity: var(--particle-opacity); }
-  100% { transform: translate(14px, -26px); opacity: 0; }
+  25% { opacity: var(--particle-opacity, .6); }
+  75% { opacity: var(--particle-opacity, .6); }
+  100% { transform: translate(10px, -30px); opacity: 0; }
 }
 
-/* Créatures */
-.forest-scene__creature {
-  position: absolute;
-  animation: forest-hop 3.2s ease-in-out infinite;
+/* Gardien (événement rare) — le monde change, une silhouette apparaît */
+.forest-scene.is-guardian .forest-scene__svg {
+  filter: brightness(1.08) saturate(1.05);
 }
-@keyframes forest-hop {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-/* Gardien (événement rare) */
 .forest-scene__guardian {
-  position: absolute;
-  left: 26%;
-  top: 2%;
-  width: 44%;
-  transform: translateX(-50%);
-  z-index: 4;
-  animation: guardian-appear 2.6s ease-out both;
-  pointer-events: none;
+  animation: guardian-appear 3s ease-out both;
 }
 @keyframes guardian-appear {
-  0% { opacity: 0; transform: translateX(-50%) translateY(10px) scale(.96); }
-  35% { opacity: .9; }
-  80% { opacity: .9; }
-  100% { opacity: .75; transform: translateX(-50%) translateY(0) scale(1); }
-}
-.forest-scene.is-guardian .forest-scene__sky {
-  background: linear-gradient(225deg, #f6e2a2 0%, #ecd68e 46%, #cdd68e 100%);
-}
-/* Aura dorée du gardien (halo lumineux autour de l'arbre, au-dessus du feuillage) */
-.forest-scene__aura {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  width: 92%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 226, 140, .8) 0%, rgba(255, 226, 140, .45) 40%, rgba(255, 226, 140, 0) 66%);
-  pointer-events: none;
-  z-index: 5;
-  animation: guardian-aura 3.2s ease-in-out infinite;
-}
-@keyframes guardian-aura {
-  0%, 100% { opacity: .85; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+  0% { opacity: 0; }
+  30% { opacity: .85; }
+  80% { opacity: .85; }
+  100% { opacity: .7; }
 }
 
 /* Pause : la forêt s'endort (jamais morte) */
 .forest-scene__pause {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(40, 52, 60, .18), rgba(40, 52, 60, .34));
-  backdrop-filter: saturate(.7);
+  background: linear-gradient(180deg, rgba(20, 30, 26, .28), rgba(20, 30, 26, .46));
+  backdrop-filter: saturate(.6);
 }
 
 /* ------------------------------------------------------------------ */
-/* Feedback de complétion                                              */
+/* Header « Aujourd'hui » + bouton d'ajout                            */
 /* ------------------------------------------------------------------ */
 
-.completion-feedback {
-  position: fixed;
-  left: 50%;
-  bottom: calc(48px + env(safe-area-inset-bottom, 0px));
-  width: calc(100% - 32px);
-  max-width: 520px;
-  z-index: 45;
-  transform: translateX(-50%);
-  pointer-events: none;
+.maison-today {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 16px;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  padding: 0 2px;
+}
+.maison-today__title {
   margin: 0;
-  border-radius: 18px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent);
-  animation: feedback-in 220ms ease-out;
-}
-@keyframes feedback-in {
-  from { opacity: 0; transform: translate(-50%, 6px) scale(.98); }
-  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
-}
-.completion-feedback__companions {
-  display: flex;
-  gap: 4px;
-}
-.completion-feedback__companion {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  animation: companion-bounce 700ms ease-out;
-}
-.completion-feedback__companion + .completion-feedback__companion {
-  animation-delay: 90ms;
-}
-@keyframes companion-bounce {
-  0% { transform: translateY(0) scale(1); }
-  35% { transform: translateY(-8px) scale(1.08); }
-  70% { transform: translateY(0) scale(.98); }
-  100% { transform: translateY(0) scale(1); }
-}
-.completion-feedback__leaves {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.completion-feedback__leaves span {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50% 0 50% 50%;
-  background: var(--particle, #7aa85f);
-  opacity: 0;
-  animation: leaf-fly 1.1s ease-out forwards;
-}
-.completion-feedback__leaves span:nth-child(1) { left: 20%; top: 40%; animation-delay: 0s; }
-.completion-feedback__leaves span:nth-child(2) { left: 45%; top: 30%; animation-delay: .1s; }
-.completion-feedback__leaves span:nth-child(3) { left: 65%; top: 45%; animation-delay: .2s; }
-.completion-feedback__leaves span:nth-child(4) { left: 80%; top: 35%; animation-delay: .3s; }
-@keyframes leaf-fly {
-  0% { opacity: 0; transform: translate(0, 0) rotate(0); }
-  20% { opacity: .9; }
-  100% { opacity: 0; transform: translate(10px, -30px) rotate(120deg); }
-}
-.completion-feedback__text {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 550;
+  font: 500 17px/1.3 var(--font-serif, Georgia, serif);
   color: var(--text);
+  letter-spacing: .01em;
 }
+.maison-today__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  background: var(--surface-soft);
+  color: var(--primary);
+  cursor: pointer;
+  transition: background 140ms ease, transform 140ms ease;
+}
+.maison-today__add:hover { background: var(--accent-soft); }
+.maison-today__add:active { transform: scale(.94); }
+.maison-today__add:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ------------------------------------------------------------------ */
-/* Liste de tâches                                                     */
+/* Liste de tâches — compacte, sans grosses cartes                    */
 /* ------------------------------------------------------------------ */
 
 .task-list { margin-bottom: 18px; }
-.task-list__completed > summary {
-  min-height: 44px;
-  padding: 10px 0;
-  color: var(--text-muted);
-  font-size: 14px;
-  cursor: pointer;
-}
-.task-list__section {
-  margin: 0 0 8px;
-  font: 500 15px/1.3 Georgia, 'Times New Roman', serif;
-  color: var(--text-muted);
-  letter-spacing: .01em;
-}
 .task-list__items {
   list-style: none;
-  margin: 0 0 14px;
+  margin: 0;
   padding: 0;
-  background: var(--surface);
-  border: 1px solid rgba(221, 221, 199, .94);
-  border-radius: 18px;
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  border-top: 1px solid var(--border-soft);
 }
 .task-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #eae9d9;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--border-soft);
 }
 .task-row:last-child { border-bottom: 0; }
 .task-row__check {
   position: relative;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 30px minmax(0, 1fr);
   align-items: center;
-  min-height: 44px;
+  min-height: 40px;
   min-width: 0;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
 }
 .task-row__check input {
@@ -350,12 +172,12 @@
 .task-row__box {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  margin: 8px;
-  border-radius: 9px;
-  border: 2px solid var(--border);
-  background: #faf9ed;
+  width: 22px;
+  height: 22px;
+  margin: 4px 6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
   color: transparent;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
@@ -370,11 +192,11 @@
 }
 .task-row__body { min-width: 0; }
 .task-row.is-upcoming .task-row__check { cursor: default; }
-.task-row.is-upcoming .task-row__box { background: transparent; }
+.task-row.is-upcoming .task-row__box { border-style: dashed; }
 .task-row__title {
   display: block;
-  font-size: 16px;
-  font-weight: 550;
+  font-size: 15.5px;
+  font-weight: 500;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -386,72 +208,225 @@
 }
 .task-row__meta {
   display: block;
-  margin-top: 2px;
-  font-size: 12.5px;
+  margin-top: 1px;
+  font-size: 12px;
   color: var(--text-faint);
 }
 .task-row__who {
   display: flex;
   gap: 2px;
 }
-.task-row__who .person-dot { width: 30px; height: 30px; }
-.task-row__who .person-dot img { width: 29px; height: 29px; }
+.task-row__who .person-dot { width: 26px; height: 26px; }
+.task-row__who .person-dot img { width: 24px; height: 24px; }
+.task-list__section {
+  margin: 14px 0 6px;
+  font: 500 14px/1.3 var(--font-serif, Georgia, serif);
+  color: var(--text-muted);
+}
+.task-list__completed > summary {
+  min-height: 40px;
+  padding: 8px 2px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  cursor: pointer;
+}
 .task-list__empty {
-  margin: 0;
-  padding: 18px;
+  margin: 8px 0 0;
+  padding: 18px 2px;
   text-align: center;
   color: var(--text-faint);
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: 18px;
+  font-size: 14px;
+  border-top: 1px solid var(--border-soft);
 }
 
 /* ------------------------------------------------------------------ */
-/* Répartition hebdomadaire (factuelle)                                */
+/* Répartition hebdomadaire (factuelle) — compacte                    */
 /* ------------------------------------------------------------------ */
 
 .weekly-dist {
-  background: var(--surface);
-  border: 1px solid rgba(221, 221, 199, .94);
-  border-radius: 18px;
-  padding: 16px 18px;
-  box-shadow: var(--shadow-card);
+  margin: 0 0 8px;
+  padding: 12px 2px 0;
+  border-top: 1px solid var(--border-soft);
 }
 .weekly-dist__title {
-  margin: 0 0 10px;
-  font: 500 17px/1.3 Georgia, 'Times New Roman', serif;
+  margin: 0 0 8px;
+  font: 500 14px/1.3 var(--font-serif, Georgia, serif);
+  color: var(--text-muted);
 }
 .weekly-dist__rows {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
 }
 .weekly-dist__row {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 7px 0;
-  border-bottom: 1px solid #eae9d9;
+  gap: 3px;
+  padding: 8px 4px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-control);
 }
-.weekly-dist__row:last-child { border-bottom: 0; }
 .weekly-dist__label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-muted);
 }
-.weekly-dist__label .person-dot { width: 26px; height: 26px; }
-.weekly-dist__label .person-dot img { width: 25px; height: 25px; }
+.weekly-dist__label .person-dot { width: 22px; height: 22px; }
+.weekly-dist__label .person-dot img { width: 20px; height: 20px; }
 .weekly-dist__value {
-  font-size: 16px;
-  font-weight: 650;
+  font-size: 18px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 .weekly-dist__hint {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-faint);
 }
+
+/* ------------------------------------------------------------------ */
+/* Feedback de complétion — réponse du monde, pas confettis           */
+/* ------------------------------------------------------------------ */
+
+.completion-feedback {
+  position: fixed;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  width: calc(100% - 48px);
+  max-width: 360px;
+  z-index: 45;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  margin: 0;
+  border-radius: var(--radius-control);
+  background: rgba(44, 64, 52, 0.92);
+  color: var(--on-primary);
+  border: 1px solid rgba(194, 160, 94, 0.3);
+  animation: feedback-in 220ms ease-out;
+}
+@keyframes feedback-in {
+  from { opacity: 0; transform: translate(-50%, 6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.completion-feedback__companions {
+  display: flex;
+  gap: 4px;
+}
+.completion-feedback__companion {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: saturate(.7);
+  animation: companion-rise 700ms ease-out;
+}
+.completion-feedback__companion + .completion-feedback__companion {
+  animation-delay: 90ms;
+}
+@keyframes companion-rise {
+  0% { transform: translateY(4px) scale(.96); opacity: .6; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.completion-feedback__leaves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.completion-feedback__leaves span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50% 0 50% 50%;
+  background: var(--particle, #7aa85f);
+  opacity: 0;
+  animation: leaf-fly 1.2s ease-out forwards;
+}
+.completion-feedback__leaves span:nth-child(1) { left: 20%; top: 40%; animation-delay: 0s; }
+.completion-feedback__leaves span:nth-child(2) { left: 45%; top: 30%; animation-delay: .1s; }
+.completion-feedback__leaves span:nth-child(3) { left: 65%; top: 45%; animation-delay: .2s; }
+.completion-feedback__leaves span:nth-child(4) { left: 80%; top: 35%; animation-delay: .3s; }
+@keyframes leaf-fly {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0); }
+  20% { opacity: .8; }
+  100% { opacity: 0; transform: translate(10px, -26px) rotate(120deg); }
+}
+.completion-feedback__text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--on-primary);
+}
+
+/* ------------------------------------------------------------------ */
+/* Sheet d'ajout de tâche (petite, en bas)                            */
+/* ------------------------------------------------------------------ */
+
+.maison-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.maison-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 30, 24, 0.5);
+  animation: fade-in 160ms ease-out;
+}
+.maison-sheet__panel {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  background: var(--surface);
+  border-radius: 18px 18px 0 0;
+  border: 1px solid var(--border-soft);
+  border-bottom: 0;
+  padding: 8px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  animation: sheet-up 200ms ease-out;
+}
+@keyframes sheet-up {
+  from { transform: translateY(16px); opacity: .6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.maison-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.maison-sheet__title {
+  margin: 0;
+  font: 500 19px/1.3 var(--font-serif, Georgia, serif);
+  color: var(--text);
+}
+.maison-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-soft);
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.maison-sheet__close:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.maison-sheet__body { min-width: 0; }
 
 /* ------------------------------------------------------------------ */
 /* Mouvement réduit                                                    */
@@ -459,13 +434,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .forest-scene__particle,
-  .forest-scene__creature,
   .forest-scene__flowers,
   .forest-scene__tree-sway,
   .forest-scene__guardian,
+  .forest-scene__spirit,
   .completion-feedback,
   .completion-feedback__companion,
-  .completion-feedback__leaves span {
+  .completion-feedback__leaves span,
+  .maison-sheet__panel,
+  .maison-sheet__backdrop {
     animation: none !important;
   }
   .forest-scene__guardian { opacity: .8; }

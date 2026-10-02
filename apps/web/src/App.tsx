@@ -11,10 +11,10 @@ import { SettingsView } from './views/SettingsView';
 import './styles/home.css';
 
 type ModuleId = 'budget' | 'maison' | 'courses';
-const modules: { id: ModuleId; label: string; icon: string }[] = [
-  { id: 'budget', label: 'Budget', icon: '◈' },
-  { id: 'maison', label: 'Maison', icon: '⌂' },
-  { id: 'courses', label: 'Courses', icon: '♧' },
+const modules: { id: ModuleId; label: string }[] = [
+  { id: 'budget', label: 'Budget' },
+  { id: 'maison', label: 'Maison' },
+  { id: 'courses', label: 'Courses' },
 ];
 
 export function App() {
@@ -46,7 +46,7 @@ export function App() {
           <button type="button" className="icon-btn" aria-label="Réglages" onClick={() => setOverlay('settings')}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="m9 3-1 3-3 1 1 3-2 2 2 2-1 3 3 1 1 3h6l1-3 3-1-1-3 2-2-2-2 1-3-3-1-1-3z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
       </header>
-      <nav className="home-modules" aria-label="Modules de la maison">{modules.map(item => <button type="button" key={item.id} aria-current={module === item.id ? 'page' : undefined} onClick={() => changeModule(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>
+      <nav className="home-modules" aria-label="Modules de la maison">{modules.map(item => <button type="button" key={item.id} aria-current={module === item.id ? 'page' : undefined} onClick={() => changeModule(item.id)}>{item.label}</button>)}</nav>
       <main className="app-main" id="contenu-principal">
         {module === 'budget' && <CurrentMonthView />}
         {module === 'maison' && <MaisonView />}

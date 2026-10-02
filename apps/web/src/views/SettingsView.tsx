@@ -126,25 +126,40 @@ export function SettingsView() {
             onCommit={(name) => updatePersonSettings(person, { name })}
           />
         </div>
-        <AmountInput
-          id={`base-salary-${id}`}
-          label="Salaire de base"
-          valueCents={p.baseSalaryCents}
-          onCommit={(cents) => updatePersonSettings(person, { baseSalaryCents: cents })}
-        />
-        <div className="settings-rates">
-          <RateInput
-            id={`base-rate-${id}`}
-            label="Taux de base"
-            valueBps={p.baseRateBps}
-            onCommit={(bps) => updatePersonSettings(person, { baseRateBps: bps })}
-          />
-          <RateInput
-            id={`variable-rate-${id}`}
-            label="Taux variable"
-            valueBps={p.variableRateBps}
-            onCommit={(bps) => updatePersonSettings(person, { variableRateBps: bps })}
-          />
+        <div className="settings-person__rows">
+          <div className="settings-row">
+            <span className="settings-row__label">Salaire de base</span>
+            <AmountInput
+              id={`base-salary-${id}`}
+              label="Salaire de base"
+              labelVisible={false}
+              valueCents={p.baseSalaryCents}
+              onCommit={(cents) => updatePersonSettings(person, { baseSalaryCents: cents })}
+              className="settings-row__input"
+            />
+          </div>
+          <div className="settings-row">
+            <span className="settings-row__label">Taux de base</span>
+            <RateInput
+              id={`base-rate-${id}`}
+              label="Taux de base"
+              labelVisible={false}
+              valueBps={p.baseRateBps}
+              onCommit={(bps) => updatePersonSettings(person, { baseRateBps: bps })}
+              className="settings-row__input"
+            />
+          </div>
+          <div className="settings-row">
+            <span className="settings-row__label">Taux variable</span>
+            <RateInput
+              id={`variable-rate-${id}`}
+              label="Taux variable"
+              labelVisible={false}
+              valueBps={p.variableRateBps}
+              onCommit={(bps) => updatePersonSettings(person, { variableRateBps: bps })}
+              className="settings-row__input"
+            />
+          </div>
         </div>
       </section>
     );

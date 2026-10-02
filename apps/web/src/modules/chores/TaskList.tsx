@@ -117,14 +117,11 @@ export function TaskList({
   return (
     <div className="task-list">
       {dueToday.length > 0 && (
-        <>
-          <h3 className="task-list__section">Aujourd'hui</h3>
-          <ul className="task-list__items">
-            {dueToday.map((t) => (
-              <TaskRow key={t.id} task={t} people={people} done={isDone(t)} onToggle={onToggle} />
-            ))}
-          </ul>
-        </>
+        <ul className="task-list__items">
+          {dueToday.map((t) => (
+            <TaskRow key={t.id} task={t} people={people} done={isDone(t)} onToggle={onToggle} />
+          ))}
+        </ul>
       )}
       {upcoming.length > 0 && (
         <>

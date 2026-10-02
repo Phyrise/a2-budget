@@ -108,7 +108,15 @@
 .settings-rates { margin-top: 4px; margin-bottom: 14px; }
 
 /* Carte compacte (moins de verticalité) */
-.card--compact { padding-top: 16px; padding-bottom: 16px; }
+.card--compact { padding-top: 14px; padding-bottom: 14px; }
+
+/* Lignes compactes : libellé à gauche, champ à droite. */
+.settings-person__rows { display: grid; gap: 1px; margin-top: 6px; }
+.settings-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 34px; }
+.settings-row__label { font-size: 13px; color: var(--text-muted); }
+.settings-row__input { min-width: 0; }
+.settings-row__input .amount-input { margin-bottom: 0; }
+.settings-row__input .amount-input__field { min-height: 32px; padding: 4px 8px; font-size: 14.5px; text-align: right; border-radius: 6px; }
 
 /* Nom éditable en place */
 .settings-person__head {

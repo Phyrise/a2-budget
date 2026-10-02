@@ -1,32 +1,39 @@
 /* Thème forêt : assets locaux, surfaces lisibles et mouvement discret. */
 html:root {
-  --bg: #eaf0df;
-  --surface: #fffdf4;
-  --text: #263e30;
-  --text-muted: #59684f;
-  --text-faint: #616f58;
-  --primary: #284c36;
-  --primary-strong: #1f3c2b;
-  --on-primary: #faf4df;
-  --accent: #e2cc8e;
-  --accent-soft: #f4ecd4;
-  --border: #dcdcc8;
-  --danger: #a13c2c;
-  --danger-soft: #f8e7dd;
-  --focus-ring: #365f41;
-  --radius-card: 24px;
-  --radius-control: 12px;
-  --shadow-card: 0 3px 18px rgba(34, 57, 33, .06);
+  --bg: #d7dfcb;
+  --surface: #f5f1e2;
+  --surface-soft: rgba(245, 241, 226, 0.8);
+  --surface-dark: #2c4034;
+  --text: #2b3a2e;
+  --text-muted: #4e5e4c;
+  --text-faint: #66735f;
+  --primary: #33513c;
+  --primary-strong: #26402f;
+  --on-primary: #f3eeda;
+  --accent: #c2a05e;
+  --accent-soft: #e6d9ba;
+  --border: #c4cbb2;
+  --border-soft: rgba(110, 122, 100, 0.28);
+  --danger: #8a4a3a;
+  --danger-soft: #e6d2c8;
+  --focus-ring: #33513c;
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --shadow-card: 0 1px 2px rgba(30, 45, 33, .06), 0 6px 18px rgba(30, 45, 33, .05);
 }
 body { background: var(--bg); }
 body::before, body::after {
   content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1;
 }
 body::before {
-  background: url('../assets/forest-sanctuary.jpg') center / cover no-repeat;
+  background: url('../assets/forest-sanctuary.jpg') center 30% / cover no-repeat;
+  filter: saturate(.82) brightness(.94);
 }
+/* Brume : lumière chaude en haut, dégradé sage plus profond vers le bas. */
 body::after {
-  background: linear-gradient(180deg, rgba(232, 240, 220, .57), rgba(234, 240, 223, .92));
+  background:
+    radial-gradient(120% 70% at 50% -6%, rgba(240, 232, 200, .42), transparent 58%),
+    linear-gradient(180deg, rgba(178, 192, 166, .55) 0%, rgba(164, 180, 154, .78) 60%, rgba(148, 166, 140, .9) 100%);
 }
 .app-shell .app-main { max-width: 576px; padding: 20px 18px calc(100px + env(safe-area-inset-bottom, 0px)); }
 .view { position: relative; animation: view-fade-in 180ms ease-out; }
@@ -44,17 +51,18 @@ body::after {
 .page-description { margin: 9px 0 0; font-size: 14px; line-height: 1.5; max-width: 88%; color: #f1ecd9; }
 .view-title:focus, .cm-title:focus { outline: none; }
 .view-loading { color: var(--text-muted); }
-.forest-spirit { display: block; width: 30px; height: auto; pointer-events: none; }
+.forest-spirit { display: block; width: 22px; height: auto; pointer-events: none; opacity: .8; }
 .header-spirit { position: absolute; right: 20px; top: 19px; width: 31px; transform: rotate(9deg); }
-.card { position: relative; background: var(--surface); border: 1px solid rgba(221, 221, 199, .94); border-radius: var(--radius-card); padding: 20px; margin-bottom: 18px; box-shadow: var(--shadow-card); }
+.card { position: relative; background: var(--surface-soft); border: 1px solid var(--border-soft); border-radius: var(--radius-card); padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow-card); backdrop-filter: blur(3px); }
 .card-title { margin: 0; font: 500 22px/1.3 Georgia, 'Times New Roman', serif; letter-spacing: -.02em; }
 .card-hint { margin: 5px 0 0; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .card-head__value { font-size: 17px; font-weight: 650; }
 .is-deficit { color: var(--danger); }
-.person-dot { display: inline-grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 50%; background: #ebefdf; }
-.person-dot--b { background: #f4e9c8; }
-.person-dot img { width: 41px; height: 41px; object-fit: contain; transform: scale(1.22); pointer-events: none; }
+/* Compagnons : tokens discrets, harmonisés (pas des stickers). */
+.person-dot { display: inline-grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: rgba(236, 232, 214, .55); border: 1px solid var(--border-soft); }
+.person-dot--b { background: rgba(232, 224, 198, .55); }
+.person-dot img { width: 30px; height: 30px; object-fit: contain; transform: scale(1.12); pointer-events: none; filter: saturate(.72) contrast(.96); }
 .field { margin-bottom: 14px; }
 .field__label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 550; color: var(--text-muted); }
 .field__input, .amount-input__field { width: 100%; min-height: 48px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: #faf9ed; font-size: 16px; transition: background 160ms ease, border-color 160ms ease; }

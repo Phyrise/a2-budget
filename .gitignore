@@ -10,3 +10,4 @@ test-results/
 *.log
 qa-live/
 qa-redesign/
+qa-gate/

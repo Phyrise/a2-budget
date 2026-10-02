@@ -48,12 +48,14 @@ export function RateInput({
   valueBps,
   onCommit,
   className,
+  labelVisible = true,
 }: {
   id: string;
   label: string;
   valueBps: number;
   onCommit: (bps: number) => void;
   className?: string;
+  labelVisible?: boolean;
 }) {
   const field = useDraftField({
     plainValue: bpsToPlain(valueBps),
@@ -79,7 +81,7 @@ export function RateInput({
 
   return (
     <div className={className ? `amount-input ${className}` : 'amount-input'}>
-      <label className="field__label" htmlFor={id}>
+      <label className={labelVisible ? 'field__label' : 'visually-hidden'} htmlFor={id}>
         {label}
       </label>
       <input

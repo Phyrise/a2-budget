@@ -17,6 +17,8 @@ import type {
 } from '@a2/core';
 import { hasCompletion, isActionableToday, localDateKey } from '@a2/core';
 import { ForestScene } from './ForestScene';
+import { ForestSceneRaster } from './ForestSceneRaster';
+import { hasRasterLayers } from './forest-layers';
 import { CompletionFeedback } from './CompletionFeedback';
 import { TaskList, WeeklyDistribution } from './TaskList';
 import './chores.css';
@@ -87,7 +89,11 @@ export function MaisonModule({
 
   return (
     <section className="maison-module" aria-label="Maison">
-      <ForestScene forest={forest} showGuardian={showGuardian} />
+      {hasRasterLayers() ? (
+        <ForestSceneRaster forest={forest} showGuardian={showGuardian} />
+      ) : (
+        <ForestScene forest={forest} showGuardian={showGuardian} />
+      )}
       <CompletionFeedback
         assignee={feedback.assignee}
         names={{ a: people[0]?.name ?? 'A', b: people[1]?.name ?? 'B' }}

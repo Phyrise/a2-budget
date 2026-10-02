@@ -91,6 +91,67 @@
   100% { opacity: .7; }
 }
 
+/* --- Scène raster (assets peints) --- */
+.forest-scene--raster {
+  position: relative;
+  overflow: hidden;
+}
+.forest-scene__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.forest-scene__layer--tree {
+  object-fit: contain;
+  object-position: center bottom;
+  transform-origin: 50% 100%;
+}
+.forest-scene__layer--fg {
+  object-fit: cover;
+  object-position: center bottom;
+  height: 45%;
+  top: auto;
+  bottom: 0;
+}
+.forest-scene__layer--spirit {
+  object-fit: contain;
+  width: 22%;
+  height: auto;
+  inset: auto;
+  right: 18%;
+  bottom: 22%;
+  opacity: 0.7;
+}
+.forest-scene__layer--guardian {
+  object-fit: contain;
+  object-position: center bottom;
+  animation: guardian-appear 2.4s ease-out both;
+}
+.forest-scene__layer--sway {
+  animation: forest-sway 12s ease-in-out infinite;
+}
+.forest-scene__mist {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 52%;
+  height: 26%;
+  background: linear-gradient(to bottom, transparent, rgba(214, 222, 200, 0.28), transparent);
+  filter: blur(6px);
+  animation: forest-drift 26s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.forest-scene__grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  background: transparent;
+}
+
 /* Pause : la forêt s'endort (jamais morte) */
 .forest-scene__pause {
   position: absolute;

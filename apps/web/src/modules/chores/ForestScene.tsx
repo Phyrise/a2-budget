@@ -22,10 +22,10 @@ import type { ForestState } from '@a2/core';
 import { vitalityState } from '@a2/core';
 import './chores.css';
 
-type Vitality = 'quiet' | 'peaceful' | 'lively' | 'flourishing';
+export type Vitality = 'quiet' | 'peaceful' | 'lively' | 'flourishing';
 
 /** Palette d'ambiance par état de vitalité. */
-const PALETTES: Record<
+export const PALETTES: Record<
   Vitality,
   {
     skyTop: string;
@@ -126,7 +126,7 @@ const PALETTES: Record<
 };
 
 /** Nombre de particules (lucioles) par état. */
-function particleCount(state: Vitality): number {
+export function particleCount(state: Vitality): number {
   switch (state) {
     case 'quiet':
       return 3;
@@ -142,7 +142,7 @@ function particleCount(state: Vitality): number {
 }
 
 /** Position pseudo-aléatoire stable (déterministe). */
-function particleStyle(index: number, total: number): React.CSSProperties {
+export function particleStyle(index: number, total: number): React.CSSProperties {
   const seed = (index * 53 + 17) % 100;
   const left = 8 + ((seed * 7) % 84);
   const top = 16 + ((seed * 13) % 56);
@@ -160,9 +160,36 @@ function particleStyle(index: number, total: number): React.CSSProperties {
 }
 
 /**
- * Arbre de la maison — ancien, asymétrique, enraciné.
- * Vrai système de branches (strokes arrondis), canopée dense en masses,
- * racines qui s'écartent, creux, mousse, texture d'écorce.
+ * Génère une masse de feuillage irrégulière (bords boursouflés, pas de blob
+ * lisse). Déterministe (seed), pas de Math.random.
+ */
+function foliageMass(cx: number, cy: number, rx: number, ry: number, seed: number): string {
+  const points = 9;
+  const parts: string[] = [];
+  for (let i = 0; i <= points; i++) {
+    const idx = i % points;
+    const angle = (idx / points) * Math.PI * 2;
+    const wobble = 0.78 + (((seed * 7 + idx * 13) % 47) / 47) * 0.42;
+    const x = cx + Math.cos(angle) * rx * wobble;
+    const y = cy + Math.sin(angle) * ry * wobble;
+    if (i === 0) {
+      parts.push(`M${x.toFixed(1)} ${y.toFixed(1)}`);
+    } else {
+      const midAngle = angle - Math.PI / points;
+      const midWobble = 0.86 + (((seed * 11 + idx * 17) % 37) / 37) * 0.4;
+      const midX = cx + Math.cos(midAngle) * rx * midWobble * 1.14;
+      const midY = cy + Math.sin(midAngle) * ry * midWobble * 1.14;
+      parts.push(`Q${midX.toFixed(1)} ${midY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}`);
+    }
+  }
+  parts.push('Z');
+  return parts.join(' ');
+}
+
+/**
+ * Arbre de la maison — ancien, asymétrique, lourd, enraciné.
+ * Tronc noueux, branches lues dans la masse, canopée irrégulière en couches,
+ * racines intégrées au sol, creux, mousse, texture d'écorce.
  */
 function AncientTree({
   stage,
@@ -176,10 +203,10 @@ function AncientTree({
   const canopyScale =
     (0.88 + Math.min(stage, 6) * 0.04) *
     (vitality === 'flourishing' ? 1.08 : vitality === 'lively' ? 1.03 : vitality === 'peaceful' ? 1.0 : 0.96);
-  const trunk = '#5a4636';
-  const trunkShadow = '#3c2f26';
-  const trunkLit = '#7a6248';
-  const branch = '#4e3d2f';
+  const trunk = '#54402f';
+  const trunkShadow = '#382a20';
+  const trunkLit = '#75593f';
+  const branch = '#463527';
   const moss = '#5f7a4a';
 
   return (
@@ -187,16 +214,23 @@ function AncientTree({
       {/* Ombre de contact */}
       <ellipse cx="182" cy="288" rx="80" ry="10" fill={p.groundDeep} opacity="0.55" />
 
-      {/* Racines qui s'écartent (épaisses, hautes, bien visibles) */}
+      {/* Racines intégrées au sol : système de racines qui émerge de la terre,
+          avec doigts de racines et mousse. */}
+      <path
+        d="M176 266 C 160 268, 146 274, 136 288 C 146 282, 158 280, 168 280 C 174 280, 180 282, 186 284 C 192 282, 198 280, 208 280 C 218 280, 230 282, 240 288 C 230 274, 216 268, 202 266 C 194 264, 184 264, 176 266 Z"
+        fill={trunk}
+      />
+      {/* Doigts de racines (plus fins, s'écartent) */}
       <g stroke={trunk} strokeLinecap="round" fill="none">
-        <path d="M178 272 C 166 272, 152 276, 142 284" strokeWidth="10" />
-        <path d="M182 274 C 174 278, 166 284, 160 292" strokeWidth="7" />
-        <path d="M190 272 C 202 272, 216 276, 226 284" strokeWidth="10" />
-        <path d="M188 274 C 196 278, 204 284, 210 292" strokeWidth="7" />
+        <path d="M168 278 C 158 280, 150 284, 144 290" strokeWidth="6" />
+        <path d="M208 278 C 218 280, 226 284, 232 290" strokeWidth="6" />
+        <path d="M182 282 C 178 288, 176 294, 174 300" strokeWidth="5" />
       </g>
+      {/* Ombre sous les racines (ancrage au sol) */}
+      <path d="M140 288 C 160 282, 216 282, 236 288 C 216 292, 160 292, 140 288 Z" fill={p.groundDeep} opacity="0.5" />
       {/* Mousse sur les racines */}
-      <path d="M150 288 C 160 284, 172 284, 180 286 C 170 288, 160 290, 150 288 Z" fill={moss} opacity="0.5" />
-      <path d="M196 288 C 206 286, 216 288, 224 292 C 214 290, 204 290, 196 288 Z" fill={moss} opacity="0.45" />
+      <path d="M150 284 C 162 280, 174 280, 182 282 C 172 284, 160 286, 150 284 Z" fill={moss} opacity="0.5" />
+      <path d="M196 284 C 208 280, 220 280, 228 284 C 218 286, 206 286, 196 284 Z" fill={moss} opacity="0.45" />
 
       {/* Tronc noueux (penché, torsadé) */}
       <path
@@ -238,43 +272,49 @@ function AncientTree({
         <path d="M256 156 C 266 160, 276 164, 286 170" strokeWidth="5" />
       </g>
 
-      {/* Canopée : masses de feuillage aux extrémités des branches (les branches
-          restent visibles), en couches ombre → milieu → lumière. */}
+      {/* Canopée : masses irrégulières (pas de blob), asymétriques, en couches
+          ombre → milieu → lumière. Les branches restent lues dans la masse. */}
       <g className="forest-scene__canopy" style={{ transform: `scale(${canopyScale})`, transformOrigin: '188px 158px' }}>
-        {/* Couche d'ombre (profondeur) */}
+        {/* Couche d'ombre (profondeur, plus large) */}
         <g fill={p.canopyShadow}>
-          <ellipse cx="262" cy="150" rx="30" ry="22" />
-          <ellipse cx="224" cy="132" rx="28" ry="20" />
-          <ellipse cx="122" cy="190" rx="28" ry="20" />
-          <ellipse cx="188" cy="150" rx="34" ry="24" />
-          <ellipse cx="284" cy="168" rx="22" ry="16" />
+          <path d={foliageMass(258, 152, 40, 30, 3)} />
+          <path d={foliageMass(216, 130, 36, 28, 7)} />
+          <path d={foliageMass(128, 186, 34, 26, 11)} />
+          <path d={foliageMass(188, 152, 44, 32, 5)} />
+          <path d={foliageMass(286, 168, 26, 20, 13)} />
         </g>
         {/* Couche intermédiaire */}
         <g fill={p.canopyMid}>
-          <ellipse cx="258" cy="144" rx="28" ry="20" />
-          <ellipse cx="222" cy="126" rx="26" ry="19" />
-          <ellipse cx="120" cy="184" rx="26" ry="19" />
-          <ellipse cx="188" cy="144" rx="36" ry="24" />
-          <ellipse cx="280" cy="162" rx="20" ry="15" />
-          <ellipse cx="244" cy="150" rx="22" ry="16" />
+          <path d={foliageMass(254, 146, 36, 27, 17)} />
+          <path d={foliageMass(214, 124, 32, 25, 19)} />
+          <path d={foliageMass(126, 180, 30, 23, 23)} />
+          <path d={foliageMass(190, 146, 40, 29, 29)} />
+          <path d={foliageMass(282, 162, 22, 17, 31)} />
+          <path d={foliageMass(236, 152, 26, 20, 37)} />
         </g>
         {/* Couche éclairée (haut, vers la lumière) */}
         <g fill={p.canopyLit}>
-          <ellipse cx="254" cy="138" rx="24" ry="17" />
-          <ellipse cx="220" cy="120" rx="22" ry="16" />
-          <ellipse cx="118" cy="178" rx="22" ry="16" />
-          <ellipse cx="190" cy="138" rx="32" ry="21" />
-          <ellipse cx="276" cy="156" rx="18" ry="13" />
-          <ellipse cx="240" cy="144" rx="18" ry="14" />
+          <path d={foliageMass(250, 138, 30, 22, 41)} />
+          <path d={foliageMass(212, 118, 28, 20, 43)} />
+          <path d={foliageMass(124, 174, 26, 19, 47)} />
+          <path d={foliageMass(192, 138, 34, 24, 53)} />
+          <path d={foliageMass(278, 156, 18, 14, 59)} />
         </g>
-        {/* Hautes lumières (taches de lumière) */}
+        {/* Hautes lumières (taches de lumière, irrégulières, discrètes) */}
         <g fill={p.light}>
-          <circle cx="228" cy="116" r="4.5" opacity="0.5" />
-          <circle cx="252" cy="132" r="4" opacity="0.45" />
-          <circle cx="196" cy="128" r="4" opacity="0.5" />
-          <circle cx="270" cy="150" r="3.5" opacity="0.4" />
-          <circle cx="128" cy="172" r="3.5" opacity="0.4" />
+          <path d={foliageMass(228, 116, 6, 4, 61)} opacity="0.32" />
+          <path d={foliageMass(252, 132, 5, 4, 67)} opacity="0.28" />
+          <path d={foliageMass(196, 128, 5, 4, 71)} opacity="0.3" />
         </g>
+      </g>
+
+      {/* Branches par-dessus la canopée (lisibles dans la masse du feuillage) */}
+      <g stroke={branch} strokeLinecap="round" fill="none" opacity="0.9">
+        <path d="M188 184 C 208 172, 234 162, 262 154" strokeWidth="9" />
+        <path d="M186 200 C 168 194, 146 192, 122 194" strokeWidth="8" />
+        <path d="M188 178 C 198 162, 210 148, 224 136" strokeWidth="7" />
+        <path d="M240 160 C 254 154, 268 150, 282 148" strokeWidth="4.5" />
+        <path d="M212 150 C 222 142, 232 136, 244 132" strokeWidth="4" />
       </g>
 
       {/* Fleurs (stade ≥ 4) — discrètes */}
@@ -306,14 +346,22 @@ function Blossom({ x, y }: { x: number; y: number }) {
   );
 }
 
-/** Petit esprit — à peine visible, discret. */
+/** Petit esprit — à peine visible, adouci (flou, ombre, brume), pas un sticker. */
 function HiddenSpirit({ visible }: { visible: boolean }) {
   if (!visible) return null;
   return (
-    <g className="forest-scene__spirit" transform="translate(256 252)" opacity="0.65">
-      <ellipse cx="0" cy="0" rx="6.5" ry="7.5" fill="#eef0e0" opacity="0.85" />
-      <circle cx="-2.3" cy="-2" r="1.2" fill="#3a4a3a" />
-      <circle cx="2.3" cy="-2" r="1.2" fill="#3a4a3a" />
+    <g className="forest-scene__spirit" transform="translate(256 250)" opacity="0.5">
+      {/* Ombre au sol (ancrage) */}
+      <ellipse cx="0" cy="9" rx="6" ry="2" fill="#1a2a1e" opacity="0.4" />
+      {/* Corps adouci (flou) */}
+      <g filter="url(#fs-soft)">
+        <ellipse cx="0" cy="0" rx="6" ry="7" fill="#e8ead8" opacity="0.7" />
+      </g>
+      {/* Yeux discrets */}
+      <circle cx="-2" cy="-2" r="1" fill="#3a4a3a" opacity="0.7" />
+      <circle cx="2" cy="-2" r="1" fill="#3a4a3a" opacity="0.7" />
+      {/* Filet de brume autour */}
+      <ellipse cx="0" cy="2" rx="10" ry="6" fill="#c8d4bc" opacity="0.18" />
     </g>
   );
 }
@@ -387,6 +435,9 @@ export function ForestScene({
             <stop offset="56%" stopColor="#000000" stopOpacity="0" />
             <stop offset="100%" stopColor="#0a1410" stopOpacity="0.46" />
           </radialGradient>
+          <filter id="fs-soft" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.1" />
+          </filter>
         </defs>
 
         {/* Ciel / atmosphère */}
@@ -413,7 +464,7 @@ export function ForestScene({
         <rect x="0" y="150" width="400" height="70" fill="url(#fs-mist)" />
 
         {/* Rayons de lumière (doux, étroits, en dégradé) */}
-        <g opacity={p.lightOpacity * 0.5}>
+        <g opacity={p.lightOpacity * 0.42}>
           <path d="M158 0 L176 0 L120 200 L104 200 Z" fill={p.light} />
           <path d="M236 0 L250 0 L214 190 L202 190 Z" fill={p.light} opacity="0.6" />
         </g>
@@ -424,6 +475,9 @@ export function ForestScene({
 
         {/* Arbre central */}
         <AncientTree stage={forest.growthStage} vitality={state} p={p} />
+
+        {/* Brume devant l'arbre (profondeur : la brume traverse la scène) */}
+        <rect x="0" y="176" width="400" height="64" fill="url(#fs-mist)" opacity="0.75" />
 
         {/* Esprit caché */}
         <HiddenSpirit visible={showSpirit} />

@@ -20,9 +20,9 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         id: '/a2-budget/',
-        name: 'A² Budget',
-        short_name: 'Budget',
-        description: 'Budget commun du couple : contributions, dépenses, reste.',
+        name: 'A² Home',
+        short_name: 'Home',
+        description: 'Notre quotidien à deux : budget, maison et courses.',
         lang: 'fr',
         dir: 'ltr',
         start_url: '/a2-budget/',

@@ -17,6 +17,7 @@ export function ExpenseEditor({
   onAdd,
   addLabel,
   idPrefix = 'expense',
+  compactAdd = false,
 }: {
   items: Expense[];
   onRename: (id: string, label: string) => void;
@@ -26,7 +27,10 @@ export function ExpenseEditor({
   addLabel: string;
   /** Préfixe d'ids pour éviter les collisions si deux listes coexistent. */
   idPrefix?: string;
+  /** Budget compact : ouvre le formulaire depuis le bouton + du titre. */
+  compactAdd?: boolean;
 }) {
+  const [addOpen, setAddOpen] = useState(!compactAdd);
   const [newLabel, setNewLabel] = useState('');
   const [newAmount, setNewAmount] = useState(0);
   const [newAmountValid, setNewAmountValid] = useState(true);
@@ -59,6 +63,10 @@ export function ExpenseEditor({
 
   return (
     <>
+      {compactAdd && <button type="button" className="expense-add-toggle" aria-label={addOpen ? "Fermer l’ajout de dépense" : "Ajouter une dépense"} aria-expanded={addOpen} aria-controls={`${idPrefix}-add-form`} onClick={() => {
+        setAddOpen(!addOpen);
+        if (!addOpen) requestAnimationFrame(() => newLabelRef.current?.focus());
+      }}><span aria-hidden="true">{addOpen ? '×' : '+'}</span></button>}
       <ul className="expense-list">
         {items.length === 0 && <li className="expense-list__empty">Aucune dépense.</li>}
         {items.map((expense) => (
@@ -105,7 +113,7 @@ export function ExpenseEditor({
           </li>
         ))}
       </ul>
-      <form className="expense-add" onSubmit={handleSubmit}>
+      <form id={`${idPrefix}-add-form`} className="expense-add" hidden={compactAdd && !addOpen} onSubmit={handleSubmit}>
         <input
           ref={newLabelRef}
           className="expense-add__label"

@@ -1,18 +1,18 @@
-import type { PersistedState } from '@a2/core';
+import type { AppState } from '@a2/core';
 
 /**
  * Résultat d'une lecture de stockage.
  *
  * - `absent` : aucune clé (premier lancement).
  * - `ok` : contenu lisible et parsable (la validation du contenu est faite
- *   par le store via validatePersistedState).
+ *   par le store via migrateState).
  * - `error` : contenu illisible (JSON corrompu) ou accès au stockage refusé.
  *   `raw` préserve le contenu brut quand il est disponible : il ne doit
  *   jamais être perdu ni écrasé sans action explicite.
  */
 export type LoadResult =
   | { status: 'absent' }
-  | { status: 'ok'; state: PersistedState }
+  | { status: 'ok'; state: unknown }
   | { status: 'error'; raw: string | null; reason: 'parse' | 'access' };
 
 /**
@@ -24,7 +24,7 @@ export type LoadResult =
  */
 export interface StorageAdapter {
   load(): Promise<LoadResult>;
-  save(state: PersistedState): Promise<void>;
+  save(state: AppState): Promise<void>;
   /** Supprime uniquement la clé de cette application (jamais localStorage.clear()). */
   clear(): Promise<void>;
 }
@@ -62,13 +62,13 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
     try {
       const parsed: unknown = JSON.parse(raw);
-      return Promise.resolve({ status: 'ok', state: parsed as PersistedState });
+      return Promise.resolve({ status: 'ok', state: parsed });
     } catch {
       return Promise.resolve({ status: 'error', raw, reason: 'parse' });
     }
   }
 
-  save(state: PersistedState): Promise<void> {
+  save(state: AppState): Promise<void> {
     const attempt = this.chain.then(() => this.doSave(state));
     // La chaîne reste vivante même si cette écriture échoue : les
     // sauvegardes suivantes doivent quand même être tentées.
@@ -82,7 +82,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     return attempt;
   }
 
-  private doSave(state: PersistedState): Promise<void> {
+  private doSave(state: AppState): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       try {
         window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

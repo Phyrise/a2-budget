@@ -32,7 +32,6 @@ export function SettingsView() {
     updateRecurringExpense,
     addRecurringExpense,
     removeRecurringExpense,
-    setDefaultReserve,
     applySettingsToCurrentMonth,
     exportJson,
     importJson,
@@ -188,16 +187,6 @@ export function SettingsView() {
         />
       </section>
 
-      <section className="card" aria-label="Réserve mensuelle par défaut">
-        <h2 className="card-title">Réserve mensuelle par défaut</h2>
-        <AmountInput
-          id="default-reserve"
-          label="Réserve mensuelle par défaut"
-          valueCents={settings.defaultReserveTargetCents}
-          onCommit={setDefaultReserve}
-        />
-      </section>
-
       <section className="card" aria-label="Appliquer les valeurs par défaut">
         <h2 className="card-title">Valeurs par défaut</h2>
         <p className="card-hint">
@@ -259,7 +248,7 @@ export function SettingsView() {
             <p className="import-confirm__summary" id="import-confirm-summary">
               Fichier : {importState.summary.monthCount} mois, sélectionné sur{' '}
               {monthKeyToLabel(importState.summary.selectedMonth)}, pour{' '}
-              {importState.summary.personAName} et {importState.summary.personBName}.
+              {importState.summary.personAName} et {importState.summary.personBName}. Maison : {importState.summary.taskCount} tâche(s).
             </p>
             <div className="import-confirm__actions">
               <button type="button" className="btn btn--primary" onClick={confirmImport}>

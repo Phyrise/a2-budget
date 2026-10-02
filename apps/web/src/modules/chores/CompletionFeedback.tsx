@@ -9,6 +9,7 @@
  * Composant autonome : reçoit l'assignee et une clé de re-déclenchement.
  */
 
+import { useEffect, useState } from 'react';
 import jiji from '../../assets/jiji-avatar-small.png';
 import calcifer from '../../assets/calcifer-avatar-small.png';
 import type { TaskAssignee } from '@a2/core';
@@ -37,7 +38,20 @@ export function CompletionFeedback({
   /** Change à chaque complétion pour re-déclencher l'animation. */
   trigger: number;
 }) {
-  if (trigger === 0) return null;
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (trigger === 0) {
+      setVisible(false);
+      return;
+    }
+
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [trigger]);
+
+  if (trigger === 0 || !visible) return null;
   const showA = assignee === 'a' || assignee === 'both';
   const showB = assignee === 'b' || assignee === 'both';
 

@@ -1,6 +1,6 @@
 import {
-  validatePersistedState,
-  type PersistedState,
+  migrateState,
+  type AppState,
 } from '@a2/core';
 
 /** Résumé d'un import, affiché avant confirmation de remplacement. */
@@ -9,18 +9,19 @@ export interface ImportSummary {
   selectedMonth: string;
   personAName: string;
   personBName: string;
+  taskCount: number;
 }
 
 /** Enveloppe d'export versionnée. */
 interface ExportEnvelope {
   app: 'a2-budget';
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: string;
-  state: PersistedState;
+  state: AppState;
 }
 
 /** JSON d'export prêt à télécharger. */
-export function buildExportJson(state: PersistedState): string {
+export function buildExportJson(state: AppState): string {
   const envelope: ExportEnvelope = {
     app: 'a2-budget',
     schemaVersion: state.schemaVersion,
@@ -47,7 +48,7 @@ export function exportFilename(now: Date = new Date()): string {
  */
 export function parseImportJson(
   text: string,
-): { ok: true; state: PersistedState; summary: ImportSummary } | { ok: false; reason: string } {
+): { ok: true; state: AppState; summary: ImportSummary } | { ok: false; reason: string } {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -64,20 +65,28 @@ export function parseImportJson(
       ? (value as { state: unknown }).state
       : value;
 
-  const check = validatePersistedState(candidate);
+  if (value !== null && typeof value === 'object' && 'app' in value && 'state' in value) {
+    const envelope = value as { app: unknown; schemaVersion?: unknown; state: unknown };
+    if (envelope.app !== 'a2-budget') return { ok: false, reason: 'unexpected-app' };
+    if (envelope.schemaVersion !== 1 && envelope.schemaVersion !== 2) return { ok: false, reason: 'unsupported-version' };
+    if (!candidate || typeof candidate !== 'object' || !('schemaVersion' in candidate) || candidate.schemaVersion !== envelope.schemaVersion) return { ok: false, reason: 'version-mismatch' };
+  }
+
+  const check = migrateState(candidate);
   if (!check.ok) {
     return { ok: false, reason: check.reason };
   }
 
-  const s = check.state;
+  const s = check.state.budget;
   return {
     ok: true,
-    state: s,
+    state: check.state,
     summary: {
       monthCount: s.months.length,
       selectedMonth: s.selectedMonth,
       personAName: s.settings.personA.name,
       personBName: s.settings.personB.name,
+      taskCount: check.state.chores.tasks.length,
     },
   };
 }

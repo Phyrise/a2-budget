@@ -26,7 +26,7 @@ import type {
   PauseInterval,
   VitalityState,
 } from './types.js';
-import { addDays, localDateKey, parseLocalDateKey } from './dates.js';
+import { addDays, isValidLocalDateKey, localDateKey, parseLocalDateKey } from './dates.js';
 
 // ---------------------------------------------------------------------------
 // Constantes internes (jamais exposées)
@@ -39,6 +39,8 @@ export const VITALITY_PER_CREDIT = 12;
 export const DAILY_CREDIT_CAP = 3;
 /** Décroissance douce de la vitalité par jour sans action. */
 export const DAILY_DECAY = 6;
+/** Deux journées d'inactivité terminées sont offertes avant toute décroissance. */
+export const INACTIVITY_GRACE_DAYS = 2;
 /** Streak (jours consécutifs) qui déclenche l'événement rare du gardien. */
 export const GUARDIAN_STREAK = 10;
 
@@ -115,10 +117,10 @@ export function vitalityState(vitality: number): VitalityState {
 // Crédits (anti-spam)
 // ---------------------------------------------------------------------------
 
-/** Nombre de crédits accordés le `localDate` (actifs + tombstones). */
+/** Nombre de crédits accordés le `localDate` (actifs + tombstones, hors faits sans crédit). */
 export function creditsGrantedOn(forest: ForestState, localDate: string): number {
   return Object.values(forest.creditLedger).filter(
-    (c) => c.grantedOn === localDate,
+    (c) => c.grantedOn === localDate && c.status !== 'uncredited',
   ).length;
 }
 
@@ -131,17 +133,42 @@ export function creditsGrantedOn(forest: ForestState, localDate: string): number
  * Accroît `lifetimeCare` (croissance permanente) et la vitalité.
  * Pur : ne mute jamais `forest`.
  */
+function latestObservedDay(forest: ForestState): string | null {
+  let latest = forest.lastProcessedDay;
+  for (const day of [forest.lastMeaningfulActionDate, forest.pausedAt,
+    ...forest.pauses.map((pause) => pause.end ?? pause.start),
+    ...Object.values(forest.creditLedger).map((credit) => credit.grantedOn)]) {
+    if (day !== null && (latest === null || day > latest)) latest = day;
+  }
+  return latest;
+}
+
 export function grantCredit(
   forest: ForestState,
   creditKey: CreditKey,
   completionLocalDate: string,
 ): { forest: ForestState; granted: boolean } {
-  if (forest.paused) return { forest, granted: false };
+  const latest = latestObservedDay(forest);
+  if (!isValidLocalDateKey(completionLocalDate) ||
+    (latest !== null && completionLocalDate < latest)) {
+    return { forest, granted: false };
+  }
   if (forest.creditLedger[creditKey] !== undefined) {
     return { forest, granted: false }; // idempotent (actif ou tombstone)
   }
-  if (creditsGrantedOn(forest, completionLocalDate) >= DAILY_CREDIT_CAP) {
-    return { forest, granted: false }; // cap quotidien atteint
+  if (forest.paused || creditsGrantedOn(forest, completionLocalDate) >= DAILY_CREDIT_CAP) {
+    // Le fait reste enregistré mais ne pourra pas être récompensé au re-clic,
+    // même après une annulation, un rechargement ou un changement de jour.
+    return {
+      forest: {
+        ...forest,
+        creditLedger: {
+          ...forest.creditLedger,
+          [creditKey]: { grantedOn: completionLocalDate, status: 'uncredited' },
+        },
+      },
+      granted: false,
+    };
   }
   const next: ForestState = {
     ...forest,
@@ -166,7 +193,7 @@ export function tombstoneCredit(
   creditKey: CreditKey,
 ): { forest: ForestState; tombstoned: boolean } {
   const credit = forest.creditLedger[creditKey];
-  if (credit === undefined || credit.status === 'tombstoned') {
+  if (credit === undefined || credit.status !== 'active') {
     return { forest, tombstoned: false };
   }
   const next: ForestState = {
@@ -201,6 +228,7 @@ export function isGapFullyPaused(
   lastDate: string,
   localDate: string,
 ): boolean {
+  if (localDate <= lastDate) return false;
   let cursor = addDays(parseLocalDateKey(lastDate), 1);
   const end = parseLocalDateKey(localDate);
   while (cursor.getTime() < end.getTime()) {
@@ -219,6 +247,9 @@ export function isGapFullyPaused(
  * Met aussi à jour `longestStreak` et `lastMeaningfulActionDate`. Pur.
  */
 export function updateStreak(forest: ForestState, localDate: string): ForestState {
+  const latest = latestObservedDay(forest);
+  if (forest.paused || !isValidLocalDateKey(localDate) ||
+    (latest !== null && localDate < latest)) return forest;
   const last = forest.lastMeaningfulActionDate;
   let currentStreak: number;
   if (last === null) {
@@ -239,28 +270,62 @@ export function updateStreak(forest: ForestState, localDate: string): ForestStat
 }
 
 /**
- * Avance la forêt d'un jour (`localDate`) : décroissance douce de la vitalité
- * si aucune action ce jour-là, et cassure du streak si un jour non ponctué
- * passe sans action. **Idempotent par jour** (via `lastProcessedDay`).
+ * Réconcilie les journées TERMINÉES avant `localDate`. Le jour courant reste
+ * ouvert : son premier soin peut prolonger le streak de la veille. La vitalité
+ * ne décroît qu'après deux journées d'inactivité non pausées. Un saut de dates
+ * produit le même résultat que des chargements quotidiens ; reculer est un no-op.
  * En pause : aucun effet (la forêt est endormie). Pur.
  */
 export function advanceDay(forest: ForestState, localDate: string): ForestState {
   if (forest.paused) return forest;
-  if (forest.lastProcessedDay === localDate) return forest;
-  const actedToday = forest.lastMeaningfulActionDate === localDate;
-  let vitality = forest.vitality;
-  if (!actedToday) {
-    vitality = Math.max(0, vitality - DAILY_DECAY);
+  if (!isValidLocalDateKey(localDate)) return forest;
+  const latest = latestObservedDay(forest);
+  if ((forest.lastProcessedDay !== null && localDate <= forest.lastProcessedDay) ||
+    (latest !== null && localDate < latest)) return forest;
+  const lastAction = forest.lastMeaningfulActionDate;
+  if (lastAction === null || lastAction >= localDate) {
+    return { ...forest, lastProcessedDay: localDate };
   }
-  let currentStreak = forest.currentStreak;
-  if (
-    !actedToday &&
-    forest.lastMeaningfulActionDate !== null &&
-    !isDayPaused(forest.pauses, localDate)
-  ) {
-    currentStreak = 0; // un jour non ponctué sans action casse le streak
+  const firstIdleDay = localDateKey(addDays(parseLocalDateKey(lastAction), 1));
+  const finishedThrough = localDateKey(addDays(parseLocalDateKey(localDate), -1));
+  const totalIdleDays = countActiveDays(forest.pauses, firstIdleDay, finishedThrough);
+  const previouslyThrough = forest.lastProcessedDay === null
+    ? lastAction
+    : localDateKey(addDays(parseLocalDateKey(forest.lastProcessedDay), -1));
+  const previousIdleDays = countActiveDays(forest.pauses, firstIdleDay, previouslyThrough);
+  const decayDays = Math.max(0, totalIdleDays - INACTIVITY_GRACE_DAYS) -
+    Math.max(0, previousIdleDays - INACTIVITY_GRACE_DAYS);
+  const broken = totalIdleDays > 0;
+  return {
+    ...forest,
+    vitality: Math.max(0, forest.vitality - Math.max(0, decayDays) * DAILY_DECAY),
+    currentStreak: broken ? 0 : forest.currentStreak,
+    lastProcessedDay: localDate,
+  };
+}
+
+/** Calendrier civil : compter des composantes de dates évite les journées DST de 23/25 h. */
+function calendarOrdinal(key: string): number {
+  const date = parseLocalDateKey(key);
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000);
+}
+
+/** Nombre de jours inclusifs hors pause, sans boucle proportionnelle à une longue absence. */
+function countActiveDays(pauses: PauseInterval[], first: string, last: string): number {
+  if (last < first) return 0;
+  const start = calendarOrdinal(first);
+  const end = calendarOrdinal(last);
+  const ranges = pauses.map((pause) => [
+    Math.max(start, calendarOrdinal(pause.start)),
+    Math.min(end, pause.end === null ? end : calendarOrdinal(pause.end)),
+  ] as const).filter(([a, b]) => a <= b).sort((a, b) => a[0] - b[0]);
+  let pausedDays = 0;
+  let coveredThrough = start - 1;
+  for (const [a, b] of ranges) {
+    pausedDays += Math.max(0, b - Math.max(a, coveredThrough + 1) + 1);
+    coveredThrough = Math.max(coveredThrough, b);
   }
-  return { ...forest, vitality, currentStreak, lastProcessedDay: localDate };
+  return end - start + 1 - pausedDays;
 }
 
 // ---------------------------------------------------------------------------
@@ -303,9 +368,9 @@ export function evaluateUnlocks(forest: ForestState): ForestState {
 // ---------------------------------------------------------------------------
 
 /**
- * Évalue les événements rares après une montée de streak. Le **gardien**
- * (événement mythique rare) se déclenche quand le streak passe de <10 à ≥10,
- * **une seule fois** par série de streak (pas de doublon à 11, 12, …).
+ * Le prototype mémorise la première visite du gardien au passage de <10 à ≥10.
+ * Rejouer une transition, recharger ou recommencer une série ne répète pas la
+ * visite déjà enregistrée ; une économie de visites récurrentes reste à définir.
  * Pur.
  */
 export function evaluateRareEvents(
@@ -313,7 +378,8 @@ export function evaluateRareEvents(
   previousStreak: number,
   newStreak: number,
 ): { forest: ForestState; triggered: string | null } {
-  if (newStreak >= GUARDIAN_STREAK && previousStreak < GUARDIAN_STREAK) {
+  if (newStreak >= GUARDIAN_STREAK && previousStreak < GUARDIAN_STREAK &&
+    forest.lastRareEvent !== 'guardian') {
     return { forest: { ...forest, lastRareEvent: 'guardian' }, triggered: 'guardian' };
   }
   return { forest, triggered: null };
@@ -333,6 +399,8 @@ export function pauseForest(
   localDate: string,
 ): ForestState {
   if (forest.paused) return forest;
+  const latest = latestObservedDay(forest);
+  if (!isValidLocalDateKey(localDate) || (latest !== null && localDate < latest)) return forest;
   const pauses: PauseInterval[] = [
     ...forest.pauses,
     { start: localDate, end: null },
@@ -350,13 +418,16 @@ export function resumeForest(
   localDate: string,
 ): ForestState {
   if (!forest.paused) return forest;
+  const latest = latestObservedDay(forest);
+  if (!isValidLocalDateKey(localDate) || (latest !== null && localDate < latest)) return forest;
   const pauses = forest.pauses.slice();
   for (let i = pauses.length - 1; i >= 0; i -= 1) {
     if (pauses[i]!.end === null) {
       const start = pauses[i]!.start;
       const dayBefore = localDateKey(addDays(parseLocalDateKey(localDate), -1));
-      const end = dayBefore < start ? start : dayBefore;
-      pauses[i] = { start, end };
+      // Une pause/reprise dans le même jour n'exempte aucun jour calendaire.
+      if (localDate === start) pauses.splice(i, 1);
+      else pauses[i] = { start, end: dayBefore };
       break;
     }
   }

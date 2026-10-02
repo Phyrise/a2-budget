@@ -13,8 +13,28 @@ import {
   computeMonthSummary,
   currentMonthKey,
   ensureMonth as coreEnsureMonth,
-  emptyState,
-  validatePersistedState,
+  emptyAppState,
+  migrateState,
+  advanceDay,
+  localDateKey,
+  createTask,
+  isoWeekday,
+  addCompletion,
+  removeCompletion,
+  hasCompletion,
+  isDueOn,
+  creditKeyFor,
+  grantCredit,
+  tombstoneCredit,
+  updateStreak,
+  evaluateRareEvents,
+  evaluateUnlocks,
+  pauseForest,
+  resumeForest,
+  type AppState,
+  type TaskAssignee,
+  type TaskRecurrence,
+  type HouseholdTask,
   type Expense,
   type MonthRecord,
   type MonthSummary,
@@ -42,7 +62,13 @@ export type Recovery =
 
 export interface AppContextValue {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
+  /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
+  appState: AppState | null;
+  today: Date;
+  createHomeTask: (title: string, assignee: TaskAssignee, recurrence: TaskRecurrence) => void;
+  toggleHomeTask: (task: HouseholdTask) => void;
+  toggleHomePause: () => void;
   saveStatus: SaveStatus;
   /** Mode de récupération actif (données illisibles ou stockage indisponible). */
   recovery: Recovery;
@@ -112,6 +138,11 @@ function mapMonth(
   };
 }
 
+function prepareApp(app: AppState): AppState {
+  const budget = coreEnsureMonth({ schemaVersion: 1, ...app.budget }, app.budget.selectedMonth);
+  return { ...app, budget: { settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth }, forest: advanceDay(app.forest, localDateKey(new Date())) };
+}
+
 export function AppProvider({
   adapter,
   children,
@@ -124,7 +155,9 @@ export function AppProvider({
     adapterRef.current = adapter ?? new LocalStorageAdapter();
   }
 
-  const [state, setState] = useState<PersistedState | null>(null);
+  const [appState, setAppState] = useState<AppState | null>(null);
+  const [today, setToday] = useState(() => new Date());
+  const state = useMemo<PersistedState | null>(() => appState ? ({ schemaVersion: 1, ...appState.budget }) : null, [appState]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [recovery, setRecovery] = useState<Recovery>({ kind: 'none' });
   const hydratedRef = useRef(false);
@@ -134,17 +167,16 @@ export function AppProvider({
   // Application d'un résultat de chargement à l'état du store.
   const applyLoadResult = useCallback((result: Awaited<ReturnType<StorageAdapter['load']>>) => {
     if (result.status === 'absent') {
-      const fresh = emptyState();
-      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setAppState(prepareApp(emptyAppState()));
       setRecovery({ kind: 'none' });
       hydratedRef.current = true;
       return;
     }
 
     if (result.status === 'ok') {
-      const check = validatePersistedState(result.state);
+      const check = migrateState(result.state);
       if (check.ok) {
-        setState(coreEnsureMonth(check.state, check.state.selectedMonth));
+        setAppState(prepareApp(check.state));
         setRecovery({ kind: 'none' });
         hydratedRef.current = true;
         return;
@@ -152,8 +184,7 @@ export function AppProvider({
       // Contenu lisible mais invalide (version inconnue, champs invalides) :
       // mode de récupération. L'état en mémoire est neuf et utilisable, mais
       // rien n'est persisté ; la clé existante n'est pas touchée.
-      const fresh = emptyState();
-      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setAppState(prepareApp(emptyAppState()));
       setRecovery({ kind: 'unreadable', message: UNREADABLE_MESSAGE });
       hydratedRef.current = true;
       return;
@@ -161,8 +192,7 @@ export function AppProvider({
 
     // result.status === 'error' : JSON corrompu (raw préservé dans la clé)
     // ou accès au stockage refusé.
-    const fresh = emptyState();
-    setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+    setAppState(prepareApp(emptyAppState()));
     setRecovery(
       result.reason === 'access'
         ? { kind: 'storage-unavailable', message: STORAGE_UNAVAILABLE_MESSAGE }
@@ -197,27 +227,34 @@ export function AppProvider({
   // Sauvegarde de chaque modification valide, sans debounce fragile.
   // Bloquée en mode de récupération : aucune écriture avant action explicite.
   useEffect(() => {
-    if (state === null || !hydratedRef.current) return;
+    if (appState === null || !hydratedRef.current) return;
     if (recoveryRef.current.kind !== 'none') return;
     setSaveStatus('saving');
-    void adapterRef.current?.save(state).then(
+    void adapterRef.current?.save(appState).then(
       () => setSaveStatus('saved'),
       () => setSaveStatus('error'),
     );
-  }, [state]);
+  }, [appState]);
 
   const mutate = useCallback((fn: (s: PersistedState) => PersistedState) => {
-    setState((prev) => (prev === null ? prev : fn(prev)));
+    setAppState((prev) => {
+      if (prev === null) return prev;
+      const budget = fn({ schemaVersion: 1, ...prev.budget });
+      return {
+        ...prev,
+        budget: { settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth },
+        household: { people: [budget.settings.personA, budget.settings.personB].map(person => ({ id: person.id, name: person.name })) },
+      };
+    });
   }, []);
 
   // --- Récupération explicite ---------------------------------------------
 
   const confirmReset = useCallback(() => {
     void adapterRef.current?.clear().then(() => {
-      const fresh = emptyState();
-      setState(coreEnsureMonth(fresh, fresh.selectedMonth));
+      setAppState(prepareApp(emptyAppState()));
       setRecovery({ kind: 'none' });
-    });
+    }, () => setSaveStatus('error'));
   }, []);
 
   const retryLoad = useCallback(() => {
@@ -387,8 +424,8 @@ export function AppProvider({
   // --- Sauvegarde / transfert manuel ---------------------------------------
 
   const exportJson = useCallback(() => {
-    return state === null ? '' : buildExportJson(state);
-  }, [state]);
+    return appState === null ? '' : buildExportJson(appState);
+  }, [appState]);
 
   const importJson = useCallback(
     (text: string): { ok: true; summary: ImportSummary } | { ok: false; reason: string } => {
@@ -398,12 +435,70 @@ export function AppProvider({
       }
       // Import confirmé par l'utilisateur : remplacement explicite de l'état
       // (et sortie du mode de récupération, si actif).
-      setState(coreEnsureMonth(result.state, result.state.selectedMonth));
+      setAppState(prepareApp(result.state));
       setRecovery({ kind: 'none' });
       return { ok: true, summary: result.summary };
     },
     [],
   );
+
+  // --- Maison / forest: the same persisted V2 state and serialized writes. ---
+  const createHomeTask = useCallback((title: string, assignee: TaskAssignee, recurrence: TaskRecurrence) => {
+    const now = new Date();
+    if (!title.trim()) return;
+    const task = createTask({ id: newId(), title: title.trim(), assignee, recurrence, weeklyDay: recurrence === 'weekly' ? isoWeekday(now) : undefined, monthlyDay: recurrence === 'monthly' ? now.getDate() : undefined }, localDateKey(now));
+    setAppState(previous => previous ? { ...previous, chores: { ...previous.chores, tasks: [...previous.chores.tasks, task] } } : previous);
+  }, []);
+
+  const toggleHomeTask = useCallback((requested: HouseholdTask) => {
+    const now = new Date();
+    const day = localDateKey(now);
+    const id = newId();
+    setAppState(previous => {
+      if (!previous) return previous;
+      const task = previous.chores.tasks.find(item => item.id === requested.id);
+      if (!task || (task.recurrence !== 'none' && !isDueOn(task, now))) return previous;
+      const dueDate = task.recurrence === 'none' ? 'once' : day;
+      const key = creditKeyFor(task, dueDate);
+      const forest = advanceDay(previous.forest, day);
+      if (hasCompletion(previous.chores.completions, task.id, dueDate)) {
+        const result = removeCompletion(previous.chores.completions, task.id, dueDate);
+        return { ...previous, chores: { ...previous.chores, completions: result.completions }, forest: tombstoneCredit(forest, key).forest };
+      }
+      const result = addCompletion(previous.chores.completions, task, dueDate, now, id);
+      if (!result.added) return previous;
+      const credit = grantCredit(forest, key, day);
+      let nextForest = credit.forest;
+      if (credit.granted) {
+        nextForest = updateStreak(nextForest, day);
+        nextForest = evaluateRareEvents(nextForest, forest.currentStreak, nextForest.currentStreak).forest;
+        nextForest = evaluateUnlocks(nextForest);
+      }
+      return { ...previous, chores: { ...previous.chores, completions: result.completions }, forest: nextForest };
+    });
+  }, []);
+
+  const toggleHomePause = useCallback(() => {
+    const day = localDateKey(new Date());
+    setAppState(previous => previous ? { ...previous, forest: previous.forest.paused ? resumeForest(previous.forest, day) : pauseForest(advanceDay(previous.forest, day), day) } : previous);
+  }, []);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      const now = new Date();
+      setToday(now);
+      setAppState(previous => { if (!previous) return previous; const forest = advanceDay(previous.forest, localDateKey(now)); return forest === previous.forest ? previous : { ...previous, forest }; });
+      clearTimeout(timer);
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      timer = setTimeout(refresh, tomorrow.getTime() - now.getTime() + 100);
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', onVisible); };
+  }, []);
 
   // --- Dérivés --------------------------------------------------------------
 
@@ -420,6 +515,11 @@ export function AppProvider({
   const value = useMemo<AppContextValue>(
     () => ({
       state,
+      appState,
+      today,
+      createHomeTask,
+      toggleHomeTask,
+      toggleHomePause,
       saveStatus,
       recovery,
       currentMonth,
@@ -445,6 +545,11 @@ export function AppProvider({
     }),
     [
       state,
+      appState,
+      today,
+      createHomeTask,
+      toggleHomeTask,
+      toggleHomePause,
       saveStatus,
       recovery,
       currentMonth,

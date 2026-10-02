@@ -7,6 +7,8 @@ import {
   evaluateRareEvents,
   evaluateUnlocks,
   grantCredit,
+  INACTIVITY_GRACE_DAYS,
+  isDayPaused,
   growthStageFor,
   GUARDIAN_STREAK,
   pauseForest,
@@ -18,6 +20,8 @@ import {
   vitalityState,
 } from './forest.js';
 import { migrateState } from './appState.js';
+import { emptyAppState } from './appState.js';
+import { addCompletion, creditKeyFor, createTask, removeCompletion } from './tasks.js';
 import type { ForestState } from './types.js';
 
 /** Construit une forêt avec un streak de `n` jours consécutifs (à partir du 1er oct). */
@@ -39,6 +43,7 @@ function grantNCredits(n: number): ForestState {
     const dateKey = `2026-10-${String(day).padStart(2, '0')}`;
     for (let i = 1; i <= DAILY_CREDIT_CAP && count < n; i += 1) {
       forest = grantCredit(forest, `t${day}-${i}|${dateKey}`, dateKey).forest;
+      forest = updateStreak(forest, dateKey);
       count += 1;
     }
     day += 1;
@@ -131,13 +136,19 @@ describe('tombstoneCredit (annuler / recompléter)', () => {
 });
 
 describe('advanceDay (décroissance douce + jour manqué)', () => {
-  it('l’inactivité fait décroître la vitalité doucement', () => {
+  it('réconcilie seulement les jours terminés, avec deux jours de grâce', () => {
     let forest = grantCredit(emptyForest(), 't1|2026-10-01', '2026-10-01').forest;
+    forest = updateStreak(forest, '2026-10-01');
     const v0 = forest.vitality;
     forest = advanceDay(forest, '2026-10-02');
-    expect(forest.vitality).toBe(v0 - DAILY_DECAY);
+    expect(forest.vitality).toBe(v0);
     forest = advanceDay(forest, '2026-10-03');
-    expect(forest.vitality).toBe(v0 - 2 * DAILY_DECAY);
+    expect(forest.vitality).toBe(v0);
+    forest = advanceDay(forest, '2026-10-04');
+    expect(forest.vitality).toBe(v0);
+    forest = advanceDay(forest, '2026-10-05');
+    expect(forest.vitality).toBe(v0 - DAILY_DECAY);
+    expect(INACTIVITY_GRACE_DAYS).toBe(2);
   });
 
   it('la vitalité ne descend jamais sous 0', () => {
@@ -150,19 +161,20 @@ describe('advanceDay (décroissance douce + jour manqué)', () => {
 
   it('idempotent par jour (pas de double décroissance)', () => {
     let forest = grantCredit(emptyForest(), 't1|2026-10-01', '2026-10-01').forest;
-    forest = advanceDay(forest, '2026-10-02');
+    forest = updateStreak(forest, '2026-10-01');
+    forest = advanceDay(forest, '2026-10-05');
     const v = forest.vitality;
-    forest = advanceDay(forest, '2026-10-02'); // même jour
+    forest = advanceDay(forest, '2026-10-05'); // même jour
     expect(forest.vitality).toBe(v);
   });
 
   it('un jour manqué non ponctué casse le streak (comportement défini)', () => {
     let forest = forestWithStreak(3);
     expect(forest.currentStreak).toBe(3);
-    forest = advanceDay(forest, '2026-10-04'); // jour 4 sans action
+    forest = advanceDay(forest, '2026-10-05'); // jour 4 terminé sans action
     expect(forest.currentStreak).toBe(0);
     // Le streak repart à 1 le jour suivant.
-    forest = updateStreak(forest, '2026-10-05');
+    forest = updateStreak(forest, '2026-10-06');
     expect(forest.currentStreak).toBe(1);
   });
 
@@ -216,9 +228,8 @@ describe('pause / reprise', () => {
     let forest = emptyForest();
     forest = pauseForest(forest, '2026-10-01');
     forest = resumeForest(forest, '2026-10-01');
-    // L'intervalle est vide : aucun jour n'est « ponctué ».
-    expect(forest.pauses[0]!.end).toBe('2026-10-01');
-    expect(forest.pauses[0]!.start).toBe('2026-10-01');
+    expect(forest.pauses).toEqual([]);
+    expect(isDayPaused(forest.pauses, '2026-10-01')).toBe(false);
   });
 });
 
@@ -244,7 +255,7 @@ describe('streak', () => {
   it('longestStreak ne diminue jamais', () => {
     let forest = forestWithStreak(5);
     expect(forest.longestStreak).toBe(5);
-    forest = advanceDay(forest, '2026-10-06'); // casse le streak
+    forest = advanceDay(forest, '2026-10-07'); // jour 6 terminé sans action
     expect(forest.currentStreak).toBe(0);
     expect(forest.longestStreak).toBe(5); // mémoire conservée
   });
@@ -276,27 +287,27 @@ describe('événements rares (gardien)', () => {
     expect(at12).toBeNull();
   });
 
-  it('un nouveau streak de 10 après une cassure redéclenche le gardien', () => {
+  it('mémorise la première visite après une cassure et un nouveau streak', () => {
     let forest = forestWithStreak(GUARDIAN_STREAK); // streak 10
-    evaluateRareEvents(forest, 9, 10); // déclenché
+    forest = evaluateRareEvents(forest, 9, 10).forest;
     // Cassure.
-    forest = advanceDay(forest, '2026-10-11');
+    forest = advanceDay(forest, '2026-10-12');
     expect(forest.currentStreak).toBe(0);
     // Nouveau streak jusqu'à 10.
     let day = 12;
-    let prev = 0;
+    let repeatVisits = 0;
     while (forest.currentStreak < GUARDIAN_STREAK) {
       const key = `2026-10-${String(day).padStart(2, '0')}`;
       const before = forest.currentStreak;
       forest = updateStreak(forest, key);
       const { forest: f2, triggered } = evaluateRareEvents(forest, before, forest.currentStreak);
       forest = f2;
-      if (triggered === 'guardian') break;
-      prev = forest.currentStreak;
+      if (triggered === 'guardian') repeatVisits += 1;
       day += 1;
     }
     expect(forest.currentStreak).toBe(GUARDIAN_STREAK);
     expect(forest.lastRareEvent).toBe('guardian');
+    expect(repeatVisits).toBe(0);
   });
 });
 
@@ -376,5 +387,127 @@ describe('horloge / DST', () => {
     let forest = grantCredit(emptyForest(), 't1|2026-10-01', eveningKey).forest;
     const { granted } = grantCredit(forest, 't2|2026-10-02', morningKey);
     expect(granted).toBe(true);
+  });
+});
+
+describe('parcours de chargement → complétion → soin', () => {
+  it('atteint le gardien au 10e jour malgré le chargement avant chaque action', () => {
+    let state = emptyAppState();
+    const task = createTask({ id: 'daily', title: 'Une attention', assignee: 'both', recurrence: 'daily' }, '2026-10-01');
+    let visits = 0;
+    for (let day = 1; day <= 10; day += 1) {
+      const dateKey = `2026-10-${String(day).padStart(2, '0')}`;
+      const now = new Date(2026, 9, day, 10);
+      const loaded = migrateState(JSON.parse(JSON.stringify(state)));
+      expect(loaded.ok).toBe(true);
+      if (!loaded.ok) throw new Error(loaded.reason);
+      state = loaded.state;
+      const before = advanceDay(state.forest, dateKey);
+      expect(before.currentStreak).toBe(day - 1);
+      const completion = addCompletion(state.chores.completions, task, dateKey, now, `c${day}`);
+      const credit = grantCredit(before, creditKeyFor(task, dateKey), dateKey);
+      expect(completion.added).toBe(true);
+      expect(credit.granted).toBe(true);
+      let forest = updateStreak(credit.forest, dateKey);
+      const rare = evaluateRareEvents(forest, before.currentStreak, forest.currentStreak);
+      if (rare.triggered === 'guardian') visits += 1;
+      forest = evaluateUnlocks(rare.forest);
+      state = { ...state, chores: { tasks: [task], completions: completion.completions }, forest };
+      expect(forest.currentStreak).toBe(day);
+    }
+    expect(visits).toBe(1);
+    const key = creditKeyFor(task, '2026-10-10');
+    state.chores.completions = removeCompletion(state.chores.completions, task.id, '2026-10-10').completions;
+    state.forest = tombstoneCredit(state.forest, key).forest;
+    const reloaded = migrateState(JSON.parse(JSON.stringify(state)));
+    expect(reloaded.ok).toBe(true);
+    if (!reloaded.ok) throw new Error(reloaded.reason);
+    expect(grantCredit(reloaded.state.forest, key, '2026-10-10').granted).toBe(false);
+    expect(evaluateRareEvents(reloaded.state.forest, 9, 10).triggered).toBeNull();
+    expect(reloaded.state.forest.lastRareEvent).toBe('guardian');
+  });
+
+  it('une absence de plusieurs jours équivaut aux chargements quotidiens', () => {
+    let initial = grantCredit(emptyForest(), 't1|2026-10-01', '2026-10-01').forest;
+    initial = updateStreak({ ...initial, vitality: 100 }, '2026-10-01');
+    initial = advanceDay(initial, '2026-10-02');
+    const once = advanceDay(initial, '2026-10-16');
+    let daily = initial;
+    for (let day = 3; day <= 16; day += 1) daily = advanceDay(daily, `2026-10-${String(day).padStart(2, '0')}`);
+    expect(once).toEqual(daily);
+    expect(once.vitality).toBe(100 - (14 - INACTIVITY_GRACE_DAYS) * DAILY_DECAY);
+    expect(once.lifetimeCare).toBe(initial.lifetimeCare);
+    expect(once.longestStreak).toBe(initial.longestStreak);
+  });
+
+  it('la reprise après pause garde la série avant la première action du jour', () => {
+    let forest = forestWithStreak(9);
+    forest = pauseForest(forest, '2026-10-10');
+    forest = resumeForest(forest, '2026-10-13');
+    forest = advanceDay(forest, '2026-10-13');
+    expect(forest.currentStreak).toBe(9);
+    forest = grantCredit(forest, 't1|2026-10-13', '2026-10-13').forest;
+    forest = updateStreak(forest, '2026-10-13');
+    expect(forest.currentStreak).toBe(10);
+    expect(evaluateRareEvents(forest, 9, 10).triggered).toBe('guardian');
+  });
+
+  it('les jours de pause ne consomment pas les deux jours de grâce', () => {
+    let forest = grantCredit(emptyForest(), 't1|2026-10-01', '2026-10-01').forest;
+    forest = updateStreak(forest, '2026-10-01');
+    forest = advanceDay(forest, '2026-10-02');
+    forest = pauseForest(forest, '2026-10-02');
+    forest = resumeForest(forest, '2026-10-06');
+    forest = advanceDay(forest, '2026-10-08');
+    expect(forest.vitality).toBe(VITALITY_PER_CREDIT);
+    forest = advanceDay(forest, '2026-10-09');
+    expect(forest.vitality).toBe(VITALITY_PER_CREDIT - DAILY_DECAY);
+  });
+
+  it('ne répète ni décroissance, ni soin, ni série après un recul de date', () => {
+    let forest = grantCredit(emptyForest(), 't1|2026-10-01', '2026-10-01').forest;
+    forest = updateStreak(forest, '2026-10-01');
+    forest = advanceDay(forest, '2026-10-05');
+    expect(advanceDay(forest, '2026-10-03')).toBe(forest);
+    expect(advanceDay(forest, '2026-10-05')).toBe(forest);
+    expect(updateStreak(forest, '2026-10-03')).toBe(forest);
+    expect(grantCredit(forest, 't2|2026-10-03', '2026-10-03')).toEqual({ forest, granted: false });
+    expect(pauseForest(forest, '2026-10-03')).toBe(forest);
+  });
+
+  it('réconcilie des jours calendaires autour du changement d’heure', () => {
+    let forest = grantCredit(emptyForest(), 't1|2026-10-23', '2026-10-23').forest;
+    forest = updateStreak({ ...forest, vitality: 100 }, '2026-10-23');
+    forest = advanceDay(forest, '2026-10-24');
+    forest = advanceDay(forest, '2026-10-29');
+    expect(forest.vitality).toBe(100 - 3 * DAILY_DECAY);
+  });
+
+  it('une occurrence refusée au cap ne gagne rien après undo/reload/le lendemain', () => {
+    let forest = emptyForest();
+    for (let i = 1; i <= 4; i += 1) forest = grantCredit(forest, `t${i}|once`, '2026-10-01').forest;
+    forest = updateStreak(forest, '2026-10-01');
+    expect(forest.creditLedger['t4|once']!.status).toBe('uncredited');
+    expect(forest.lifetimeCare).toBe(3);
+    forest = tombstoneCredit(forest, 't4|once').forest;
+    const restored = migrateState(JSON.parse(JSON.stringify({ ...emptyAppState(), forest })));
+    expect(restored.ok).toBe(true);
+    if (!restored.ok) throw new Error(restored.reason);
+    forest = advanceDay(restored.state.forest, '2026-10-02');
+    const retry = grantCredit(forest, 't4|once', '2026-10-02');
+    expect(retry.granted).toBe(false);
+    expect(retry.forest.lifetimeCare).toBe(3);
+    const fresh = grantCredit(retry.forest, 'new|2026-10-02', '2026-10-02');
+    expect(fresh.granted).toBe(true);
+    expect(fresh.forest.lifetimeCare).toBe(4);
+  });
+
+  it('une occurrence faite pendant la pause reste sans crédit après reprise', () => {
+    let forest = pauseForest(emptyForest(), '2026-10-01');
+    const paused = grantCredit(forest, 't1|once', '2026-10-01');
+    expect(paused.granted).toBe(false);
+    forest = resumeForest(paused.forest, '2026-10-02');
+    expect(grantCredit(forest, 't1|once', '2026-10-02').granted).toBe(false);
+    expect(grantCredit(forest, 't2|once', '2026-10-02').granted).toBe(true);
   });
 });

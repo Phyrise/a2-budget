@@ -124,7 +124,7 @@ test.describe('PWA', () => {
     const page = await context.newPage();
 
     await page.goto(BASE);
-    await expect(page.locator('.bottom-nav')).toBeVisible();
+    await expect(page.locator('.home-modules')).toBeVisible();
     await waitPrecacheReady(page);
 
     // Le thème (forêt + avatars) est bien dans le précache.
@@ -141,14 +141,14 @@ test.describe('PWA', () => {
     // Hors ligne : rechargement servi par le précache.
     await context.setOffline(true);
     await page.reload();
-    await expect(page.locator('.bottom-nav')).toBeVisible();
-    await expect(page.locator('.cm-main__title')).toBeVisible();
+    await expect(page.locator('.home-modules')).toBeVisible();
+    await expect(page.locator('.budget-total strong')).toBeVisible();
 
     // Le contenu est bien servi par le service worker (pas le réseau) :
     // le worker est le contrôleur de la page.
     await page.waitForFunction(async () => {
       const reg = await navigator.serviceWorker.getRegistration();
-      return Boolean(reg?.controller);
+      return Boolean(navigator.serviceWorker.controller);
     }, undefined, { timeout: 10_000 });
 
     await context.close();
@@ -164,7 +164,7 @@ test.describe('PWA', () => {
 
     // Version 1 : enregistrement + précache.
     await page.goto(BASE);
-    await expect(page.locator('.bottom-nav')).toBeVisible();
+    await expect(page.locator('.home-modules')).toBeVisible();
     await waitPrecacheReady(page);
     expect(await page.title()).not.toContain('v2');
 
@@ -217,7 +217,7 @@ test.describe('PWA', () => {
 
     // Rechargement : la version 2 est servie.
     await page.reload();
-    await expect(page.locator('.bottom-nav')).toBeVisible();
+    await expect(page.locator('.home-modules')).toBeVisible();
     await expect(page).toHaveTitle(/v2/);
 
     await context.close();

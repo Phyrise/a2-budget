@@ -6,6 +6,7 @@
  */
 
 export { MaisonModule } from './MaisonModule';
+export { MaisonActions, type MaisonActionsProps } from './MaisonActions';
 export { ForestScene } from './ForestScene';
 export { CompletionFeedback } from './CompletionFeedback';
 export { TaskList, TaskRow, WeeklyDistribution } from './TaskList';

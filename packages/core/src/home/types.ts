@@ -77,12 +77,13 @@ export type VitalityState = 'quiet' | 'peaceful' | 'lively' | 'flourishing';
  * Enregistrement de crédit dans le ledger.
  * - `grantedOn` : date locale de la complétion qui a généré le crédit (sert au
  *   cap quotidien).
- * - `status` : « active » (crédit en cours) ou « tombstoned » (annulé mais
- *   conservé : compte toujours pour le cap du jour, ne redonne rien).
+ * - `status` : « active », « tombstoned » (crédit annulé mais conservé), ou
+ *   « uncredited » (fait enregistré pendant une pause ou après le cap).
+ *   Un fait non crédité ne reçoit pas de crédit au prochain re-clic.
  */
 export interface CreditRecord {
   grantedOn: string;
-  status: 'active' | 'tombstoned';
+  status: 'active' | 'tombstoned' | 'uncredited';
 }
 
 /** Clé de crédit : « ${taskId}|${scheduledLocalDate} » ou « ${taskId}|once ». */
@@ -137,8 +138,9 @@ export interface ForestState {
   /** Ledger de crédits (tombstones conservés). */
   creditLedger: CreditLedger;
   /**
-   * Dernier jour local « traité » par advanceDay (rend la décroissance
-   * idempotente par jour). Null si jamais traité.
+   * Dernier jour local observé par advanceDay. Tous les jours strictement
+   * antérieurs sont réconciliés ; ce jour reste ouvert aux actions. Sert de
+   * borne monotone contre les rechargements et les reculs d'horloge.
    */
   lastProcessedDay: string | null;
 }

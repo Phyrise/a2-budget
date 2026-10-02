@@ -20,8 +20,8 @@ import { currentMonthKey } from '../months.js';
 import { defaultSettings, validatePersistedState } from '../state.js';
 import type { PersistedState } from '../types.js';
 import { isValidLocalDateKey } from './dates.js';
-import { emptyForest, VITALITY_MAX } from './forest.js';
-import { ONCE } from './tasks.js';
+import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
+import { ONCE, splitCreditKey } from './tasks.js';
 import type {
   AppState,
   ChoreCompletion,
@@ -87,8 +87,18 @@ export function migrateV1toV2(v1: PersistedState): AppState {
       ],
     },
     budget: {
-      settings: v1.settings,
-      months: v1.months,
+      settings: {
+        ...v1.settings,
+        personA: { ...v1.settings.personA },
+        personB: { ...v1.settings.personB },
+        recurringExpenses: v1.settings.recurringExpenses.map((expense) => ({ ...expense })),
+      },
+      months: v1.months.map((month) => ({
+        ...month,
+        personA: { ...month.personA },
+        personB: { ...month.personB },
+        expenses: month.expenses.map((expense) => ({ ...expense })),
+      })),
       selectedMonth: v1.selectedMonth,
     },
     chores: { tasks: [], completions: [] },
@@ -131,12 +141,15 @@ function validateHousehold(
     return { ok: false, reason: 'household-people-not-array' };
   }
   const people: Person[] = [];
+  const seen = new Set<string>();
   for (const p of value.people) {
     if (!isPlainObject(p)) return { ok: false, reason: 'person-not-object' };
     if (typeof p.id !== 'string' || p.id.length === 0) {
       return { ok: false, reason: 'person-invalid-id' };
     }
     if (typeof p.name !== 'string') return { ok: false, reason: 'person-invalid-name' };
+    if (seen.has(p.id)) return { ok: false, reason: 'duplicate-person-id' };
+    seen.add(p.id);
     people.push({ id: p.id, name: p.name });
   }
   return { ok: true, state: { people } };
@@ -203,12 +216,15 @@ function validateTasks(value: unknown): Ok<HouseholdTask[]> | Fail {
 function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
   if (!Array.isArray(value)) return { ok: false, reason: 'completions-not-array' };
   const seen = new Set<string>();
+  const seenIds = new Set<string>();
   const out: ChoreCompletion[] = [];
   for (const c of value) {
     if (!isPlainObject(c)) return { ok: false, reason: 'completion-not-object' };
     if (typeof c.id !== 'string' || c.id.length === 0) {
       return { ok: false, reason: 'completion-invalid-id' };
     }
+    if (seenIds.has(c.id)) return { ok: false, reason: 'duplicate-completion-id' };
+    seenIds.add(c.id);
     if (typeof c.taskId !== 'string' || c.taskId.length === 0) {
       return { ok: false, reason: 'completion-invalid-task-id' };
     }
@@ -222,7 +238,9 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
     ) {
       return { ok: false, reason: 'completion-invalid-due-date' };
     }
-    if (typeof c.completedAt !== 'string' || Number.isNaN(Date.parse(c.completedAt))) {
+    if (typeof c.completedAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(c.completedAt) ||
+      !isValidLocalDateKey(c.completedAt.slice(0, 10)) || Number.isNaN(Date.parse(c.completedAt))) {
       return { ok: false, reason: 'completion-invalid-completed-at' };
     }
     const occKey = `${c.taskId}|${c.dueDate}`;
@@ -262,6 +280,11 @@ function validatePauses(value: unknown): Ok<PauseInterval[]> | Fail {
     if (p.end !== null && (typeof p.end !== 'string' || !isValidLocalDateKey(p.end))) {
       return { ok: false, reason: 'pause-invalid-end' };
     }
+    if (p.end !== null && p.end < p.start) return { ok: false, reason: 'pause-inverted-interval' };
+    const previous = out.at(-1);
+    if (previous && (previous.end === null || p.start <= previous.end)) {
+      return { ok: false, reason: 'pause-overlapping-intervals' };
+    }
     out.push({ start: p.start, end: p.end });
   }
   return { ok: true, state: out };
@@ -270,13 +293,31 @@ function validatePauses(value: unknown): Ok<PauseInterval[]> | Fail {
 function validateCreditLedger(value: unknown): Ok<CreditLedger> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'forest-ledger-not-object' };
   const out: CreditLedger = {};
+  const counts = new Map<string, number>();
   for (const [key, record] of Object.entries(value)) {
+    let dueDate: string;
+    try {
+      [, dueDate] = splitCreditKey(key);
+    } catch {
+      return { ok: false, reason: 'credit-invalid-key' };
+    }
+    if (dueDate !== ONCE && !isValidLocalDateKey(dueDate)) {
+      return { ok: false, reason: 'credit-invalid-key' };
+    }
     if (!isPlainObject(record)) return { ok: false, reason: 'credit-not-object' };
     if (typeof record.grantedOn !== 'string' || !isValidLocalDateKey(record.grantedOn)) {
       return { ok: false, reason: 'credit-invalid-granted-on' };
     }
-    if (record.status !== 'active' && record.status !== 'tombstoned') {
+    if (record.status !== 'active' && record.status !== 'tombstoned' && record.status !== 'uncredited') {
       return { ok: false, reason: 'credit-invalid-status' };
+    }
+    if (dueDate !== ONCE && dueDate > record.grantedOn) {
+      return { ok: false, reason: 'credit-future-occurrence' };
+    }
+    if (record.status !== 'uncredited') {
+      const count = (counts.get(record.grantedOn) ?? 0) + 1;
+      if (count > DAILY_CREDIT_CAP) return { ok: false, reason: 'forest-credit-cap-exceeded' };
+      counts.set(record.grantedOn, count);
     }
     out[key] = { grantedOn: record.grantedOn, status: record.status };
   }
@@ -327,6 +368,23 @@ function validateForest(value: unknown): Ok<ForestState> | Fail {
   if (!pauses.ok) return pauses;
   const creditLedger = validateCreditLedger(value.creditLedger);
   if (!creditLedger.ok) return creditLedger;
+  const credited = Object.values(creditLedger.state).filter((credit) => credit.status !== 'uncredited');
+  if (value.lifetimeCare !== credited.length) {
+    return { ok: false, reason: 'forest-lifetime-ledger-mismatch' };
+  }
+  if (value.currentStreak > value.longestStreak ||
+    (value.currentStreak > 0 && value.lastMeaningfulActionDate === null)) {
+    return { ok: false, reason: 'forest-inconsistent-streak' };
+  }
+  if (value.lastMeaningfulActionDate !== null &&
+    !credited.some((credit) => credit.grantedOn === value.lastMeaningfulActionDate)) {
+    return { ok: false, reason: 'forest-action-ledger-mismatch' };
+  }
+  const open = pauses.state.filter((pause) => pause.end === null);
+  if (value.paused ? open.length !== 1 || open[0]!.start !== value.pausedAt
+    : open.length !== 0 || value.pausedAt !== null) {
+    return { ok: false, reason: 'forest-inconsistent-pause' };
+  }
   if (
     value.lastProcessedDay !== null &&
     (typeof value.lastProcessedDay !== 'string' || !isValidLocalDateKey(value.lastProcessedDay))
@@ -342,8 +400,8 @@ function validateForest(value: unknown): Ok<ForestState> | Fail {
       longestStreak: value.longestStreak,
       lastMeaningfulActionDate: value.lastMeaningfulActionDate,
       growthStage: value.growthStage,
-      unlockedCreatureIds: value.unlockedCreatureIds,
-      unlockedEnvironmentIds: value.unlockedEnvironmentIds,
+      unlockedCreatureIds: [...value.unlockedCreatureIds],
+      unlockedEnvironmentIds: [...value.unlockedEnvironmentIds],
       lastRareEvent: value.lastRareEvent,
       paused: value.paused,
       pausedAt: value.pausedAt,
@@ -394,6 +452,11 @@ export function validateAppState(
 
     const household = validateHousehold(value.household);
     if (!household.ok) return household;
+    const expectedPeople = [budget.state.settings.personA, budget.state.settings.personB];
+    if (household.state.people.length !== 2 || expectedPeople.some((person) =>
+      !household.state.people.some((shared) => shared.id === person.id && shared.name === person.name))) {
+      return { ok: false, reason: 'household-budget-identity-mismatch' };
+    }
     const chores = validateChores(value.chores);
     if (!chores.ok) return chores;
     const forest = validateForest(value.forest);

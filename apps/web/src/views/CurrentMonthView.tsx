@@ -55,7 +55,6 @@ export function CurrentMonthView() {
     selectMonth,
     selectCurrentMonth,
     setSalary,
-    setReserve,
     setExpenseAmount,
     renameExpense,
     addExpense,
@@ -105,107 +104,39 @@ export function CurrentMonthView() {
     <section className="view" aria-label="Ce mois">
       <LoadNotice />
 
-      <header className="page-header cm-header">
-        <div className="app-brand"><span className="app-brand__mark">A²</span><span>Notre petit budget</span></div>
-        <p className="page-eyebrow">Un rituel à deux</p>
-        <h1 className="cm-title" tabIndex={-1}>{monthKeyToLabel(key)}</h1>
-        <ForestSpirit className="header-spirit" />
-        <div className="cm-picker" role="group" aria-label="Changer de mois">
-          <label className="visually-hidden" htmlFor="cm-month">
-            Mois
-          </label>
-          <select
-            id="cm-month"
-            className="cm-picker__select cm-picker__select--month"
-            value={selectedMonth}
-            onChange={(event) => changeMonth(selectedYear, Number(event.target.value))}
-          >
-            {MONTH_LABELS.map((label, index) => (
-              <option key={label} value={index + 1}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <label className="visually-hidden" htmlFor="cm-year">
-            Année
-          </label>
-          <select
-            id="cm-year"
-            className="cm-picker__select cm-picker__select--year"
-            value={selectedYear}
-            onChange={(event) => changeMonth(Number(event.target.value), selectedMonth)}
-          >
-            {years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
-        </div>
-        {!isCurrentMonth && (
-          <button type="button" className="btn btn--ghost cm-back" onClick={selectCurrentMonth}>
-            Revenir au mois courant
-          </button>
-        )}
+      <header className="budget-month">
+        <button type="button" className="icon-btn" aria-label="Mois précédent" onClick={() => changeMonth(selectedMonth === 1 ? selectedYear - 1 : selectedYear, selectedMonth === 1 ? 12 : selectedMonth - 1)}>‹</button>
+        <details className="month-disclosure">
+          <summary aria-label="Changer de mois"><h1 className="cm-title" tabIndex={-1}>{monthKeyToLabel(key)}</h1><span aria-hidden="true">⌄</span></summary>
+          <div className="cm-picker" role="group" aria-label="Changer de mois">
+            <label className="visually-hidden" htmlFor="cm-month">Mois</label>
+            <select id="cm-month" className="cm-picker__select" value={selectedMonth} onChange={(event) => changeMonth(selectedYear, Number(event.target.value))}>
+              {MONTH_LABELS.map((label, index) => <option key={label} value={index + 1}>{label}</option>)}
+            </select>
+            <label className="visually-hidden" htmlFor="cm-year">Année</label>
+            <select id="cm-year" className="cm-picker__select" value={selectedYear} onChange={(event) => changeMonth(Number(event.target.value), selectedMonth)}>
+              {years.map((year) => <option key={year} value={year}>{year}</option>)}
+            </select>
+          </div>
+        </details>
+        <button type="button" className="icon-btn" aria-label="Mois suivant" onClick={() => changeMonth(selectedMonth === 12 ? selectedYear + 1 : selectedYear, selectedMonth === 12 ? 1 : selectedMonth + 1)}>›</button>
       </header>
+      {!isCurrentMonth && <button type="button" className="month-return" onClick={selectCurrentMonth}>Revenir au mois courant</button>}
 
-      <section className="card cm-salaries" aria-label="Salaires du mois">
-        <h2 className="card-title">Nos revenus</h2>
-        <p className="card-hint">Prévisions à ajuster pour ce mois.</p>
-        <div className="salary-row">
-          <PersonDot name={personA.name} tone="a" />
-          <label className="salary-row__name" htmlFor="salary-a">
-            {personA.name}
-          </label>
-          <AmountInput
-            id="salary-a"
-            label={`Salaire de ${personA.name}`}
-            labelVisible={false}
-            valueCents={currentMonth.salaryACents}
-            onCommit={(cents) => setSalary(key, 'A', cents)}
-            className="salary-row__amount"
-          />
+      <section className="card budget-summary" aria-label="Revenus et contributions du mois">
+        <div className="budget-summary__heading"><h2 className="card-title">Notre compte commun</h2><span className="budget-summary__hint">À verser</span></div>
+        <div className="budget-matrix__labels" aria-hidden="true"><span></span><span>Revenu du mois</span><span>Contribution</span></div>
+        <div className="budget-person">
+          <div className="budget-person__identity"><PersonDot name={personA.name} tone="a" /><label htmlFor="salary-a">{personA.name}</label></div>
+          <AmountInput id="salary-a" label={`Salaire de ${personA.name}`} labelVisible={false} valueCents={currentMonth.salaryACents} onCommit={(cents) => setSalary(key, 'A', cents)} className="budget-person__income" />
+          <strong className="budget-person__contribution amount" aria-label={`Contribution de ${personA.name}`}>{formatCents(summary.contributionACents)}</strong>
         </div>
-        <div className="salary-row">
-          <PersonDot name={personB.name} tone="b" />
-          <label className="salary-row__name" htmlFor="salary-b">
-            {personB.name}
-          </label>
-          <AmountInput
-            id="salary-b"
-            label={`Salaire de ${personB.name}`}
-            labelVisible={false}
-            valueCents={currentMonth.salaryBCents}
-            onCommit={(cents) => setSalary(key, 'B', cents)}
-            className="salary-row__amount"
-          />
+        <div className="budget-person">
+          <div className="budget-person__identity"><PersonDot name={personB.name} tone="b" /><label htmlFor="salary-b">{personB.name}</label></div>
+          <AmountInput id="salary-b" label={`Salaire de ${personB.name}`} labelVisible={false} valueCents={currentMonth.salaryBCents} onCommit={(cents) => setSalary(key, 'B', cents)} className="budget-person__income" />
+          <strong className="budget-person__contribution amount" aria-label={`Contribution de ${personB.name}`}>{formatCents(summary.contributionBCents)}</strong>
         </div>
-      </section>
-
-      <section className="card-primary cm-main" aria-label="À verser sur le compte commun">
-        <h2 className="cm-main__title">Pour notre compte commun</h2>
-        <dl className="cm-main__rows">
-          <div className="cm-main__row">
-            <dt className="cm-main__who">
-              <PersonDot name={personA.name} tone="a" />
-              <span>{personA.name}</span>
-            </dt>
-            <dd className="cm-main__value amount">{formatCents(summary.contributionACents)}</dd>
-          </div>
-          <div className="cm-main__row">
-            <dt className="cm-main__who">
-              <PersonDot name={personB.name} tone="b" />
-              <span>{personB.name}</span>
-            </dt>
-            <dd className="cm-main__value amount">{formatCents(summary.contributionBCents)}</dd>
-          </div>
-        </dl>
-        <div className="cm-main__total">
-          <span className="cm-main__total-label">À verser au total</span>
-          <span key={summary.householdContributionCents} className="cm-main__total-value amount">
-            {formatCents(summary.householdContributionCents)}
-          </span>
-        </div>
+        <div className="budget-total"><span>À verser au total</span><strong key={summary.householdContributionCents} className="amount">{formatCents(summary.householdContributionCents)}</strong><ForestSpirit className="budget-total__spirit" /></div>
       </section>
 
       <section className="balance-preview" aria-label="Aperçu du mois">
@@ -250,8 +181,7 @@ export function CurrentMonthView() {
 
       <section className="card expense-card" aria-label="Dépenses du mois">
         <div className="card-head">
-          <h2 className="card-title">La vie à deux</h2>
-          <span className="card-head__value amount">{formatCents(summary.expensesTotalCents)}</span>
+          <h2 className="card-title">Dépenses du mois</h2>
         </div>
         <ExpenseEditor
           idPrefix={`m-${key}`}
@@ -260,35 +190,11 @@ export function CurrentMonthView() {
           onAmount={(id, cents) => setExpenseAmount(key, id, cents)}
           onRemove={(id) => removeExpense(key, id)}
           onAdd={(label, cents) => addExpense(key, label, cents)}
+          compactAdd
           addLabel="Nouvelle dépense"
         />
       </section>
 
-      <section className="card" aria-label="Reste après dépenses">
-        <h2 className="card-title">Une petite réserve</h2>
-        <p className="card-hint">Ce que l’on souhaite mettre de côté ce mois.</p>
-        <div className="rest-reserve">
-          <AmountInput
-            id="cm-reserve"
-            label="Réserve à mettre de côté ce mois"
-            valueCents={currentMonth.reserveTargetCents}
-            onCommit={(cents) => setReserve(key, cents)}
-          />
-        </div>
-        {currentMonth.reserveTargetCents > 0 && (
-          <div className="rest-leisure">
-            <div className="rest-row">
-              <span className="rest-row__label">Disponible pour les loisirs</span>
-              <span className="rest-row__value amount">{formatCents(summary.leisureCents)}</span>
-            </div>
-            {!summary.reserveCovered && (
-              <p className="rest-note rest-note--danger">
-                Réserve non couverte : {formatCents(summary.reserveShortfallCents)} manquants.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
     </section>
   );
 }

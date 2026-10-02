@@ -158,20 +158,21 @@ function Guardian() {
 export function ForestScene({
   forest,
   className = '',
+  showGuardian = false,
 }: {
   forest: ForestState;
   className?: string;
+  showGuardian?: boolean;
 }) {
   const state = vitalityState(forest.vitality);
-  const guardianActive = forest.lastRareEvent === 'guardian';
   const particles = particleCount(state);
   const creatures = forest.unlockedCreatureIds.slice(0, 4);
 
   return (
     <div
-      className={`forest-scene forest-scene--${state} ${guardianActive ? 'is-guardian' : ''} ${className}`.trim()}
+      className={`forest-scene forest-scene--${state} ${showGuardian ? 'is-guardian' : ''} ${className}`.trim()}
       role="img"
-      aria-label={`Forêt ${state === 'quiet' ? 'apaisée' : state === 'peaceful' ? 'paisible' : state === 'lively' ? 'vivante' : 'en pleine floraison'}`}
+      aria-label={`Forêt ${forest.paused ? 'endormie' : state === 'quiet' ? 'apaisée' : state === 'peaceful' ? 'paisible' : state === 'lively' ? 'vivante' : 'en pleine floraison'}`}
     >
       <div className="forest-scene__sky" aria-hidden="true" />
       <div className="forest-scene__ground" aria-hidden="true" />
@@ -180,7 +181,7 @@ export function ForestScene({
           <span key={i} className="forest-scene__particle" style={particleStyle(i, particles)} />
         ))}
       </div>
-      {guardianActive && <Guardian />}
+      {showGuardian && <Guardian />}
       <HomeTree stage={forest.growthStage} vitality={state} />
       {creatures.map((id, i) => (
         <Creature key={id} id={id} index={i} />

@@ -14,47 +14,80 @@
   box-shadow: var(--shadow-card);
   aspect-ratio: 16 / 8;
   margin-bottom: 18px;
-  /* valeurs par défaut (quiet) */
-  --sky-top: #d8e0d0;
-  --sky-bottom: #c5d0bd;
-  --ground: #b8c4a8;
-  --particle: #9aab8a;
-  --particle-opacity: .58;
-  --canopy-sat: .8;
+  /* valeurs par défaut (quiet) — histoire chaud/froid */
+  --sky-warm: #ece2c0;
+  --sky-mid: #d6e4c2;
+  --sky-cool: #b4cfa6;
+  --hills: #93b29a;
+  --ground: #8fb070;
+  --particle: #82a068;
+  --particle-opacity: .6;
+  --canopy-sat: .85;
 }
 
 .forest-scene--peaceful {
-  --sky-top: #dce8cc;
-  --sky-bottom: #c8d8b4;
-  --ground: #b4c89c;
-  --particle: #8aab6f;
-  --particle-opacity: .62;
-  --canopy-sat: .9;
+  --sky-warm: #ece4c2;
+  --sky-mid: #d8e6be;
+  --sky-cool: #b6d09c;
+  --hills: #90b190;
+  --ground: #8bb066;
+  --particle: #7a9c5e;
+  --particle-opacity: .66;
+  --canopy-sat: .95;
 }
 
 .forest-scene--lively {
-  --sky-top: #d4e6c0;
-  --sky-bottom: #bcd8a4;
-  --ground: #a8c48c;
-  --particle: #7aa85f;
-  --particle-opacity: .78;
-  --canopy-sat: 1;
+  --sky-warm: #e8e2ba;
+  --sky-mid: #d2e4b2;
+  --sky-cool: #aed08e;
+  --hills: #88ae84;
+  --ground: #80a85c;
+  --particle: #6f9a52;
+  --particle-opacity: .8;
+  --canopy-sat: 1.05;
 }
 
 .forest-scene--flourishing {
-  --sky-top: #c8e4b4;
-  --sky-bottom: #aed494;
-  --ground: #9cc47c;
-  --particle: #6a9a4f;
-  --particle-opacity: .9;
+  --sky-warm: #ece2a4;
+  --sky-mid: #c8dc94;
+  --sky-cool: #98c474;
+  --hills: #74a268;
+  --ground: #6a9a48;
+  --particle: #5a8a40;
+  --particle-opacity: .95;
   --canopy-sat: 1.08;
 }
 
 .forest-scene__sky {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--sky-top), var(--sky-bottom) 70%);
+  /* Ciel : chaud près du soleil (haut-droite) → plus frais en bas-gauche */
+  background: linear-gradient(225deg, var(--sky-warm) 0%, var(--sky-mid) 46%, var(--sky-cool) 100%);
   transition: background 600ms ease;
+  overflow: hidden;
+}
+
+/* Soleil : cœur lumineux + halo (haut à droite) */
+.forest-scene__sun {
+  position: absolute;
+  top: -6%;
+  right: 10%;
+  width: 34%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fffef2 0%, #fff6cf 22%, rgba(255, 246, 200, .55) 46%, rgba(255, 250, 224, 0) 72%);
+}
+
+/* Collines lointaines (profondeur, horizon doux) */
+.forest-scene__hills {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22%;
+  width: 100%;
+  height: 34%;
+  display: block;
+  color: var(--hills);
 }
 
 .forest-scene__ground {
@@ -62,24 +95,44 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34%;
+  height: 30%;
   background: linear-gradient(180deg, transparent, var(--ground));
   transition: background 600ms ease;
+  color: var(--ground);
+}
+
+/* Herbe le long du sol */
+.forest-scene__grass {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 26px;
+  display: block;
 }
 
 .forest-scene__canopy {
-  filter: saturate(var(--canopy-sat));
-  transform-origin: 100px 120px;
-  transition: filter 600ms ease;
+  transition: transform 600ms ease;
 }
 
 .forest-scene__tree {
   position: absolute;
   left: 50%;
-  bottom: 8%;
-  width: 34%;
+  bottom: 3%;
+  width: 46%;
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+/* Balancement doux de l'arbre (origine à la base du tronc) */
+.forest-scene__tree-sway {
+  transform-origin: 110px 248px;
+  animation: forest-sway 7s ease-in-out infinite;
+}
+@keyframes forest-sway {
+  0%, 100% { transform: rotate(-0.6deg); }
+  50% { transform: rotate(0.6deg); }
 }
 
 .forest-scene__flowers {
@@ -120,10 +173,11 @@
 /* Gardien (événement rare) */
 .forest-scene__guardian {
   position: absolute;
-  left: 22%;
-  top: 4%;
-  width: 36%;
+  left: 26%;
+  top: 2%;
+  width: 44%;
   transform: translateX(-50%);
+  z-index: 4;
   animation: guardian-appear 2.6s ease-out both;
   pointer-events: none;
 }
@@ -134,7 +188,25 @@
   100% { opacity: .75; transform: translateX(-50%) translateY(0) scale(1); }
 }
 .forest-scene.is-guardian .forest-scene__sky {
-  background: linear-gradient(180deg, #e8e2c8, #cdd8b4 70%);
+  background: linear-gradient(225deg, #f6e2a2 0%, #ecd68e 46%, #cdd68e 100%);
+}
+/* Aura dorée du gardien (halo lumineux autour de l'arbre, au-dessus du feuillage) */
+.forest-scene__aura {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 92%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 140, .8) 0%, rgba(255, 226, 140, .45) 40%, rgba(255, 226, 140, 0) 66%);
+  pointer-events: none;
+  z-index: 5;
+  animation: guardian-aura 3.2s ease-in-out infinite;
+}
+@keyframes guardian-aura {
+  0%, 100% { opacity: .85; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
 }
 
 /* Pause : la forêt s'endort (jamais morte) */
@@ -389,6 +461,7 @@
   .forest-scene__particle,
   .forest-scene__creature,
   .forest-scene__flowers,
+  .forest-scene__tree-sway,
   .forest-scene__guardian,
   .completion-feedback,
   .completion-feedback__companion,

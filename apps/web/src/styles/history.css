@@ -78,3 +78,16 @@
 .history-item__grid { gap: 16px 24px; }
 .history-metric__label { color: var(--text-muted); font-size: 12px; }
 .history-metric__value { font-size: 18px; font-weight: 550; margin-top: 2px; }
+
+/* Effacer l'historique */
+.history-clear { margin-top: 24px; }
+.history-clear__btn { width: 100%; }
+.history-clear__confirm {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f7efe9;
+  border: 1px solid #e6cfc4;
+}
+.history-clear__text { margin: 0 0 12px; font-size: 14px; color: var(--text); }
+.history-clear__actions { display: flex; gap: 10px; }
+.history-clear__actions .btn { flex: 1; }

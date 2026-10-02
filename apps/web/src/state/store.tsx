@@ -85,6 +85,8 @@ export interface AppContextValue {
   // Sélection de mois
   selectMonth: (monthKey: string) => void;
   selectCurrentMonth: () => void;
+  /** Efface l'historique : supprime tous les mois sauf le mois sélectionné. */
+  clearHistory: () => void;
 
   // Édition du mois
   setSalary: (monthKey: string, person: 'A' | 'B', cents: number) => void;
@@ -275,6 +277,16 @@ export function AppProvider({
     const now = new Date();
     const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     mutate((s) => coreEnsureMonth(s, key));
+  }, [mutate]);
+
+  const clearHistory = useCallback(() => {
+    // Supprime tous les mois sauf le mois sélectionné (conservé pour ne pas
+    // perdre le mois en cours d'édition).
+    mutate((s) => {
+      const keep = s.selectedMonth;
+      const months = s.months.filter((m) => m.monthKey === keep);
+      return { ...s, months };
+    });
   }, [mutate]);
 
   // --- Édition du mois ----------------------------------------------------
@@ -528,6 +540,7 @@ export function AppProvider({
       retryLoad,
       selectMonth,
       selectCurrentMonth,
+      clearHistory,
       setSalary,
       setReserve,
       setExpenseAmount,
@@ -558,6 +571,7 @@ export function AppProvider({
       retryLoad,
       selectMonth,
       selectCurrentMonth,
+      clearHistory,
       setSalary,
       setReserve,
       setExpenseAmount,

@@ -7,6 +7,7 @@ import { RateInput } from '../components/RateInput';
 import { ExpenseEditor } from '../components/ExpenseEditor';
 import { LoadNotice } from '../components/LoadNotice';
 import { PersonDot } from '../components/PersonDot';
+import { InlineName } from '../components/InlineName';
 import '../styles/shared.css';
 import '../styles/settings.css';
 
@@ -116,21 +117,13 @@ export function SettingsView() {
     const id = person.toLowerCase();
     const p = person === 'A' ? settings.personA : settings.personB;
     return (
-      <section className="card" aria-label={`Réglages de ${p.name}`}>
-        <h2 className="card-title settings-person__title">
+      <section className="card card--compact" aria-label={`Réglages de ${p.name}`}>
+        <div className="settings-person__head">
           <PersonDot name={p.name} tone={person === 'A' ? 'a' : 'b'} />
-          {p.name}
-        </h2>
-        <div className="field settings-name">
-          <label className="field__label" htmlFor={`name-${id}`}>
-            Nom
-          </label>
-          <input
-            id={`name-${id}`}
-            className="field__input"
-            type="text"
+          <InlineName
             value={p.name}
-            onChange={(event) => updatePersonSettings(person, { name: event.target.value })}
+            label={`Nom de ${p.name}`}
+            onCommit={(name) => updatePersonSettings(person, { name })}
           />
         </div>
         <AmountInput
@@ -153,10 +146,6 @@ export function SettingsView() {
             onCommit={(bps) => updatePersonSettings(person, { variableRateBps: bps })}
           />
         </div>
-        <p className="card-hint">
-          Le taux de base s’applique au salaire jusqu’au salaire de base ; le taux variable,
-          au-delà.
-        </p>
       </section>
     );
   };

@@ -16,7 +16,7 @@ function makeForest(overrides: Partial<ForestState>): ForestState {
   return { ...emptyForest(), ...overrides };
 }
 
-const SCENES: { label: string; forest: ForestState }[] = [
+const SCENES: { label: string; forest: ForestState; showGuardian?: boolean }[] = [
   {
     label: '1 · Quiet (apaisée)',
     forest: makeForest({ vitality: 8, growthStage: 1, unlockedCreatureIds: [] }),
@@ -51,8 +51,8 @@ const SCENES: { label: string; forest: ForestState }[] = [
       vitality: 70,
       growthStage: 3,
       unlockedCreatureIds: ['moss-ling', 'seed-spirit'],
-      lastRareEvent: 'guardian',
     }),
+    showGuardian: true,
   },
 ];
 
@@ -75,7 +75,7 @@ function Preview() {
       >
         {SCENES.map((scene) => (
           <figure key={scene.label} style={{ margin: 0 }}>
-            <ForestScene forest={scene.forest} />
+            <ForestScene forest={scene.forest} showGuardian={scene.showGuardian} />
             <figcaption style={{ marginTop: 8, fontSize: 14, color: '#263e30' }}>
               {scene.label}
             </figcaption>

@@ -4,6 +4,7 @@ import {
   formatCents,
   monthKeyToLabel,
 } from '@a2/core';
+import { useState } from 'react';
 import { useApp } from '../state/store';
 import { LoadNotice } from '../components/LoadNotice';
 import { ForestSpirit } from '../components/ForestSpirit';
@@ -17,7 +18,8 @@ import '../styles/history.css';
  * (via l'événement de navigation, voir components/navigation.ts).
  */
 export function HistoryView() {
-  const { state, selectMonth } = useApp();
+  const { state, selectMonth, clearHistory } = useApp();
+  const [confirmClear, setConfirmClear] = useState(false);
 
   if (state === null) {
     return (
@@ -115,6 +117,37 @@ export function HistoryView() {
             );
           })}
         </ul>
+      )}
+
+      {months.length >= 1 && (
+        <div className="history-clear">
+          {confirmClear ? (
+            <div className="history-clear__confirm" role="alertdialog" aria-label="Confirmer l'effacement de l'historique">
+              <p className="history-clear__text">
+                Effacer l'historique ? Tous les mois sauf le mois affiché seront supprimés.
+              </p>
+              <div className="history-clear__actions">
+                <button
+                  type="button"
+                  className="btn btn--danger"
+                  onClick={() => {
+                    clearHistory();
+                    setConfirmClear(false);
+                  }}
+                >
+                  Effacer
+                </button>
+                <button type="button" className="btn btn--ghost" onClick={() => setConfirmClear(false)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="btn btn--ghost history-clear__btn" onClick={() => setConfirmClear(true)}>
+              Effacer l'historique
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

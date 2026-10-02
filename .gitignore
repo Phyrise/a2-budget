@@ -8,3 +8,4 @@ qa-forest/
 playwright-report/
 test-results/
 *.log
+qa-live/

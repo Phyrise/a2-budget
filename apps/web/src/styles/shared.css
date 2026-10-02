@@ -82,6 +82,8 @@ body::after {
 .btn { border-radius: 14px; font-weight: 550; }
 .btn:disabled { cursor: default; opacity: .45; }
 .btn--ghost { background: #faf9ed; }
+.btn--danger { background: #f3d9d2; color: #8a3b2e; border-color: #e0b3a6; }
+.btn--danger:hover { background: #eecfc4; }
 .expense-list__empty { padding: 12px 0; font-size: 14px; color: var(--text-muted); }
 .empty-state { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 32px 24px; text-align: center; }
 .empty-state__title { margin: 0; font-weight: 600; }

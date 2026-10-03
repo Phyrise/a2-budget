@@ -17,13 +17,15 @@ import {
 } from 'react';
 import { useApp } from '../state/store';
 import { LivingForest } from './LivingForest';
-import type { LivingForestHandle, WorldState, WorldVariant, Who } from './types';
+import type { LivingForestHandle, WorldMotion, WorldState, WorldVariant, Who } from './types';
 import { toWorldState } from './worldState';
 
 export interface WorldPresentation {
   variant: WorldVariant;
   /** Animation active (false = image fixe). */
   live: boolean;
+  /** Préférence « Forêt » (réglages). */
+  motion: WorldMotion;
 }
 
 interface WorldContextValue {
@@ -41,11 +43,11 @@ const WorldContext = createContext<WorldContextValue | null>(null);
 export function WorldProvider({ children }: { children: ReactNode }) {
   const { appState, today } = useApp();
   const handleRef = useRef<LivingForestHandle | null>(null);
-  const [presentation, setPresentationState] = useState<WorldPresentation>({ variant: 'hero', live: true });
+  const [presentation, setPresentationState] = useState<WorldPresentation>({ variant: 'hero', live: true, motion: 'full' });
   const state = useMemo(() => (appState ? toWorldState(appState, today) : null), [appState, today]);
 
   const setPresentation = useCallback((p: WorldPresentation) => {
-    setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live ? prev : p));
+    setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion ? prev : p));
   }, []);
   const pulse = useCallback<WorldContextValue['pulse']>((opts) => handleRef.current?.pulse(opts), []);
   const playGuardian = useCallback(() => handleRef.current?.playGuardian(), []);
@@ -73,6 +75,7 @@ export function WorldStage({ className }: { className?: string }) {
       state={state}
       variant={presentation.variant}
       live={presentation.live}
+      motion={presentation.motion}
       className={className}
     />
   );

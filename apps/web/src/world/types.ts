@@ -40,11 +40,19 @@ export interface WorldState {
  */
 export type WorldVariant = 'hero' | 'banner' | 'backdrop';
 
+export type WorldMotion = 'full' | 'gentle' | 'still';
+
 export interface LivingForestProps {
   state: WorldState;
   variant?: WorldVariant;
   /** false : une seule image rendue (0 GPU ensuite). Défaut : true pour hero. */
   live?: boolean;
+  /**
+   * Préférence « Forêt » des réglages : `full` (vivante), `gentle` (douce :
+   * mouvements réduits de moitié, pas de parallaxe automatique), `still`
+   * (immobile : images fixes en fondu). `prefers-reduced-motion` force `still`.
+   */
+  motion?: WorldMotion;
   className?: string;
   /** Appelé quand la première image est affichée (poster ou WebGL). */
   onReady?: () => void;

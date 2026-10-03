@@ -165,19 +165,17 @@ forte), à propos. Les valeurs par défaut s'appliquent aux nouveaux mois.
 
 | Chemin | Propriétaire |
 |---|---|
-| `art/pipeline/**`, `apps/web/src/world/assets/**`, `apps/web/src/world/manifest.ts` | agent ASSETS |
-| `apps/web/src/world/engine/**`, `apps/web/src/world/LivingForest.tsx` | agent MONDE |
-| `apps/web/src/app/**`, `apps/web/src/ui/**`, `apps/web/src/styles/**` (sauf `tokens.css`), `features/budget/**`, `features/history/**`, `features/settings/**`, `apps/web/src/sw.ts`, `index.html`, e2e | agent UI |
-| `packages/core/**`, `apps/web/src/state/**`, `features/maison/**`, `features/courses/**` | agent MAISON |
-| `world/types.ts`, `world/WorldContext.tsx`, `world/worldState.ts`, `styles/tokens.css`, `docs/V2_BRIEF.md`, manifests (`package.json`) | lead |
+| `art/pipeline/**`, `apps/web/src/world/assets/**`, `apps/web/src/world/manifest.ts`, `apps/web/public/icons/**`, `apps/web/public/favicon.svg` | agent ASSETS |
+| `apps/web/src/world/engine/**`, `apps/web/src/world/LivingForest.tsx`, `apps/web/world-lab.html`, `apps/web/src/world/lab/**` | agent MONDE |
+| `packages/core/**`, `apps/web/src/state/**` | agent DOMAINE (passe en premier) |
+| `apps/web/src/app/**`, `apps/web/src/ui/**`, `apps/web/src/styles/**` (sauf `tokens.css`, ajustable avec parcimonie), `apps/web/src/features/**`, `apps/web/src/sw.ts`, `index.html`, `e2e/**` | agent UI |
+| `world/types.ts`, `world/WorldContext.tsx`, `world/worldState.ts`, `docs/V2_BRIEF.md`, manifests (`package.json`, `vite.config.ts`) | lead |
 
 Contrats : `world/types.ts` (monde, manifest), `useApp()` (store), `useWorld()`
 (pulse/gardien/présentation). Écrans = composants sans props exportés :
 `BudgetScreen`, `MaisonScreen`, `CoursesScreen`, `HistorySheetContent`,
-`SettingsSheetContent`. Le système de design (`ui/`) est construit par l'agent
-UI ; en parallèle, l'agent MAISON s'appuie sur les jetons de `tokens.css` et
-les classes utilitaires de base décrites ci-dessous, puis harmonise à
-l'intégration.
+`SettingsSheetContent`. Le système de design (`ui/`) et tous les écrans sont
+construits par l'agent UI, sur l'API du store étendue par l'agent DOMAINE.
 
 Classes de base garanties par la coquille (agent UI, `styles/base.css`) :
 `.screen-sheet` (la feuille), `.sheet-section`, `.section-title`, `.btn`,

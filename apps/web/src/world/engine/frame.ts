@@ -1,0 +1,197 @@
+/**
+ * Une image du monde : avance les horloges et les transitions, calcule les
+ * uniformes, remplit les lots, puis dessine (draw.ts).
+ */
+import { drawFrame } from './draw';
+import type { WorldEngine } from './Engine';
+import { approachParams, cloneParams, kodamaCount } from './moods';
+import { BURST, MOTES, RAIN } from './pipeline';
+
+const TIER_PARTICLES = [1, 0.7, 0.4];
+const TIER_FOG_LAYERS = [3, 2, 1];
+const smoothstep = (k: number) => k * k * (3 - 2 * k);
+const mix3 = (a: number[], b: number[], k: number): [number, number, number] => [
+  a[0]! + (b[0]! - a[0]!) * k,
+  a[1]! + (b[1]! - a[1]!) * k,
+  a[2]! + (b[2]! - a[2]!) * k,
+];
+
+export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) {
+  const s = e.state;
+  if (!s || !e.stage) return;
+  const m = e.cfg.manifest;
+  const aspect = m.size.w / m.size.h;
+  const animate = e.animated;
+  const stillLive = !animate && e.cfg.motion === 'still' && e.cfg.live;
+  const motionK = e.cfg.motion === 'gentle' ? 0.5 : animate ? 1 : 0;
+  const tier = e.tier;
+  void fps;
+
+  if (animate) e.t += dt;
+  const t = e.t;
+
+  // --- Ambiance (humeur, nuit) : lente en direct, courte en « immobile », immédiate en bandeau.
+  const nightTarget = s.paused ? 1 : 0;
+  if (animate || stillLive) {
+    const tau = animate ? 1 : 0.2;
+    approachParams(e.mood, e.target, dt, tau);
+    e.night += (nightTarget - e.night) * (1 - Math.exp(-dt / tau));
+    if (Math.abs(nightTarget - e.night) < 1e-3) e.night = nightTarget;
+  } else {
+    e.mood = cloneParams(e.target);
+    e.night = nightTarget;
+  }
+  const mood = e.mood;
+  const night = e.night;
+
+  // --- Croissance.
+  let grow = 1;
+  if (e.growStart >= 0) {
+    const k = (n - e.growStart) / e.growDur;
+    if (k >= 1 || (!animate && !stillLive)) e.disposePrev();
+    else grow = smoothstep(Math.max(0, k));
+  }
+
+  // --- Gardien.
+  const g = e.spirits.guardianFrame(n);
+  if (!g.active && e.spirits.guardian) e.releaseGuardian();
+
+  // --- Lumières qui se posent : souffle de vent, éclat de rayon, kodama attentif.
+  e.lights.update(n);
+  for (const land of e.lights.landed.splice(0)) {
+    e.gust = 1;
+    e.rayBoost = 0.5;
+    e.spirits.lookAt(land.x, land.y, n);
+    e.fx.gust(n);
+  }
+  e.gust *= animate ? Math.exp(-dt / 1.3) : 0;
+  e.rayBoost *= animate ? Math.exp(-dt / 1.6) : 0;
+
+  // --- Parallaxe : respiration lente + doigt / souris, lissées.
+  const p = e.pointer;
+  const pk = 1 - Math.exp(-dt / 0.45);
+  p.x += (p.tx * motionK - p.x) * pk;
+  p.y += (p.ty * motionK - p.y) * pk;
+  const auto = animate && e.cfg.motion === 'full';
+  let px = (auto ? Math.sin(t * 0.13) * 0.0045 + Math.sin(t * 0.051 + 2) * 0.0015 : 0) - p.x * 0.012;
+  let py = (auto ? Math.sin(t * 0.09 + 1) * 0.0022 : 0) - p.y * 0.006;
+  const mag = Math.hypot(px, py);
+  if (mag > 0.015) {
+    px *= 0.015 / mag;
+    py *= 0.015 / mag;
+  }
+  const f = e.framing;
+  const fr = e.pipe.frame;
+  fr.uCenter.value = [f.cx, f.cy];
+  fr.uView.value = [f.vw, f.vh];
+  fr.uPar.value = [px * f.vw, py * f.vw * aspect];
+
+  // --- Passe peinture.
+  const fogDay = mix3([0.5, 0.58, 0.57], [0.7, 0.73, 0.68], mood.fogLift);
+  const fogColor = mix3(fogDay, [0.13, 0.19, 0.27], night);
+  const mirror = m.lightSource.x > 0.5 ? 1 : -1;
+  const baseAng = [-0.36, -0.16, 0.03, -0.56];
+  const rayAngles = baseAng.map((a, i) => (a + Math.sin(t * 0.031 + i * 1.7) * 0.018) * mirror);
+  const day = 1 - night;
+  const hasRaysFx = e.fx.hasRays;
+  const sc = e.pipe.scene.program.uniforms;
+  sc.uColor!.value = e.stage.color;
+  sc.uDepth!.value = e.stage.depth;
+  sc.uPrev!.value = e.prev?.color ?? e.stage.color;
+  sc.uGrow!.value = e.prev ? grow : 1;
+  if (e.res.masks) sc.uMasks!.value = e.res.masks;
+  sc.uTime!.value = t;
+  sc.uWind!.value = (0.9 * mood.wind + e.gust * 1.4) * Math.max(motionK, animate ? 0 : 0.5) * g.windScale;
+  sc.uWater!.value = 1;
+  sc.uFog!.value = mood.fog * (e.fx.hasFog ? 0.7 : 1) * (1 - night * 0.25);
+  sc.uFogLift!.value = mood.fogLift;
+  sc.uFogLayers!.value = TIER_FOG_LAYERS[tier] ?? 1;
+  sc.uFogColor!.value = fogColor;
+  sc.uFogGlow!.value = g.fogGlow * 0.55;
+  sc.uRays!.value = (mood.rays * day + e.rayBoost + g.fogGlow * 0.15) * (hasRaysFx ? 0.45 : 1);
+  sc.uRayW!.value = [mood.ray0, mood.ray1, mood.ray2, mood.ray3];
+  sc.uRayAng!.value = rayAngles;
+  sc.uRayWidth!.value = [0.075, 0.05, 0.06, 0.045];
+  sc.uLight!.value = [m.lightSource.x, m.lightSource.y];
+  sc.uRayColor!.value = mix3([1, 0.94, 0.8], [1, 0.84, 0.58], mood.gold * 0.6);
+  sc.uSparkle!.value = mood.sparkle * (1 - night * 0.7);
+  sc.uMoss!.value = mood.moss * day + s.growthProgress * 0.12 * day;
+  sc.uMoon!.value = night * 0.9;
+  sc.uDetail!.value = tier < 2 ? 1 : 0;
+
+  // --- Étalonnage.
+  const pu = e.pipe.post.program.uniforms;
+  const lutA = e.res.lut(e.lutA);
+  const lutB = e.res.lut(e.lutB);
+  pu.uHasA!.value = lutA ? 1 : 0;
+  pu.uHasB!.value = lutB ? 1 : 0;
+  if (lutA) pu.uLutA!.value = lutA;
+  if (lutB) pu.uLutB!.value = lutB;
+  pu.uLutMix!.value = e.lutMix(n);
+  pu.uNightProc!.value = e.res.lut('night') ? 0 : night;
+  const proc = e.res.hasAnyLut ? 0 : 1;
+  pu.uExposure!.value = mood.exposure * proc + g.fogGlow * 0.06;
+  pu.uSaturation!.value = 1 + (mood.saturation - 1) * proc;
+  pu.uWarmth!.value = mood.warmth * proc * day;
+  pu.uVignette!.value = e.cfg.variant === 'banner' ? 0.3 : 0.42;
+  pu.uGrain!.value = tier < 2 ? 0.022 : 0;
+  pu.uSeed!.value = animate ? (t * 7.31) % 1 : 0;
+  pu.uRes!.value = [e.pipe.target.width, e.pipe.target.height];
+
+  // --- Fougères du premier plan.
+  const fg = e.pipe.fg.program.uniforms;
+  if (e.res.foreground) fg.uFg!.value = e.res.foreground;
+  fg.uTime!.value = t;
+  fg.uSway!.value = motionK * (0.75 + e.gust * 1.6) * g.windScale;
+  fg.uFogColor!.value = fogColor;
+  fg.uFogMix!.value = mood.fog * 0.07 + night * 0.05;
+
+  // --- Esprits.
+  const spots = m.kodamaSpots.length;
+  e.spirits.update(n, dt, kodamaCount(s.mood, spots, s.paused), s.creatures, animate || stillLive);
+  const sprites = e.spirits.draws(n, night, mood.fog, g);
+
+  // --- Lots additifs.
+  e.pipe.sceneFx.reset();
+  e.fx.update(n, mood, animate);
+  e.fx.emit(e.pipe.sceneFx, n, t, mood, night, rayAngles, e.rayBoost, g.fogGlow);
+  e.pipe.emissive.reset();
+  e.spirits.emitHalos(e.pipe.emissive, t, night, e.fx.atlas);
+  e.lights.emit(e.pipe.emissive, n, t, night, 1);
+
+  // --- Particules.
+  const sizeK = e.dpr * Math.min(1.4, Math.max(0.75, e.cssH / 700));
+  const tierK = TIER_PARTICLES[tier] ?? 0.4;
+  const motesCount = Math.min(MOTES, (mood.spores + s.growthProgress * 8) * day + 18 * night) * tierK;
+  const mu = e.pipe.motes.program.uniforms;
+  mu.uTime!.value = t;
+  mu.uCount!.value = motesCount;
+  mu.uNight!.value = night;
+  mu.uGold!.value = mood.gold;
+  mu.uSizeK!.value = sizeK;
+  mu.uIntensity!.value = 1;
+  const rainCount = mood.rain * day * RAIN * tierK;
+  const ru = e.pipe.rain.program.uniforms;
+  ru.uTime!.value = t;
+  ru.uCount!.value = rainCount;
+  ru.uSizeK!.value = sizeK;
+  const bu = e.pipe.burst.program.uniforms;
+  if (g.burst > 0) {
+    const box = e.spirits.guardianBox();
+    bu.uTime!.value = t;
+    bu.uBurst!.value = g.burst;
+    bu.uCount!.value = BURST;
+    bu.uRect!.value = [box[0], box[1], box[2] / aspect, box[3]];
+    bu.uDepth!.value = m.guardianSpot.depth;
+    bu.uSizeK!.value = sizeK;
+  }
+
+  drawFrame(e.renderer, e.pipe, {
+    sprites,
+    fogColor,
+    hasForeground: !!e.res.foreground,
+    drawRain: animate && rainCount > 1,
+    drawBurst: g.burst > 0,
+    drawMotes: motesCount > 0.5,
+  });
+}

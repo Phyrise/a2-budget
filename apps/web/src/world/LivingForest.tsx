@@ -111,7 +111,9 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         if (cancelled) return;
         const r = box.getBoundingClientRect();
         const cur = latest.current;
-        engine = await mod.createWorldEngine(
+        // Moteur créé tout de suite : un démontage pendant le chargement l'arrête net
+        // (aucun téléversement GPU orphelin, ex. double montage de StrictMode).
+        engine = new mod.WorldEngine(
           canvas,
           {
             manifest,
@@ -132,13 +134,10 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
               restoreTimer = window.setTimeout(onRestored, 3000);
             },
           },
-          cur.state,
-          { w: Math.max(1, r.width), h: Math.max(1, r.height) },
         );
-        if (cancelled) {
-          engine.destroy();
-          return;
-        }
+        engine.resize(Math.max(1, r.width), Math.max(1, r.height));
+        await engine.init(cur.state);
+        if (cancelled) return;
         engineRef.current = engine;
         engine.setState(latest.current.state);
         const io = new IntersectionObserver((entries) => {

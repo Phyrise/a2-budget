@@ -74,10 +74,12 @@ if (!only || only === 'pulse') {
 }
 
 if (!only || only === 'growth') {
-  const { ctx, page } = await open(browser, 'mood=peaceful&stage=3');
+  const { ctx, page } = await open(browser, 'mood=peaceful&stage=1');
   await page.evaluate(() => window.__lab.set({ stage: 6 }));
-  await page.waitForTimeout(1900);
-  await page.screenshot({ path: resolve(out, 't-growth-mid.png'), clip: { x: 0, y: 0, width: 390, height: 455 } });
+  for (const [i, ms] of [[1, 900], [2, 700], [3, 700]]) {
+    await page.waitForTimeout(ms);
+    await page.screenshot({ path: resolve(out, `t-growth-${i}.png`), clip: { x: 0, y: 0, width: 390, height: 455 } });
+  }
   await page.waitForTimeout(3000);
   await page.screenshot({ path: resolve(out, 't-growth-end.png'), clip: { x: 0, y: 0, width: 390, height: 455 } });
   check('croissance', true);

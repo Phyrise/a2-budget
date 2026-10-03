@@ -80,6 +80,7 @@ export class WorldEngine {
   private emaFrame = 0;
   private emaInterval = 16;
   private lastFrameAt = 0;
+  private startAt = 0;
   private raf = 0;
   private visible = true;
   private destroyed = false;
@@ -120,13 +121,14 @@ export class WorldEngine {
     const stage = clampStage(state.stage);
     this.applyMoodTarget(true);
     await this.res.loadMasks();
+    if (this.destroyed) throw new Error('destroyed');
     const [st] = await Promise.all([
       this.res.loadStage(stage),
       this.res.loadForeground(),
       this.res.loadLut(this.lutB),
       state.paused ? this.res.loadLut('night') : Promise.resolve(null),
     ]);
-    if (this.destroyed) return;
+    if (this.destroyed) throw new Error('destroyed');
     this.stage = st;
     this.lights.sync(state.lights, now(), false);
     this.ready = true;
@@ -136,10 +138,18 @@ export class WorldEngine {
   }
 
   private async loadSecondary() {
+    try {
+      await this.loadSecondaryInner();
+    } catch {
+      /* moteur détruit pendant le chargement */
+    }
+  }
+
+  private async loadSecondaryInner() {
     const m = this.cfg.manifest;
     await Promise.all(
       m.sprites.kodama.length > 0
-        ? m.kodamaSpots.map((_, i) => this.res.sprite(m.sprites.kodama[i % m.sprites.kodama.length]!, i))
+        ? m.kodamaSpots.map((_, i) => this.res.sprite(m.sprites.kodama[i % m.sprites.kodama.length]!, i, m.sprites.kodama.length === 1))
         : [],
     ).then((assets) => {
       this.spirits.kodama = assets.filter((a): a is NonNullable<typeof a> => a !== null);
@@ -398,7 +408,8 @@ export class WorldEngine {
 
   private trackQuality(interval: number) {
     this.emaInterval += (interval * 1000 - this.emaInterval) * 0.1;
-    if (this.cfg.quality !== 'auto' || this.tier >= 2 || this.lastNow < 3) return;
+    if (!this.startAt) this.startAt = this.lastNow;
+    if (this.cfg.quality !== 'auto' || this.tier >= 2 || this.lastNow - this.startAt < 3) return;
     this.ema = this.emaInterval;
     if (this.ema > 24) this.slowFor += interval;
     else this.slowFor = Math.max(0, this.slowFor - interval);

@@ -45,12 +45,12 @@ void main() {
     alpha = smoothstep(0.0, 0.18, life) * smoothstep(1.0, 0.7, life);
     float blink = smoothstep(0.15, 0.85, sin(uTime * (0.5 + aSeed.z * 0.9) + aSeed.x * 40.0) * 0.5 + 0.5);
     alpha *= mix(0.55 + 0.45 * blink, blink, uNight) * active;
-    size = mix(6.0, 11.0, aSeed.z) * mix(0.7, 1.35, depth) * mix(1.0, 1.7, uNight);
+    size = mix(7.0, 13.0, aSeed.z) * mix(0.7, 1.35, depth) * mix(1.0, 1.6, uNight);
     vec3 pale = vec3(0.86, 0.93, 0.84);
     vec3 gold = vec3(1.0, 0.8, 0.46);
     vec3 firefly = vec3(0.78, 1.0, 0.46);
     col = mix(mix(pale, gold, uGold * step(aSeed.y, 0.75)), firefly, uNight);
-    alpha *= mix(0.55, 0.95, uNight);
+    alpha *= mix(0.7, 0.95, uNight);
   } else if (uMode < 1.5) {
     depth = uDepth;
     float delay = aSeed.w * 0.35;

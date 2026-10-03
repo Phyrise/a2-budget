@@ -41,7 +41,8 @@ uniform float uMoss;
 uniform float uMoon;
 uniform float uDetail;      // 0 = palier bas (moins d'échantillons)
 
-vec3 sampleColor(sampler2D t, vec2 p) { return texture2D(t, p).rgb; }
+// Biais de LOD négatif : la peinture reste nette en réduction (mipmaps trilinéaires).
+vec3 sampleColor(sampler2D t, vec2 p) { return texture2D(t, p, -0.6).rgb; }
 
 void main() {
   vec2 uv = uCenter + (vUv - 0.5) * uView;
@@ -111,7 +112,7 @@ void main() {
     float green = smoothstep(0.01, 0.09, col.g - max(col.r, col.b));
     float ground = smoothstep(0.45, 0.85, suv.y) * (1.0 - m.r);
     float breathe = 0.6 + 0.4 * sin(t * 0.7 + texture2D(uNoise, suv * iso * 3.0).r * 9.0);
-    col += vec3(0.30, 0.48, 0.16) * green * ground * breathe * uMoss * 0.16 * (0.4 + l);
+    col += vec3(0.32, 0.5, 0.16) * green * ground * breathe * uMoss * 0.22 * (0.4 + l);
   }
 
   // --- Gouttes qui scintillent sur les feuilles.

@@ -47,6 +47,10 @@ export class Resources {
   }
 
   texture(img: TexImage, o: { w?: number; h?: number; mips?: boolean; wrap?: boolean; premult?: boolean } = {}): Texture {
+    if (this.disposed) {
+      releaseImage(img instanceof Uint8Array ? null : img);
+      throw new Error('disposed');
+    }
     const gl = this.gl;
     const mips = o.mips ?? false;
     const size = img instanceof Uint8Array ? { w: o.w ?? 1, h: o.h ?? 1 } : imageSize(img);
@@ -155,11 +159,12 @@ export class Resources {
     return p;
   }
 
-  async sprite(url: string, index = 0): Promise<SpriteAsset | null> {
+  /** `sheet` : planche non découpée possible (stub kodama) → une seule case. */
+  async sprite(url: string, index = 0, sheet = false): Promise<SpriteAsset | null> {
     if (!url) return null;
     try {
       const img = await decodeImage(url, { kind: 'sprite', maxWidth: 768 });
-      const cell = spriteCell(img, index);
+      const cell: [number, number, number, number] = sheet ? spriteCell(img, index) : [0, 0, 1, 1];
       const rect = opaqueBounds(img, cell);
       const s = imageSize(img);
       const aspect = (rect[2] * s.w) / (rect[3] * s.h);

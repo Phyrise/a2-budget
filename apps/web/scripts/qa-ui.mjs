@@ -227,7 +227,10 @@ for (const vp of (process.env.QA_VP ?? 'm,d').split(',')) {
     await page.waitForTimeout(1600);
     await page.locator('.done-today .disclosure__toggle').click();
     await page.waitForTimeout(400);
-    await shot(page, `${vp}-maison-check-done`, { full: true });
+    await page.locator('.done-today').scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 200);
+    await page.waitForTimeout(400);
+    await shot(page, `${vp}-maison-check-done`);
   });
   await scenario(`${vp}-maison-alldone`, vp, { module: 'maison', state: fixtures.doneAll }, async (page) => {
     await shot(page, `${vp}-maison-alldone`);

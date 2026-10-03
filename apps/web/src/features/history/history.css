@@ -161,3 +161,8 @@
   color: var(--moss-400);
   margin: 0 6px;
 }
+
+.history-day__label .ordinal {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}

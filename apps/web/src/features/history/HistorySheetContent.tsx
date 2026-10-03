@@ -7,12 +7,25 @@
  * Lecture seule (aucune écriture, sauf « Effacer les mois passés » confirmé).
  */
 import { compareMonthKeys, computeMonthSummary, localDateKey, monthKeyToLabel, recentGroceryPurchases } from '@a2/core';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { Button, Companion, ConfirmDialog, EmptyState, Icon, clockTime, cx, euro, euroMinus, relativeDayLabel } from '../../ui';
 import { assigneeName } from '../maison/taskText';
 import './history.css';
+
+/** « 1er » reste en minuscules dans les intitulés en capitales (« JEUDI 1er OCTOBRE »). */
+function withOrdinal(label: string): ReactNode {
+  const match = /^(.*\b1)er(\b.*)$/u.exec(label);
+  if (match === null) return label;
+  return (
+    <>
+      {match[1]}
+      <span className="ordinal">er</span>
+      {match[2]}
+    </>
+  );
+}
 
 function groupByDay<T>(items: T[], dateOf: (item: T) => string): Array<{ day: string; items: T[] }> {
   const groups: Array<{ day: string; items: T[] }> = [];
@@ -135,7 +148,7 @@ function MaisonHistory() {
     <ol className="history-days">
       {groups.map((g) => (
         <li key={g.day} className="history-day">
-          <h3 className="history-day__label">{relativeDayLabel(g.day, today)}</h3>
+          <h3 className="history-day__label">{withOrdinal(relativeDayLabel(g.day, today))}</h3>
           <ul className="history-day__list">
             {g.items.map((c) => (
               <li key={c.id} className="history-entry">
@@ -173,7 +186,7 @@ function CoursesHistory() {
     <ol className="history-days">
       {groups.map((g) => (
         <li key={g.day} className="history-day">
-          <h3 className="history-day__label">{relativeDayLabel(g.day, today)}</h3>
+          <h3 className="history-day__label">{withOrdinal(relativeDayLabel(g.day, today))}</h3>
           <ul className="history-day__list">
             {g.items.map((p) => (
               <li key={p.id} className="history-entry history-entry--plain">

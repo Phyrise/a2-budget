@@ -180,11 +180,17 @@
   color: var(--on-accent);
   font-weight: 650;
   text-decoration: none;
+  opacity: 0;
+  pointer-events: none;
   transform: translateY(-160%);
-  transition: transform var(--dur-fast);
+  transition:
+    transform var(--dur-fast),
+    opacity var(--dur-fast);
 }
 
 .skip-link:focus {
+  opacity: 1;
+  pointer-events: auto;
   transform: none;
 }
 

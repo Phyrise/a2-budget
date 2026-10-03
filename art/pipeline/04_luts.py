@@ -9,9 +9,11 @@ Méthode — régression couleur par paires de pixels :
   2. chaque paire contribue aux 8 nœuds de la LUT qui entourent la couleur
      source (poids trilinéaires) : système creux A·x ≈ y ;
   3. régularisation : lissage d'ordre 2 dans l'espace LUT (‖L·x‖², L = laplacien
-     3D) et rappel faible vers un repli affine global (tgt ≈ M·[r g b 1]) —
-     les cases vides (couleurs absentes de la peinture) sont ainsi remplies
-     de façon lisse, sans bande ni couleur aberrante ;
+     3D) et rappel vers un repli global (gain + décalage par canal, plus une
+     affine 3×3 régularisée vers ce repli diagonal), faible là où la peinture
+     fournit des données et fort ailleurs (poids ∝ exp(−densité)) — les cases
+     vides (couleurs absentes de la peinture : lumières ambrées, lucioles…)
+     sont remplies de façon lisse, sans bande ni couleur aberrante ;
   4. moindres carrés repondérés (Huber, 3 itérations) : les détails propres à
      la cible (rayons, lucioles, lune) ne faussent pas la correspondance globale.
 
@@ -87,7 +89,7 @@ def apply_lut(img: np.ndarray, lut: np.ndarray) -> np.ndarray:
     return (A @ lut).reshape(h, w, 3)
 
 
-def fit(src: np.ndarray, tgt: np.ndarray, lam_rel=0.08, mu_rel=2e-3, delta=0.035, iters=4):
+def fit(src: np.ndarray, tgt: np.ndarray, lam_rel=0.08, mu_rel=2e-3, far_rel=0.3, ridge_rel=0.01, delta=0.035, iters=4):
     x = src.reshape(-1, 3).astype(np.float64)
     y = tgt.reshape(-1, 3).astype(np.float64)
     A = trilinear_matrix(x)
@@ -99,18 +101,37 @@ def fit(src: np.ndarray, tgt: np.ndarray, lam_rel=0.08, mu_rel=2e-3, delta=0.035
     w = np.ones(len(x))
     lut = None
     for it in range(iters):
-        # Repli affine global (pondéré).
+        # Repli global : gain + décalage par canal (robuste, toujours plausible :
+        # une couleur absente de la peinture garde sa teinte), puis affine 3×3
+        # régularisée vers ce repli diagonal — la gamme étroite de la peinture
+        # (verts, bruns, gris-bleus) ne contraint pas les directions de
+        # saturation ; sans ce rappel, l'affine libre les extrapole n'importe
+        # comment (rouge → noir en « quiet », bleu saturé en « lively »).
+        sw = w.sum()
+        Md = np.zeros((4, 3))
+        for c in range(3):
+            Xc = np.stack([x[:, c], np.ones(len(x))], 1)
+            g, o = np.linalg.lstsq((Xc * w[:, None]).T @ Xc, (Xc * w[:, None]).T @ y[:, c], rcond=None)[0]
+            g = float(np.clip(g, 0.35, 1.8))
+            o = float(np.average(y[:, c] - g * x[:, c], weights=w))
+            Md[c, c], Md[3, c] = g, o
         Mw = X1 * w[:, None]
-        M = np.linalg.lstsq(Mw.T @ X1, Mw.T @ y, rcond=None)[0]
+        alpha = ridge_rel * sw
+        M = np.linalg.solve(Mw.T @ X1 + alpha * np.eye(4), Mw.T @ y + alpha * Md)
         aff = np.clip(G1 @ M, 0, 1)
         W = sp.diags(w)
         AtA = (A.T @ W @ A).tocsr()
         diag = AtA.diagonal()
         scale = float(diag[diag > 0].mean())
-        lam, mu = lam_rel * scale, mu_rel * scale
-        S = (AtA + lam * LtL + mu * sp.identity(K)).tocsc()
+        # Densité de données par nœud : loin de la peinture, le rappel vers le
+        # repli domine (pas d'extrapolation linéaire par le lissage d'ordre 2).
+        dens = A.T @ w
+        dens = dens / dens[dens > 0].mean()
+        lam = lam_rel * scale
+        mu = scale * (mu_rel + far_rel * np.exp(-dens / 0.05))
+        S = (AtA + lam * LtL + sp.diags(mu)).tocsc()
         solve = splu(S)
-        rhs = A.T @ (w[:, None] * y) + mu * aff
+        rhs = A.T @ (w[:, None] * y) + mu[:, None] * aff
         lut = np.stack([solve.solve(rhs[:, c]) for c in range(3)], 1)
         res = np.linalg.norm(A @ lut - y, axis=1)
         w = 1.0 / np.maximum(1.0, res / delta)  # Huber

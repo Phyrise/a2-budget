@@ -13,14 +13,19 @@ export function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-/** « Samedi 3 octobre ». */
-export function longDate(date: Date): string {
-  return capitalize(longFmt.format(date));
+/** Premier du mois en ordinal : « 1 octobre » → « 1er octobre ». */
+function firstOrdinal(text: string): string {
+  return text.replace(/(^|\s)1(?=\s)/u, (_match, before: string) => `${before}1er`);
 }
 
-/** « 3 octobre ». */
+/** « Samedi 3 octobre », « Jeudi 1er octobre ». */
+export function longDate(date: Date): string {
+  return capitalize(firstOrdinal(longFmt.format(date)));
+}
+
+/** « 3 octobre », « 1er octobre ». */
 export function dayMonth(date: Date): string {
-  return dayMonthFmt.format(date);
+  return firstOrdinal(dayMonthFmt.format(date));
 }
 
 /** « Lundi ». */

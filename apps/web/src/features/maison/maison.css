@@ -335,8 +335,8 @@ button.task-row__body:hover .task-row__title {
 }
 
 .app--desktop .maison-hero__mood {
-  max-width: calc(100% - 128px);
-  font-size: 30px;
+  max-width: calc(100% - 120px);
+  font-size: 27px;
   text-shadow: none;
 }
 

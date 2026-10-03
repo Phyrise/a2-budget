@@ -83,7 +83,7 @@
 }
 
 .module-view {
-  animation: module-in 300ms var(--ease-out) both;
+  animation: module-in 240ms var(--ease-out) both;
 }
 
 .module-view > .world-window {

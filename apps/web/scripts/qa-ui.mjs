@@ -327,6 +327,39 @@ for (const vp of (process.env.QA_VP ?? 'm,d').split(',')) {
     await shot(page, `${vp}-focus`);
   });
 
+  await scenario(`${vp}-saved`, vp, { module: 'budget', state: fixtures.filled }, async (page) => {
+    await page.locator('#salary-a').click();
+    await page.locator('#salary-a').fill('2250');
+    await page.locator('#salary-a').blur();
+    await page.waitForTimeout(350);
+    await shot(page, `${vp}-saved`);
+  });
+  await scenario(`${vp}-save-error`, vp, { module: 'budget', state: fixtures.filled }, async (page) => {
+    await page.evaluate(() => {
+      const original = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (key, value) {
+        if (key === 'a2-budget:state:v1') throw new DOMException('Quota', 'QuotaExceededError');
+        return original.call(this, key, value);
+      };
+    });
+    await page.locator('#salary-a').click();
+    await page.locator('#salary-a').fill('2250');
+    await page.locator('#salary-a').blur();
+    await page.waitForTimeout(500);
+    await shot(page, `${vp}-save-error`);
+  });
+  await scenario(`${vp}-update`, vp, { module: 'maison', state: fixtures.filled }, async (page) => {
+    // Aperçu visuel de l'invite (needRefresh ne se simule pas en dev) : même balisage que UpdatePrompt.
+    await page.evaluate(() => {
+      const el = document.createElement('div');
+      el.className = 'update-prompt';
+      el.innerHTML = `<svg class="icon update-prompt__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3.8c.7 4.1 2.2 5.6 6.2 6.2-4 .7-5.5 2.2-6.2 6.2-.7-4-2.2-5.5-6.2-6.2 4-.6 5.5-2.1 6.2-6.2Z"/></svg><p class="update-prompt__text">Une nouvelle version est prête.</p><div class="update-prompt__actions"><button class="btn btn--ghost btn--sm"><span class="btn__label">Plus tard</span></button><button class="btn btn--primary btn--sm"><span class="btn__label">Actualiser</span></button></div>`;
+      document.querySelector('.app').appendChild(el);
+    });
+    await page.waitForTimeout(400);
+    await shot(page, `${vp}-update`);
+  });
+
   // --- Feuilles globales ----------------------------------------------------
   for (const module of ['budget', 'maison', 'courses']) {
     await scenario(`${vp}-history-${module}`, vp, { module, state: fixtures.filled }, async (page) => {

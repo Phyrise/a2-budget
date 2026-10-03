@@ -116,7 +116,15 @@ function ModuleNav() {
           type="button"
           className={cx('app-nav__item', m.id === module && 'is-active')}
           aria-current={m.id === module ? 'page' : undefined}
-          onClick={() => setModule(m.id)}
+          onClick={() => {
+            if (m.id !== module) {
+              setModule(m.id);
+              return;
+            }
+            // Module déjà affiché : retour en douceur vers la forêt.
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+          }}
         >
           <Icon name={NAV_ICONS[m.id]} size={22} />
           <span className="app-nav__label">{m.label}</span>

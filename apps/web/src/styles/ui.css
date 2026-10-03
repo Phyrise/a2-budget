@@ -525,6 +525,14 @@ dialog.sheet[data-state='closing']::backdrop {
   object-fit: contain;
 }
 
+/* Sprites peints (planches V3) : posés sur la ligne, jamais déformés. */
+.companion__sprite {
+  display: block;
+  object-position: 50% 100%;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 .companion--both {
   width: calc(var(--cmp-size) * 1.5);
 }

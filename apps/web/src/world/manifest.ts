@@ -50,13 +50,13 @@ import lutLively from './assets/luts/lively.png';
 import lutFlourishing from './assets/luts/flourishing.png';
 import lutNight from './assets/luts/night.png';
 import kodama1 from './assets/sprites/kodama-1.webp';
-import kodama6 from './assets/sprites/kodama-6.webp';
 import kodama2 from './assets/sprites/kodama-2.webp';
+import kodama6 from './assets/sprites/kodama-6.webp';
+import kodama8 from './assets/sprites/kodama-8.webp';
 import kodama4 from './assets/sprites/kodama-4.webp';
 import kodama7 from './assets/sprites/kodama-7.webp';
-import kodama5 from './assets/sprites/kodama-5.webp';
 import kodama3 from './assets/sprites/kodama-3.webp';
-import kodama8 from './assets/sprites/kodama-8.webp';
+import kodama5 from './assets/sprites/kodama-5.webp';
 import mossLing from './assets/sprites/moss-ling.webp';
 import seedSpirit from './assets/sprites/seed-spirit.webp';
 import leafSprite from './assets/sprites/leaf-sprite.webp';
@@ -113,8 +113,8 @@ export const manifest: WorldManifest = {
     6: { color: stage6, depth: depth6 },
     7: { color: stage7, depth: depth7 },
   },
-  masks: masks,
-  foreground: foreground,
+  masks,
+  foreground,
   luts: {
     quiet: lutQuiet,
     peaceful: lutPeaceful,
@@ -123,41 +123,41 @@ export const manifest: WorldManifest = {
     night: lutNight,
   },
   anchors: [
-    { x: 0.13, y: 0.575, depth: 0.431 },
-    { x: 0.27, y: 0.612, depth: 0.396 },
-    { x: 0.4, y: 0.642, depth: 0.349 },
-    { x: 0.47, y: 0.592, depth: 0.188 },
-    { x: 0.6, y: 0.607, depth: 0.176 },
-    { x: 0.765, y: 0.588, depth: 0.208 },
-    { x: 0.575, y: 0.676, depth: 0.224 },
-    { x: 0.84, y: 0.668, depth: 0.251 },
-    { x: 0.77, y: 0.742, depth: 0.314 },
-    { x: 0.25, y: 0.776, depth: 0.553 },
-    { x: 0.46, y: 0.79, depth: 0.384 },
-    { x: 0.905, y: 0.79, depth: 0.42 },
-    { x: 0.085, y: 0.69, depth: 0.529 },
-    { x: 0.36, y: 0.705, depth: 0.404 },
+    { x: 0.13, y: 0.5, depth: 0.094 },
+    { x: 0.215, y: 0.535, depth: 0.157 },
+    { x: 0.255, y: 0.5, depth: 0.165 },
+    { x: 0.3, y: 0.508, depth: 0.129 },
+    { x: 0.375, y: 0.482, depth: 0.129 },
+    { x: 0.43, y: 0.548, depth: 0.169 },
+    { x: 0.47, y: 0.515, depth: 0.169 },
+    { x: 0.505, y: 0.572, depth: 0.184 },
+    { x: 0.555, y: 0.53, depth: 0.165 },
+    { x: 0.645, y: 0.57, depth: 0.149 },
+    { x: 0.71, y: 0.508, depth: 0.184 },
+    { x: 0.765, y: 0.548, depth: 0.2 },
+    { x: 0.835, y: 0.568, depth: 0.196 },
+    { x: 0.905, y: 0.55, depth: 0.176 },
   ],
   kodamaSpots: [
-    { x: 0.585, y: 0.672, depth: 0.224, scale: 0.055 },
-    { x: 0.23, y: 0.607, depth: 0.427, scale: 0.052 },
-    { x: 0.8, y: 0.613, depth: 0.216, scale: 0.046 },
-    { x: 0.885, y: 0.706, depth: 0.349, scale: 0.058 },
-    { x: 0.47, y: 0.598, depth: 0.188, scale: 0.042 },
-    { x: 0.27, y: 0.783, depth: 0.561, scale: 0.066 },
+    { x: 0.36, y: 0.49, depth: 0.098, scale: 0.05 },
+    { x: 0.79, y: 0.553, depth: 0.2, scale: 0.048 },
+    { x: 0.255, y: 0.503, depth: 0.2, scale: 0.046 },
+    { x: 0.135, y: 0.495, depth: 0.067, scale: 0.044 },
+    { x: 0.885, y: 0.537, depth: 0.176, scale: 0.052 },
+    { x: 0.47, y: 0.553, depth: 0.18, scale: 0.042 },
   ],
   creatureSpots: {
-    'moss-ling': { x: 0.36, y: 0.638, depth: 0.373, scale: 0.034 },
-    'seed-spirit': { x: 0.638, y: 0.588, depth: 0.153, scale: 0.03 },
-    'leaf-sprite': { x: 0.935, y: 0.6, depth: 0.216, scale: 0.042 },
-    'ember-wisp': { x: 0.715, y: 0.742, depth: 0.267, scale: 0.046 },
-    'mushroom-pip': { x: 0.445, y: 0.69, depth: 0.353, scale: 0.034 },
-    'water-drip': { x: 0.095, y: 0.537, depth: 0.22, scale: 0.066 },
+    'moss-ling': { x: 0.31, y: 0.513, depth: 0.129, scale: 0.032 },
+    'seed-spirit': { x: 0.64, y: 0.575, depth: 0.149, scale: 0.03 },
+    'leaf-sprite': { x: 0.905, y: 0.43, depth: 0.137, scale: 0.04 },
+    'ember-wisp': { x: 0.17, y: 0.4, depth: 0.106, scale: 0.042 },
+    'mushroom-pip': { x: 0.845, y: 0.572, depth: 0.204, scale: 0.032 },
+    'water-drip': { x: 0.055, y: 0.505, depth: 0.22, scale: 0.054 },
   },
   lightSource: { x: 0.29, y: 0.02 },
   guardianSpot: { x: 0.245, y: 0.48, depth: 0.063, scale: 0.38 },
   sprites: {
-    kodama: [kodama1, kodama6, kodama2, kodama4, kodama7, kodama5, kodama3, kodama8],
+    kodama: [kodama1, kodama2, kodama6, kodama8, kodama4, kodama7, kodama3, kodama5],
     creatures: {
       'moss-ling': mossLing,
       'seed-spirit': seedSpirit,
@@ -166,7 +166,7 @@ export const manifest: WorldManifest = {
       'mushroom-pip': mushroomPip,
       'water-drip': waterDrip,
     },
-    guardian: guardian,
+    guardian,
   },
   companions: {
     a: { idle: jijiIdle, happy: jijiHappy, proud: jijiProud, sleepy: jijiSleepy, curious: jijiCurious },
@@ -181,5 +181,5 @@ export const manifest: WorldManifest = {
     halos: [fxHalos1, fxHalos2],
   },
   banners: { budget: bannerBudget, courses: bannerCourses },
-  placeholder: placeholder,
+  placeholder,
 };

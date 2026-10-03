@@ -163,6 +163,24 @@ def check() -> None:
             d.line([(x0, yy * H), (x0 + 12, yy * H)], fill=(255, 255, 255, 170), width=2)
         d.text((8, yy * H - 22), txt, fill=(255, 255, 255, 220), font=font(16), stroke_width=3, stroke_fill=(0, 0, 0))
     canvas.convert("RGB").resize((768, 1152), Image.LANCZOS).save(QA / "08-check.jpg", quality=82)
+    # Les mêmes points sur les stades 1, 3 et 7 (le cèdre change : rien ne doit
+    # flotter dans le vide), bande utile y 0,30–0,80.
+    tiles = []
+    for st in (1, 3, 7):
+        im = Image.open(WORK / "aligned" / f"{STAGE_SOURCES[st]}.png").convert("RGBA")
+        for i, k in enumerate(pl["kodamaSpots"]):
+            paste_sprite(im, sprites / f"{k.get('sprite', f'kodama-{i % 8 + 1}')}.webp", k["x"], k["y"], k["scale"])
+        for cid, c in pl["creatureSpots"].items():
+            paste_sprite(im, sprites / f"{cid}.webp", c["x"], c["y"], c["scale"])
+        dd = ImageDraw.Draw(im, "RGBA")
+        for a in pl["anchors"]:
+            x, y = a["x"] * W, a["y"] * H
+            dd.ellipse([x - 9, y - 9, x + 9, y + 9], fill=(255, 220, 140, 200), outline=(0, 0, 0, 255), width=2)
+        tiles.append(im.convert("RGB").crop((0, int(0.3 * H), W, int(0.8 * H))).resize((512, 384), Image.LANCZOS))
+    sheet = Image.new("RGB", (512 * 3, 384))
+    for i, t in enumerate(tiles):
+        sheet.paste(t, (512 * i, 0))
+    sheet.save(QA / "08-check-stages.jpg", quality=80)
     # Zoom sur la moitié basse (sprites lisibles).
     canvas.convert("RGB").crop((0, 640, 1024, 1536)).resize((768, 672), Image.LANCZOS).save(QA / "08-check-low.jpg", quality=84)
     print(f"{len(res['anchors'])} ancres, {len(res['kodamaSpots'])} kodama, {len(res['creatureSpots'])} créatures")

@@ -51,12 +51,20 @@ function forest(stage: number, vitality: number, paused = false): AppState {
   for (const [i, t] of tasks.slice(0, 3).entries()) {
     s = toggleTaskToday(s, t.id, new Date(now.getFullYear(), now.getMonth(), now.getDate(), Math.min(now.getHours(), 7 + i), 5), 'c' + i).state;
   }
-  const care = GROWTH_THRESHOLDS[stage - 1] ?? 0;
+  const target = (GROWTH_THRESHOLDS[stage - 1] ?? 0) + 1;
   const today = localDateKey(now);
+  // Registre de crédits cohérent (lifetimeCare = crédits actifs, 3 par jour au plus).
+  const ledger = { ...s.forest.creditLedger };
+  let credited = Object.values(ledger).filter((c) => c.status !== 'uncredited').length;
+  for (let i = 0; credited < target; i++) {
+    ledger['old' + i + '|once'] = { grantedOn: localDateKey(addDays(now, -2 - Math.floor(i / 3))), status: 'active' };
+    credited++;
+  }
   s.forest = {
     ...s.forest,
+    creditLedger: ledger,
     vitality,
-    lifetimeCare: care + 1,
+    lifetimeCare: credited,
     growthStage: stage,
     unlockedCreatureIds: CREATURES.filter((c) => c.stage <= stage).map((c) => c.id),
     lastMeaningfulActionDate: today,
@@ -132,6 +140,12 @@ async function app(name, vp, state, module, wait = 3500) {
   await page.goto(`${BASE}?module=${module}`);
   await page.waitForSelector('.screen-sheet');
   await page.waitForTimeout(wait);
+  const geo = await page.evaluate(() => {
+    const c = document.querySelector('.app-world canvas')?.getBoundingClientRect();
+    const s = document.querySelector('.screen-sheet')?.getBoundingClientRect();
+    return `scrollY ${Math.round(scrollY)}, canvas ${c ? `${Math.round(c.width)}×${Math.round(c.height)}@${Math.round(c.top)}` : '—'}, feuille @${s ? Math.round(s.top) : '—'}`;
+  });
+  console.log(`  ${name}: ${geo}`);
   await shot(page, name);
   await ctx.close();
 }

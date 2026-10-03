@@ -65,6 +65,11 @@ def num(v: float) -> str:
     return s if s not in ("-0", "") else "0"
 
 
+def prop(key: str, value: str) -> str:
+    """Propriété d'objet, en raccourci quand le nom d'import est la clé."""
+    return key if key == value else f"{key}: {value}"
+
+
 def point(p: dict) -> str:
     out = f"x: {num(p['x'])}, y: {num(p['y'])}, depth: {num(p['depth'])}"
     if "scale" in p:
@@ -156,8 +161,8 @@ export const manifest: WorldManifest = {{
   stages: {{
 {chr(10).join(stages)}
   }},
-  masks: {masks},
-  foreground: {fg},
+  {prop('masks', masks)},
+  {prop('foreground', fg)},
   luts: {{
 {chr(10).join(luts)}
   }},
@@ -177,7 +182,7 @@ export const manifest: WorldManifest = {{
     creatures: {{
 {chr(10).join(creatures)}
     }},
-    guardian: {guardian},
+    {prop('guardian', guardian)},
   }},
   companions: {{
     a: {{ {comp['a']} }},
@@ -187,7 +192,7 @@ export const manifest: WorldManifest = {{
 {chr(10).join(fx)}
   }},
   banners: {{ budget: {budget}, courses: {courses} }},
-  placeholder: {placeholder},
+  {prop('placeholder', placeholder)},
 }};
 '''
     (OUT / "manifest.ts").write_text(head + imp + "\n" + body)

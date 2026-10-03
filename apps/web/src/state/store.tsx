@@ -11,27 +11,28 @@ import {
 import {
   applySettingsToMonth as coreApplySettingsToMonth,
   computeMonthSummary,
-  currentMonthKey,
   ensureMonth as coreEnsureMonth,
   emptyAppState,
   migrateState,
   advanceDay,
   localDateKey,
   createTask,
+  updateTask,
+  deleteTask,
+  toggleTaskToday,
   isoWeekday,
-  addCompletion,
-  removeCompletion,
-  hasCompletion,
-  isDueOn,
-  creditKeyFor,
-  grantCredit,
-  tombstoneCredit,
-  updateStreak,
-  evaluateRareEvents,
-  evaluateUnlocks,
   pauseForest,
   resumeForest,
+  addGroceryItem,
+  toggleGroceryItem,
+  removeGroceryItem,
+  restoreGroceryItem,
+  updateGroceryItem,
+  clearDoneGroceries as coreClearDoneGroceries,
   type AppState,
+  type GroceryAuthor,
+  type GroceryItem,
+  type GroceryItemPatch,
   type TaskAssignee,
   type TaskRecurrence,
   type HouseholdTask,
@@ -60,15 +61,103 @@ export type Recovery =
   | { kind: 'unreadable'; message: string }
   | { kind: 'storage-unavailable'; message: string };
 
+/** Saisie d'une nouvelle tâche Maison (feuille « Ajouter »). */
+export interface NewHomeTaskInput {
+  title: string;
+  assignee: TaskAssignee;
+  recurrence: TaskRecurrence;
+  /** weekly : jour ISO 1 = lundi … 7 = dimanche. Défaut : aujourd'hui. */
+  weeklyDay?: number;
+  /** monthly : jour du mois 1..31 (ajusté au dernier jour des mois courts). Défaut : aujourd'hui. */
+  monthlyDay?: number;
+}
+
+/** Champs modifiables d'une tâche Maison. */
+export type HomeTaskPatch = Partial<
+  Pick<HouseholdTask, 'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay'>
+>;
+
+/** Résultat synchrone d'une bascule de tâche (pour lancer l'animation). */
+export interface ToggleHomeTaskResult {
+  /** Vrai si l'occurrence du jour est désormais faite. */
+  completed: boolean;
+  /**
+   * Id du fait Maison créé (completed) ou retiré (annulation) — à passer à
+   * `useWorld().pulse({ id })`. null si rien n'a changé (tâche inconnue ou non
+   * due aujourd'hui, état pas encore chargé).
+   */
+  completionId: string | null;
+}
+
+/** Résultat synchrone d'un ajout aux courses. */
+export interface AddGroceryResult {
+  /** Faux si la saisie était vide ou si l'article était déjà dans la liste. */
+  added: boolean;
+  /** Article ajouté, ou l'article existant (doublon), ou null (saisie vide). */
+  item: GroceryItem | null;
+}
+
+/** Article retiré (à passer à `restoreGrocery` pour annuler). */
+export interface RemovedGrocery {
+  item: GroceryItem;
+  index: number;
+}
+
 export interface AppContextValue {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
+  /** État applicatif V2 complet (budget, Maison, forêt, courses). null avant chargement. */
   appState: AppState | null;
+  /** Maintenant (rafraîchi à minuit, au focus et au retour sur l'onglet). */
   today: Date;
-  createHomeTask: (title: string, assignee: TaskAssignee, recurrence: TaskRecurrence) => void;
-  toggleHomeTask: (task: HouseholdTask) => void;
+
+  // Maison (tâches) — mêmes écritures sérialisées que le budget
+  /**
+   * Crée une tâche. Titre nettoyé ; jour de semaine / du mois = aujourd'hui
+   * s'il n'est pas fourni. Retourne la tâche créée, ou null si la saisie est
+   * invalide (titre vide, jour hors plage) ou l'état pas encore chargé.
+   */
+  createHomeTask: (input: NewHomeTaskInput) => HouseholdTask | null;
+  /**
+   * Modifie une tâche (titre, qui, récurrence, jour). Passer en weekly /
+   * monthly sans jour connu prend le jour d'aujourd'hui. Les faits Maison
+   * passés gardent leur titre d'origine. Retourne false si la tâche est
+   * inconnue ou le patch incohérent (rien n'est modifié).
+   */
+  updateHomeTask: (id: string, patch: HomeTaskPatch) => boolean;
+  /**
+   * Supprime une tâche. Les faits Maison passés restent dans l'historique et
+   * la répartition ; la forêt ne perd rien. Retourne false si inconnue.
+   */
+  deleteHomeTask: (id: string) => boolean;
+  /**
+   * Coche / décoche l'occurrence du jour (ou l'unique occurrence d'une
+   * ponctuelle). Synchrone : le résultat est calculé avant setState.
+   * Crédits forêt : cap quotidien, tombstone à l'annulation, recocher ne
+   * redonne pas de crédit.
+   */
+  toggleHomeTask: (task: HouseholdTask) => ToggleHomeTaskResult;
+  /** « Mettre la maison en pause » / « Réveiller la forêt ». */
   toggleHomePause: () => void;
+
+  // Courses
+  /**
+   * Ajout rapide (« 2 pommes », « lait x2 », « 500 g de farine ») : quantité
+   * extraite, rayon automatique, pas de doublon d'un article non coché.
+   */
+  addGrocery: (label: string, addedBy?: GroceryAuthor) => AddGroceryResult;
+  /** Met au panier / sort du panier (doneAt horodaté). */
+  toggleGrocery: (id: string) => void;
+  /** Retire un article (sans l'archiver). Retourne de quoi annuler, ou null si inconnu. */
+  removeGrocery: (id: string) => RemovedGrocery | null;
+  /** Annule un retrait (remet l'article à sa place). */
+  restoreGrocery: (removed: RemovedGrocery) => void;
+  /** Renomme / change la quantité / change le rayon (null = rayon automatique). */
+  updateGrocery: (id: string, patch: GroceryItemPatch) => void;
+  /** « Vider le panier » : archive les articles cochés dans l'historique. Retourne leur nombre. */
+  clearDoneGroceries: () => number;
+
   saveStatus: SaveStatus;
   /** Mode de récupération actif (données illisibles ou stockage indisponible). */
   recovery: Recovery;
@@ -98,6 +187,8 @@ export interface AppContextValue {
 
   // Réglages (s'appliquent aux NOUVEAUX mois, jamais aux mois existants)
   updatePersonSettings: (person: 'A' | 'B', patch: Partial<Omit<PersonSettings, 'id'>>) => void;
+  /** Renomme une personne (nom nettoyé, vide ignoré → false) ; household.people suit. */
+  renamePerson: (person: 'A' | 'B', name: string) => boolean;
   updateRecurringExpense: (expenseId: string, patch: Partial<Omit<Expense, 'id'>>) => void;
   addRecurringExpense: (label: string, amountCents: number) => void;
   removeRecurringExpense: (expenseId: string) => void;
@@ -165,6 +256,34 @@ export function AppProvider({
   const hydratedRef = useRef(false);
   const recoveryRef = useRef<Recovery>(recovery);
   recoveryRef.current = recovery;
+  // Dernier état connu, pour les actions qui renvoient un résultat synchrone
+  // (toggleHomeTask, addGrocery…). Resynchronisé à chaque rendu, et avancé
+  // de façon optimiste par `transact` pour que deux actions dans le même tick
+  // (double tap) voient la première.
+  const latestRef = useRef<AppState | null>(appState);
+  latestRef.current = appState;
+
+  /**
+   * Applique une transition PURE et déterministe (ids et horloge capturés
+   * par l'appelant) : le résultat est calculé tout de suite sur le dernier
+   * état connu, puis la même transition est rejouée dans l'updater de
+   * setState (sûr en StrictMode, qui rejoue les updaters ; composé avec les
+   * autres mises à jour en attente). Écriture sérialisée par l'effet de
+   * sauvegarde, comme toute autre modification.
+   */
+  const transact = useCallback(
+    <R,>(fn: (s: AppState) => { state: AppState; result: R }, fallback: R): R => {
+      const current = latestRef.current;
+      if (current === null) return fallback;
+      const { state: next, result } = fn(current);
+      if (next !== current) {
+        latestRef.current = next;
+        setAppState((prev) => (prev === null ? prev : fn(prev).state));
+      }
+      return result;
+    },
+    [],
+  );
 
   // Application d'un résultat de chargement à l'état du store.
   const applyLoadResult = useCallback((result: Awaited<ReturnType<StorageAdapter['load']>>) => {
@@ -375,6 +494,17 @@ export function AppProvider({
     [mutate],
   );
 
+  const renamePerson = useCallback(
+    (person: 'A' | 'B', name: string): boolean => {
+      const clean = name.replace(/\s+/g, ' ').trim();
+      if (clean === '') return false;
+      // mutate resynchronise household.people depuis les réglages.
+      updatePersonSettings(person, { name: clean });
+      return true;
+    },
+    [updatePersonSettings],
+  );
+
   const updateRecurringExpense = useCallback(
     (expenseId: string, patch: Partial<Omit<Expense, 'id'>>) => {
       mutate((s) => ({
@@ -454,46 +584,180 @@ export function AppProvider({
     [],
   );
 
-  // --- Maison / forest: the same persisted V2 state and serialized writes. ---
-  const createHomeTask = useCallback((title: string, assignee: TaskAssignee, recurrence: TaskRecurrence) => {
-    const now = new Date();
-    if (!title.trim()) return;
-    const task = createTask({ id: newId(), title: title.trim(), assignee, recurrence, weeklyDay: recurrence === 'weekly' ? isoWeekday(now) : undefined, monthlyDay: recurrence === 'monthly' ? now.getDate() : undefined }, localDateKey(now));
-    setAppState(previous => previous ? { ...previous, chores: { ...previous.chores, tasks: [...previous.chores.tasks, task] } } : previous);
-  }, []);
+  // --- Maison : tâches + forêt (même état V2, mêmes écritures sérialisées) ---
 
-  const toggleHomeTask = useCallback((requested: HouseholdTask) => {
-    const now = new Date();
-    const day = localDateKey(now);
-    const id = newId();
-    setAppState(previous => {
-      if (!previous) return previous;
-      const task = previous.chores.tasks.find(item => item.id === requested.id);
-      if (!task || (task.recurrence !== 'none' && !isDueOn(task, now))) return previous;
-      const dueDate = task.recurrence === 'none' ? 'once' : day;
-      const key = creditKeyFor(task, dueDate);
-      const forest = advanceDay(previous.forest, day);
-      if (hasCompletion(previous.chores.completions, task.id, dueDate)) {
-        const result = removeCompletion(previous.chores.completions, task.id, dueDate);
-        return { ...previous, chores: { ...previous.chores, completions: result.completions }, forest: tombstoneCredit(forest, key).forest };
+  const createHomeTask = useCallback(
+    (input: NewHomeTaskInput): HouseholdTask | null => {
+      const now = new Date();
+      let task: HouseholdTask;
+      try {
+        task = createTask(
+          {
+            id: newId(),
+            title: input.title,
+            assignee: input.assignee,
+            recurrence: input.recurrence,
+            weeklyDay: input.recurrence === 'weekly' ? (input.weeklyDay ?? isoWeekday(now)) : undefined,
+            monthlyDay: input.recurrence === 'monthly' ? (input.monthlyDay ?? now.getDate()) : undefined,
+          },
+          localDateKey(now),
+        );
+      } catch {
+        return null;
       }
-      const result = addCompletion(previous.chores.completions, task, dueDate, now, id);
-      if (!result.added) return previous;
-      const credit = grantCredit(forest, key, day);
-      let nextForest = credit.forest;
-      if (credit.granted) {
-        nextForest = updateStreak(nextForest, day);
-        nextForest = evaluateRareEvents(nextForest, forest.currentStreak, nextForest.currentStreak).forest;
-        nextForest = evaluateUnlocks(nextForest);
-      }
-      return { ...previous, chores: { ...previous.chores, completions: result.completions }, forest: nextForest };
-    });
-  }, []);
+      return transact(
+        (s) => ({
+          state: { ...s, chores: { ...s.chores, tasks: [...s.chores.tasks, task] } },
+          result: task as HouseholdTask | null,
+        }),
+        null,
+      );
+    },
+    [transact],
+  );
+
+  const updateHomeTask = useCallback(
+    (id: string, patch: HomeTaskPatch): boolean => {
+      const now = new Date();
+      return transact((s) => {
+        const current = s.chores.tasks.find((t) => t.id === id);
+        if (current === undefined) return { state: s, result: false };
+        const recurrence = patch.recurrence ?? current.recurrence;
+        const effective: HomeTaskPatch = { ...patch };
+        if (recurrence === 'weekly' && effective.weeklyDay === undefined && current.weeklyDay === undefined) {
+          effective.weeklyDay = isoWeekday(now);
+        }
+        if (recurrence === 'monthly' && effective.monthlyDay === undefined && current.monthlyDay === undefined) {
+          effective.monthlyDay = now.getDate();
+        }
+        try {
+          const tasks = updateTask(s.chores.tasks, id, effective);
+          return {
+            state: tasks === s.chores.tasks ? s : { ...s, chores: { ...s.chores, tasks } },
+            result: true,
+          };
+        } catch {
+          return { state: s, result: false };
+        }
+      }, false);
+    },
+    [transact],
+  );
+
+  const deleteHomeTask = useCallback(
+    (id: string): boolean =>
+      transact((s) => {
+        const tasks = deleteTask(s.chores.tasks, id);
+        return tasks === s.chores.tasks
+          ? { state: s, result: false }
+          : { state: { ...s, chores: { ...s.chores, tasks } }, result: true };
+      }, false),
+    [transact],
+  );
+
+  const toggleHomeTask = useCallback(
+    (task: HouseholdTask): ToggleHomeTaskResult => {
+      const now = new Date();
+      const completionId = newId();
+      return transact<ToggleHomeTaskResult>(
+        (s) => {
+          const r = toggleTaskToday(s, task.id, now, completionId);
+          return { state: r.state, result: { completed: r.completed, completionId: r.completionId } };
+        },
+        { completed: false, completionId: null },
+      );
+    },
+    [transact],
+  );
 
   const toggleHomePause = useCallback(() => {
     const day = localDateKey(new Date());
     setAppState(previous => previous ? { ...previous, forest: previous.forest.paused ? resumeForest(previous.forest, day) : pauseForest(advanceDay(previous.forest, day), day) } : previous);
   }, []);
+
+  // --- Courses ------------------------------------------------------------
+
+  const addGrocery = useCallback(
+    (label: string, addedBy?: GroceryAuthor): AddGroceryResult => {
+      const now = new Date();
+      const id = newId();
+      return transact<AddGroceryResult>(
+        (s) => {
+          const r = addGroceryItem(s.groceries.items, label, { id, now, addedBy });
+          return {
+            state: r.items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items: r.items } },
+            result: { added: r.added, item: r.item },
+          };
+        },
+        { added: false, item: null },
+      );
+    },
+    [transact],
+  );
+
+  const toggleGrocery = useCallback(
+    (id: string) => {
+      const now = new Date();
+      transact((s) => {
+        const items = toggleGroceryItem(s.groceries.items, id, now);
+        return {
+          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
+          result: undefined,
+        };
+      }, undefined);
+    },
+    [transact],
+  );
+
+  const removeGrocery = useCallback(
+    (id: string): RemovedGrocery | null =>
+      transact<RemovedGrocery | null>((s) => {
+        const index = s.groceries.items.findIndex((item) => item.id === id);
+        if (index === -1) return { state: s, result: null };
+        const items = removeGroceryItem(s.groceries.items, id);
+        return {
+          state: { ...s, groceries: { ...s.groceries, items } },
+          result: { item: s.groceries.items[index]!, index },
+        };
+      }, null),
+    [transact],
+  );
+
+  const restoreGrocery = useCallback(
+    (removed: RemovedGrocery) => {
+      transact((s) => {
+        const items = restoreGroceryItem(s.groceries.items, removed.item, removed.index);
+        return {
+          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
+          result: undefined,
+        };
+      }, undefined);
+    },
+    [transact],
+  );
+
+  const updateGrocery = useCallback(
+    (id: string, patch: GroceryItemPatch) => {
+      transact((s) => {
+        const items = updateGroceryItem(s.groceries.items, id, patch);
+        return {
+          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
+          result: undefined,
+        };
+      }, undefined);
+    },
+    [transact],
+  );
+
+  const clearDoneGroceries = useCallback((): number => {
+    const now = new Date();
+    return transact((s) => {
+      const groceries = coreClearDoneGroceries(s.groceries, now);
+      return groceries === s.groceries
+        ? { state: s, result: 0 }
+        : { state: { ...s, groceries }, result: s.groceries.items.length - groceries.items.length };
+    }, 0);
+  }, [transact]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -530,8 +794,16 @@ export function AppProvider({
       appState,
       today,
       createHomeTask,
+      updateHomeTask,
+      deleteHomeTask,
       toggleHomeTask,
       toggleHomePause,
+      addGrocery,
+      toggleGrocery,
+      removeGrocery,
+      restoreGrocery,
+      updateGrocery,
+      clearDoneGroceries,
       saveStatus,
       recovery,
       currentMonth,
@@ -548,6 +820,7 @@ export function AppProvider({
       addExpense,
       removeExpense,
       updatePersonSettings,
+      renamePerson,
       updateRecurringExpense,
       addRecurringExpense,
       removeRecurringExpense,
@@ -561,8 +834,16 @@ export function AppProvider({
       appState,
       today,
       createHomeTask,
+      updateHomeTask,
+      deleteHomeTask,
       toggleHomeTask,
       toggleHomePause,
+      addGrocery,
+      toggleGrocery,
+      removeGrocery,
+      restoreGrocery,
+      updateGrocery,
+      clearDoneGroceries,
       saveStatus,
       recovery,
       currentMonth,
@@ -579,6 +860,7 @@ export function AppProvider({
       addExpense,
       removeExpense,
       updatePersonSettings,
+      renamePerson,
       updateRecurringExpense,
       addRecurringExpense,
       removeRecurringExpense,

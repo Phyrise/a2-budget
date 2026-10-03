@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyState } from '../index.js';
-import { emptyAppState, createTask } from './index.js';
+import { addCompletion, addGroceryItem, clearDoneGroceries, createTask, emptyAppState, toggleGroceryItem } from './index.js';
 import { buildExportJson, parseImportJson } from '../../../../apps/web/src/state/exportImport.js';
 
 describe('app import/export V2 integration', () => {
@@ -24,6 +24,23 @@ describe('app import/export V2 integration', () => {
     if (!result.ok) return;
     expect(result.state).toEqual(app);
     expect(result.summary.taskCount).toBe(1);
+  });
+  it('round-trips groceries (new optional fields + history) and summarises tasks and groceries', () => {
+    const app = emptyAppState();
+    const now = new Date('2026-10-15T09:00:00.000Z');
+    let items = addGroceryItem([], '2 pommes', { id: 'g1', now, addedBy: 'a' }).items;
+    items = addGroceryItem(items, '500 g de farine', { id: 'g2', now, addedBy: 'b' }).items;
+    items = toggleGroceryItem(items, 'g1', now);
+    app.groceries = clearDoneGroceries({ items }, now);
+    app.groceries.items = addGroceryItem(app.groceries.items, 'lait', { id: 'g3', now }).items;
+    const task = createTask({ id: 'task', title: 'Linge', assignee: 'b', recurrence: 'daily' }, '2026-10-02');
+    app.chores.tasks.push(task);
+    app.chores.completions = addCompletion([], task, '2026-10-14', now, 'c1').completions;
+    const result = parseImportJson(buildExportJson(app));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state).toEqual(app);
+    expect(result.summary).toMatchObject({ taskCount: 1, completionCount: 1, groceryCount: 2 });
   });
   it('rejects malformed data and unsupported envelope versions without accepting an inner V2', () => {
     expect(parseImportJson('{')).toEqual({ ok: false, reason: 'invalid-json' });

@@ -179,11 +179,44 @@ export function actionableTasksToday(
   return tasks.filter((t) => isActionableToday(t, today, completions));
 }
 
+const ASSIGNEES: ReadonlySet<string> = new Set(['a', 'b', 'both', 'unassigned']);
+const RECURRENCES: ReadonlySet<string> = new Set(['none', 'daily', 'weekly', 'monthly']);
+
+function isIntIn(value: unknown, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
+/**
+ * Validation commune création / édition (mêmes règles que validateAppState,
+ * pour qu'une tâche acceptée ici se recharge toujours). Lève une RangeError.
+ */
+function assertTaskFields(fields: {
+  title: string;
+  assignee: string;
+  recurrence: string;
+  weeklyDay?: number | undefined;
+  monthlyDay?: number | undefined;
+}): void {
+  if (typeof fields.title !== 'string' || fields.title.trim() === '') {
+    throw new RangeError('task title must not be empty');
+  }
+  if (!ASSIGNEES.has(fields.assignee)) throw new RangeError('invalid task assignee');
+  if (!RECURRENCES.has(fields.recurrence)) throw new RangeError('invalid task recurrence');
+  if (fields.recurrence === 'weekly' && !isIntIn(fields.weeklyDay, 1, 7)) {
+    throw new RangeError('weekly task requires weeklyDay in [1,7]');
+  }
+  if (fields.recurrence === 'monthly' && !isIntIn(fields.monthlyDay, 1, 31)) {
+    throw new RangeError('monthly task requires monthlyDay in [1,31]');
+  }
+}
+
 /**
  * Crée une tâche. Valide la cohérence récurrence/jour :
- * - weekly exige weeklyDay ∈ [1,7]
- * - monthly exige monthlyDay ∈ [1,31]
- * - none/daily n'ont pas de jour
+ * - titre non vide (espaces de bord retirés) ;
+ * - assignee / récurrence connus ;
+ * - weekly exige weeklyDay entier ∈ [1,7]
+ * - monthly exige monthlyDay entier ∈ [1,31]
+ * - none/daily n'ont pas de jour (un jour fourni est ignoré)
  * Lève une RangeError si incohérent.
  */
 export function createTask(
@@ -198,22 +231,10 @@ export function createTask(
   },
   createdAt: string,
 ): HouseholdTask {
-  if (input.title.trim() === '') {
-    throw new RangeError('task title must not be empty');
-  }
-  if (input.recurrence === 'weekly') {
-    if (input.weeklyDay === undefined || input.weeklyDay < 1 || input.weeklyDay > 7) {
-      throw new RangeError('weekly task requires weeklyDay in [1,7]');
-    }
-  }
-  if (input.recurrence === 'monthly') {
-    if (input.monthlyDay === undefined || input.monthlyDay < 1 || input.monthlyDay > 31) {
-      throw new RangeError('monthly task requires monthlyDay in [1,31]');
-    }
-  }
+  assertTaskFields(input);
   return {
     id: input.id,
-    title: input.title,
+    title: input.title.trim(),
     description: input.description,
     assignee: input.assignee,
     recurrence: input.recurrence,
@@ -221,4 +242,123 @@ export function createTask(
     monthlyDay: input.recurrence === 'monthly' ? input.monthlyDay : undefined,
     createdAt,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Édition / suppression
+// ---------------------------------------------------------------------------
+
+/** Champs modifiables d'une tâche. */
+export type TaskPatch = Partial<
+  Pick<HouseholdTask, 'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'description'>
+>;
+
+/**
+ * Modifie une tâche (titre, assignee, récurrence, jour de semaine / du mois,
+ * description). La tâche résultante est validée comme à la création :
+ * - titre non vide (espaces de bord retirés) ;
+ * - assignee / récurrence connus ;
+ * - weekly exige weeklyDay ∈ [1,7] (celui du patch, sinon l'ancien) ;
+ * - monthly exige monthlyDay ∈ [1,31] (idem) ;
+ * - les jours sans objet pour la récurrence finale sont retirés.
+ * Lève une RangeError si incohérent (rien n'est modifié).
+ *
+ * `id` et `createdAt` ne changent jamais. Les faits Maison passés gardent
+ * leur copie du titre et de l'assignee (historique fidèle) ; les crédits de la
+ * forêt sont inchangés. Id inconnu ou patch sans effet → même référence.
+ */
+export function updateTask(tasks: HouseholdTask[], id: string, patch: TaskPatch): HouseholdTask[] {
+  const index = tasks.findIndex((t) => t.id === id);
+  if (index === -1) return tasks;
+  const current = tasks[index]!;
+
+  const title = patch.title !== undefined ? patch.title.trim() : current.title;
+  const assignee = patch.assignee ?? current.assignee;
+  const recurrence = patch.recurrence ?? current.recurrence;
+  const weeklyDay = patch.weeklyDay ?? current.weeklyDay;
+  const monthlyDay = patch.monthlyDay ?? current.monthlyDay;
+  assertTaskFields({ title, assignee, recurrence, weeklyDay, monthlyDay });
+
+  const next: HouseholdTask = {
+    id: current.id,
+    title,
+    description: patch.description !== undefined ? patch.description : current.description,
+    assignee,
+    recurrence,
+    weeklyDay: recurrence === 'weekly' ? weeklyDay : undefined,
+    monthlyDay: recurrence === 'monthly' ? monthlyDay : undefined,
+    createdAt: current.createdAt,
+  };
+  if (
+    next.title === current.title &&
+    next.description === current.description &&
+    next.assignee === current.assignee &&
+    next.recurrence === current.recurrence &&
+    next.weeklyDay === current.weeklyDay &&
+    next.monthlyDay === current.monthlyDay
+  ) {
+    return tasks;
+  }
+  const out = tasks.slice();
+  out[index] = next;
+  return out;
+}
+
+/**
+ * Supprime une tâche (modèle). Les faits Maison passés **restent** dans
+ * l'historique et la répartition (ils portent leur propre copie du titre) ;
+ * les crédits de la forêt sont conservés. Id inconnu → même référence.
+ */
+export function deleteTask(tasks: HouseholdTask[], id: string): HouseholdTask[] {
+  const index = tasks.findIndex((t) => t.id === id);
+  if (index === -1) return tasks;
+  const out = tasks.slice();
+  out.splice(index, 1);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// À venir
+// ---------------------------------------------------------------------------
+
+/** Une occurrence à venir (non cochable). */
+export interface UpcomingOccurrence {
+  task: HouseholdTask;
+  /** Date d'échéance locale « YYYY-MM-DD ». */
+  date: string;
+  /** 1 = demain, 2 = après-demain… */
+  daysFromNow: number;
+}
+
+/**
+ * Prochaines occurrences des tâches récurrentes sur les `days` jours qui
+ * **suivent** `from` (demain → from + days, bornes incluses ; aujourd'hui est
+ * couvert par actionableTasksToday). Les ponctuelles (`none`) n'ont pas
+ * d'occurrence future et sont exclues ; une occurrence déjà terminée est
+ * omise. Tri : date croissante, puis ordre des tâches.
+ * `includeDaily: false` omet les tâches quotidiennes (peu informatives dans
+ * « À venir »). `days` est borné à [0, 366].
+ */
+export function upcomingOccurrences(
+  tasks: HouseholdTask[],
+  completions: ChoreCompletion[],
+  from: Date,
+  days: number,
+  options: { includeDaily?: boolean } = {},
+): UpcomingOccurrence[] {
+  const includeDaily = options.includeDaily ?? true;
+  const span = Math.max(0, Math.min(366, Math.floor(days)));
+  const out: UpcomingOccurrence[] = [];
+  for (let offset = 1; offset <= span; offset += 1) {
+    const date = addDays(from, offset);
+    const key = localDateKey(date);
+    for (const task of tasks) {
+      if (task.recurrence === 'none') continue;
+      if (task.recurrence === 'daily' && !includeDaily) continue;
+      if (!isDueOn(task, date)) continue;
+      if (hasCompletion(completions, task.id, key)) continue;
+      out.push({ task, date: key, daysFromNow: offset });
+    }
+  }
+  return out;
 }

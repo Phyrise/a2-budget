@@ -9,8 +9,9 @@ les formules du budget : il compose l'état applicatif modulaire V2 autour du
 budget existant, **profondément identique** (réserve comprise).
 
 Implémentation : `packages/core/src/home/**` (fichiers `types.ts`, `dates.ts`,
-`tasks.ts`, `forest.ts`, `appState.ts`, `fixtures/v1.ts`). Tests : `*.test.ts`
-du même dossier.
+`tasks.ts`, `choreActions.ts`, `forest.ts`, `groceries.ts`, `appState.ts`,
+`fixtures/v1.ts`). Tests : `*.test.ts` du même dossier. Store :
+`apps/web/src/state/store.tsx` (§9).
 
 ---
 
@@ -49,7 +50,8 @@ AppState
 │   └── completions: ChoreCompletion[]
 ├── forest: ForestState
 └── groceries
-    └── items: GroceryItem[]        // échafaudage du futur module Courses
+    ├── items: GroceryItem[]        // liste commune (à acheter + panier)
+    └── history?: GroceryPurchase[] // achats archivés (optionnel)
 ```
 
 - `household.people` : identité partagée des deux personnes (dérivée des
@@ -59,7 +61,12 @@ AppState
   réserve comprise). La validation V2 réutilise la validation V1 testée.
 - `chores` : tâches (modèles récurrents) + faits Maison (occurrences terminées).
 - `forest` : état de la forêt (vitalité, croissance, crédits, pause).
-- `groceries` : échafaudage minimal (module à venir).
+- `groceries` : liste de courses commune + historique des achats (§10).
+
+> **Évolution rétrocompatible** : les champs ajoutés en V2 après coup
+> (courses : `quantity`, `category`, `addedAt`, `doneAt`, `addedBy`, `history`)
+> sont **optionnels**. Un JSON V2 qui ne les a pas se charge à l'identique
+> (aucun champ inventé) ; `schemaVersion` reste `2`.
 
 > **Règle** : on ne **greffe jamais** les domaines Maison/Forêt sur
 > `schemaVersion: 1` — le validateur V1 supprimerait leurs champs au
@@ -151,6 +158,51 @@ Maison de la semaine courante (lundi → dimanche, sur `completedAt`), par
 assignee (`a`, `b`, `both`, `unassigned`). Elle est indépendante des crédits de
 la forêt : annuler un fait le retire de la répartition, mais le crédit (déjà
 accordé) reste au ledger.
+
+### 4.4 Création, édition, suppression
+
+- `createTask(input, createdAt)` : titre nettoyé (espaces de bord) et non
+  vide ; `assignee` / `recurrence` connus ; `weekly` exige `weeklyDay`
+  **entier** ∈ [1,7], `monthly` exige `monthlyDay` **entier** ∈ [1,31] ; un
+  jour sans objet est ignoré. Sinon `RangeError`. Mêmes règles que
+  `validateAppState` : une tâche acceptée se recharge toujours.
+- `updateTask(tasks, id, patch)` : `patch` ⊂ `{ title, assignee, recurrence,
+  weeklyDay, monthlyDay, description }`. Un jour absent du patch reprend
+  l'ancien ; la tâche finale est validée comme à la création (`RangeError`,
+  rien n'est modifié) ; les jours sans objet pour la récurrence finale sont
+  retirés. `id` et `createdAt` ne changent jamais. Id inconnu ou patch sans
+  effet → **même référence**.
+- `deleteTask(tasks, id)` : retire le modèle. Les **faits Maison passés
+  restent** (historique, répartition : ils portent leur copie du titre et de
+  l'assignee) ; les crédits de la forêt restent au ledger. Un fait dont la
+  tâche n'existe plus est un état V2 **valide**.
+- Les faits Maison passés ne sont **jamais réécrits** par une édition (titre
+  et assignee d'origine conservés).
+
+### 4.5 « À venir »
+
+`upcomingOccurrences(tasks, completions, from, days, { includeDaily? })` :
+occurrences des tâches récurrentes de **demain** à `from + days` (bornes
+incluses ; aujourd'hui relève de `actionableTasksToday`). Ponctuelles exclues,
+occurrence déjà faite (en avance) omise, `includeDaily: false` omet les
+quotidiennes. Tri : date croissante puis ordre des tâches. Chaque entrée :
+`{ task, date: 'YYYY-MM-DD', daysFromNow }`. `days` borné à [0, 366].
+
+### 4.6 Cocher / décocher aujourd'hui (action composée)
+
+`toggleTaskToday(state, taskId, now, completionId)` (`choreActions.ts`, pur et
+déterministe) réunit tâches + forêt dans l'ordre exact :
+
+1. tâche inconnue, ou récurrente non due aujourd'hui → aucun changement
+   (`completionId: null`) ;
+2. `advanceDay` (idempotent) ;
+3. occurrence déjà faite → retrait du fait + **tombstone** du crédit →
+   `{ completed: false, completionId: <id du fait retiré> }` ;
+4. sinon ajout du fait (id fourni) + `grantCredit` (pause, cap, idempotence) ;
+   si crédit accordé : `updateStreak`, `evaluateRareEvents`, `evaluateUnlocks`
+   → `{ completed: true, completionId }`.
+
+Recocher après annulation recrée un fait (nouvel id) **sans** nouveau crédit.
 
 ---
 
@@ -304,16 +356,110 @@ garanties (anti-spam, croissance permanente, pas de punition).
 
 ---
 
-## 8. Périmètre de ce lot (et intégration ultérieure)
+## 8. Cas limites ajoutés (V2 « Yakushima »)
 
-Ce lot livre le **domaine** (contrats + implémentation + tests) dans
-`packages/core/src/home/**`. Il **ne modifie pas** :
+- Double tap sur une tâche dans le même tick : le second appel voit le
+  premier (annulation du **même** fait), aucun crédit regagné.
+- Édition d'une tâche cochée aujourd'hui : le fait garde son titre d'origine.
+- Suppression d'une tâche : faits et crédits conservés, état rechargeable.
+- Courses : JSON V2 sans les nouveaux champs → chargé à l'identique ; champ
+  présent mais mal typé → raison stable (`grocery-invalid-*`,
+  `grocery-history-*`).
 
-- le store (`apps/web/src/state/store.tsx`), le stockage (`storage.ts`),
-  l'import/export ;
-- la coquille / navigation / vues Budget-Historique-Réglages (domaine CODEX) ;
-- `main` ni le stockage de production.
+---
 
-Le **lead** intègre ultérieurement : le store (chargement via `migrateState`,
-actions tâches/forêt), l'UI Maison, l'import/export V2, et la persistance.
-Aucune mutation de `main` avant réception du handoff UI.
+## 9. Store (`apps/web/src/state/store.tsx`, hook `useApp()`)
+
+Toutes les actions passent par le même état V2 et les mêmes écritures
+sérialisées (`LocalStorageAdapter`, une chaîne de promesses) ; aucune
+écriture en mode récupération ; sûres en StrictMode (ids et horloge capturés
+**hors** des updaters, transitions pures rejouables). Les actions qui
+renvoient un résultat le calculent **avant** `setState` sur le dernier état
+connu (avancé de façon optimiste : deux appels dans le même tick se voient).
+
+| Action | Effet | Retour |
+|---|---|---|
+| `createHomeTask({ title, assignee, recurrence, weeklyDay?, monthlyDay? })` | crée la tâche ; jour par défaut = aujourd'hui | `HouseholdTask \| null` (null : saisie invalide) |
+| `updateHomeTask(id, patch)` | `updateTask` ; passer en weekly/monthly sans jour connu → aujourd'hui | `boolean` (false : inconnue / incohérente) |
+| `deleteHomeTask(id)` | `deleteTask` (faits conservés) | `boolean` |
+| `toggleHomeTask(task)` | `toggleTaskToday` | `{ completed, completionId }` (pour `useWorld().pulse({ id: completionId })`) |
+| `toggleHomePause()` | pause / réveil de la forêt | — |
+| `addGrocery(label, addedBy?)` | `addGroceryItem` (quantité, rayon, anti-doublon) | `{ added, item }` |
+| `toggleGrocery(id)` | `toggleGroceryItem` | — |
+| `removeGrocery(id)` | `removeGroceryItem` | `{ item, index } \| null` (pour annuler) |
+| `restoreGrocery(removed)` | `restoreGroceryItem` (annulation) | — |
+| `updateGrocery(id, patch)` | `updateGroceryItem` | — |
+| `clearDoneGroceries()` | vide le panier vers l'historique | nombre d'articles archivés |
+| `renamePerson('A' \| 'B', name)` | nom nettoyé ; `household.people` suit | `boolean` (false : vide) |
+
+Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
+`actionableTasksToday`, `upcomingOccurrences(tasks, completions, today, 7)`,
+`weeklyDistribution`, `groupGroceryItems(items)`,
+`grocerySuggestions(items, 6, { history, now: today })`,
+`recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel`.
+
+Import : le résumé (`ImportSummary`) mentionne aussi `taskCount`,
+`completionCount` et `groceryCount`.
+
+---
+
+## 10. Courses (`groceries.ts`)
+
+Fonctions **pures** (même référence quand rien ne change ; ids et heure
+injectés).
+
+### 10.1 Types
+
+- `GroceryItem` : `{ id, label, done }` (V2 initiale) + optionnels
+  `quantity?: string` (« ×2 », « 500 g » avec espace insécable, « 2 paquets »),
+  `category?: GroceryCategory`, `addedAt?: ISO`, `doneAt?: ISO | null`,
+  `addedBy?: 'a' | 'b'`.
+- `GroceryPurchase` (historique) : `{ id, label, quantity?, category?,
+  addedBy?, boughtAt: ISO }`, plus récent en tête, borné à
+  `GROCERY_HISTORY_MAX = 200`.
+- `GroceryCategory` et `GROCERY_CATEGORIES` (ordre d'affichage, libellés) :
+  Fruits & légumes · Boulangerie · Frais · Épicerie · Boissons · Surgelés ·
+  Hygiène · Maison · Autre.
+
+### 10.2 Saisie rapide
+
+`parseGroceryInput(raw)` → `{ label, quantity? }` :
+« 2 pommes » → ×2 · Pommes ; « lait x2 », « lait (2) », « 2x lait » → ×2 ·
+Lait ; « 500 g de farine », « farine 500 g » → 500 g · Farine ;
+« 2 paquets de pâtes » → 2 paquets · Pâtes ; « du café » → Café ;
+« 1 baguette » → pas de quantité. Les nombres faisant partie du nom
+(« 7up », « Pastis 51 », « 2026 calendrier ») ne sont pas interprétés.
+Libellé : espaces réduits, 120 caractères max, initiale en capitale (sauf
+casse mixte type « iPhone »).
+
+`categorizeGrocery(label)` : mots-clés français (accents, casse et pluriels
+indifférents) ; « surgelé / congelé » → surgelés ; sinon le mot-clé trouvé le
+plus tôt l'emporte (« jus d'orange » → boissons), à égalité le plus long
+(« lait de coco » → épicerie, « crème solaire » → hygiène) ; rien → autre.
+`groceryCategoryOf(item)` = catégorie enregistrée, sinon déduite.
+
+### 10.3 Opérations
+
+- `addGroceryItem(items, raw, { id, now, addedBy?, category? })` → `{ items,
+  item, added }`. Saisie vide → inchangé (`item: null`). Article identique
+  (`groceryKey` : accents, casse, pluriel s/x ignorés) **non coché** déjà
+  présent → pas de doublon (`added: false`, `item` = l'existant ; une
+  quantité différente remplace l'ancienne). Sinon ajout en fin de liste avec
+  `addedAt = now`, `doneAt = null`.
+- `toggleGroceryItem(items, id, now)` : `done` s'inverse ; `doneAt` = now ou
+  null.
+- `removeGroceryItem(items, id)` / `restoreGroceryItem(items, item, index)`.
+- `updateGroceryItem(items, id, { label?, quantity?, category? })` : libellé
+  re-normalisé (quantité incluse extraite, rayon recalculé sauf rayon
+  explicite) ; `quantity: null | ''` retire ; `category: null` = rayon
+  automatique. Champs invalides ignorés, jamais d'exception.
+- `clearDoneGroceries(state, now)` : articles cochés → tête de l'historique
+  (`boughtAt` = `doneAt`, sinon `now`), dédoublonnés par id, bornés.
+- `grocerySuggestions(items, n, { history?, now?, windowDays = 90, minCount
+  = 1 })` : articles achetés (historique + panier) **absents de la liste**,
+  classés par fréquence, puis récence, puis libellé.
+- `recentGroceryPurchases(state, n)` : panier + historique, plus récent
+  d'abord (feuille Historique).
+- `groupGroceryItems(items)` → `{ toBuy: [{ category, label, items }], basket }`
+  (rayons dans l'ordre d'affichage, rayons vides omis ; panier du plus
+  récemment coché au plus ancien).

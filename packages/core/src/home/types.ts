@@ -146,14 +146,77 @@ export interface ForestState {
 }
 
 // ---------------------------------------------------------------------------
-// Courses (futur — simple échafaudage)
+// Courses
 // ---------------------------------------------------------------------------
 
-/** Article de la liste de courses (MVP minimal, module à venir). */
+/**
+ * Rayon d'un article de courses (catégorie automatique par mots-clés
+ * français, modifiable). Ordre d'affichage et libellés : GROCERY_CATEGORIES.
+ */
+export type GroceryCategory =
+  | 'fruits-legumes'
+  | 'boulangerie'
+  | 'frais'
+  | 'epicerie'
+  | 'boissons'
+  | 'surgeles'
+  | 'hygiene'
+  | 'maison'
+  | 'autre';
+
+/** Qui a ajouté un article (repère discret, jamais un score). */
+export type GroceryAuthor = 'a' | 'b';
+
+/**
+ * Article de la liste de courses commune.
+ *
+ * Rétrocompatibilité : `id`, `label`, `done` existent depuis la V2 initiale ;
+ * tous les autres champs sont **optionnels** (un JSON V2 sans eux se charge
+ * tel quel, sans les inventer).
+ */
 export interface GroceryItem {
   id: string;
+  /** Libellé normalisé (espaces réduits, initiale en capitale), sans la quantité. */
   label: string;
+  /** Vrai si l'article est dans le panier (coché). */
   done: boolean;
+  /** Quantité libre et facultative : « ×2 », « 500 g », « 2 paquets »… */
+  quantity?: string;
+  /** Rayon (catégorie automatique ou choisie). Absent = à déduire du libellé. */
+  category?: GroceryCategory;
+  /** Horodatage ISO de l'ajout. */
+  addedAt?: string;
+  /** Horodatage ISO du passage au panier, null si décoché. */
+  doneAt?: string | null;
+  /** Qui a ajouté l'article. */
+  addedBy?: GroceryAuthor;
+}
+
+/**
+ * Achat archivé : un article sorti du panier par « Vider le panier ».
+ * Sert à l'historique (« derniers articles achetés ») et aux suggestions
+ * d'articles fréquents. Liste bornée (GROCERY_HISTORY_MAX), plus récent en tête.
+ */
+export interface GroceryPurchase {
+  /** Id de l'article d'origine (unique dans l'historique). */
+  id: string;
+  label: string;
+  quantity?: string;
+  category?: GroceryCategory;
+  addedBy?: GroceryAuthor;
+  /** Horodatage ISO de l'achat (doneAt de l'article, sinon date du vidage). */
+  boughtAt: string;
+}
+
+/** État du module Courses. */
+export interface GroceriesState {
+  /** Liste active : à acheter (done = false) + panier (done = true). */
+  items: GroceryItem[];
+  /**
+   * Historique des achats (optionnel : absent des JSON V2 antérieurs ; créé
+   * au premier « Vider le panier »).
+   */
+  history?: GroceryPurchase[];
 }
 
 // ---------------------------------------------------------------------------
@@ -175,7 +238,7 @@ export interface Person {
  *   (réserve comprise, même si elle n'est plus affichée).
  * - `chores`    : tâches + faits Maison.
  * - `forest`    : état de la forêt (vitalité, croissance, crédits, pause).
- * - `groceries` : échafaudage du futur module Courses.
+ * - `groceries` : liste de courses commune (+ historique des achats, optionnel).
  */
 export interface AppState {
   schemaVersion: 2;
@@ -192,7 +255,5 @@ export interface AppState {
     completions: ChoreCompletion[];
   };
   forest: ForestState;
-  groceries: {
-    items: GroceryItem[];
-  };
+  groceries: GroceriesState;
 }

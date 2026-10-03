@@ -9,7 +9,12 @@ export interface ImportSummary {
   selectedMonth: string;
   personAName: string;
   personBName: string;
+  /** Tâches Maison (modèles). */
   taskCount: number;
+  /** Faits Maison enregistrés (historique). */
+  completionCount: number;
+  /** Articles de la liste de courses active (à acheter + panier). */
+  groceryCount: number;
 }
 
 /** Enveloppe d'export versionnée. */
@@ -87,6 +92,8 @@ export function parseImportJson(
       personAName: s.settings.personA.name,
       personBName: s.settings.personB.name,
       taskCount: check.state.chores.tasks.length,
+      completionCount: check.state.chores.completions.length,
+      groceryCount: check.state.groceries.items.length,
     },
   };
 }

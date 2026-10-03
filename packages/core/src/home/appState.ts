@@ -21,13 +21,17 @@ import { defaultSettings, validatePersistedState } from '../state.js';
 import type { PersistedState } from '../types.js';
 import { isValidLocalDateKey } from './dates.js';
 import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
+import { isGroceryCategory } from './groceries.js';
 import { ONCE, splitCreditKey } from './tasks.js';
 import type {
   AppState,
   ChoreCompletion,
   CreditLedger,
   ForestState,
+  GroceriesState,
+  GroceryAuthor,
   GroceryItem,
+  GroceryPurchase,
   HouseholdTask,
   PauseInterval,
   Person,
@@ -238,9 +242,7 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
     ) {
       return { ok: false, reason: 'completion-invalid-due-date' };
     }
-    if (typeof c.completedAt !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(c.completedAt) ||
-      !isValidLocalDateKey(c.completedAt.slice(0, 10)) || Number.isNaN(Date.parse(c.completedAt))) {
+    if (!isIsoTimestamp(c.completedAt)) {
       return { ok: false, reason: 'completion-invalid-completed-at' };
     }
     const occKey = `${c.taskId}|${c.dueDate}`;
@@ -412,7 +414,75 @@ function validateForest(value: unknown): Ok<ForestState> | Fail {
   };
 }
 
-function validateGroceries(value: unknown): Ok<{ items: GroceryItem[] }> | Fail {
+const ISO_TIMESTAMP_RE =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/** Horodatage ISO 8601 complet et valide (ex. new Date().toISOString()). */
+function isIsoTimestamp(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    ISO_TIMESTAMP_RE.test(value) &&
+    isValidLocalDateKey(value.slice(0, 10)) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+function isGroceryAuthor(value: unknown): value is GroceryAuthor {
+  return value === 'a' || value === 'b';
+}
+
+/**
+ * Champs optionnels communs (article / achat). Absents ou null → omis ;
+ * présents → type exact exigé (sinon raison stable).
+ */
+function validateGroceryOptionals(
+  item: Record<string, unknown>,
+  prefix: 'grocery' | 'grocery-history',
+): Ok<Pick<GroceryItem, 'quantity' | 'category' | 'addedBy'>> | Fail {
+  const out: Pick<GroceryItem, 'quantity' | 'category' | 'addedBy'> = {};
+  if (item.quantity !== undefined && item.quantity !== null) {
+    if (typeof item.quantity !== 'string') return { ok: false, reason: `${prefix}-invalid-quantity` };
+    if (item.quantity.trim() !== '') out.quantity = item.quantity;
+  }
+  if (item.category !== undefined && item.category !== null) {
+    if (!isGroceryCategory(item.category)) return { ok: false, reason: `${prefix}-invalid-category` };
+    out.category = item.category;
+  }
+  if (item.addedBy !== undefined && item.addedBy !== null) {
+    if (!isGroceryAuthor(item.addedBy)) return { ok: false, reason: `${prefix}-invalid-added-by` };
+    out.addedBy = item.addedBy;
+  }
+  return { ok: true, state: out };
+}
+
+function validateGroceryHistory(value: unknown): Ok<GroceryPurchase[]> | Fail {
+  if (!Array.isArray(value)) return { ok: false, reason: 'grocery-history-not-array' };
+  const seen = new Set<string>();
+  const out: GroceryPurchase[] = [];
+  for (const entry of value) {
+    if (!isPlainObject(entry)) return { ok: false, reason: 'grocery-history-not-object' };
+    if (typeof entry.id !== 'string' || entry.id.length === 0) {
+      return { ok: false, reason: 'grocery-history-invalid-id' };
+    }
+    if (seen.has(entry.id)) return { ok: false, reason: 'duplicate-grocery-history-id' };
+    seen.add(entry.id);
+    if (typeof entry.label !== 'string') return { ok: false, reason: 'grocery-history-invalid-label' };
+    if (!isIsoTimestamp(entry.boughtAt)) {
+      return { ok: false, reason: 'grocery-history-invalid-bought-at' };
+    }
+    const optionals = validateGroceryOptionals(entry, 'grocery-history');
+    if (!optionals.ok) return optionals;
+    out.push({ id: entry.id, label: entry.label, ...optionals.state, boughtAt: entry.boughtAt });
+  }
+  return { ok: true, state: out };
+}
+
+/**
+ * Courses : `id`, `label`, `done` requis (V2 initiale) ; `quantity`,
+ * `category`, `addedAt`, `doneAt`, `addedBy` et `history` optionnels. Un
+ * champ absent n'est jamais inventé (un JSON V2 ancien ressort identique).
+ */
+function validateGroceries(value: unknown): Ok<GroceriesState> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'groceries-not-object' };
   if (!Array.isArray(value.items)) return { ok: false, reason: 'groceries-items-not-array' };
   const seen = new Set<string>();
@@ -426,9 +496,27 @@ function validateGroceries(value: unknown): Ok<{ items: GroceryItem[] }> | Fail 
     if (typeof item.done !== 'boolean') return { ok: false, reason: 'grocery-invalid-done' };
     if (seen.has(item.id)) return { ok: false, reason: 'duplicate-grocery-id' };
     seen.add(item.id);
-    items.push({ id: item.id, label: item.label, done: item.done });
+    const optionals = validateGroceryOptionals(item, 'grocery');
+    if (!optionals.ok) return optionals;
+    const out: GroceryItem = { id: item.id, label: item.label, done: item.done, ...optionals.state };
+    if (item.addedAt !== undefined && item.addedAt !== null) {
+      if (!isIsoTimestamp(item.addedAt)) return { ok: false, reason: 'grocery-invalid-added-at' };
+      out.addedAt = item.addedAt;
+    }
+    if (item.doneAt !== undefined) {
+      if (item.doneAt !== null && !isIsoTimestamp(item.doneAt)) {
+        return { ok: false, reason: 'grocery-invalid-done-at' };
+      }
+      out.doneAt = item.doneAt;
+    }
+    items.push(out);
   }
-  return { ok: true, state: { items } };
+  if (value.history === undefined || value.history === null) {
+    return { ok: true, state: { items } };
+  }
+  const history = validateGroceryHistory(value.history);
+  if (!history.ok) return history;
+  return { ok: true, state: { items, history: history.state } };
 }
 
 /**

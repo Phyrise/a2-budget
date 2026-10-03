@@ -3,7 +3,8 @@
  *
  * Ce domaine est séparé du budget : il compose l'état applicatif modulaire
  * V2 (AppState), fournit la migration V1 → V2, le modèle de tâches à
- * occurrences explicites, et l'état de la forêt dérivé des complétions.
+ * occurrences explicites (édition, suppression, « À venir »), l'état de la
+ * forêt dérivé des complétions et la liste de courses commune.
  *
  * Sémantique, unités et cas limites : docs/DOMAIN_CONTRACTS.md.
  */
@@ -15,7 +16,11 @@ export type {
   CreditLedger,
   CreditRecord,
   ForestState,
+  GroceriesState,
+  GroceryAuthor,
+  GroceryCategory,
   GroceryItem,
+  GroceryPurchase,
   HouseholdTask,
   PauseInterval,
   Person,
@@ -47,7 +52,38 @@ export {
   weeklyDistribution,
   actionableTasksToday,
   createTask,
+  updateTask,
+  deleteTask,
+  upcomingOccurrences,
 } from './tasks.js';
+export type { TaskPatch, UpcomingOccurrence } from './tasks.js';
+
+export { toggleTaskToday } from './choreActions.js';
+export type { ChoresAndForest, ToggleTaskResult } from './choreActions.js';
+
+export {
+  GROCERY_CATEGORIES,
+  GROCERY_HISTORY_MAX,
+  GROCERY_LABEL_MAX,
+  isGroceryCategory,
+  groceryCategoryLabel,
+  categorizeGrocery,
+  groceryCategoryOf,
+  normalizeGroceryLabel,
+  normalizeGroceryQuantity,
+  parseGroceryInput,
+  groceryKey,
+  addGroceryItem,
+  toggleGroceryItem,
+  removeGroceryItem,
+  restoreGroceryItem,
+  updateGroceryItem,
+  clearDoneGroceries,
+  recentGroceryPurchases,
+  grocerySuggestions,
+  groupGroceryItems,
+} from './groceries.js';
+export type { GroceryItemPatch, GrocerySuggestion, GroceryGroup } from './groceries.js';
 
 export {
   VITALITY_MAX,

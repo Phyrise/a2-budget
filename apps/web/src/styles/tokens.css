@@ -2,7 +2,9 @@
    Palette tirée des peintures : sous-bois presque noir, mousse humide,
    écorce de cèdre, brume bleu-vert ; la lumière chaude est rare et précieuse.
    Thème sombre unique : l'interface prolonge la forêt au lieu de la recouvrir. */
-@import '@fontsource-variable/fraunces/index.css';
+/* Fraunces complète (axes opsz + SOFT : grands montants doux) + italique (phrases de la forêt). */
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/fraunces/wght-italic.css';
 @import '@fontsource-variable/inter/index.css';
 
 :root {

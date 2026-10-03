@@ -1,0 +1,234 @@
+/* Réglages (feuille) */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding-top: 6px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-section + .settings-section {
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.settings-section__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.settings-section__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(147, 173, 124, 0.12);
+  color: var(--moss-300);
+}
+
+#reset-title {
+  color: var(--danger);
+}
+
+.settings-section:has(#reset-title) .settings-section__icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.settings-section__title {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  font-size: 19px;
+  font-weight: 540;
+  line-height: 1.25;
+  color: var(--ivory-50);
+}
+
+.settings-section__desc {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settings-section__desc strong {
+  color: var(--ivory-100);
+  font-weight: 600;
+}
+
+.settings-section > .btn {
+  align-self: flex-start;
+}
+
+/* Personnes */
+.settings-people {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-person {
+  --who: var(--who-a);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--who) 8%, transparent), transparent 70%),
+    rgba(19, 33, 26, 0.6);
+}
+
+.settings-person--b {
+  --who: var(--who-b);
+}
+
+.settings-person__head {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.settings-person__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-person__rates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings__add {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.settings__note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--moss-300);
+  font-size: 14px;
+}
+
+.settings__motion {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.settings__backup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.import-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.import-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 420px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.import-note .icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.import-note--success {
+  background: rgba(147, 173, 124, 0.12);
+  color: var(--moss-300);
+}
+
+.import-note--error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.import-confirm p {
+  color: var(--text-muted);
+}
+
+.import-confirm strong {
+  color: var(--ivory-100);
+  overflow-wrap: anywhere;
+}
+
+.import-confirm__list {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(5, 10, 8, 0.4);
+  color: var(--ivory-200);
+  font-size: 14.5px;
+}
+
+.import-confirm__list li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.import-confirm__list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--moss-400);
+}
+
+/* À propos */
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 12px 8px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.settings-about__pair {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+
+.settings-about__name {
+  font-size: 22px;
+  font-weight: 520;
+  color: var(--ivory-50);
+}
+
+.settings-about__text {
+  max-width: 340px;
+  color: var(--text-faint);
+  font-size: 13.5px;
+  line-height: 1.55;
+}

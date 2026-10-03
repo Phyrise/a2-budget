@@ -1,16 +1,40 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" style="background: #0b1410">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>A² Home</title>
     <meta name="description" content="Notre quotidien à deux : budget, maison et courses." />
+    <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0b1410" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="A² Home" />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="icon" href="/a2-budget/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/a2-budget/icons/apple-touch-icon.png" />
+    <style>
+      /* Fond sombre immédiat : aucun flash blanc avant le chargement des styles. */
+      html,
+      body {
+        margin: 0;
+        background: #0b1410;
+        color: #ece6d3;
+      }
+      #root:empty {
+        min-height: 100vh;
+        background:
+          radial-gradient(120% 60% at 50% 18%, #1a2c23 0%, rgba(11, 20, 16, 0) 70%),
+          #0b1410;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="padding: 24px; font-family: system-ui, sans-serif">A² Home a besoin de JavaScript pour fonctionner.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

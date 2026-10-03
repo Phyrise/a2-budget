@@ -1,0 +1,681 @@
+/* Base A² Home : remise à zéro, typographie, classes de base garanties
+   (.screen-sheet, .sheet-section, .section-title, .btn, .btn--primary,
+   .btn--ghost, .icon-btn, .field, .chip, .card, .amount, .muted,
+   .visually-hidden). Jetons : tokens.css. */
+
+:root {
+  /* Grain papier : bruit fractal très léger (fond des feuilles). */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .93 0 0 0 0 .9 0 0 0 0 .8 .085 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --sheet-bg: var(--paper-grain), linear-gradient(180deg, #111e18 0, var(--surface) 220px);
+  --header-h: calc(var(--safe-top) + 64px);
+  --dock-space: calc(var(--nav-height) + var(--safe-bottom) + 36px);
+  --amount-features: 'tnum' 1, 'lnum' 1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+  color: var(--text);
+  scrollbar-color: var(--ink-600) transparent;
+}
+
+html.has-modal {
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+p {
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--amber-300);
+  text-underline-offset: 3px;
+}
+
+::selection {
+  background: rgba(221, 179, 106, 0.32);
+  color: var(--ivory-50);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+[inert] {
+  pointer-events: none;
+}
+
+/* Cibles de focus programmatique (titre d'écran, contenu) : pas d'anneau. */
+h1[tabindex='-1']:focus,
+main[tabindex='-1']:focus {
+  outline: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Typographie                                                         */
+/* ------------------------------------------------------------------ */
+
+.display {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  letter-spacing: -0.015em;
+}
+
+.eyebrow {
+  font: 600 11.5px/1.2 var(--font-sans);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fog-400);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 520;
+  letter-spacing: -0.012em;
+  color: var(--ivory-50);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.faint {
+  color: var(--text-faint);
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+  font-feature-settings: var(--amount-features);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* Feuille (surface encre posée sur la forêt)                          */
+/* ------------------------------------------------------------------ */
+
+.screen-sheet {
+  position: relative;
+  min-height: calc(100svh - var(--world-h, 0px));
+  padding: 30px var(--gutter) var(--dock-space);
+  background: var(--sheet-bg);
+  background-color: var(--surface);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  box-shadow:
+    0 -1px 0 rgba(236, 230, 211, 0.07),
+    0 -24px 48px rgba(3, 7, 5, 0.35);
+}
+
+/* Bord supérieur fondu dans la forêt. */
+.screen-sheet::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% - 1px);
+  height: 44px;
+  background: linear-gradient(to top, rgba(12, 21, 17, 0.5), rgba(12, 21, 17, 0));
+  pointer-events: none;
+}
+
+.sheet-section {
+  margin-top: 34px;
+}
+
+.sheet-section:first-child,
+.load-notice + .sheet-section {
+  margin-top: 0;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 10px;
+}
+
+.section-head .section-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-head__meta {
+  color: var(--text-faint);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Boutons                                                             */
+/* ------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: 600 15px/1.1 var(--font-sans);
+  letter-spacing: 0.005em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft),
+    color var(--dur-fast) var(--ease-soft),
+    transform var(--dur-fast) var(--ease-soft);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 18px rgba(201, 154, 79, 0.18);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.btn--primary:disabled {
+  opacity: 1;
+  background: rgba(221, 179, 106, 0.14);
+  color: rgba(236, 208, 154, 0.5);
+  box-shadow: none;
+}
+
+.btn--danger:disabled {
+  opacity: 1;
+  background: transparent;
+  border-color: rgba(217, 138, 108, 0.3);
+  color: rgba(217, 138, 108, 0.55);
+}
+
+.btn--ghost {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.06);
+  border-color: rgba(185, 198, 189, 0.32);
+}
+
+.btn--quiet {
+  background: rgba(236, 230, 211, 0.07);
+  color: var(--text);
+}
+
+.btn--quiet:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.11);
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: #1d0e08;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #e49c80;
+}
+
+.btn--danger-ghost {
+  border-color: rgba(217, 138, 108, 0.38);
+  color: var(--danger);
+}
+
+.btn--danger-ghost:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.btn--sm {
+  padding: 0 14px;
+  font-size: 14px;
+  gap: 6px;
+}
+
+.btn--lg {
+  min-height: 52px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+
+.btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    color var(--dur-fast) var(--ease-soft),
+    transform var(--dur-fast) var(--ease-soft);
+}
+
+.icon-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-btn--soft {
+  background: rgba(236, 230, 211, 0.07);
+}
+
+.icon-btn--soft:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.12);
+}
+
+.icon-btn--ghost {
+  color: var(--fog-300);
+}
+
+.icon-btn--ghost:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.07);
+  color: var(--text);
+}
+
+.icon-btn--glass {
+  background: rgba(7, 13, 10, 0.42);
+  border-color: rgba(236, 230, 211, 0.16);
+  color: var(--ivory-50);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.icon-btn--glass:hover:not(:disabled) {
+  background: rgba(7, 13, 10, 0.6);
+}
+
+.icon-btn--accent {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 6px 18px rgba(201, 154, 79, 0.2);
+}
+
+.icon-btn--accent:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.icon-btn--danger {
+  color: var(--danger);
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+}
+
+.icon-btn--lg {
+  width: 52px;
+  height: 52px;
+}
+
+.icon-btn__dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber-400);
+  box-shadow: 0 0 0 2px var(--ink-900);
+}
+
+/* ------------------------------------------------------------------ */
+/* Champs                                                              */
+/* ------------------------------------------------------------------ */
+
+.field,
+.amount-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fog-300);
+}
+
+.field__row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.field__input,
+.amount-input__field,
+.select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: rgba(5, 10, 8, 0.55);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.2;
+  transition:
+    border-color var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-fast) var(--ease-soft),
+    box-shadow var(--dur-fast) var(--ease-soft);
+}
+
+.field__input::placeholder {
+  color: var(--fog-500);
+}
+
+.field__input:hover,
+.amount-input__field:hover,
+.select:hover {
+  border-color: rgba(185, 198, 189, 0.34);
+}
+
+.field__input:focus,
+.amount-input__field:focus,
+.select:focus {
+  outline: none;
+  border-color: rgba(221, 179, 106, 0.75);
+  background: rgba(5, 10, 8, 0.8);
+  box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.16);
+}
+
+.amount-input__field {
+  font-family: var(--font-sans);
+  font-feature-settings: var(--amount-features);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.field.is-invalid .field__input,
+.amount-input.is-invalid .amount-input__field {
+  border-color: rgba(217, 138, 108, 0.8);
+  box-shadow: 0 0 0 3px rgba(217, 138, 108, 0.14);
+}
+
+/* Champ en ligne (listes éditables en place) */
+.field--inline .field__input,
+.amount-input--inline .amount-input__field {
+  min-height: 44px;
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  border-radius: 12px;
+}
+
+.field--inline .field__input:hover,
+.amount-input--inline .amount-input__field:hover {
+  background: rgba(236, 230, 211, 0.045);
+  border-color: transparent;
+}
+
+.field--inline .field__input:focus,
+.amount-input--inline .amount-input__field:focus {
+  background: rgba(5, 10, 8, 0.7);
+  border-color: rgba(221, 179, 106, 0.7);
+}
+
+.amount-input--inline .amount-input__field {
+  text-align: right;
+}
+
+/* Grand champ (salaires) */
+.amount-input--large .amount-input__field {
+  min-height: 52px;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+  font-size: 21px;
+  letter-spacing: -0.01em;
+}
+
+.field__hint {
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.field__error {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 40px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239aaba1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9.5l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.select option {
+  background: var(--ink-850);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ */
+/* Pastilles, cartes                                                   */
+/* ------------------------------------------------------------------ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: rgba(236, 230, 211, 0.06);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft);
+}
+
+button.chip {
+  position: relative;
+}
+
+/* Zone tactile étendue à 44 px sans grossir la pastille. */
+button.chip::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+button.chip:hover {
+  background: rgba(236, 230, 211, 0.1);
+  border-color: var(--line-strong);
+}
+
+.chip--glass {
+  background: rgba(7, 13, 10, 0.5);
+  border-color: rgba(236, 230, 211, 0.18);
+  color: var(--ivory-50);
+}
+
+.card {
+  position: relative;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
+  box-shadow: 0 1px 0 rgba(236, 230, 211, 0.04) inset;
+}
+
+.divider {
+  height: 1px;
+  border: 0;
+  margin: 0;
+  background: var(--line);
+}
+
+/* Fenêtre sur la forêt, au-dessus de la feuille (titre, phrase d'humeur). */
+.world-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: var(--world-h);
+  min-height: 150px;
+  padding: var(--header-h) var(--gutter) 22px;
+  pointer-events: none;
+}
+
+.world-window::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(60%, 220px);
+  background: linear-gradient(to top, rgba(8, 14, 11, 0.62), rgba(8, 14, 11, 0));
+  z-index: -1;
+}
+
+.world-window button,
+.world-window a {
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

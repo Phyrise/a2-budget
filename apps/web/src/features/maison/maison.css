@@ -1,0 +1,350 @@
+/* Maison — la clairière */
+
+.maison-hero {
+  padding-bottom: 58px;
+}
+
+.maison-hero__date {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ivory-200);
+  opacity: 0.9;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+}
+
+.maison-hero__mood {
+  max-width: 330px;
+  margin-top: 6px;
+  font-size: 31px;
+  line-height: 1.1;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--ivory-50);
+  text-shadow:
+    0 2px 22px rgba(0, 0, 0, 0.65),
+    0 0 2px rgba(0, 0, 0, 0.4);
+  text-wrap: balance;
+  hyphens: manual;
+}
+
+/* Compagnons perchés sur le bord de la feuille */
+.perch {
+  position: absolute;
+  top: -50px;
+  right: 18px;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  pointer-events: none;
+}
+
+.perch .companion--b {
+  margin-left: -4px;
+  margin-bottom: 1px;
+}
+
+.maison__head {
+  margin-bottom: 4px;
+}
+
+.maison__title {
+  font-size: 28px;
+  font-weight: 500;
+}
+
+/* Liste des tâches */
+.task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 66px;
+  max-height: 140px;
+  margin-left: -6px;
+  border-bottom: 1px solid var(--line);
+  transition: opacity var(--dur-base) var(--ease-soft);
+}
+
+.task-list > .task-row:last-child {
+  border-bottom: 0;
+}
+
+.task-row__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 8px 8px 4px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+button.task-row__body:hover .task-row__title {
+  color: #fffaf0;
+}
+
+.task-row__title {
+  font-size: 16.5px;
+  font-weight: 540;
+  line-height: 1.3;
+  color: var(--ivory-50);
+  overflow-wrap: anywhere;
+  transition: color var(--dur-base) var(--ease-soft);
+}
+
+.task-row__meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.task-row.is-done .task-row__title {
+  color: var(--fog-400);
+  text-decoration: line-through;
+  text-decoration-color: rgba(185, 198, 189, 0.55);
+  text-decoration-thickness: 1.5px;
+}
+
+.task-row.is-leaving {
+  animation: row-leave 340ms var(--ease-soft) 960ms forwards;
+}
+
+@keyframes row-leave {
+  to {
+    opacity: 0;
+    max-height: 0;
+    min-height: 0;
+    border-bottom-color: transparent;
+  }
+}
+
+.task-row > .companion {
+  margin-right: 2px;
+}
+
+.task-row--done {
+  min-height: 56px;
+  margin-left: -6px;
+}
+
+.task-row--done .task-row__title {
+  font-size: 15.5px;
+  color: var(--fog-300);
+}
+
+.task-row__spacer {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: var(--moss-400);
+}
+
+.done-today {
+  margin-top: 14px;
+}
+
+.done-today .disclosure__toggle {
+  min-height: 52px;
+}
+
+.task-list--done {
+  padding-bottom: 6px;
+}
+
+/* À venir */
+.upcoming {
+  display: flex;
+  flex-direction: column;
+}
+
+.upcoming__day {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.upcoming__day:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.upcoming__when {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+}
+
+.upcoming__weekday {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ivory-100);
+}
+
+.upcoming__date {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.upcoming__items {
+  display: flex;
+  flex-direction: column;
+}
+
+.upcoming__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  color: var(--fog-300);
+  font-size: 15px;
+}
+
+.upcoming__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Pied : cette semaine, pause */
+.maison__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.week-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.week-line .icon {
+  flex: none;
+  color: var(--moss-300);
+}
+
+/* Pause */
+.pause-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+  padding: 18px;
+  border: 1px solid rgba(198, 211, 230, 0.2);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(198, 211, 230, 0.12), transparent 60%),
+    linear-gradient(160deg, rgba(34, 46, 66, 0.65), rgba(18, 28, 34, 0.7));
+}
+
+.pause-card__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(198, 211, 230, 0.12);
+  color: var(--who-a);
+}
+
+.pause-card__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 520;
+  color: var(--ivory-50);
+}
+
+.pause-card__body {
+  margin-top: 4px;
+  color: var(--fog-300);
+  font-size: 14.5px;
+}
+
+.pause-card__action {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.pause-card + .sheet-section {
+  margin-top: 0;
+}
+
+.upcoming__who {
+  display: flex;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+}
+
+.maison--paused .task-list {
+  opacity: 0.82;
+}
+
+/* Feuille d'ajout / d'édition */
+.task-form {
+  display: grid;
+  gap: 22px;
+  padding-top: 4px;
+}
+
+.who-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 0 6px;
+  font-size: 13px;
+}
+
+.task-form__who .segmented__label {
+  padding: 0 2px;
+}
+
+.task-form__days .segmented__label {
+  font-weight: 650;
+}
+
+.task-sheet .sheet__footer {
+  justify-content: flex-end;
+}
+
+.task-sheet__delete {
+  flex: 0 0 auto !important;
+  margin-right: auto;
+}
+
+.app--desktop .maison-hero__mood {
+  max-width: calc(100% - 128px);
+  font-size: 30px;
+  text-shadow: none;
+}
+
+.app--desktop .maison-hero__date {
+  text-shadow: none;
+  color: var(--fog-400);
+}
+
+.app--desktop .perch {
+  top: -58px;
+}

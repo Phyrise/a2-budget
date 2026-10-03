@@ -30,49 +30,13 @@ from __future__ import annotations
 import cv2
 import numpy as np
 from PIL import Image
-from scipy.ndimage import gaussian_filter1d
 
-from common import ASSETS, QA, SRC, WORK, grid, label, write_json
+from common import ASSETS, QA, SRC, WORK, bands, cuts_from_bands, grid, label, write_json
 
 OUTD = ASSETS / "fx"
 OUTD.mkdir(parents=True, exist_ok=True)
 SHEET = "14-effects-sheet"
 ROWS = [("fog", 3), ("rays", 3), ("drips", 6), ("needles", 4), ("motes", 6), ("halos", 2)]
-
-
-def valleys(profile: np.ndarray, count: int, min_gap: int) -> list[int]:
-    """Les `count` creux les plus profonds d'un profil lissé, espacés d'au moins min_gap."""
-    p = profile.astype(np.float64)
-    order = np.argsort(p, kind="stable")
-    chosen: list[int] = []
-    # Parcourt les positions par valeur croissante ; à valeur égale (zéros),
-    # préfère le milieu des plages vides.
-    zero = p <= p.min() + 1e-9
-    if zero.any():
-        # Milieux des plages minimales, triés par longueur décroissante.
-        runs = []
-        i = 0
-        while i < len(p):
-            if zero[i]:
-                j = i
-                while j + 1 < len(p) and zero[j + 1]:
-                    j += 1
-                runs.append((j - i + 1, (i + j) // 2, i, j))
-                i = j + 1
-            else:
-                i += 1
-        runs.sort(reverse=True)
-        cand = [r[1] for r in runs if r[2] > 0 and r[3] < len(p) - 1] + list(order)
-    else:
-        cand = list(order)
-    for c in cand:
-        if c < min_gap // 2 or c > len(p) - min_gap // 2:
-            continue
-        if all(abs(c - o) >= min_gap for o in chosen):
-            chosen.append(int(c))
-        if len(chosen) == count:
-            break
-    return sorted(chosen)
 
 
 def soft_floor(x: np.ndarray, f: np.ndarray) -> np.ndarray:
@@ -93,46 +57,50 @@ def main() -> None:
     clean = np.clip(clean, 0, 1)
     lc = clean.max(2)
 
-    # Masque de présence : seuil bas sur la luminance nettoyée, dilaté.
+    # Masque de présence : seuil bas sur la luminance nettoyée, dilaté (franges
+    # douces et gouttelettes détachées gardées avec leur élément).
     thr = 4 / 255
     mask = (cv2.GaussianBlur(lc, (0, 0), 1.5) > thr).astype(np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     mask_d = cv2.dilate(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13)))
-
-    yprof = gaussian_filter1d(mask_d.sum(1).astype(np.float64), 4)
-    ycuts = [0] + valleys(yprof, len(ROWS) - 1, min_gap=60) + [H]
+    mask_t = (cv2.GaussianBlur(lc, (0, 0), 1.5) > 10 / 255).astype(np.uint8)
+    mask_t = cv2.morphologyEx(mask_t, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    mask_t = cv2.dilate(mask_t, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+    # Coupes : profils du masque NON dilaté à un seuil un peu plus haut (les
+    # rangées « rayons » et « gouttes » se touchent presque ; la dilatation
+    # les fusionnerait).
+    cut_mask = (lc > 12 / 255).astype(np.uint8)
+    ycuts = cuts_from_bands(bands(cut_mask.sum(1), len(ROWS)), H)
     print("coupes de rangées :", ycuts)
-    n_lab, lab = cv2.connectedComponents(mask_d, connectivity=8)
 
     report: dict = {}
     tiles = []
     for (group, count), y0, y1 in zip(ROWS, ycuts[:-1], ycuts[1:]):
-        band = mask_d[y0:y1]
-        xprof = gaussian_filter1d(band.sum(0).astype(np.float64), 3)
-        xcuts = [0] + valleys(xprof, count - 1, min_gap=W // (count + 2)) + [W]
+        xcuts = cuts_from_bands(bands(cut_mask[y0:y1].sum(0), count, margin=40), W)
+        print(f"  {group}: coupes {xcuts}")
         report[group] = []
         for k, (x0, x1) in enumerate(zip(xcuts[:-1], xcuts[1:])):
-            cell = np.zeros_like(mask_d)
-            cell[y0:y1, x0:x1] = 1
-            # Composantes majoritairement dans la case.
+            # L'élément = le masque dilaté restreint à sa case ; la boîte est
+            # prise sur un masque un peu plus strict (le voile quasi noir
+            # n'agrandit pas la texture inutilement).
             keep = np.zeros_like(mask_d)
-            ids = np.unique(lab[y0:y1, x0:x1][mask_d[y0:y1, x0:x1] > 0])
-            for i in ids:
-                comp = lab == i
-                if (comp & (cell > 0)).sum() > 0.5 * comp.sum():
-                    keep |= comp.astype(np.uint8)
-            ys, xs = np.nonzero(keep)
+            keep[y0:y1, x0:x1] = mask_d[y0:y1, x0:x1]
+            tight = np.zeros_like(mask_d)
+            tight[y0:y1, x0:x1] = mask_t[y0:y1, x0:x1]
+            ys, xs = np.nonzero(tight)
             if len(ys) == 0:
                 raise SystemExit(f"{group} {k}: case vide")
-            pad = 10
-            by0, by1 = max(0, ys.min() - pad), min(H, ys.max() + 1 + pad)
-            bx0, bx1 = max(0, xs.min() - pad), min(W, xs.max() + 1 + pad)
+            pad = 12
+            by0, by1 = max(y0, ys.min() - pad), min(y1, ys.max() + 1 + pad)
+            bx0, bx1 = max(x0, xs.min() - pad), min(x1, xs.max() + 1 + pad)
             soft = cv2.GaussianBlur(cv2.dilate(keep, np.ones((5, 5), np.uint8)).astype(np.float32), (0, 0), 3)
             crop = clean[by0:by1, bx0:bx1] * np.clip(soft[by0:by1, bx0:bx1] * 1.5, 0, 1)[..., None]
-            # Bords fondus vers le noir (4 px).
+            # Bords fondus vers le noir (12 px : une coupe dans une frange de
+            # brume ne laisse pas d'arête droite).
             h, w = crop.shape[:2]
-            ry = np.clip(np.minimum(np.arange(h), np.arange(h)[::-1]) / 4.0, 0, 1)
-            rx = np.clip(np.minimum(np.arange(w), np.arange(w)[::-1]) / 4.0, 0, 1)
+            ry = np.clip(np.minimum(np.arange(h), np.arange(h)[::-1]) / 12.0, 0, 1)
+            rx = np.clip(np.minimum(np.arange(w), np.arange(w)[::-1]) / 12.0, 0, 1)
+            ry, rx = ry * ry * (3 - 2 * ry), rx * rx * (3 - 2 * rx)
             crop = crop * (ry[:, None] * rx[None, :])[..., None]
             m = crop.max(2)
             peak = max(float(np.percentile(m[m > thr], 99.8)) if (m > thr).any() else 1.0, 0.25)
@@ -144,7 +112,7 @@ def main() -> None:
             Image.fromarray(u8, "RGBA").save(path, "WEBP", quality=90, alpha_quality=90, method=6, exact=True)
             # Contrôle : niveau de noir après compression (bord de 3 px).
             back = np.asarray(Image.open(path).convert("RGBA")).astype(np.float32)
-            border = np.concatenate([back[:3].reshape(-1, 4), back[-3:].reshape(-1, 4), back[:, :3].reshape(-1, 4), back[:, -3:].reshape(-1, 4)])
+            border = np.concatenate([back[:1].reshape(-1, 4), back[-1:].reshape(-1, 4), back[:, :1].reshape(-1, 4), back[:, -1:].reshape(-1, 4)])
             info = {
                 "file": f"fx/{name}.webp",
                 "w": w,

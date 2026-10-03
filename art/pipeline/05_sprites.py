@@ -44,35 +44,6 @@ def load(name: str) -> np.ndarray:
     return np.asarray(Image.open(SRC / f"{name}.png").convert("RGBA"), dtype=np.float32) / 255.0
 
 
-def components(rgba: np.ndarray, expected: int, merge_px: int = 24) -> list[tuple[int, int, int, int]]:
-    """Boîtes (x0, y0, x1, y1) des `expected` plus grands objets, en ordre de lecture."""
-    a = (rgba[..., 3] > 0.02).astype(np.uint8)
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (merge_px, merge_px))
-    merged = cv2.dilate(a, k)
-    n, lab, stats, cent = cv2.connectedComponentsWithStats(merged, connectivity=8)
-    idx = sorted(range(1, n), key=lambda i: -stats[i, cv2.CC_STAT_AREA])[:expected]
-    if len(idx) != expected:
-        raise SystemExit(f"{len(idx)} objets trouvés, {expected} attendus")
-    boxes = []
-    for i in idx:
-        x, y, w, h = stats[i, :4]
-        # Boîte réelle (alpha d'origine) à l'intérieur de la composante fusionnée.
-        sub = (lab[y : y + h, x : x + w] == i) & (a[y : y + h, x : x + w] > 0)
-        ys, xs = np.nonzero(sub)
-        boxes.append((x + xs.min(), y + ys.min(), x + xs.max() + 1, y + ys.max() + 1, i))
-    # Ordre de lecture : regroupe en rangées par centre vertical.
-    boxes.sort(key=lambda b: (b[1] + b[3]) / 2)
-    rows: list[list] = []
-    for b in boxes:
-        cy = (b[1] + b[3]) / 2
-        if rows and abs(cy - np.mean([(r[1] + r[3]) / 2 for r in rows[-1]])) < 0.25 * rgba.shape[0]:
-            rows[-1].append(b)
-        else:
-            rows.append([b])
-    ordered = [b for r in rows for b in sorted(r, key=lambda b: b[0])]
-    return [(b[0], b[1], b[2], b[3]) for b in ordered], lab, [b[4] for b in ordered]
-
-
 def decontaminate(rgba: np.ndarray) -> np.ndarray:
     """Couleur des bords semi-transparents tirée des pixels opaques voisins."""
     rgb, a = rgba[..., :3], rgba[..., 3]
@@ -151,15 +122,79 @@ def export(rgba: np.ndarray, name: str, target_h: int, pad: int = 6) -> dict:
     return {"file": f"sprites/{name}.webp", "w": im.width, "h": im.height, "bytes": path.stat().st_size}
 
 
-def cut(sheet: str, names: list[str], target_h: int, merge_px: int = 24, uniform: bool = False, pad: int = 6) -> dict:
+def cells(rgba: np.ndarray, layout: list[int]) -> list[np.ndarray]:
+    """Objets d'une planche en grille, en ordre de lecture.
+
+    `layout` = nombre d'objets par rangée, cases remplies de gauche à droite
+    (ex. [3, 2] : grille 3×2, case bas-droite vide). Les planches suivent une
+    grille régulière ; chaque frontière de case est recalée sur le creux de la
+    projection de l'alpha dans ±15 % de la taille de case. Chaque composante
+    connexe est attribuée à la case qui en contient l'essentiel (moustaches,
+    queue, bond qui déborde restent avec leur objet) ; une composante
+    partagée entre deux cases (socles de mousse qui se touchent) est coupée
+    à la frontière. Renvoie un masque booléen par objet.
+    """
+    H, W = rgba.shape[:2]
+    a = (rgba[..., 3] > 0.02).astype(np.uint8)
+    a = cv2.morphologyEx(a, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+
+    def refine(profile: np.ndarray, n: int, size: int) -> list[int]:
+        step = size / n
+        cuts = [0]
+        for k in range(1, n):
+            c = round(k * step)
+            r = round(0.15 * step)
+            seg = profile[c - r : c + r + 1].astype(np.float64)
+            low = np.flatnonzero(seg <= seg.min())
+            cuts.append(c - r + int(np.median(low)))  # milieu du creux
+        return cuts + [size]
+
+    ycuts = refine(a.sum(1), len(layout), H)
+    ncol = max(layout)
+    rects = []
+    for r, n in enumerate(layout):
+        y0, y1 = ycuts[r], ycuts[r + 1]
+        xcuts = refine(a[y0:y1].sum(0), ncol, W)
+        rects += [(xcuts[c], y0, xcuts[c + 1], y1) for c in range(n)]
+    print("  cases :", rects)
+    cell_id = np.full((H, W), -1, np.int32)
+    for k, (x0, y0, x1, y1) in enumerate(rects):
+        cell_id[y0:y1, x0:x1] = k
+    n, lab = cv2.connectedComponents(a, connectivity=8)
+    masks = [np.zeros((H, W), bool) for _ in rects]
+    for i in range(1, n):
+        comp = lab == i
+        ids, cnt = np.unique(cell_id[comp], return_counts=True)
+        ok = ids >= 0
+        ids, cnt = ids[ok], cnt[ok]
+        if len(ids) == 0:
+            continue
+        frac = cnt / cnt.sum()
+        if frac.max() >= 0.7:
+            masks[int(ids[np.argmax(frac)])] |= comp
+        else:
+            for k in ids:
+                masks[int(k)] |= comp & (cell_id == k)
+    for k, m in enumerate(masks):
+        if not m.any():
+            raise SystemExit(f"case {k} vide")
+    return masks
+
+
+def cut(sheet: str, names: list[str], layout: list[int], target_h: int, uniform: bool = False, pad: int = 6) -> dict:
     rgba = load(sheet)
-    boxes, lab, ids = components(rgba, len(names), merge_px)
+    masks = cells(rgba, layout)
+    assert len(masks) == len(names), (len(masks), names)
+    boxes = []
+    for m in masks:
+        ys, xs = np.nonzero(m)
+        boxes.append((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     info = {}
     hmax = max(b[3] - b[1] for b in boxes)
-    for (x0, y0, x1, y1), cid, name in zip(boxes, ids, names):
+    for (x0, y0, x1, y1), m, name in zip(boxes, masks, names):
         crop = rgba[y0:y1, x0:x1].copy()
         # Ne garde que l'objet (les voisins qui débordent dans la boîte sont effacés).
-        keep = cv2.dilate((lab[y0:y1, x0:x1] == cid).astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
+        keep = cv2.dilate(m[y0:y1, x0:x1].astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
         crop[~keep] = 0
         # Échelle commune à la planche (tailles relatives conservées) ou hauteur fixe.
         th = round(target_h * (y1 - y0) / hmax) if uniform else target_h
@@ -202,11 +237,11 @@ def edge_zoom(name: str, bg=(240, 240, 240)) -> Image.Image:
 
 def main() -> None:
     info: dict = {}
-    info["kodama"] = cut("08-kodama-sheet", KODAMA, 256)
-    info["creatures"] = cut("09-small-spirits-sheet", CREATURES, 256, merge_px=40)
+    info["kodama"] = cut("08-kodama-sheet", KODAMA, [4, 4], 256)
+    info["creatures"] = cut("09-small-spirits-sheet", CREATURES, [3, 3], 256)
     # Même échelle pour toutes les poses d'un personnage : la plus haute = 320 px.
-    info["jiji"] = cut(JIJI_SHEET, [f"jiji-{p}" for p in POSES], 320, merge_px=30, uniform=True, pad=8)
-    info["calcifer"] = cut(CALCIFER_SHEET, [f"calcifer-{p}" for p in POSES], 320, merge_px=40, uniform=True, pad=8)
+    info["jiji"] = cut(JIJI_SHEET, [f"jiji-{p}" for p in POSES], [3, 2], 320, uniform=True, pad=8)
+    info["calcifer"] = cut(CALCIFER_SHEET, [f"calcifer-{p}" for p in POSES], [3, 2], 320, uniform=True, pad=8)
 
     g = load("11-guardian-isolated")
     ys, xs = np.nonzero(g[..., 3] > 0.02)

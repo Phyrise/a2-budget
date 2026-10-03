@@ -44,9 +44,7 @@ def stage6() -> Image.Image:
 
 
 def depth6() -> np.ndarray:
-    p = WORK / "depth" / "stage-6.png"
-    if not p.exists():
-        p = ASSETS / "depth" / "stage-6.png"
+    p = WORK / "depth" / "stage-6.png"  # écrit par 02_depth.py
     return np.asarray(Image.open(p).convert("L"), dtype=np.float32) / 255.0
 
 
@@ -158,6 +156,12 @@ def check() -> None:
     for i, k in enumerate(pl["kodamaSpots"]):
         x, y = k["x"] * W, k["y"] * H
         d.text((x + 8, y + 2), f"k{i}", fill=(160, 255, 160, 255), font=font(18), stroke_width=3, stroke_fill=(0, 0, 0))
+    # Zone visible du héros mobile (390×528 px, cadrage « cover » autour du
+    # cèdre) : le bas passe sous le bord fondu de la feuille vers y ≈ 0,80.
+    for yy, txt in ((0.8, "bord de la feuille (mobile)"), (0.864, "bas du canvas (mobile)")):
+        for x0 in range(0, W, 24):
+            d.line([(x0, yy * H), (x0 + 12, yy * H)], fill=(255, 255, 255, 170), width=2)
+        d.text((8, yy * H - 22), txt, fill=(255, 255, 255, 220), font=font(16), stroke_width=3, stroke_fill=(0, 0, 0))
     canvas.convert("RGB").resize((768, 1152), Image.LANCZOS).save(QA / "08-check.jpg", quality=82)
     # Zoom sur la moitié basse (sprites lisibles).
     canvas.convert("RGB").crop((0, 640, 1024, 1536)).resize((768, 672), Image.LANCZOS).save(QA / "08-check-low.jpg", quality=84)

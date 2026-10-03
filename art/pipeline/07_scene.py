@@ -7,8 +7,9 @@ bandeaux fixes et image d'attente.
   - foreground.webp : 07-foreground-frame, alpha vérifié, bords décontaminés
     (pas de liseré clair), couleurs propagées sous l'alpha nul ;
   - banners/budget.webp : 02-master-landscape (1536×1024, taille native) ;
-  - banners/courses.webp : bande paysage 2:1 tirée de 03-vitality-lively
-    (ruisseau, cascade et rochers moussus au soleil) ;
+  - banners/courses.webp : bande paysage 3:2 tirée de 03-vitality-lively
+    (ruisseau, cascade et rochers moussus au soleil ; le bandeau de l'app est
+    ≈ 1,4:1 en « cover ») ;
   - placeholder.webp : stade 6 minuscule (≤ 3 KB), à afficher flouté.
 
 Sorties : out/assets/…, out/work/scene.json, planches out/qa/07-*.
@@ -27,8 +28,8 @@ from common import ASSETS, QA, SRC, STAGE_SOURCES, WORK, grid, label, write_json
 sprites = importlib.import_module("05_sprites")
 
 COURSES_SRC = "03-vitality-lively"
-# Bande 2:1 (x0, y0, largeur) en pixels source 1024×1536 — choisie sur la planche 07-banner-candidates.
-COURSES_CROP = (0, 880, 1024)
+# Bande (x0, y0, largeur, hauteur) en pixels source 1024×1536 — choisie sur la planche 07-banner-candidates.
+COURSES_CROP = (0, 853, 1024, 683)
 
 
 def webp_bytes(im: Image.Image, **kw) -> bytes:
@@ -50,10 +51,8 @@ def main() -> None:
 
     # Profondeur : PNG 8 bits (02_depth.py) → format sans perte le plus léger.
     for s in STAGE_SOURCES:
-        png = ASSETS / "depth" / f"stage-{s}.png"
-        keep = WORK / "depth" / f"stage-{s}.png"
-        if png.exists():
-            png.replace(keep)  # 02_depth.py écrit ici ; l'original 8 bits est conservé dans work/
+        keep = WORK / "depth" / f"stage-{s}.png"  # écrit par 02_depth.py
+        (ASSETS / "depth").mkdir(parents=True, exist_ok=True)
         data_png = keep.read_bytes()
         im = Image.open(keep).convert("L")
         wb = webp_bytes(im.convert("RGB"), lossless=True, quality=100, method=6)
@@ -101,8 +100,8 @@ def main() -> None:
     land.save(p, "WEBP", quality=80, method=6)
     report["banner_budget"] = {"file": "banners/budget.webp", "w": land.width, "h": land.height, "bytes": p.stat().st_size}
     src = Image.open(WORK / "aligned" / f"{COURSES_SRC}.png").convert("RGB")
-    x0, y0, w = COURSES_CROP
-    band = src.crop((x0, y0, x0 + w, y0 + w // 2))
+    x0, y0, w, h = COURSES_CROP
+    band = src.crop((x0, y0, x0 + w, y0 + h))
     p = ASSETS / "banners" / "courses.webp"
     band.save(p, "WEBP", quality=80, method=6)
     report["banner_courses"] = {"file": "banners/courses.webp", "w": band.width, "h": band.height, "bytes": p.stat().st_size}
@@ -115,7 +114,7 @@ def main() -> None:
         for yy in (0, 300, 640, 880, 1024):
             cands.append(label(im.crop((0, yy, 1024, yy + 512)).resize((384, 192), Image.LANCZOS), f"{nm} y={yy}"))
     grid(cands, 5).save(QA / "07-banner-candidates.jpg", quality=80)
-    grid([label(land.resize((768, 512), Image.LANCZOS), "budget"), label(band.resize((768, 384), Image.LANCZOS), "courses")], 2).save(
+    grid([label(land.resize((768, 512), Image.LANCZOS), "budget"), label(band.resize((768, 512), Image.LANCZOS), "courses")], 2).save(
         QA / "07-banners.jpg", quality=84
     )
 
@@ -145,11 +144,17 @@ def main() -> None:
         ],
         3,
     ).save(QA / "07-scene.jpg", quality=84)
-    # Zoom sur un bord du premier plan (contrôle du liseré).
+    # Zoom sur un bord du premier plan (contrôle du liseré) : la fenêtre de
+    # 220 px la plus riche en bords semi-transparents.
+    al = u8[..., 3].astype(np.float32) / 255
+    dens = cv2.boxFilter(((al > 0.1) & (al < 0.9)).astype(np.float32), -1, (220, 220), normalize=True)
+    cy, cx = np.unravel_index(int(np.argmax(dens[110:-110, 110:-110])), dens[110:-110, 110:-110].shape)
+    box = (int(cx), int(cy), int(cx) + 220, int(cy) + 220)
+    print("zoom premier plan :", box)
     zoom = Image.new("RGBA", (220, 220), (235, 235, 235, 255))
-    zoom.alpha_composite(Image.fromarray(u8, "RGBA").crop((600, 560, 820, 780)))
-    zoom2 = master.convert("RGBA").crop((600, 560, 820, 780))
-    zoom2.alpha_composite(Image.fromarray(u8, "RGBA").crop((600, 560, 820, 780)))
+    zoom.alpha_composite(Image.fromarray(u8, "RGBA").crop(box))
+    zoom2 = master.convert("RGBA").crop(box)
+    zoom2.alpha_composite(Image.fromarray(u8, "RGBA").crop(box))
     grid([zoom.convert("RGB").resize((440, 440), Image.NEAREST), zoom2.convert("RGB").resize((440, 440), Image.NEAREST)], 2).save(
         QA / "07-foreground-edge.jpg", quality=88
     )

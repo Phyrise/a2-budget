@@ -1,1 +1,37 @@
-{}
+{
+  "_doc": "Placements choisis à la main sur la peinture du stade 6 (08-grid*.jpg). Coordonnées normalisées 0..1 du cadrage portrait (origine en haut à gauche) ; y = pied / point de pose ; scale = hauteur du sprite / hauteur d'image. Héros mobile : y visible ≈ 0,05..0,80.",
+  "anchors": [
+    { "x": 0.13, "y": 0.575, "note": "tronc couché, mousse (gauche)" },
+    { "x": 0.27, "y": 0.612, "note": "tronc couché, milieu" },
+    { "x": 0.4, "y": 0.642, "note": "tronc couché, extrémité" },
+    { "x": 0.47, "y": 0.592, "note": "racine gauche du cèdre" },
+    { "x": 0.6, "y": 0.607, "note": "racines moussues au pied du cèdre" },
+    { "x": 0.765, "y": 0.588, "note": "racine droite du cèdre" },
+    { "x": 0.575, "y": 0.676, "note": "rocher moussu central" },
+    { "x": 0.84, "y": 0.668, "note": "rochers moussus à droite" },
+    { "x": 0.692, "y": 0.752, "note": "rocher entre les deux cascades" },
+    { "x": 0.25, "y": 0.776, "note": "gros rocher moussu (bas gauche)" },
+    { "x": 0.46, "y": 0.79, "note": "rocher sombre de la berge" },
+    { "x": 0.905, "y": 0.79, "note": "rocher de la berge droite" },
+    { "x": 0.085, "y": 0.69, "note": "fougères au sol (gauche)" },
+    { "x": 0.36, "y": 0.705, "note": "fougères sous le tronc couché" }
+  ],
+  "kodamaSpots": [
+    { "x": 0.585, "y": 0.672, "scale": 0.055, "sprite": "kodama-1", "note": "assis sur le rocher central (seul visible en « paisible »)" },
+    { "x": 0.23, "y": 0.607, "scale": 0.052, "sprite": "kodama-6", "note": "sur le tronc couché" },
+    { "x": 0.8, "y": 0.613, "scale": 0.046, "sprite": "kodama-2", "note": "tête penchée, racine droite" },
+    { "x": 0.885, "y": 0.706, "scale": 0.058, "sprite": "kodama-4", "note": "grimpe sur le rocher de droite" },
+    { "x": 0.47, "y": 0.598, "scale": 0.042, "sprite": "kodama-7", "note": "secoue la tête, racine gauche" },
+    { "x": 0.27, "y": 0.783, "scale": 0.066, "sprite": "kodama-5", "note": "les deux, sur le gros rocher (bas)" }
+  ],
+  "creatureSpots": {
+    "moss-ling": { "x": 0.36, "y": 0.638, "scale": 0.034, "note": "boule de mousse sur le bout du tronc couché" },
+    "seed-spirit": { "x": 0.638, "y": 0.588, "scale": 0.03, "note": "graine lumineuse dans le creux au pied du cèdre" },
+    "leaf-sprite": { "x": 0.935, "y": 0.6, "scale": 0.042, "note": "spore lumineuse dans les fougères de droite" },
+    "ember-wisp": { "x": 0.715, "y": 0.742, "scale": 0.046, "note": "volute de brume au-dessus des cascades" },
+    "mushroom-pip": { "x": 0.445, "y": 0.69, "scale": 0.034, "note": "champignon au sol, sous le bout du tronc" },
+    "water-drip": { "x": 0.095, "y": 0.537, "scale": 0.066, "note": "faon derrière le tronc couché (gauche)" }
+  },
+  "guardianSpot": { "x": 0.245, "y": 0.48, "scale": 0.38, "note": "entre les troncs du fond, à gauche du cèdre (cf. 10-guardian-scene)" },
+  "lightSource": { "x": 0.29, "y": 0.02 }
+}

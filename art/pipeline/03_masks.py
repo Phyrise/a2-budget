@@ -50,9 +50,7 @@ def soften(m: np.ndarray, sigma: float) -> np.ndarray:
 
 
 def depth6() -> np.ndarray:
-    p = WORK / "depth" / "stage-6.png"
-    if not p.exists():
-        p = ASSETS / "depth" / "stage-6.png"
+    p = WORK / "depth" / "stage-6.png"  # écrit par 02_depth.py
     return np.asarray(Image.open(p).convert("L"), dtype=np.float32) / 255.0
 
 
@@ -134,15 +132,26 @@ def cedar_mask(stage_imgs: dict[int, np.ndarray]) -> tuple[np.ndarray, dict[int,
 
 
 def light_mask(rgb: np.ndarray, hsv: np.ndarray, depth: np.ndarray, yy: np.ndarray) -> np.ndarray:
+    """Trouées claires de la canopée : brume lumineuse entre les troncs du fond.
+
+    Clair (seuils choisis sur la distribution de luminance du haut de l'image),
+    plus clair que son voisinage, peu saturé, lointain, dans la moitié haute.
+    Les petites taches claires isolées plus bas (papiers de la corde sacrée,
+    reflets) sont retirées par analyse en composantes connexes.
+    """
     lum = 0.3 * rgb[..., 0] + 0.59 * rgb[..., 1] + 0.11 * rgb[..., 2]
     loc = lum - cv2.GaussianBlur(lum, (0, 0), 25)  # plus clair que le voisinage
-    bright = smoothstep(0.32, 0.55, lum) * smoothstep(-0.02, 0.06, loc)
+    bright = smoothstep(0.40, 0.60, lum) * smoothstep(-0.03, 0.05, loc)
     desat = 1 - smoothstep(0.2, 0.4, hsv[..., 1])
-    far = 1 - smoothstep(0.08, 0.22, depth)
-    top = 1 - smoothstep(0.45, 0.65, yy)
+    far = 1 - smoothstep(0.10, 0.30, depth)
+    top = 1 - smoothstep(0.40, 0.55, yy)
     a = bright * desat * far * top
-    a = smoothstep(0.08, 0.45, soften(a, 1.5))
-    return soften(a, 2.0)
+    a = smoothstep(0.1, 0.5, soften(a, 1.2))
+    n, lab, stats, cent = cv2.connectedComponentsWithStats((a > 0.3).astype(np.uint8), 8)
+    for i in range(1, n):
+        if stats[i, cv2.CC_STAT_AREA] < 80 and cent[i, 1] > 0.3 * MH:
+            a[lab == i] = 0
+    return soften(a, 1.2)
 
 
 def overlay(rgb: np.ndarray, m: np.ndarray, color, name: str) -> Image.Image:
@@ -180,6 +189,9 @@ def main() -> None:
         overlay(rgb, a, (255, 230, 80), "A trouées"),
     ]
     grid(tiles, 5).save(QA / "03-masks.jpg", quality=82)
+    # Vue 2×2 réduite (contrôle visuel rapide, canaux séparés AVANT réduction :
+    # PIL prémultiplie l'alpha en redimensionnant du RGBA).
+    grid([t.resize((450, 675), Image.LANCZOS) for t in tiles[1:]], 2).save(QA / "03-masks-2x2.jpg", quality=78)
     # B sur chaque stade (la zone doit couvrir tous les cèdres).
     tiles = [overlay(stage_imgs[s], b, (255, 60, 220), f"B / stade {s}") for s in sorted(stage_imgs)]
     tiles = [t.resize((256, 384), Image.LANCZOS) for t in tiles]

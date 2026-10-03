@@ -146,19 +146,13 @@ def main() -> None:
     fav = draw_mark(fav, cy=0.62, height=0.36)
     b64 = base64.b64encode(png_bytes(fav)).decode("ascii")
     svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
-        'viewBox="0 0 64 64" width="64" height="64">\n'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">\n'
         "  <title>A² Home</title>\n"
         '  <defs><clipPath id="r"><rect width="64" height="64" rx="14"/></clipPath></defs>\n'
         '  <rect width="64" height="64" rx="14" fill="#16261d"/>\n'
-        f'  <image clip-path="url(#r)" width="64" height="64" href="data:image/png;base64,{b64}" '
-        f'xlink:href="data:image/png;base64,{b64}"/>\n'
+        f'  <image clip-path="url(#r)" width="64" height="64" href="data:image/png;base64,{b64}"/>\n'
         "</svg>\n"
     )
-    # Une seule référence suffit : on garde href (SVG 2) et xlink:href (anciens moteurs)
-    # seulement si le poids reste raisonnable.
-    if len(svg) > 24000:
-        svg = svg.replace(f' xlink:href="data:image/png;base64,{b64}"', "")
     (OUT / "favicon.svg").write_text(svg)
     print("favicon.svg", len(svg), "octets")
 

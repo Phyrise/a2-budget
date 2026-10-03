@@ -81,11 +81,17 @@ SAM 3 : dépôt `~/sam3_official`, environnement `~/miniconda3/envs/sam3_local`.
 ## Placements
 
 `placements.json` est édité à la main en regardant `qa/08-grid.jpg` (et la
-vue zoomée de la moitié basse), puis vérifié sur `qa/08-check.jpg`. Repères :
-dans le héros mobile (390×528 px, cadrage « cover » autour du cèdre), seule la
-bande y ≈ 0,05–0,80 est visible ; le bas passe sous la feuille. L'emplacement
-de kodama i reçoit le sprite i de `sprites.kodama` (ordre écrit par
-`10_manifest.py` d'après le champ `sprite`).
+vues zoomées), puis vérifié sur `qa/08-check.jpg` et sur les stades 1, 3 et 7
+(`qa/08-check-stages.jpg` : le cèdre change, rien ne doit flotter dans le
+vide). Repères mesurés dans l'app (390×844) : le canvas du héros fait
+390×528 px (cadrage « cover » autour du cèdre, y image ≈ 0–0,86), la phrase
+d'humeur couvre y ≈ 0,57–0,67 (x < 0,8) et la feuille commence à y ≈ 0,75 ;
+la bande libre est donc y ≈ 0,12–0,57 — ancres, kodama et créatures y sont
+posés (racines moussues, souche brisée, fougères du fond, rochers de droite).
+Le bureau montre y ≈ 0,13–0,87. L'emplacement de kodama i reçoit le sprite i
+de `sprites.kodama` (ordre écrit par `10_manifest.py` d'après le champ
+`sprite`) ; en « paisible » seul l'emplacement 0 est visible, en « vive » les
+trois premiers.
 
 ## Contrôles visuels
 

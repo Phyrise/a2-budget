@@ -87,9 +87,8 @@ async function readPrecache(page: import('@playwright/test').Page): Promise<Prec
       count: urls.length,
       ok:
         urls.some((u) => /\/assets\/index-.*\.js/.test(u)) &&
-        urls.some((u) => u.includes('forest-sanctuary')) &&
-        urls.some((u) => u.includes('jiji-avatar-small')) &&
-        urls.some((u) => u.includes('calcifer-avatar-small')),
+        urls.some((u) => /\.(jpe?g|webp|avif)$/.test(u)) &&
+        urls.some((u) => /\.woff2$/.test(u)),
     };
   });
 }
@@ -124,30 +123,28 @@ test.describe('PWA', () => {
     const page = await context.newPage();
 
     await page.goto(BASE);
-    await expect(page.locator('.home-modules')).toBeVisible();
+    await expect(page.locator('.app-nav')).toBeVisible();
     await waitPrecacheReady(page);
 
-    // Le thème (forêt + avatars) est bien dans le précache.
+    // Le monde (peintures) et les polices auto-hébergées sont dans le précache.
     const cachedUrls = await page.evaluate(async () => {
       const names = await caches.keys();
       const name = names.find((n) => n.startsWith('a2-budget-precache'));
-      const cache = await caches.open(name);
+      const cache = await caches.open(name as string);
       return (await cache.keys()).map((r) => r.url);
     });
-    expect(cachedUrls.some((u) => u.includes('forest-sanctuary'))).toBe(true);
-    expect(cachedUrls.some((u) => u.includes('jiji-avatar-small'))).toBe(true);
-    expect(cachedUrls.some((u) => u.includes('calcifer-avatar-small'))).toBe(true);
+    expect(cachedUrls.some((u) => /\.(jpe?g|webp|avif)$/.test(u))).toBe(true);
+    expect(cachedUrls.some((u) => /\.woff2$/.test(u))).toBe(true);
 
     // Hors ligne : rechargement servi par le précache.
     await context.setOffline(true);
     await page.reload();
-    await expect(page.locator('.home-modules')).toBeVisible();
-    await expect(page.locator('.budget-total strong')).toBeVisible();
+    await expect(page.locator('.app-nav')).toBeVisible();
+    await expect(page.locator('.screen-sheet')).toBeVisible();
 
     // Le contenu est bien servi par le service worker (pas le réseau) :
     // le worker est le contrôleur de la page.
     await page.waitForFunction(async () => {
-      const reg = await navigator.serviceWorker.getRegistration();
       return Boolean(navigator.serviceWorker.controller);
     }, undefined, { timeout: 10_000 });
 
@@ -164,7 +161,7 @@ test.describe('PWA', () => {
 
     // Version 1 : enregistrement + précache.
     await page.goto(BASE);
-    await expect(page.locator('.home-modules')).toBeVisible();
+    await expect(page.locator('.app-nav')).toBeVisible();
     await waitPrecacheReady(page);
     expect(await page.title()).not.toContain('v2');
 
@@ -217,7 +214,7 @@ test.describe('PWA', () => {
 
     // Rechargement : la version 2 est servie.
     await page.reload();
-    await expect(page.locator('.home-modules')).toBeVisible();
+    await expect(page.locator('.app-nav')).toBeVisible();
     await expect(page).toHaveTitle(/v2/);
 
     await context.close();

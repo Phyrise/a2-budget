@@ -1,22 +1,45 @@
 import { expect, test } from '@playwright/test';
+import { APP, PHONE, UI_KEY, goTo, nav, openApp, trackErrors } from './helpers';
+
+test.use({ viewport: PHONE });
 
 /**
- * La page de production se charge avec la nouvelle coquille A² Home et
- * un Budget utilisable, sans navigation inférieure héritée.
+ * La page de production se charge avec la coquille V2 : monde en fond,
+ * en-tête (Historique, Réglages), pilule de navigation, Maison par défaut.
  */
-test('la page de production se charge', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (err) => errors.push(err.message));
-
-  await page.goto('/a2-budget/');
+test('la page de production se charge sur Maison', async ({ page }) => {
+  const errors = trackErrors(page);
+  await openApp(page);
   await expect(page).toHaveTitle('A² Home');
-  await expect(page.locator('#contenu-principal')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'A carré Home, aller au contenu' })).toBeVisible();
-  const modules = page.getByRole('navigation', { name: 'Modules de la maison' });
+  await expect(page.locator('main#contenu')).toBeVisible();
+  await expect(page.locator('.app-world')).toHaveAttribute('aria-hidden', 'true');
+
+  const modules = nav(page);
   await expect(modules.getByRole('button')).toHaveCount(3);
-  await expect(modules.getByRole('button', { name: 'Budget', exact: true })).toHaveAttribute('aria-current', 'page');
-  await expect(page.locator('.budget-person__contribution')).toHaveCount(2);
-  await expect(page.locator('.budget-total strong')).toBeVisible();
-  await expect(page.locator('.bottom-nav')).toHaveCount(0);
+  await expect(modules.getByRole('button', { name: 'Maison', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('heading', { level: 1, name: /Aujourd’hui/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Historique de la maison', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Réglages', exact: true })).toBeVisible();
+  // Aucun appel réseau hors de l'origine, rien dans l'URL sauf ?module=.
+  expect(new URL(page.url()).search).toBe('');
   expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+});
+
+test('?module= ouvre le module demandé ; le dernier module est mémorisé', async ({ page }) => {
+  await openApp(page, 'budget');
+  await expect(nav(page).getByRole('button', { name: 'Budget', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#salary-a')).toBeVisible();
+
+  await goTo(page, 'Courses');
+  await expect(page.locator('#grocery-input')).toBeVisible();
+  // Le titre de l'écran reçoit le focus à chaque changement de module.
+  await expect(page.locator('#courses-title')).toBeFocused();
+
+  // Préférences d'interface dans une clé distincte des données.
+  const ui = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), UI_KEY);
+  expect(ui.module).toBe('courses');
+
+  await page.goto(APP);
+  await expect(nav(page).getByRole('button', { name: 'Courses', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#grocery-input')).toBeVisible();
 });

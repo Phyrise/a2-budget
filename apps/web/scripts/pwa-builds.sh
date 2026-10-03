@@ -15,7 +15,8 @@ pnpm build
 cp -r dist "$OUT/dist-v1"
 
 echo ">> build v2 (marqueur titre)"
-sed -i 's#<title>A² Budget</title>#<title>A² Budget v2</title>#' index.html
+perl -pi -e 's#<title>A² Home</title>#<title>A² Home v2</title>#' index.html
+grep -q 'A² Home v2' index.html
 pnpm build
 cp -r dist "$OUT/dist-v2"
 

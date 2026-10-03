@@ -68,8 +68,8 @@ void main() {
     float fall = fract(aSeed.y + uTime * (0.45 + aSeed.z * 0.35));
     vec2 s = vec2(aSeed.x * 1.1 - 0.05 + fall * 0.06, fall * 1.15 - 0.08);
     gl_Position = screenToClip(s);
-    size = mix(16.0, 30.0, aSeed.z);
-    alpha = 0.16 * active * smoothstep(0.0, 0.1, fall) * mix(0.5, 1.0, aSeed.w);
+    size = mix(20.0, 36.0, aSeed.z);
+    alpha = 0.22 * active * smoothstep(0.0, 0.1, fall) * mix(0.5, 1.0, aSeed.w);
     col = vec3(0.82, 0.88, 0.9);
     gl_PointSize = size * uSizeK;
     vCol = vec4(col, alpha * uIntensity);

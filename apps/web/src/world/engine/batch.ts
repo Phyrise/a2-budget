@@ -82,11 +82,24 @@ export class BillboardBatch implements BillboardWriter {
   push(x: number, y: number, depth: number, w: number, h: number, rot: number, r: number, g: number, b: number, a: number, rect: Rect) {
     if (this.count >= this.capacity || a <= 0.002) return;
     const i = this.count++;
-    this.pos.set([x, y, depth], i * 3);
-    this.size.set([w, h], i * 2);
+    const p = this.pos;
+    const s = this.size;
+    const c = this.color;
+    const q = this.rect;
+    p[i * 3] = x;
+    p[i * 3 + 1] = y;
+    p[i * 3 + 2] = depth;
+    s[i * 2] = w;
+    s[i * 2 + 1] = h;
     this.rot[i] = rot;
-    this.color.set([r, g, b, a], i * 4);
-    this.rect.set(rect, i * 4);
+    c[i * 4] = r;
+    c[i * 4 + 1] = g;
+    c[i * 4 + 2] = b;
+    c[i * 4 + 3] = a;
+    q[i * 4] = rect[0];
+    q[i * 4 + 1] = rect[1];
+    q[i * 4 + 2] = rect[2];
+    q[i * 4 + 3] = rect[3];
   }
 
   /** Envoie les instances au GPU ; renvoie false s'il n'y a rien à dessiner. */

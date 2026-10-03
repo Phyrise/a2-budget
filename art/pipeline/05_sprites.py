@@ -1,4 +1,4 @@
-"""Sprites détourés : kodama, créatures, gardien, compagnons, cadre de premier plan.
+"""Sprites détourés : kodama, créatures, gardien, compagnons (Jiji, Calcifer).
 
 Les planches ont déjà un fond transparent. Pour chaque planche :
   - découpe en composantes connexes de l'alpha (fusion des petits fragments
@@ -29,9 +29,15 @@ KODAMA = [f"kodama-{i}" for i in range(1, 9)]
 # 09-small-spirits-sheet : boule de mousse, graine lumineuse, volute de brume,
 # champignon, spore lumineuse, faon → ids CREATURES de @a2/core.
 CREATURES = ["moss-ling", "seed-spirit", "ember-wisp", "mushroom-pip", "leaf-sprite", "water-drip"]
-# 12-companion-* : 5 poses en ordre de lecture.
-CAT_POSES = ["idle", "happy", "proud", "sleepy", "curious"]
-FLAME_POSES = ["idle", "happy", "proud", "sleepy", "curious"]
+# Compagnons : UNIQUEMENT les planches V3 (grille 3×2, case bas-droite vide).
+# Ordre de lecture : 1 idle, 2 happy, 3 proud, 4 sleepy, 5 curious.
+#   12-jiji-reactions-v3 : assis sceptique, clin d'œil bouche ouverte, bond
+#   surpris pattes levées, roulé en boule endormi, regard curieux vers le haut.
+#   13-calcifer-reactions-v3 : pince-sans-rire, bouche grande ouverte, regard en
+#   coin vantard, flamme basse endormie, regard curieux vers le haut.
+POSES = ["idle", "happy", "proud", "sleepy", "curious"]
+JIJI_SHEET = "12-jiji-reactions-v3"
+CALCIFER_SHEET = "13-calcifer-reactions-v3"
 
 
 def load(name: str) -> np.ndarray:
@@ -145,7 +151,7 @@ def export(rgba: np.ndarray, name: str, target_h: int, pad: int = 6) -> dict:
     return {"file": f"sprites/{name}.webp", "w": im.width, "h": im.height, "bytes": path.stat().st_size}
 
 
-def cut(sheet: str, names: list[str], target_h: int, merge_px: int = 24, uniform: bool = False) -> dict:
+def cut(sheet: str, names: list[str], target_h: int, merge_px: int = 24, uniform: bool = False, pad: int = 6) -> dict:
     rgba = load(sheet)
     boxes, lab, ids = components(rgba, len(names), merge_px)
     info = {}
@@ -157,7 +163,7 @@ def cut(sheet: str, names: list[str], target_h: int, merge_px: int = 24, uniform
         crop[~keep] = 0
         # Échelle commune à la planche (tailles relatives conservées) ou hauteur fixe.
         th = round(target_h * (y1 - y0) / hmax) if uniform else target_h
-        info[name] = export(crop, name, th) | {"src_box": [int(x0), int(y0), int(x1), int(y1)]}
+        info[name] = export(crop, name, th, pad=pad) | {"src_box": [int(x0), int(y0), int(x1), int(y1)]}
         print(f"{sheet} → {name}: {info[name]}")
     return info
 
@@ -198,8 +204,9 @@ def main() -> None:
     info: dict = {}
     info["kodama"] = cut("08-kodama-sheet", KODAMA, 256)
     info["creatures"] = cut("09-small-spirits-sheet", CREATURES, 256, merge_px=40)
-    info["cat"] = cut("12-companion-cat", [f"cat-{p}" for p in CAT_POSES], 256, merge_px=30, uniform=True)
-    info["flame"] = cut("12-companion-flame", [f"flame-{p}" for p in FLAME_POSES], 256, merge_px=40, uniform=True)
+    # Même échelle pour toutes les poses d'un personnage : la plus haute = 320 px.
+    info["jiji"] = cut(JIJI_SHEET, [f"jiji-{p}" for p in POSES], 320, merge_px=30, uniform=True, pad=8)
+    info["calcifer"] = cut(CALCIFER_SHEET, [f"calcifer-{p}" for p in POSES], 320, merge_px=40, uniform=True, pad=8)
 
     g = load("11-guardian-isolated")
     ys, xs = np.nonzero(g[..., 3] > 0.02)
@@ -210,9 +217,9 @@ def main() -> None:
 
     contact(KODAMA, "kodama")
     contact(CREATURES, "creatures")
-    contact([f"cat-{p}" for p in CAT_POSES] + [f"flame-{p}" for p in FLAME_POSES], "companions")
+    contact([f"jiji-{p}" for p in POSES] + [f"calcifer-{p}" for p in POSES], "companions")
     contact(["guardian"], "guardian", tile=700)
-    grid([edge_zoom("guardian"), edge_zoom("kodama-1"), edge_zoom("cat-idle"), edge_zoom("ember-wisp")], 1).save(
+    grid([edge_zoom("guardian"), edge_zoom("kodama-1"), edge_zoom("jiji-idle"), edge_zoom("ember-wisp")], 1).save(
         QA / "05-edges.jpg", quality=90
     )
 

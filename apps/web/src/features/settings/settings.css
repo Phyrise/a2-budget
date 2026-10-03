@@ -93,13 +93,50 @@
 
 .settings-person__head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
+  margin-bottom: 2px;
 }
 
 .settings-person__name {
   flex: 1;
   min-width: 0;
+}
+
+/* Le prénom, modifiable en place : un titre, souligné en pointillés. */
+.settings-person__name .field__input {
+  min-height: 40px;
+  padding: 2px 2px 4px;
+  border: 0;
+  border-bottom: 1px dashed rgba(236, 230, 211, 0.24);
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 80, 'WONK' 0;
+  font-size: 23px;
+  font-weight: 540;
+  letter-spacing: -0.005em;
+  color: var(--ivory-50);
+  box-shadow: none;
+}
+
+.settings-person__name .field__input:hover {
+  border-bottom-color: rgba(236, 230, 211, 0.45);
+  background: transparent;
+}
+
+.settings-person__name .field__input:focus {
+  border-bottom: 1px solid var(--who);
+  background: transparent;
+  box-shadow: none;
+}
+
+.settings-person__companion {
+  margin-top: 3px;
+  font-size: 12.5px;
+  font-style: italic;
+  font-family: var(--font-display);
+  color: color-mix(in srgb, var(--who) 70%, var(--fog-300));
 }
 
 .settings-person__rates {

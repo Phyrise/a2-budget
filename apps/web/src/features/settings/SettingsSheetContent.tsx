@@ -51,17 +51,19 @@ function PersonSettingsCard({ person, settings }: { person: 'A' | 'B'; settings:
   return (
     <div className={`settings-person settings-person--${who}`}>
       <div className="settings-person__head">
-        <Companion who={who} size={44} />
+        <Companion who={who} size={46} />
         <div className="settings-person__name">
           <InlineTextField
             id={`person-name-${who}`}
-            label={`Nom (${person === 'A' ? 'Jiji' : 'Calcifer'})`}
-            labelVisible
+            label={`Prénom (compagnon : ${person === 'A' ? 'Jiji' : 'Calcifer'})`}
             value={settings.name}
             onCommit={(name) => renamePerson(person, name)}
             maxLength={24}
-            appearance="field"
+            appearance="large"
           />
+          <p className="settings-person__companion" aria-hidden="true">
+            avec {person === 'A' ? 'Jiji' : 'Calcifer'}
+          </p>
         </div>
       </div>
       <AmountInput

@@ -48,7 +48,7 @@ function monthKey(d: Date, delta: number) {
   return currentMonthKey(x);
 }
 
-function filled(opts: { paused?: boolean; deficit?: boolean; doneAll?: boolean } = {}): AppState {
+function filled(opts: { paused?: boolean; deficit?: boolean; doneAll?: boolean; reserve?: boolean } = {}): AppState {
   const now = new Date();
   let s = emptyAppState();
   // Budget : trois mois.
@@ -65,6 +65,7 @@ function filled(opts: { paused?: boolean; deficit?: boolean; doneAll?: boolean }
     m0.salaryACents = 150_000; m0.salaryBCents = 210_000;
     m0.expenses.push({ id: 'car', label: 'Réparation voiture', amountCents: 64_000 });
   }
+  if (opts.reserve) m0.reserveTargetCents = 30_000;
   s.budget.months = [m2, m1, m0];
   s.budget.selectedMonth = m0.monthKey;
 
@@ -137,6 +138,7 @@ const check = (name: string, s: AppState) => {
   paused: check('paused', filled({ paused: true })),
   deficit: check('deficit', filled({ deficit: true })),
   doneAll: check('doneAll', filled({ doneAll: true })),
+  reserve: check('reserve', filled({ reserve: true })),
 };
 `,
 );
@@ -293,6 +295,34 @@ for (const vp of ['m', 'd']) {
     await page.locator('.item-row__body').first().click();
     await page.waitForTimeout(500);
     await shot(page, `${vp}-courses-item-sheet`);
+  });
+
+  // --- Défilement, toasts, focus -------------------------------------------
+  await scenario(`${vp}-maison-scrolled`, vp, { module: 'maison', state: fixtures.filled }, async (page) => {
+    await page.mouse.wheel(0, 520);
+    await page.waitForTimeout(500);
+    await shot(page, `${vp}-maison-scrolled`);
+  });
+  await scenario(`${vp}-courses-scrolled`, vp, { module: 'courses', state: fixtures.filled }, async (page) => {
+    await page.mouse.wheel(0, 420);
+    await page.waitForTimeout(500);
+    await shot(page, `${vp}-courses-scrolled`);
+  });
+  await scenario(`${vp}-courses-toast`, vp, { module: 'courses', state: fixtures.filled }, async (page) => {
+    await page.getByRole('button', { name: 'Retirer Tomates cerises' }).click();
+    await page.waitForTimeout(400);
+    await shot(page, `${vp}-courses-toast`);
+  });
+  await scenario(`${vp}-budget-reserve`, vp, { module: 'budget', state: fixtures.reserve }, async (page) => {
+    await page.mouse.wheel(0, 560);
+    await page.waitForTimeout(400);
+    await shot(page, `${vp}-budget-reserve`);
+  });
+  await scenario(`${vp}-focus`, vp, { module: 'budget', state: fixtures.filled }, async (page) => {
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(200);
+    await shot(page, `${vp}-focus`);
   });
 
   // --- Feuilles globales ----------------------------------------------------

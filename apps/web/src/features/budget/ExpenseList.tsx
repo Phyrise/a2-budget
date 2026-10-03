@@ -5,7 +5,7 @@
 import type { MonthRecord } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, EmptyState, IconButton, InlineTextField, TextField, euro, useToast } from '../../ui';
+import { AmountInput, Button, EmptyState, IconButton, InlineTextField, TextField, euro, fr, useToast } from '../../ui';
 
 export function ExpenseEditorList({
   idPrefix,
@@ -137,7 +137,7 @@ export function ExpenseList({ month, totalCents }: { month: MonthRecord; totalCe
     if (!expense) return;
     removeExpense(key, id);
     toast.show({
-      message: `${expense.label} retiré`,
+      message: fr(`Dépense retirée : ${expense.label}`),
       icon: 'trash',
       action: { label: 'Annuler', onClick: () => addExpense(key, expense.label, expense.amountCents) },
     });

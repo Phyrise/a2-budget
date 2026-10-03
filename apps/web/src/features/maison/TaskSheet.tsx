@@ -228,7 +228,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
           setConfirmDelete(false);
           if (editing && deleteHomeTask(editing.id)) {
             onClose();
-            toast.show({ message: fr(`« ${editing.title} » supprimée`), icon: 'trash' });
+            toast.show({ message: fr(`Tâche supprimée : ${editing.title}`), icon: 'trash' });
           }
         }}
       >

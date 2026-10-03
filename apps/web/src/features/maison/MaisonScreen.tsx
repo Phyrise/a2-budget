@@ -255,7 +255,7 @@ export function MaisonScreen() {
             </span>
             <div className="pause-card__text">
               <p className="pause-card__title">La maison est en pause</p>
-              <p className="pause-card__body">La forêt dort. Rien ne se perd&nbsp;: ni la croissance, ni les séries.</p>
+              <p className="pause-card__body">La forêt dort. Rien ne se perd pendant la pause&nbsp;: elle reprendra où vous l’avez laissée.</p>
             </div>
             <Button variant="primary" icon="sun" onClick={toggleHomePause} className="pause-card__action">
               Réveiller la forêt

@@ -7,7 +7,7 @@
 import { computeContributionBreakdown, currentMonthKey, monthKeyToLabel, type MonthRecord } from '@a2/core';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
-import { AmountInput, Companion, Disclosure, IconButton, cx, euro, euroMinus, euroShort, percent, shiftMonthKey } from '../../ui';
+import { AmountInput, Companion, Disclosure, Icon, IconButton, cx, euro, euroMinus, euroShort, percent, shiftMonthKey } from '../../ui';
 import { ExpenseList } from './ExpenseList';
 import './budget.css';
 
@@ -84,16 +84,33 @@ export function BudgetScreen() {
   const s = currentSummary;
   const deficit = s.remainingCents < 0;
   const reserve = currentMonth.reserveTargetCents;
+  const label = monthKeyToLabel(key);
+  const split = label.lastIndexOf(' ');
+  const monthName = split > 0 ? label.slice(0, split) : label;
+  const year = split > 0 ? label.slice(split + 1) : '';
 
   return (
     <>
       <div className="world-window world-window--banner budget-banner">
         <div className="month-bar">
           <div className="month-bar__titles">
-            <p className="eyebrow month-bar__eyebrow">Le foyer</p>
+            {isCurrent ? (
+              <p className="eyebrow month-bar__eyebrow">Le foyer</p>
+            ) : (
+              <button type="button" className="chip chip--glass month-bar__today" onClick={selectCurrentMonth}>
+                <Icon name="undo" size={15} strokeWidth={1.9} />
+                Revenir au mois courant
+              </button>
+            )}
             <h1 id="budget-title" tabIndex={-1} className="month-bar__label display">
               <span className="visually-hidden">Budget, </span>
-              {monthKeyToLabel(key)}
+              <span className="month-bar__month">{monthName}</span>
+              {year && (
+                <>
+                  {' '}
+                  <span className="month-bar__year">{year}</span>
+                </>
+              )}
             </h1>
           </div>
           <div className="month-bar__nav">
@@ -101,11 +118,6 @@ export function BudgetScreen() {
             <IconButton icon="chevron-right" label="Mois suivant" variant="glass" onClick={() => selectMonth(shiftMonthKey(key, 1))} />
           </div>
         </div>
-        {!isCurrent && (
-          <button type="button" className="chip chip--glass month-bar__today" onClick={selectCurrentMonth}>
-            Revenir au mois courant
-          </button>
-        )}
       </div>
 
       <section className="screen-sheet budget" aria-labelledby="budget-title">

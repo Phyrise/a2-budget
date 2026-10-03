@@ -150,7 +150,7 @@ export function CoursesScreen() {
     const removed = removeGrocery(item.id);
     if (removed === null) return;
     toast.show({
-      message: fr(`« ${item.label} » retiré`),
+      message: fr(`Retiré de la liste : ${item.label}`),
       icon: 'trash',
       action: { label: 'Annuler', onClick: () => restoreGrocery(removed) },
     });

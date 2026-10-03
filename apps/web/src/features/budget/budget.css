@@ -19,11 +19,23 @@
 
 .month-bar__label {
   margin-top: 4px;
-  font-size: 34px;
+  font-size: clamp(27px, 8vw, 34px);
   line-height: 1.05;
   font-weight: 500;
   color: var(--ivory-50);
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+
+.month-bar__month {
+  white-space: nowrap;
+}
+
+/* L'année, plus discrète : le mois se lit d'abord. */
+.month-bar__year {
+  white-space: nowrap;
+  font-weight: 380;
+  color: var(--ivory-200);
+  opacity: 0.78;
 }
 
 .month-bar__nav {
@@ -32,9 +44,25 @@
   padding-bottom: 2px;
 }
 
+/* À la place du surtitre quand un autre mois est affiché. */
 .month-bar__today {
-  align-self: flex-start;
-  margin-top: 10px;
+  min-height: 30px;
+  margin: 0 0 2px;
+  padding: 0 12px 0 9px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.month-bar__today::after {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}
+
+.month-bar__today .icon {
+  color: var(--amber-300);
 }
 
 /* Personnes */

@@ -119,6 +119,8 @@ export function AmountInput({
       {field.error !== null && (
         <p className="field__error" id={`${id}-error`} role="alert">
           {field.error}
+          {/* Hors formulaire, la dernière valeur valide reste affichée et enregistrée. */}
+          {!field.editing && onValidityChange === undefined && ' Le montant précédent est conservé.'}
         </p>
       )}
     </div>

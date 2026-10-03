@@ -136,3 +136,44 @@ def grid(images: list[Image.Image], cols: int, bg=(20, 20, 20)) -> Image.Image:
     for k, im in enumerate(images):
         sheet.paste(im.convert("RGB"), ((k % cols) * w, (k // cols) * h))
     return sheet
+
+
+def bands(profile: np.ndarray, count: int, min_len: int = 4, margin: int = 8) -> list[tuple[int, int]]:
+    """Découpe un profil de projection (somme d'un masque par ligne ou colonne)
+    en exactement `count` plages de contenu [début, fin).
+
+    Plages = suites de valeurs > 0 ; les miettes (< min_len) sont ignorées ;
+    s'il y en a trop, on fusionne les deux plages les plus proches ; s'il en
+    manque, on coupe la plus longue à son creux intérieur.
+    """
+    p = np.asarray(profile, dtype=np.float64)
+    runs: list[list[int]] = []
+    start = None
+    for i, v in enumerate(p):
+        if v > 0 and start is None:
+            start = i
+        elif v <= 0 and start is not None:
+            runs.append([start, i])
+            start = None
+    if start is not None:
+        runs.append([start, len(p)])
+    runs = [r for r in runs if r[1] - r[0] >= min_len]
+    while len(runs) > count:
+        gaps = [runs[i + 1][0] - runs[i][1] for i in range(len(runs) - 1)]
+        i = int(np.argmin(gaps))
+        runs[i] = [runs[i][0], runs[i + 1][1]]
+        del runs[i + 1]
+    while len(runs) < count:
+        i = int(np.argmax([r[1] - r[0] for r in runs]))
+        s, e = runs[i]
+        if e - s < 2 * margin + 2:
+            raise ValueError("plage trop courte pour être coupée")
+        inner = p[s + margin : e - margin]
+        c = s + margin + int(np.argmin(inner))
+        runs[i : i + 1] = [[s, c], [c, e]]
+    return [(int(a), int(b)) for a, b in runs]
+
+
+def cuts_from_bands(b: list[tuple[int, int]], n: int) -> list[int]:
+    """Coupes [0, milieux des intervalles…, n] entre plages consécutives."""
+    return [0] + [(b[i][1] + b[i + 1][0]) // 2 for i in range(len(b) - 1)] + [n]

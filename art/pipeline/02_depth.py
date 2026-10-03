@@ -12,7 +12,7 @@ Chaîne :
      de parallaxe au bord des objets proches), adoucissement.
 
 Sorties : out/work/depth/raw-<stade>.npy (1024×1536 float, 0 loin → 1 près),
-          out/assets/depth/stage-<n>.png (512×768, 8 bits, blanc = près),
+          out/work/depth/stage-<n>.png (512×768, 8 bits, blanc = près),
           planches out/qa/02-*.
 """
 from __future__ import annotations
@@ -26,7 +26,7 @@ import torch
 from PIL import Image
 from transformers import AutoModelForDepthEstimation
 
-from common import ASSETS, MASTER_STAGE, MH, MW, QA, STAGE_SOURCES, WORK, H, W, grid, label, load_aligned
+from common import MASTER_STAGE, MH, MW, QA, STAGE_SOURCES, WORK, H, W, grid, label, load_aligned
 
 MODEL = os.environ.get("A2_DEPTH_MODEL", "depth-anything/Depth-Anything-V2-Large-hf")
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
@@ -122,7 +122,6 @@ def main() -> None:
     model = AutoModelForDepthEstimation.from_pretrained(MODEL).eval()
     print("model", MODEL, f"{time.time() - t0:.1f}s")
     (WORK / "depth").mkdir(parents=True, exist_ok=True)
-    (ASSETS / "depth").mkdir(parents=True, exist_ok=True)
 
     order = [MASTER_STAGE] + [s for s in STAGE_SOURCES if s != MASTER_STAGE]
     ref_rgb = load_aligned(STAGE_SOURCES[MASTER_STAGE])
@@ -149,8 +148,9 @@ def main() -> None:
         np.save(WORK / "depth" / f"raw-{s}.npy", d.astype(np.float32))
         fin = finish(d, rgb)
         finals[s] = fin
+        # 8 bits dans work/ ; 07_scene.py choisit le format livré (PNG ou WebP sans perte).
         Image.fromarray(np.round(fin * 255).astype(np.uint8), "L").save(
-            ASSETS / "depth" / f"stage-{s}.png", optimize=True
+            WORK / "depth" / f"stage-{s}.png", optimize=True
         )
 
     # Planches de contrôle.

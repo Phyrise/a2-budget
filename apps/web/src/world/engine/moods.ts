@@ -39,9 +39,9 @@ export interface MoodParams {
 
 export const MOODS: Record<Mood, MoodParams> = {
   quiet: {
-    fog: 0.9, fogLift: 0.1, rays: 0.12, ray0: 1, ray1: 0, ray2: 0, ray3: 0,
-    spores: 12, gold: 0, rain: 0.75, drips: 0.9, sparkle: 0.05, moss: 0, wind: 0.75,
-    exposure: -0.07, saturation: 0.86, warmth: -0.05,
+    fog: 1, fogLift: 0, rays: 0.06, ray0: 1, ray1: 0, ray2: 0, ray3: 0,
+    spores: 12, gold: 0, rain: 0.85, drips: 0.9, sparkle: 0.05, moss: 0, wind: 0.8,
+    exposure: -0.12, saturation: 0.8, warmth: -0.06,
   },
   peaceful: {
     fog: 0.6, fogLift: 0.3, rays: 0.42, ray0: 1, ray1: 0, ray2: 0, ray3: 0,

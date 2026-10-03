@@ -125,7 +125,7 @@ export class FxSystem {
         const y = 0.42 + i * 0.075 - mood.fogLift * 0.12 + Math.sin(t * 0.05 + i) * 0.01;
         const h = 0.16 + (i % 3) * 0.04;
         const w = h * piece.aspect * 1.6;
-        const alpha = (0.1 + 0.18 * mood.fog) * (1 - night * 0.35) * (1 + fogGlow * 1.6) * (1 - 0.3 * mood.fogLift * (i < 2 ? 1 : 0));
+        const alpha = (0.05 + 0.15 * mood.fog) * (1 - night * 0.35) * (1 + fogGlow * 1.6) * (1 - 0.3 * mood.fogLift * (i < 2 ? 1 : 0));
         out.push(x, y, 0.22 + i * 0.09, w, h, 0, 0.85, 0.9, 0.9, alpha, piece.rect);
       }
     }
@@ -139,7 +139,7 @@ export class FxSystem {
         const pulse = 0.78 + 0.22 * Math.sin(t * 0.42 + i * 1.9) * Math.sin(t * 0.13 + i);
         const h = 0.55 + i * 0.06;
         const w = h * piece.aspect;
-        const rot = (rayAngles[i] ?? 0) * 0.35 * -mirror;
+        const rot = (rayAngles[i] ?? 0) * 0.8 * -mirror;
         // L'origine lumineuse de la pièce est vers son coin haut (gauche).
         const ox = (0.5 - 0.12) * w * mirror;
         const oy = (0.5 - 0.06) * h;
@@ -147,7 +147,7 @@ export class FxSystem {
         const s = Math.sin(rot);
         const cx = this.light.x + (c * ox - s * oy) / aspect;
         const cy = this.light.y + (s * ox + c * oy);
-        out.push(cx, cy, 0.3, w * mirror, h, rot, 1, 0.94, 0.8, 0.55 * wgt * pulse, piece.rect);
+        out.push(cx, cy, 0.3, w * mirror, h, rot, 1, 0.94, 0.8, 0.13 * wgt * pulse, piece.rect);
       }
     }
     if (a) {

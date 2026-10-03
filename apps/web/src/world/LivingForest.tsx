@@ -9,7 +9,7 @@
  * une perte de contexte non récupérée : peinture fixe + voile de brume CSS.
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { computeFraming, imageBoxStyle, type Framing } from './engine/framing';
+import { framingFor, imageBoxStyle, type Framing } from './engine/framing';
 import type { EngineStats, QualitySetting, WorldEngine } from './engine';
 import { manifest as defaultManifest } from './manifest';
 import type { GrowthStage, LivingForestHandle, LivingForestProps, WorldManifest, WorldMotion } from './types';
@@ -37,6 +37,12 @@ function usePrefersReducedMotion(): boolean {
 
 const layer: CSSProperties = { position: 'absolute', inset: 0, pointerEvents: 'none' };
 
+/**
+ * Taille par défaut (spécificité nulle : la coquille la remplace librement,
+ * ex. `.app-world { position: fixed; height: var(--world-h) }`).
+ */
+const BASE_CSS = ':where(.living-forest){position:relative;display:block;width:100%;height:100%;}';
+
 export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & { manifest?: WorldManifest }>(function LivingForest(
   { state, variant = 'hero', live, motion = 'full', className = '', onReady, manifest = defaultManifest },
   ref,
@@ -52,6 +58,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   const qualityRef = useRef<QualitySetting>('auto');
   const latest = useRef({ state, variant, live: effLive, motion: effMotion });
   latest.current = { state, variant, live: effLive, motion: effMotion };
+  const variantRef = useRef(variant);
+  variantRef.current = variant;
   const readyRef = useRef(false);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
@@ -75,14 +83,14 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
     const apply = () => {
       const r = el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) return;
-      setFraming(computeFraming(r.width, r.height, manifest.size.w, manifest.size.h));
+      setFraming(framingFor(variantRef.current, r.width, r.height, manifest.size));
       engineRef.current?.resize(r.width, r.height);
     };
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [manifest]);
+  }, [manifest, variant]);
 
   // Création du moteur (import dynamique), recréé après une perte de contexte.
   useEffect(() => {
@@ -188,7 +196,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
 
   return (
     <div className={`living-forest living-forest--${variant} ${className}`.trim()} aria-hidden="true">
-      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#0b1410' }} ref={boxRef}>
+      <style>{BASE_CSS}</style>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#0b1410' }} ref={boxRef}>
         {showImages || !imgLoaded ? (
           <img
             src={manifest.placeholder}

@@ -185,7 +185,7 @@ export class Spirits {
       const g = this.guardianSpot;
       out.push({
         asset: this.guardian, x: g.x, y: g.y, depth: g.depth, h: (g.scale ?? 0.4) * (1 + guardian.breathe * 0.004), rot: 0,
-        alpha: 1, reveal: guardian.reveal, glow: 0.35 + night * 0.25, glowColor: [0.8, 1.0, 0.82],
+        alpha: 1, reveal: guardian.reveal, glow: 0.1 + night * 0.2 + (1 - guardian.reveal) * 0.5, glowColor: [0.82, 1.0, 0.86],
         fogMix: 0.18,
       });
     }

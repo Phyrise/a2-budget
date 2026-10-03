@@ -108,7 +108,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   sc.uFogLayers!.value = TIER_FOG_LAYERS[tier] ?? 1;
   sc.uFogColor!.value = fogColor;
   sc.uFogGlow!.value = g.fogGlow * 0.55;
-  sc.uRays!.value = (mood.rays * day + e.rayBoost + g.fogGlow * 0.15) * (hasRaysFx ? 0.45 : 1);
+  sc.uRays!.value = (mood.rays * day + e.rayBoost + g.fogGlow * 0.15) * (hasRaysFx ? 0.38 : 1);
   sc.uRayW!.value = [mood.ray0, mood.ray1, mood.ray2, mood.ray3];
   sc.uRayAng!.value = rayAngles;
   sc.uRayWidth!.value = [0.075, 0.05, 0.06, 0.045];

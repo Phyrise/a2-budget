@@ -158,7 +158,7 @@ export class DayLights {
       const y = l.y + hover;
       const s = 0.05 * (0.85 + 0.3 * l.depth);
       // Halo large et doux + cœur.
-      out.push(x, y, l.depth, s * 2.6, s * 2.6, 0, r, g, b, 0.22 * alpha * glowK * (1 + flash * 1.5), GLOW);
+      out.push(x, y, l.depth, s * 3.2, s * 3.2, 0, r, g, b, 0.38 * alpha * glowK * (1 + flash * 1.5), GLOW);
       out.push(x, y, l.depth, s, s, 0, r, g, b, alpha * flick * glowK * (1 + flash), GLOW);
       if (flash > 0) out.push(x, y, l.depth, s * 5 * (1.2 - flash * 0.4), s * 5 * (1.2 - flash * 0.4), 0, r, g, b, flash * 0.35 * glowK, GLOW);
     }

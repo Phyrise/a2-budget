@@ -24,28 +24,51 @@ export const OVERSCALE = 1.045;
 
 const clamp = (v: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)));
 
-export function computeFraming(
-  w: number,
-  h: number,
-  imgW: number,
-  imgH: number,
-  focal: { x: number; y: number } = FOCAL,
-  overscale = OVERSCALE,
-): Framing {
+export interface FramingOptions {
+  focal?: { x: number; y: number };
+  overscale?: number;
+  /**
+   * Part minimale de la hauteur d'image visible. Sur un écran large, la
+   * peinture portrait n'est alors plus « cover » en largeur : les côtés sont
+   * prolongés par un reflet flou et assombri (shader).
+   */
+  minVisibleH?: number;
+  /** Position horizontale à l'écran (0..1) où placer le point focal. */
+  screenFocusX?: number;
+}
+
+export function computeFraming(w: number, h: number, imgW: number, imgH: number, o: FramingOptions = {}): Framing {
+  const focal = o.focal ?? FOCAL;
   const W = Math.max(1, w);
   const H = Math.max(1, h);
-  const scale = Math.max(W / imgW, H / imgH) * overscale;
+  let scale = Math.max(W / imgW, H / imgH) * (o.overscale ?? OVERSCALE);
+  if (o.minVisibleH && H / (imgH * scale) < o.minVisibleH) scale = H / (imgH * o.minVisibleH);
   const vw = W / (imgW * scale);
   const vh = H / (imgH * scale);
+  const fx = o.screenFocusX ?? 0.5;
+  const cx = focal.x + (0.5 - fx) * vw;
   return {
     scale,
-    cx: clamp(focal.x, vw / 2, 1 - vw / 2),
+    // Plus étroite que la vue : la peinture reste collée au bord gauche.
+    cx: vw < 1 ? clamp(cx, vw / 2, 1 - vw / 2) : Math.max(cx, vw / 2),
     cy: clamp(focal.y, vh / 2, 1 - vh / 2),
     vw,
     vh,
     w: W,
     h: H,
   };
+}
+
+/** Largeur du carnet d'interface posé à droite en présentation « backdrop ». */
+export const BACKDROP_PANEL = 480;
+
+/** Cadrage selon la présentation (partagé moteur / <img>). */
+export function framingFor(variant: string, w: number, h: number, size: { w: number; h: number }): Framing {
+  if (variant === 'backdrop' && w > h) {
+    const free = w >= 1024 ? w - BACKDROP_PANEL : w;
+    return computeFraming(w, h, size.w, size.h, { minVisibleH: 0.74, screenFocusX: free / 2 / w, overscale: 1.02, focal: { x: FOCAL.x, y: 0.5 } });
+  }
+  return computeFraming(w, h, size.w, size.h);
 }
 
 /** Style absolu d'une <img> plein format qui reproduit exactement le cadrage. */

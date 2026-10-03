@@ -89,6 +89,7 @@ void main() {
     sin(t * 0.42 + f.x * 3.0) * 0.35
   );
   vec4 tx = texture2D(uFg, f + sway * w * uSway * uTexel * 7.0);
+  tx *= smoothstep(0.0, 0.03, min(f.x, 1.0 - f.x));
   vec3 rgb = mix(tx.rgb, uFogColor * tx.a, uFogMix);
   gl_FragColor = vec4(rgb, tx.a);
 }

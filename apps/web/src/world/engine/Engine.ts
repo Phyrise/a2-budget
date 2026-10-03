@@ -8,7 +8,7 @@
 import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, LutName, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
-import { computeFraming, viewToScene, type Framing } from './framing';
+import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
 import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
 import { Pipeline } from './pipeline';
@@ -298,11 +298,10 @@ export class WorldEngine {
 
   configure(p: Partial<Pick<EngineConfig, 'variant' | 'motion' | 'live' | 'quality'>>) {
     const prevQ = this.cfg.quality;
+    const prevV = this.cfg.variant;
     Object.assign(this.cfg, p);
-    if (p.quality !== undefined && p.quality !== prevQ) {
-      this.tier = typeof p.quality === 'number' ? p.quality : 0;
-      this.applySize();
-    }
+    if (p.quality !== undefined && p.quality !== prevQ) this.tier = typeof p.quality === 'number' ? p.quality : 0;
+    if (this.cfg.quality !== prevQ || this.cfg.variant !== prevV) this.applySize();
     this.requestFrame(true);
   }
 
@@ -319,7 +318,7 @@ export class WorldEngine {
     this.dpr = Math.min(dev, DPR_CAPS[this.tier] ?? 1);
     this.renderer.dpr = this.dpr;
     this.renderer.setSize(this.cssW, this.cssH);
-    this.framing = computeFraming(this.cssW, this.cssH, m.size.w, m.size.h);
+    this.framing = framingFor(this.cfg.variant, this.cssW, this.cssH, m.size);
     this.pipe.resizeTarget(Math.round(this.cssW * this.dpr), Math.round(this.cssH * this.dpr));
   }
 

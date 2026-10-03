@@ -60,6 +60,15 @@ void main() {
   vec2 cuv = suv + wind;
 
   vec3 col = sampleColor(uColor, cuv);
+  // Écran large : au-delà des bords de la peinture, reflet flou et assombri.
+  float inside = min(suv.x, 1.0 - suv.x);
+  if (inside < 0.1) {
+    vec2 mir = vec2(suv.x < 0.5 ? abs(suv.x) : 2.0 - suv.x, suv.y);
+    vec3 blurred = texture2D(uColor, clamp(mir, 0.0, 1.0), 5.5).rgb;
+    float outside = max(0.0, -inside);
+    blurred *= 0.6 * exp(-outside * 2.6) + 0.07;
+    col = mix(blurred, col, smoothstep(-0.02, 0.1, inside));
+  }
 
   // --- Eau : écoulement à deux phases vers le bas / le spectateur.
   float wm = m.r * uWater;
@@ -118,10 +127,12 @@ void main() {
   float f = texture2D(uNoise, fp * vec2(0.55, 1.1) + vec2(t * 0.0045, t * 0.0011)).r;
   if (uFogLayers > 1.5) f = f * 0.6 + texture2D(uNoise, fp * vec2(1.25, 2.1) + vec2(-t * 0.0085, t * 0.002)).g * 0.4;
   if (uFogLayers > 2.5) f = mix(f, texture2D(uNoise, fp * vec2(0.3, 0.6) + vec2(t * 0.0022, -t * 0.0008)).a, 0.3);
-  float far = pow(1.0 - depth, 1.25);
-  float height = mix(0.3 + 0.7 * smoothstep(0.25, 0.85, suv.y), 0.75 + 0.25 * (1.0 - suv.y), uFogLift);
-  float density = uFog * (0.28 + 0.72 * far) * height * smoothstep(0.25, 0.85, f + uFog * 0.2);
-  float fogA = clamp(density * 0.62, 0.0, 0.62);
+  float far = pow(1.0 - depth, 1.5);
+  // Nappe basse (sol) qui se lève avec l'humeur ; toujours plus dense au loin.
+  float band = smoothstep(0.35, 0.62, suv.y) * (1.0 - smoothstep(0.78, 0.98, suv.y));
+  float height = mix(0.55 + 0.45 * band, 0.8 + 0.2 * (1.0 - suv.y), uFogLift);
+  float density = uFog * (0.1 + 0.9 * far) * height * smoothstep(0.32, 0.86, f + uFog * 0.12);
+  float fogA = clamp(density * 0.55, 0.0, 0.45);
 
   // --- Rayons depuis la canopée.
   vec2 dv = (suv - uLight) * iso;

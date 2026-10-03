@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."   # apps/web
 
-OUT=/tmp/a2-budget/pwa
+OUT="${A2_PWA_DIR:-/tmp/a2-budget/pwa}"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 

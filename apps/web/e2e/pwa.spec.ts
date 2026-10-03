@@ -14,8 +14,10 @@ import path from 'node:path';
  * Sans ces builds, les tests sont sautés (message explicite).
  */
 
-const V1 = '/tmp/a2-budget/pwa/dist-v1';
-const V2 = '/tmp/a2-budget/pwa/dist-v2';
+// Dossier des builds : A2_PWA_DIR si défini (même variable que pwa-builds.sh).
+const PWA_DIR = process.env.A2_PWA_DIR ?? '/tmp/a2-budget/pwa';
+const V1 = path.join(PWA_DIR, 'dist-v1');
+const V2 = path.join(PWA_DIR, 'dist-v2');
 const pwaReady = existsSync(V1) && existsSync(V2);
 const pwaSkipReason =
   'builds PWA absents : lancer apps/web/scripts/pwa-builds.sh avant la suite';

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 /**
- * Service worker A² Budget (lead).
+ * Service worker A² Home.
  *
  * Stratégie injectManifest : le manifest de précache est injecté par
  * vite-plugin-pwa dans `self.__WB_MANIFEST`.

@@ -34,7 +34,7 @@ export function UpdatePrompt() {
     setOfflineReady(false);
     if (prefs.offlineAnnounced) return;
     updatePrefs({ offlineAnnounced: true });
-    toast.show({ message: 'Disponible hors ligne', icon: 'leaf' });
+    toast.show({ message: 'Disponible hors ligne', icon: 'leaf', priority: 'low' });
   }, [offlineReady, prefs.offlineAnnounced, setOfflineReady, toast, updatePrefs]);
 
   if (!needRefresh) return null;

@@ -13,6 +13,11 @@ export interface ToastOptions {
   tone?: 'neutral' | 'success' | 'danger';
   /** Durée d'affichage (ms). Défaut : 4 s, 6 s avec une action. */
   duration?: number;
+  /**
+   * `low` : annonce secondaire (« Disponible hors ligne ») qui ne remplace
+   * jamais un message affiché (ex. une annulation) : elle attend son tour.
+   */
+  priority?: 'normal' | 'low';
 }
 
 interface ToastItem extends ToastOptions {
@@ -30,11 +35,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
   const [leaving, setLeaving] = useState(false);
   const idRef = useRef(0);
+  const currentRef = useRef<ToastItem | null>(null);
+  const pendingRef = useRef<ToastOptions | null>(null);
 
   const show = useCallback((options: ToastOptions) => {
+    if (options.priority === 'low' && currentRef.current !== null) {
+      pendingRef.current = options;
+      return;
+    }
     idRef.current += 1;
+    const item = { ...options, id: idRef.current };
+    currentRef.current = item;
     setLeaving(false);
-    setToast({ ...options, id: idRef.current });
+    setToast(item);
   }, []);
 
   const dismiss = useCallback(() => setLeaving(true), []);
@@ -49,11 +62,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!leaving) return;
     const timer = window.setTimeout(() => {
+      currentRef.current = null;
       setToast(null);
       setLeaving(false);
+      const pending = pendingRef.current;
+      pendingRef.current = null;
+      if (pending) window.setTimeout(() => show(pending), 400);
     }, 200);
     return () => window.clearTimeout(timer);
-  }, [leaving]);
+  }, [leaving, show]);
 
   const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 

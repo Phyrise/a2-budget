@@ -53,6 +53,7 @@ export const manifest: WorldManifest = {
     a: { idle: '', happy: '', proud: '', sleepy: '', curious: '' },
     b: { idle: '', happy: '', proud: '', sleepy: '', curious: '' },
   },
+  fx: null,
   banners: { budget: landscape, courses: night },
   placeholder,
 };

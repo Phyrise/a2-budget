@@ -125,8 +125,18 @@ export interface WorldManifest {
     creatures: Record<string, string>;
     guardian: string;
   };
-  /** Compagnons de l'interface : a = Jiji (AL), b = Calcifer (AC). */
+  /**
+   * Compagnons de l'interface : a = Jiji (AL), b = Calcifer (AC).
+   * Source : planches V3 uniquement (12-jiji-reactions-v3, 13-calcifer-reactions-v3).
+   */
   companions: Record<'a' | 'b', Record<CompanionMood, string>>;
+  /**
+   * Effets peints (planche 14-effects-sheet, fond noir → mélange additif) :
+   * nappes de brume, rayons, gouttes, aiguilles de cèdre, spores, halos de kodama.
+   * Chaque URL est une texture prête pour un mélange additif (RGB sur noir) ou
+   * alpha prémultiplié. null si absente (le moteur génère alors l'effet).
+   */
+  fx: Record<'fog' | 'rays' | 'drips' | 'needles' | 'motes' | 'halos', string[]> | null;
   /** Bandeaux fixes peints pour les autres modules. */
   banners: { budget: string; courses: string };
   /** Petite image très légère (≤ 30 KB) affichée avant le chargement. */

@@ -163,6 +163,8 @@ const fixtures = await getFixtures();
 const VIEWPORTS = {
   m: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
   d: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
+  t: { viewport: { width: 768, height: 1024 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true },
+  s: { viewport: { width: 320, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 };
 
 /** Ouvre l'app avec un état et des préférences donnés. */
@@ -209,7 +211,7 @@ async function scenario(name, vp, opts, fn) {
   await context.close();
 }
 
-for (const vp of ['m', 'd']) {
+for (const vp of (process.env.QA_VP ?? 'm,d').split(',')) {
   // --- Maison ---------------------------------------------------------------
   await scenario(`${vp}-maison-empty`, vp, { module: 'maison' }, async (page) => {
     await shot(page, `${vp}-maison-empty`);

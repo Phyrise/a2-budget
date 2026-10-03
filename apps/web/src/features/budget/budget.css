@@ -350,9 +350,37 @@
   gap: 10px;
 }
 
+/* Petits téléphones (≤ 359 px) : les montants restent entiers, sur une ligne. */
 @media (max-width: 359px) {
+  .person-grid {
+    gap: 8px;
+  }
+
+  .person-card {
+    padding: 10px 9px 12px;
+  }
+
+  .person-card__salary .amount-input__field {
+    padding: 0 8px;
+    font-size: 16px;
+  }
+
   .person-card__contribution {
-    font-size: 22px;
+    font-size: 21px;
+  }
+
+  .ledger {
+    padding: 14px 14px 12px;
+  }
+
+  .ledger__label {
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .ledger__row--total .ledger__value,
+  .ledger__rest {
+    font-size: 23px;
   }
 
   .expense-add {

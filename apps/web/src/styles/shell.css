@@ -410,6 +410,27 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Tablette (600–1023 px) : colonne de lecture centrée                 */
+/* ------------------------------------------------------------------ */
+
+@media (min-width: 600px) and (max-width: 1023px) {
+  .app:not(.app--desktop) .screen-sheet,
+  .app:not(.app--desktop) .world-window {
+    padding-left: max(var(--gutter), calc((100% - 600px) / 2));
+    padding-right: max(var(--gutter), calc((100% - 600px) / 2));
+  }
+
+  .app:not(.app--desktop) .app-header {
+    padding-left: max(20px, calc((100% - 600px) / 2));
+    padding-right: max(14px, calc((100% - 600px) / 2 - 6px));
+  }
+
+  .app:not(.app--desktop) .perch {
+    right: max(18px, calc((100% - 600px) / 2 - 2px));
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Ordinateur : forêt en fond, carnet de 480 px à droite               */
 /* ------------------------------------------------------------------ */
 

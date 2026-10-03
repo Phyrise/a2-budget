@@ -25,7 +25,7 @@
   --moss-300: #93ad7c;
 
   /* Brume / texte */
-  --fog-500: #7d8f86;
+  --fog-500: #879990;      /* ≥ 4,5:1 sur les cartes (#1a2c23) */
   --fog-400: #9aaba1;
   --fog-300: #b9c6bd;
   --ivory-200: #ddd8c6;

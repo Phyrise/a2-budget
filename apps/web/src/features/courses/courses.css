@@ -53,6 +53,17 @@
   color: var(--fog-500);
 }
 
+@media (max-width: 359px) {
+  .quick-add__input {
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  .quick-add__submit {
+    padding: 0 12px;
+  }
+}
+
 .quick-add__input:focus {
   outline: none;
 }

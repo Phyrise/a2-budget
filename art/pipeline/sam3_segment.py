@@ -17,9 +17,45 @@ from pathlib import Path
 
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 
+import functools
+
 import numpy as np
 import torch
 from PIL import Image
+
+# --- Cale CPU : SAM 3 code en dur device="cuda" / .cuda() à quelques endroits.
+# On redirige ces appels vers le CPU (les GPU de la machine sont réservés).
+_FACTORIES = ["zeros", "ones", "empty", "full", "arange", "tensor", "rand", "randn", "linspace", "as_tensor", "eye"]
+
+
+def _cpu_device(d):
+    return "cpu" if d is not None and "cuda" in str(d) else d
+
+
+def _cpuify(fn):
+    @functools.wraps(fn)
+    def wrapper(*a, **k):
+        if "device" in k:
+            k["device"] = _cpu_device(k["device"])
+        return fn(*a, **k)
+
+    return wrapper
+
+
+for _n in _FACTORIES:
+    setattr(torch, _n, _cpuify(getattr(torch, _n)))
+torch.Tensor.cuda = lambda self, *a, **k: self  # type: ignore[assignment]
+_tensor_to = torch.Tensor.to
+
+
+def _to(self, *a, **k):
+    a = tuple(_cpu_device(x) if isinstance(x, (str, torch.device)) else x for x in a)
+    if "device" in k:
+        k["device"] = _cpu_device(k["device"])
+    return _tensor_to(self, *a, **k)
+
+
+torch.Tensor.to = _to  # type: ignore[assignment]
 
 ROOT = Path(os.environ.get("A2ART_ROOT", Path.home() / "a2art"))
 SAM3_ROOT = Path(os.environ.get("SAM3_ROOT", Path.home() / "sam3_official"))
@@ -48,6 +84,10 @@ MASTER_PROMPTS = [
     "sky",
     "light rays",
     "giant tree",
+    "mossy boulder",
+    "plants",
+    "tree branch",
+    "mist",
 ]
 # Pour chaque stade : l'arbre central (zone de croissance).
 STAGE_PROMPTS = ["giant tree", "tree trunk", "tree stump", "young tree"]
@@ -60,7 +100,7 @@ JOBS: dict[str, list[str]] = {
     "05-growth-3": STAGE_PROMPTS,
     "05-growth-4": STAGE_PROMPTS,
     "05-growth-6": STAGE_PROMPTS,
-    "06-clean-plate": ["water", "fern", "foliage", "sky"],
+    "06-clean-plate": ["water", "stream", "fern", "foliage", "moss", "sky", "tree trunk"],
 }
 
 

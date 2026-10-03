@@ -32,6 +32,8 @@ const SHOTS = [
   ['stage2', 'mobile', 'stage=2&mood=peaceful'],
   ['stub', 'mobile', 'data=stub&mood=lively'],
   ['banner', 'mobile', 'variant=banner&mood=peaceful'],
+  ['tier2', 'mobile', 'mood=lively&quality=2&creature=1'],
+  ['gentle', 'mobile', 'mood=flourishing&motion=gentle&creature=1'],
   ['pulse', 'mobile', 'mood=peaceful', 'pulse'],
   ['guardian', 'mobile', 'mood=peaceful', 'guardian'],
   ['d-quiet', 'desktop', 'variant=backdrop&mood=quiet'],
@@ -56,7 +58,7 @@ for (const [name, view, params, action] of SHOTS) {
     if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${name}] ${m.text()}`);
   });
   page.on('pageerror', (e) => errors.push(`[${name}] ${e.message}`));
-  await page.goto(`${BASE}?ui=0&quality=0&${params}`);
+  await page.goto(`${BASE}?ui=0&${params.includes('quality=') ? '' : 'quality=0&'}${params}`);
   await page.waitForFunction(() => window.__lab?.stats() != null, null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(2600);
   if (action === 'pulse') {

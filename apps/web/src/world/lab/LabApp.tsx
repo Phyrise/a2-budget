@@ -23,6 +23,7 @@ interface LabSettings {
   data: LabData;
   lut: boolean;
   progress: number;
+  creature: boolean;
 }
 
 const WHO: Who[] = ['a', 'b', 'both', 'unassigned'];
@@ -45,6 +46,7 @@ function readSettings(): LabSettings {
     data: (q.get('data') as LabData) ?? 'labo',
     lut: q.get('lut') === '1',
     progress: num('progress', 0.4),
+    creature: q.get('creature') === '1',
   };
 }
 
@@ -76,10 +78,10 @@ export function LabApp() {
       growthProgress: s.progress,
       mood: s.mood,
       paused: s.paused,
-      creatures: [],
+      creatures: s.creature ? ['lab-creature'] : [],
       lights: [...lightList(s.lights), ...extra],
     }),
-    [s.stage, s.progress, s.mood, s.paused, s.lights, extra],
+    [s.stage, s.progress, s.mood, s.paused, s.lights, s.creature, extra],
   );
 
   const debug = () => ref.current as LivingForestDebugHandle | null;
@@ -155,6 +157,7 @@ export function LabApp() {
             <button style={btn} onClick={(e) => pulse(e.clientX, e.clientY)}>pulse</button>
             <button style={btn} onClick={() => setExtra((x) => x.slice(0, -1))}>annuler</button>
             <button style={btn} onClick={() => ref.current?.playGuardian()}>gardien</button>
+            <button style={on(s.creature)} onClick={() => set({ creature: !s.creature })}>créature</button>
           </div>
           <div style={row}>
             {(['full', 'gentle', 'still'] as WorldMotion[]).map((m) => (

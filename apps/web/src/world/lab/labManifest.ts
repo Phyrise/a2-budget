@@ -87,7 +87,9 @@ export function labManifest(data: LabData, testLuts: boolean): WorldManifest {
       { x: 0.33, y: 0.645, depth: 0.62, scale: 0.042 },
       { x: 0.72, y: 0.69, depth: 0.66, scale: 0.04 },
     ],
-    sprites: { ...manifest.sprites, kodama: [kod1, kod2, kod3] },
+    sprites: { ...manifest.sprites, kodama: [kod1, kod2, kod3], creatures: { 'lab-creature': kod3 } },
+    // Créature de test (chemin de code des créatures débloquées).
+    creatureSpots: { 'lab-creature': { x: 0.58, y: 0.79, depth: 0.78, scale: 0.035 } },
     fx: {
       fog: fxList('fog'),
       rays: fxList('rays'),

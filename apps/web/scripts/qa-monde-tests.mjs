@@ -51,6 +51,25 @@ if (!only || only === 'motion') {
   await ctx.close();
 }
 
+if (!only || only === 'app') {
+  // L'app réelle (StrictMode, coquille provisoire) : aucune erreur, une image.
+  const ctx = await browser.newContext(mobile);
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto(BASE.replace('world-lab.html', ''));
+  await page.waitForTimeout(4000);
+  const info = await page.evaluate(() => {
+    const c = document.querySelector('.living-forest canvas');
+    const r = document.querySelector('.living-forest')?.getBoundingClientRect();
+    return { canvas: !!c, opacity: c ? getComputedStyle(c).opacity : null, w: r?.width, h: r?.height };
+  });
+  await page.screenshot({ path: resolve(out, 't-app.png') });
+  check('app : scène montée sans erreur', info.canvas && errors.length === 0, JSON.stringify(info) + (errors.length ? ` erreurs: ${errors.slice(0, 2).join(' | ')}` : ''));
+  await ctx.close();
+}
+
 if (!only || only === 'water') {
   const { ctx, page } = await open(browser, 'variant=backdrop&mood=lively', { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
   await page.waitForTimeout(1500);

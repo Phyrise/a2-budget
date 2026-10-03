@@ -45,6 +45,7 @@ def _cpuify(fn):
 for _n in _FACTORIES:
     setattr(torch, _n, _cpuify(getattr(torch, _n)))
 torch.Tensor.cuda = lambda self, *a, **k: self  # type: ignore[assignment]
+torch.Tensor.pin_memory = lambda self, *a, **k: self  # type: ignore[assignment]
 _tensor_to = torch.Tensor.to
 
 
@@ -61,8 +62,20 @@ ROOT = Path(os.environ.get("A2ART_ROOT", Path.home() / "a2art"))
 SAM3_ROOT = Path(os.environ.get("SAM3_ROOT", Path.home() / "sam3_official"))
 sys.path.insert(0, str(SAM3_ROOT))
 
+import sam3.model.vitdet as _vitdet  # noqa: E402
 from sam3 import build_sam3_image_model  # noqa: E402
 from sam3.model.sam3_image_processor import Sam3Processor  # noqa: E402
+
+
+def _addmm_act_fp32(activation, linear, mat1):
+    """Remplace le noyau fusionné bf16 (prévu pour GPU) par un calcul float32."""
+    y = linear(mat1)
+    if activation in (torch.nn.functional.relu, torch.nn.ReLU):
+        return torch.relu(y)
+    return torch.nn.functional.gelu(y)
+
+
+_vitdet.addmm_act = _addmm_act_fp32
 
 ALIGNED = ROOT / "out" / "work" / "aligned"
 OUTDIR = ROOT / "out" / "work" / "sam3"
@@ -88,6 +101,8 @@ MASTER_PROMPTS = [
     "plants",
     "tree branch",
     "mist",
+    "hanging moss",
+    "bush",
 ]
 # Pour chaque stade : l'arbre central (zone de croissance).
 STAGE_PROMPTS = ["giant tree", "tree trunk", "tree stump", "young tree"]

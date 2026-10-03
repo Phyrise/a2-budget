@@ -1,50 +1,117 @@
-/* Jetons de design — direction « sanctuaire forestier ». Fichier lead.
-   Palette retenue : brume, lumière douce, matières naturelles (bois, pierre,
-   parchemin). Saturation utilisée avec parcimonie ; l'or reste rare. */
-:root {
-  /* Palette */
-  --bg: #d7dfcb;
-  --surface: #f5f1e2;
-  --surface-soft: rgba(245, 241, 226, 0.8);
-  --surface-dark: #2c4034;
-  --text: #2b3a2e;
-  --text-muted: #5a6a58;
-  --text-faint: #76826f;
-  --primary: #33513c;
-  --primary-strong: #26402f;
-  --on-primary: #f3eeda;
-  --accent: #c2a05e;
-  --accent-soft: #e6d9ba;
-  --border: #c4cbb2;
-  --border-soft: rgba(110, 122, 100, 0.28);
-  --danger: #8a4a3a;
-  --danger-soft: #e6d2c8;
-  --focus-ring: #33513c;
+/* Jetons de design V2 — « Yakushima, la forêt des dieux ».
+   Palette tirée des peintures : sous-bois presque noir, mousse humide,
+   écorce de cèdre, brume bleu-vert ; la lumière chaude est rare et précieuse.
+   Thème sombre unique : l'interface prolonge la forêt au lieu de la recouvrir. */
+@import '@fontsource-variable/fraunces/index.css';
+@import '@fontsource-variable/inter/index.css';
 
-  /* Formes — coins plus serrés, moins de « cartes » */
-  --radius-card: 12px;
-  --radius-control: 8px;
+:root {
+  color-scheme: dark;
+
+  /* Encre (fonds) — du plus profond au plus clair */
+  --ink-950: #070d0a;
+  --ink-900: #0b1410;
+  --ink-850: #0f1a15;
+  --ink-800: #13211a;
+  --ink-700: #1a2c23;
+  --ink-600: #22372c;
+
+  /* Mousse / végétal */
+  --moss-700: #2b4532;
+  --moss-500: #4b6b45;
+  --moss-400: #6b8a5a;
+  --moss-300: #93ad7c;
+
+  /* Brume / texte */
+  --fog-500: #7d8f86;
+  --fog-400: #9aaba1;
+  --fog-300: #b9c6bd;
+  --ivory-200: #ddd8c6;
+  --ivory-100: #ece6d3;
+  --ivory-50: #f5f0e1;
+
+  /* Écorce, ambre (rare), kodama */
+  --cedar-600: #6e4530;
+  --cedar-400: #a06a4a;
+  --amber-500: #c99a4f;
+  --amber-400: #ddb36a;
+  --amber-300: #ecd09a;
+  --kodama: #e9f0e6;
+
+  /* Personnes — repères doux portés par leur compagnon */
+  --who-a: #c6d3e6;      /* AL · Jiji — clair de lune argenté */
+  --who-b: #eba15a;      /* AC · Calcifer — braise */
+  --who-both: #e7c87e;   /* ensemble — or */
+  --who-none: #9aaba1;
+
+  /* Sémantique */
+  --bg: var(--ink-900);
+  --surface: var(--ink-850);
+  --surface-raised: var(--ink-800);
+  --surface-sunken: var(--ink-950);
+  --line: rgba(185, 198, 189, 0.12);
+  --line-strong: rgba(185, 198, 189, 0.22);
+  --text: var(--ivory-100);
+  --text-muted: var(--fog-300);
+  --text-faint: var(--fog-500);
+  --accent: var(--amber-400);
+  --accent-strong: var(--amber-300);
+  --on-accent: #1d150a;
+  --positive: var(--moss-300);
+  --danger: #d98a6c;          /* terre cuite lisible sur fond sombre */
+  --danger-soft: rgba(217, 138, 108, 0.14);
+  --focus-ring: var(--amber-300);
+
+  /* Typographie */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 19px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 44px;
+
+  /* Espacements */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --gutter: 20px;
+
+  /* Formes */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-sheet: 30px;
   --radius-pill: 999px;
 
-  /* Espacements (8/12/16/24/32) */
-  --space-1: 8px;
-  --space-2: 12px;
-  --space-3: 16px;
-  --space-4: 24px;
-  --space-5: 32px;
+  /* Ombres (sur fond sombre : profondeur, pas de halo gris) */
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 48px rgba(0, 0, 0, 0.5);
 
-  /* Typographie — direction éditoriale (serif pour les titres, sans pour le reste) */
-  --font-serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
-  --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --text-base: 16px;
-  --amount-lg: 38px;
-  --amount-md: 30px;
-  --amount-sm: 22px;
+  /* Mouvement */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 480ms;
 
-  /* Ombres très légères */
-  --shadow-card: 0 1px 2px rgba(30, 45, 33, 0.06), 0 6px 18px rgba(30, 45, 33, 0.05);
+  /* Coquille */
+  --nav-height: 68px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --content-max: 560px;
+}
 
-  /* Navigation */
-  --nav-height: 0px;
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
 }

@@ -28,8 +28,8 @@ export default defineConfig({
         start_url: '/a2-budget/',
         scope: '/a2-budget/',
         display: 'standalone',
-        background_color: '#F7F5EF',
-        theme_color: '#254B3D',
+        background_color: '#0b1410',
+        theme_color: '#0b1410',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -43,13 +43,15 @@ export default defineConfig({
       },
       workbox: {
         // Précache uniquement la coquille de l'app et les assets locaux.
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,webmanifest}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       // En mode injectManifest, c'est ce bloc qui configure le manifest de
       // précache (le bloc workbox ci-dessus ne le fait pas) : jpg/png inclus
       // (forêt, avatars) pour le mode hors ligne.
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,webmanifest}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],

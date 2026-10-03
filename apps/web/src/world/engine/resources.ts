@@ -13,6 +13,38 @@ import type { SpriteAsset } from './spirits';
 
 type TexImage = Decoded | Uint8Array;
 
+/** Pixels d'une image OPAQUE (lecture canvas sans perte : alpha = 255 partout). */
+function opaquePixels(img: Decoded, w: number, h: number): Uint8ClampedArray {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('canvas 2d indisponible');
+  ctx.drawImage(img as CanvasImageSource, 0, 0, w, h);
+  return ctx.getImageData(0, 0, w, h).data;
+}
+
+/**
+ * Recompose les masques RGBA à partir de deux images opaques (RGB + trouées
+ * de lumière en niveaux de gris). On évite un PNG RGBA à alpha presque nul,
+ * dont WebKit perdrait les canaux RGB au décodage (prémultiplication).
+ */
+function composeMasks(rgb: Decoded, light: Decoded | null): DataMap {
+  const { w, h } = imageSize(rgb);
+  const src = opaquePixels(rgb, w, h);
+  const lit = light ? opaquePixels(light, w, h) : null;
+  releaseImage(rgb);
+  releaseImage(light);
+  const data = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) {
+    data[i * 4] = src[i * 4]!;
+    data[i * 4 + 1] = src[i * 4 + 1]!;
+    data[i * 4 + 2] = src[i * 4 + 2]!;
+    data[i * 4 + 3] = lit ? lit[i * 4]! : 0;
+  }
+  return { data, width: w, height: h };
+}
+
 export interface StageTextures {
   stage: GrowthStage;
   color: Texture;
@@ -116,9 +148,12 @@ export class Resources {
   async loadMasks(): Promise<void> {
     if (!this.manifest.masks) return;
     try {
-      const m = await decodeImage(this.manifest.masks, { kind: 'data', maxWidth: 768 });
+      const rgb = await decodeImage(this.manifest.masks, { kind: 'data', maxWidth: 768 });
+      const light = this.manifest.masksLight
+        ? await decodeImage(this.manifest.masksLight, { kind: 'data', maxWidth: 768 }).catch(() => null)
+        : null;
       this.free(this.masks);
-      this.masks = this.texture(m);
+      this.masks = this.dataTexture(composeMasks(rgb, light));
       this.realMasks = true;
     } catch {
       /* repli : masques synthétiques au chargement du stade */

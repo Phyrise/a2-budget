@@ -100,12 +100,17 @@ export interface WorldManifest {
   /** Une peinture complète par stade de croissance (même cadrage). */
   stages: Record<GrowthStage, SceneImage>;
   /**
-   * Masques RGBA de la scène (cadrage portrait) :
+   * Masques de la scène (cadrage portrait), PNG RGB opaque :
    * R = eau (écoulement), G = feuillage/fougères (vent),
-   * B = cèdre central (révélations de croissance), A = trouées de lumière.
-   * null si absent.
+   * B = cèdre central (révélations de croissance). null si absent.
    */
   masks: string | null;
+  /**
+   * Trouées de lumière dans la canopée (niveaux de gris, opaque), recomposé
+   * par le moteur en canal A des masques. Fichier séparé car WebKit perd le
+   * RGB d'un PNG RGBA là où l'alpha est nul. null si absent.
+   */
+  masksLight: string | null;
   /** Cadre de fougères au premier plan (RGBA, même cadrage portrait). */
   foreground: string | null;
   /** LUT 3D 33³ en bande 1089×33 (PNG), par humeur + nuit. null = identité. */

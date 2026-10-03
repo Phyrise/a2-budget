@@ -88,6 +88,7 @@ def main() -> None:
         stages.append(f"    {s}: {{ color: {c}, depth: {d} }},")
 
     masks = asset("masks.png")
+    masks_light = asset("masks-light.png")
     fg = asset("foreground.webp")
     luts = [f"    {n}: {asset(f'luts/{n}.png')}," for n in LUTS]
 
@@ -134,10 +135,11 @@ def main() -> None:
  * - stages[n].color : peinture du stade, WebP 1024×1536 (recalée sur le stade 6).
  * - stages[n].depth : profondeur 512×768 en niveaux de gris (R = G = B), sans
  *   perte, blanc = près ; même échelle pour tous les stades (calée sur le stade 6).
- * - masks : PNG RGBA 512×768 NON prémultiplié (à décoder sans prémultiplication) :
- *   R = eau (écoulement), G = feuillage / fougères / mousse fine (vent),
- *   B = zone du cèdre (union des changements entre stades), A = trouées de
- *   lumière dans la canopée. Bords doux.
+ * - masks : PNG RGB opaque 512×768 : R = eau (écoulement), G = feuillage /
+ *   fougères / mousse fine (vent), B = zone du cèdre (union des changements
+ *   entre stades). masksLight : PNG niveaux de gris 512×768 = trouées de
+ *   lumière dans la canopée (canal A recomposé par le moteur). Deux fichiers
+ *   opaques car WebKit perd le RGB d'un PNG RGBA là où l'alpha est nul. Bords doux.
  * - luts : LUT 3D 33³ en bande PNG 1089×33 (RGB 8 bits) : le pixel
  *   (x = r + 33·b, y = g), avec r, g, b ∈ 0..32, contient la couleur de sortie
  *   pour l'entrée (r, g, b) / 32. Source : peinture du stade 6 ; cibles :
@@ -162,6 +164,7 @@ export const manifest: WorldManifest = {{
 {chr(10).join(stages)}
   }},
   {prop('masks', masks)},
+  {prop('masksLight', masks_light)},
   {prop('foreground', fg)},
   luts: {{
 {chr(10).join(luts)}

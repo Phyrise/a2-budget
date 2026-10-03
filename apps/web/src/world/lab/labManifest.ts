@@ -80,6 +80,7 @@ export function labManifest(data: LabData, testLuts: boolean): WorldManifest {
     luts,
     stages: { ...manifest.stages, 6: { color: manifest.stages[6].color, depth: depth6 } },
     masks: masks6,
+    masksLight: null,
     lightSource: { x: 0.3, y: 0.0 },
     kodamaSpots: [
       { x: 0.2, y: 0.775, depth: 0.82, scale: 0.06 },

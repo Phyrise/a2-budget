@@ -177,7 +177,11 @@ def main() -> None:
 
     rgba = np.stack([r, g, b, a], 2)
     u8 = np.clip(np.round(rgba * 255), 0, 255).astype(np.uint8)
-    Image.fromarray(u8, "RGBA").save(ASSETS / "masks.png", optimize=True)
+    # Deux fichiers OPAQUES : un PNG RGBA dont l'alpha est presque partout nul
+    # perd ses canaux RGB sur WebKit (décodage prémultiplié). Le moteur
+    # recompose RGBA à partir de masks.png (RGB) et masks-light.png (A).
+    Image.fromarray(u8[..., :3], "RGB").save(ASSETS / "masks.png", optimize=True)
+    Image.fromarray(u8[..., 3], "L").save(ASSETS / "masks-light.png", optimize=True)
     print("masks.png", (ASSETS / "masks.png").stat().st_size, "octets ; couverture R G B A :",
           [round(float((c > 0.5).mean()) * 100, 1) for c in (r, g, b, a)])
 

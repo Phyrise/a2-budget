@@ -122,7 +122,7 @@ export class Lantern {
     const glowK = 0.85 + 0.3 * night;
     const fl = animate ? 0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1 + 1) : 1;
     const bk = this.bloom(now);
-    const h = 0.042;
+    const h = 0.05;
     const cy = y - h * 0.5;
     const inten = (0.38 + 0.62 * p) * on;
     // Flaque de lumière sur la mousse, halo, lanterne, cœur.

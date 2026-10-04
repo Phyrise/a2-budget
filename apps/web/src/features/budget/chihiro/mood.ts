@@ -44,20 +44,10 @@ export function goldFill(summary: MonthSummary): number {
   return Math.min(1, summary.remainingCents / given);
 }
 
-/** Couleurs de kompeitō disponibles (clés de budgetTheme.gold.konpeito). */
-export const KONPEITO_COLORS = [
-  'pink',
-  'yellow',
-  'green',
-  'blue',
-  'white',
-  'purple',
-  'yellow-2',
-  'green-2',
-  'blue-2',
-  'purple-2',
-] as const;
-export type KonpeitoColor = (typeof KONPEITO_COLORS)[number];
+/** Teintes de kompeitō (clés de budgetTheme.gold.konpeito, variantes « -2 » en plus). */
+export const KONPEITO_HUES = ['pink', 'yellow', 'green', 'blue', 'white', 'purple'] as const;
+export type KonpeitoHue = (typeof KONPEITO_HUES)[number];
+export type KonpeitoColor = KonpeitoHue | `${Exclude<KonpeitoHue, 'pink' | 'white'>}-2`;
 
 /** Hash FNV-1a 32 bits : stable entre sessions et appareils. */
 export function stableHash(text: string): number {
@@ -69,10 +59,28 @@ export function stableHash(text: string): number {
   return h >>> 0;
 }
 
-/** Couleur stable d'une dépense, d'après son libellé (casse et espaces ignorés). */
+/** Finaliseur murmur3 : mélange les bits faibles avant le modulo. */
+function mix(h: number): number {
+  let x = h ^ (h >>> 16);
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  x ^= x >>> 16;
+  return x >>> 0;
+}
+
+/**
+ * Couleur stable d'une dépense, d'après son libellé (casse et espaces
+ * ignorés) : six teintes bien distinctes, puis une des deux variantes de
+ * cristal quand elle existe. Le sel « susu: » répartit les libellés par
+ * défaut (loyer, électricité, courses…) sur six teintes différentes.
+ */
 export function konpeitoColorFor(label: string): KonpeitoColor {
   const normalized = label.trim().toLocaleLowerCase('fr-FR').replace(/\s+/g, ' ');
-  return KONPEITO_COLORS[stableHash(normalized) % KONPEITO_COLORS.length] ?? 'yellow';
+  const h = mix(stableHash(`susu:${normalized}`));
+  const hue = KONPEITO_HUES[h % KONPEITO_HUES.length] ?? 'yellow';
+  if (hue === 'pink' || hue === 'white' || ((h >>> 8) & 1) === 0) return hue;
+  return `${hue}-2`;
 }
 
 export type SusuwatariCarrier = keyof Pick<

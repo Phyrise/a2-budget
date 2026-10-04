@@ -141,23 +141,23 @@
   position: absolute;
   left: 50%;
   bottom: 18px;
-  width: 118px;
-  height: 118px;
+  width: 128px;
+  height: 128px;
   border-radius: 50%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(255, 179, 107, 0.3), rgba(196, 72, 58, 0.1) 46%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 179, 107, 0.4), rgba(196, 72, 58, 0.14) 46%, transparent 70%);
   transition:
     opacity 600ms var(--ease-soft),
     background 600ms var(--ease-soft);
 }
 
 .noface[data-pose='offering'] .noface__glow {
-  background: radial-gradient(circle, rgba(242, 211, 134, 0.42), rgba(226, 172, 69, 0.12) 46%, transparent 70%);
+  background: radial-gradient(circle, rgba(242, 211, 134, 0.5), rgba(226, 172, 69, 0.16) 46%, transparent 70%);
 }
 
 /* Timide : clair de lune doux, jamais d'alarme. */
 .noface[data-pose='shy'] .noface__glow {
-  background: radial-gradient(circle, rgba(169, 178, 230, 0.24), rgba(57, 66, 122, 0.12) 48%, transparent 70%);
+  background: radial-gradient(circle, rgba(169, 178, 230, 0.32), rgba(57, 66, 122, 0.16) 48%, transparent 70%);
 }
 
 /* Planche du pont, sous ses pieds. */
@@ -312,7 +312,7 @@
   width: auto;
   transform-origin: 50% 100%;
   animation: susu-hop 190ms ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 1px rgba(236, 230, 211, 0.25));
+  filter: drop-shadow(0 0 1.5px rgba(236, 230, 211, 0.4)) drop-shadow(0 0 12px rgba(255, 214, 150, 0.22));
 }
 
 .susu-runner__dust {

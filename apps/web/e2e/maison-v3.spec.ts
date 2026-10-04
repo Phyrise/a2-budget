@@ -84,10 +84,10 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     let menu = await openMenu(page, 'Appeler le plombier');
     await expect(menu.getByRole('group', { name: /Marquer comme fait, par qui/ })).toBeVisible();
     await menu.getByRole('button', { name: /^AC l’a fait/ }).click();
+    // La bulle est éphémère (≥ 2,8 s) : la vérifier avant le départ de la ligne.
+    await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
     await expect(menu).toBeHidden();
     await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(0, { timeout: 5_000 });
-    await expect(page.locator('.cbubble')).toBeVisible();
-    await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
     await expect
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Appeler le plombier'))
       .toMatchObject({ assignee: 'unassigned', doneBy: 'b' });
@@ -95,8 +95,8 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     // Tâche d'AL faite par AC : coup de main visible, Jiji remercie.
     menu = await openMenu(page, 'Arroser les plantes');
     await menu.getByRole('button', { name: /C’est AC qui l’a fait/ }).click();
-    await expect(todayRow(page, 'Arroser les plantes')).toHaveCount(0, { timeout: 5_000 });
     await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
+    await expect(todayRow(page, 'Arroser les plantes')).toHaveCount(0, { timeout: 5_000 });
     await expect
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Arroser les plantes'))
       .toMatchObject({ assignee: 'a', doneBy: 'b' });

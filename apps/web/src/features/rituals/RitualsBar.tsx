@@ -58,7 +58,10 @@ export function RitualsBar() {
     return () => setForegroundSheet(false);
   }, [open, setForegroundSheet]);
 
+  // Floraison : la feuille de la lanterne se rouvre, sauf si une autre
+  // feuille est ouverte (on n'interrompt pas une saisie) — la carte le dit.
   const onLanternFinished = useCallback(() => {
+    if (document.querySelector('dialog[open]')) return;
     setOpen((current) => (current === null ? 'lantern' : current));
   }, []);
   useLanternController({ onFinished: onLanternFinished });

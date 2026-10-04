@@ -78,12 +78,17 @@ export function CircleSheet({
   };
 
   // À chaque ouverture : relecture si le cercle est déjà tenu, sinon étape 1.
+  // « Plus tard » garde les mots déjà écrits pour la même semaine.
+  const draftWeek = useRef<string | null>(null);
   useEffect(() => {
     if (!open) return;
     heldRef.current = false;
     const weekStart = prepare();
     const existing = circleForWeek(appState?.rituals, weekStart);
-    setDraft(EMPTY);
+    if (draftWeek.current !== weekStart) {
+      draftWeek.current = weekStart;
+      setDraft(EMPTY);
+    }
     setView(existing ? { kind: 'read', circle: existing } : { kind: 'hold', step: 0 });
     // Préparé une fois par ouverture : les suggestions ne bougent pas pendant le rituel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,6 +121,7 @@ export function CircleSheet({
     });
     if (saved) {
       heldRef.current = true;
+      draftWeek.current = null;
       setView({ kind: 'closing', circle: saved });
     }
   };

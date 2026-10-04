@@ -2,14 +2,19 @@
 
 /* Pendant la lanterne, l'interface s'efface et la forêt prend tout l'écran
    (la feuille elle-même reste visible : visibility est rétabli sur le dialog). */
-html:has(dialog.lantern-sheet[open]) .app-main,
 html:has(dialog.lantern-sheet[open]) .app-header,
 html:has(dialog.lantern-sheet[open]) .app-dock {
   visibility: hidden;
 }
 
-html:has(dialog.lantern-sheet[open]) .app-world {
-  height: 100svh;
+@media (max-width: 1023px) {
+  html:has(dialog.lantern-sheet[open]) .app-main {
+    visibility: hidden;
+  }
+
+  html:has(dialog.lantern-sheet[open]) .app-world {
+    height: 100svh;
+  }
 }
 
 dialog.sheet.lantern-sheet {
@@ -314,17 +319,17 @@ dialog.lantern-sheet[data-state='closing'] .sheet__panel {
 }
 
 @media (min-width: 1024px) {
+  /* Le carnet reste là, assoupi sous un voile ; la forêt garde la lumière. */
   dialog.lantern-sheet.sheet--full .sheet__panel {
-    background: linear-gradient(
-      to bottom,
-      rgba(7, 13, 10, 0.5) 0,
-      rgba(7, 13, 10, 0) 140px,
-      rgba(7, 13, 10, 0) 45%,
-      rgba(7, 13, 10, 0.7) 100%
-    );
+    background:
+      linear-gradient(to right, transparent calc(100% - 480px), rgba(7, 13, 10, 0.72) calc(100% - 480px)),
+      linear-gradient(to bottom, rgba(7, 13, 10, 0.5) 0, rgba(7, 13, 10, 0) 140px, rgba(7, 13, 10, 0) 45%, rgba(7, 13, 10, 0.7) 100%);
   }
 
+  /* La forêt occupe la gauche (la colonne du carnet est à droite) : la
+     lanterne se pose au milieu de la forêt. */
   .lantern-sheet .sheet__body {
+    padding-right: 480px;
     padding-bottom: 40px;
   }
 }

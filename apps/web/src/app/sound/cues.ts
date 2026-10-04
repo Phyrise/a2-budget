@@ -1,0 +1,53 @@
+/**
+ * Vocabulaire des petits sons de la forêt. Aucune dépendance : importable
+ * partout, y compris par les tests Node de la détection.
+ */
+
+/**
+ * Un son, lié à ce que l'on voit :
+ * - `done`     tâche faite → la lumière s'allume (carillon cristallin) ;
+ * - `chore`    corvée faite (effort 3) → bol doux + carillon ;
+ * - `undo`     un fait annulé → note douce descendante ;
+ * - `skip`     « pas aujourd'hui » → souffle de vent ;
+ * - `creature` nouvelle créature rencontrée → scintillement + note boisée ;
+ * - `growth`   la forêt grandit → accord grave (koto) + bruissement ;
+ * - `guardian` le gardien apparaît → nappe éthérée (≤ 3 s) ;
+ * - `circle`   cercle de la semaine enregistré → deux notes qui se répondent ;
+ * - `lantern`  lanterne terminée → floraison lumineuse.
+ */
+export type SoundCue =
+  | 'done'
+  | 'chore'
+  | 'undo'
+  | 'skip'
+  | 'creature'
+  | 'growth'
+  | 'guardian'
+  | 'circle'
+  | 'lantern';
+
+/** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
+export type SoundVoice = 'a' | 'b' | 'both' | 'none';
+
+/** Un événement sonore détecté dans une transition d'état. */
+export interface SoundEvent {
+  cue: SoundCue;
+  who?: SoundVoice;
+}
+
+/** Un son planifié : décalage (ms) à partir de maintenant. */
+export interface PlannedSound extends SoundEvent {
+  delayMs: number;
+}
+
+export const ALL_CUES: readonly SoundCue[] = [
+  'done',
+  'chore',
+  'undo',
+  'skip',
+  'creature',
+  'growth',
+  'guardian',
+  'circle',
+  'lantern',
+];

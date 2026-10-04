@@ -52,7 +52,7 @@ export function konpeito(bus: Bus, t: number, gentle: boolean): void {
   const hops = gentle ? [0, 0.11] : [0, 0.1, 0.17, 0.215];
   hops.forEach((at, i) => {
     const f = i % 2 === 0 ? N.Fs6 : N.Cs6;
-    tone(bus, t + at, f, { peak: 0.05 - i * 0.009, attack: 0.002, decay: 0.14, wet: 0.45, type: 'triangle' });
+    tone(bus, t + at, f, { peak: 0.07 - i * 0.012, attack: 0.002, decay: 0.14, wet: 0.45, type: 'triangle' });
   });
   bell(bus, t, N.B5, { peak: 0.04, decay: 0.5, bright: 0.6, wet: 0.45 });
 }

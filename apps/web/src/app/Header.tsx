@@ -38,13 +38,13 @@ export function Header({ solid }: { solid: boolean }) {
           Home
         </span>
       </p>
+      {prefs.devMode && (
+        <button type="button" className="dev-chip" aria-label="Mode développeur" onClick={() => openSheet('dev')}>
+          DEV
+        </button>
+      )}
       <div className="app-header__end">
         <SaveIndicator />
-        {prefs.devMode && (
-          <button type="button" className="dev-chip" aria-label="Mode développeur" onClick={() => openSheet('dev')}>
-            DEV
-          </button>
-        )}
         <IconButton icon="history" label={HISTORY_TITLES[module]} variant="glass" onClick={() => openSheet('history')} />
         {module === 'maison' && <PauseButton />}
         <IconButton icon="settings" label="Réglages" variant="glass" onClick={() => openSheet('settings')} />

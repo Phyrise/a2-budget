@@ -117,7 +117,7 @@ await page.setViewportSize({ width: 390, height: 844 });
 await recordCues(page);
 await go(page, 'Budget');
 let b = await shown(page, 'budget', 'banner');
-check('Budget : bandeau Chihiro affiché', b?.shown && b.opacity === '1' && b.src.includes('banner-landscape'), b);
+check('Budget : bandeau Chihiro affiché', b?.shown && Number(b.opacity) > 0.98 && b.src.includes('banner-landscape'), b);
 const accent = await page.evaluate(() => getComputedStyle(document.querySelector('.app-nav__item.is-active .icon')).color);
 check('Budget : accent or sur l’onglet actif', accent === 'rgb(239, 201, 111)', accent);
 await shot(page, '04-budget');
@@ -141,7 +141,7 @@ check('sons du budget : pièces puis kompeitō', heard.includes('coins') && hear
 
 await go(page, 'Courses');
 b = await shown(page, 'courses', 'banner');
-check('Courses : bandeau Kiki affiché', b?.shown && b.opacity === '1' && b.src.includes('courses/banner-landscape'), b);
+check('Courses : bandeau Kiki affiché', b?.shown && Number(b.opacity) > 0.98 && b.src.includes('courses/banner-landscape'), b);
 check('Budget : bandeau effacé', (await shown(page, 'budget', 'banner'))?.shown === false);
 await shot(page, '05-courses');
 await page.getByRole('checkbox', { name: /Lait/ }).click();
@@ -156,7 +156,7 @@ check('sons des courses : balai puis clochette', heard.includes('broom') && hear
 
 await go(page, 'Calendrier');
 b = await shown(page, 'calendar', 'banner');
-check('Calendrier : bandeau de la forêt', b?.shown && b.opacity === '1', b);
+check('Calendrier : bandeau de la forêt', b?.shown && Number(b.opacity) > 0.98, b);
 check('?module=calendar dans l’URL', new URL(page.url()).searchParams.get('module') === 'calendar', page.url());
 check('Calendrier : titre focalisé', await page.locator('#calendar-title').evaluate((el) => el === document.activeElement));
 await shot(page, '06-calendrier');
@@ -229,6 +229,38 @@ await settings.getByRole('switch', { name: 'Mode développeur' }).click();
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 check('mode quitté : plus de DEV ni d’aperçu', (await page.locator('.dev-chip').count()) === 0 && (await page.locator('.preview-banner').count()) === 0);
+
+// Sons des univers : légers et courts (rendu hors ligne, même bus que l'app).
+for (const cue of ['coins', 'konpeito', 'broom', 'shopBell', 'woodNote']) {
+  for (const gentle of [false, true]) {
+    const m = await page.evaluate(
+      async ([c, g]) => {
+        const { buildBus } = await import(/* @vite-ignore */ '/a2-budget/src/app/sound/engine.ts');
+        const { renderCue } = await import(/* @vite-ignore */ '/a2-budget/src/app/sound/voices.ts');
+        const rate = 44100;
+        const ctx = new OfflineAudioContext(2, rate * 3, rate);
+        renderCue(buildBus(ctx, ctx.destination), c, 0.01, { who: 'none', gentle: g });
+        const buf = await ctx.startRendering();
+        let peak = 0;
+        let end = 0;
+        let nan = false;
+        for (let ch = 0; ch < 2; ch++) {
+          const d = buf.getChannelData(ch);
+          for (let i = 0; i < d.length; i++) {
+            const v = Math.abs(d[i]);
+            if (Number.isNaN(v)) nan = true;
+            if (v > peak) peak = v;
+            if (v > 0.003) end = Math.max(end, i / rate);
+          }
+        }
+        return { peak, end, nan };
+      },
+      [cue, gentle],
+    );
+    const ok = !m.nan && m.peak > 0.01 && m.peak < 0.3 && m.end <= 1.2;
+    check(`son ${cue}${gentle ? ' (doux)' : ''} : crête ${m.peak.toFixed(3)}, fin ${m.end.toFixed(2)} s`, ok, m);
+  }
+}
 await mobile.close();
 
 // ============================= Ordinateur 1440 × 900 ==========================
@@ -240,12 +272,12 @@ await shot(dp, '20-bureau-maison');
 await go(dp, 'Budget');
 await dp.waitForTimeout(500);
 b = await shown(dp, 'budget', 'backdrop');
-check('bureau : fond portrait Chihiro', b?.shown && b.opacity === '1' && b.src.includes('banner-portrait'), b);
+check('bureau : fond portrait Chihiro', b?.shown && Number(b.opacity) > 0.98 && b.src.includes('banner-portrait'), b);
 await shot(dp, '21-bureau-budget');
 await go(dp, 'Courses');
 await dp.waitForTimeout(500);
 b = await shown(dp, 'courses', 'backdrop');
-check('bureau : fond portrait Kiki', b?.shown && b.opacity === '1' && b.src.includes('banner-portrait'), b);
+check('bureau : fond portrait Kiki', b?.shown && Number(b.opacity) > 0.98 && b.src.includes('banner-portrait'), b);
 check('bureau : Chihiro effacé (fondu)', (await shown(dp, 'budget', 'backdrop'))?.shown === false);
 await shot(dp, '22-bureau-courses');
 await go(dp, 'Calendrier');

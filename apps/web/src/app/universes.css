@@ -99,6 +99,18 @@
   border-color: rgba(236, 208, 154, 0.6);
 }
 
+/* Téléphone étroit : sous la marque, pour laisser la place aux boutons ronds. */
+@media (max-width: 419px) {
+  .dev-chip {
+    position: absolute;
+    top: calc(var(--safe-top) + 46px);
+    left: 18px;
+    min-height: 22px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+}
+
 /* Bandeau « Aperçu » : visible tant qu'une surcharge change la forêt. */
 .preview-banner {
   position: fixed;

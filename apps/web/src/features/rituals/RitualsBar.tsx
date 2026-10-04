@@ -38,7 +38,7 @@ function LanternStatus() {
   }
   if (s.phase === 'paused') return <>En pause</>;
   if (s.phase === 'done') return <>Elle a fleuri</>;
-  return <>5 à 25{NB}min</>;
+  return <>Un minuteur doux pour s’y mettre</>;
 }
 
 export function RitualsBar() {

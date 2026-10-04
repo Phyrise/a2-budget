@@ -1,4 +1,4 @@
-/* Équilibre de la semaine — deux pierres sur une branche. */
+/* Le partage de la semaine — deux galets sur une branche. */
 
 .balance {
   padding: 18px 18px 8px;
@@ -8,13 +8,21 @@
     linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
 }
 
-.balance__eyebrow {
+.balance__heading {
   margin: 0;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-faint);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 520;
+  line-height: 1.25;
+  color: var(--ivory-100);
+}
+
+.balance__lead {
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-wrap: pretty;
 }
 
 .balance__visual {
@@ -221,10 +229,20 @@
 }
 
 /* Détail (repliable) : les gestes, sans total */
+.balance__how {
+  margin: 12px -6px 0;
+}
+
+.balance__how + .balance__detail {
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+}
+
 .balance__detail {
   margin: 10px -6px 0;
 }
 
+.balance__how .disclosure__toggle,
 .balance__detail .disclosure__toggle {
   min-height: 48px;
   padding-left: 6px;
@@ -276,4 +294,28 @@
 .week-detail__sep {
   margin-right: 3px;
   color: var(--text-faint);
+}
+
+/* « Comment ça marche ? » */
+.balance-how {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 6px 14px;
+}
+
+.balance-how li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--fog-300);
+}
+
+.balance-how li > svg {
+  justify-self: center;
+  margin-top: 1px;
+  color: var(--moss-300);
 }

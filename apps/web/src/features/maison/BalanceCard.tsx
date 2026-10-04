@@ -1,10 +1,11 @@
 /**
- * « Équilibre de la semaine » : lecture qualitative de la charge partagée
+ * « Le partage de la semaine » (ex-« Équilibre ») : lecture qualitative de la charge partagée
  * (weeklyBalance), phrase bienveillante, suggestions applicables en un
  * geste (rebalanceSuggestions → applySuggestion, annulable). Jamais de
  * score comparé ni de gagnant (V3_BRIEF §1.2) : les intermédiaires a / b ne
  * servent qu'à incliner la branche ; le détail se limite aux gestes faits,
- * regroupés par tâche, sans décompte.
+ * regroupés par tâche, sans décompte. Une ligne d'explication et un
+ * « Comment ça marche ? » repliable rendent la carte lisible au premier coup d'œil.
  */
 import {
   completionsOfWeek,
@@ -20,6 +21,7 @@ import { useMemo } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Companion, Disclosure, Icon, NBSP, fr, useToast } from '../../ui';
 import { BalanceStones } from './BalanceStones';
+import { EffortArt } from './EffortArt';
 import type { Names } from './TaskRow';
 import { assigneeName } from './taskText';
 
@@ -27,15 +29,41 @@ function verdictText(verdict: BalanceVerdict, total: number, names: Names): { ti
   switch (verdict) {
     case 'quiet':
       return total === 0
-        ? { title: 'La semaine commence tout juste.', body: 'Chaque geste viendra se poser ici, sans rien compter.' }
-        : { title: 'La semaine se met en route, doucement.', body: 'Rien ne pèse encore d’un côté ou de l’autre.' }
+        ? { title: 'La semaine commence tout juste.', body: 'Chaque tâche cochée viendra se poser sur la branche.' }
+        : { title: 'La semaine se met en route, doucement.', body: 'Encore trop tôt pour dire de quel côté elle penche.' };
     case 'balanced':
-      return { title: 'Vous avez porté la maison à deux.', body: 'La branche est à l’équilibre. Merci à vous deux.' };
+      return { title: fr(`${names.a} et ${names.b} ont porté la maison à deux.`), body: 'La branche est à l’équilibre. Merci à vous deux.' };
     case 'a-carried':
-      return { title: fr(`${names.a} a beaucoup porté cette semaine. Un petit relais ?`), body: null };
+      return { title: fr(`${names.a} a beaucoup porté cette semaine.`), body: fr(`Et si ${names.b} prenait le relais sur une tâche ou deux ?`) };
     case 'b-carried':
-      return { title: fr(`${names.b} a beaucoup porté cette semaine. Un petit relais ?`), body: null };
+      return { title: fr(`${names.b} a beaucoup porté cette semaine.`), body: fr(`Et si ${names.a} prenait le relais sur une tâche ou deux ?`) };
   }
+}
+
+/** « Comment ça marche ? » — sans chiffre ni barème : un miroir, pas un score. */
+function HowItWorks() {
+  return (
+    <Disclosure summary={fr('Comment ça marche ?')} className="balance__how">
+      <ul className="balance-how">
+        <li>
+          <EffortArt effort={1} size={26} />
+          <span>Chaque tâche cochée depuis lundi pose un poids du côté de celui ou celle qui l’a faite.</span>
+        </li>
+        <li>
+          <EffortArt effort={3} size={26} />
+          <span>Une corvée pèse plus lourd qu’un petit geste. Une tâche faite ensemble se partage en deux.</span>
+        </li>
+        <li>
+          <Icon name="repeat" size={22} />
+          <span>Si la branche penche nettement, une idée de relais apparaît (tour à tour, confier une tâche). Rien n’est imposé.</span>
+        </li>
+        <li>
+          <Icon name="leaf" size={22} />
+          <span>Pas de score, pas de gagnant&#8239;: juste un miroir pour s’entraider. Tout repart à zéro chaque lundi.</span>
+        </li>
+      </ul>
+    </Disclosure>
+  );
 }
 
 interface DetailItem {
@@ -92,9 +120,12 @@ export function BalanceCard({ names }: { names: Names }) {
 
   return (
     <section className="balance card" aria-labelledby="balance-title">
-      <h2 id="balance-title" className="balance__eyebrow">
-        Équilibre de la semaine
+      <h2 id="balance-title" className="balance__heading">
+        Le partage de la semaine
       </h2>
+      <p className="balance__lead">
+        Chaque tâche faite pèse selon son effort — petit geste, tâche, corvée. Les deux galets montrent si la charge est partagée.
+      </p>
       <div className="balance__visual">
         <BalanceStones a={balance.a} b={balance.b} verdict={balance.verdict} />
         <div className="balance__legend" aria-hidden="true">
@@ -128,6 +159,8 @@ export function BalanceCard({ names }: { names: Names }) {
           ))}
         </ul>
       )}
+
+      <HowItWorks />
 
       {detail.length > 0 && (
         <Disclosure summary="Les gestes de la semaine" className="balance__detail">

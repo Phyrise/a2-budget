@@ -2,14 +2,16 @@
  * Lanterne : feuille plein écran transparente posée sur la forêt. Pendant
  * qu'elle est ouverte, la scène reste vivante (présentation forcée en
  * `live`, rétablie à la fermeture) et le reste de l'interface s'efface
- * (rituals.css) pour laisser toute la place au monde.
+ * (rituals.css) pour laisser toute la place au monde. La première fois, une
+ * courte explication en trois gestes précède la préparation (LanternIntro).
  */
 import { actionableTasksToday } from '@a2/core';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../../../state/store';
 import { Sheet } from '../../../ui';
 import { useWorld } from '../../../world/WorldContext';
 import type { Names } from '../ritualText';
+import { LanternIntro, lanternIntroDue, markLanternIntroRead } from './LanternIntro';
 import { LanternSetup } from './LanternSetup';
 import { LanternDone, LanternRunning } from './LanternSession';
 import { lantern, useLantern } from './lanternStore';
@@ -55,6 +57,17 @@ export function LanternSheet({ open, onClose, names }: { open: boolean; onClose:
     if (s.phase === 'done' && !s.completed && s.minutesSpent < 1) lantern.reset();
   }, [s.phase, s.completed, s.minutesSpent]);
 
+  // Première fois : trois gestes illustrés avant la préparation.
+  const sessionsCount = appState?.focus?.sessions?.length ?? 0;
+  const [forcedIntro, setForcedIntro] = useState(false);
+  const [, bump] = useState(0);
+  const showIntro = s.phase === 'idle' && (forcedIntro || lanternIntroDue(sessionsCount));
+  const continueFromIntro = () => {
+    markLanternIntroRead();
+    setForcedIntro(false);
+    bump((n) => n + 1);
+  };
+
   const close = () => {
     if (s.phase === 'done') lantern.reset();
     onClose();
@@ -66,7 +79,10 @@ export function LanternSheet({ open, onClose, names }: { open: boolean; onClose:
   return (
     <Sheet open={open} onClose={close} title={title} size="full" className="lantern-sheet">
       <div className="lantern-body">
-        {s.phase === 'idle' && <LanternSetup names={names} tasks={todays} completions={completions ?? []} />}
+        {showIntro && <LanternIntro onContinue={continueFromIntro} />}
+        {s.phase === 'idle' && !showIntro && (
+          <LanternSetup names={names} tasks={todays} completions={completions ?? []} onHelp={() => setForcedIntro(true)} />
+        )}
         {(s.phase === 'running' || s.phase === 'paused') && <LanternRunning names={names} onHide={onClose} />}
         {s.phase === 'done' && <LanternDone names={names} onAgain={() => lantern.reset()} onClose={close} />}
       </div>

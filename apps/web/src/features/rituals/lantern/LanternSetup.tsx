@@ -1,5 +1,6 @@
 /**
  * Préparer une lanterne : durée, qui, tâche liée (facultative), intention.
+ * Le bouton dit simplement ce qui va se passer (« Lancer 10 minutes »).
  */
 import { nextAssignee, type ChoreCompletion, type HouseholdTask } from '@a2/core';
 import { useState } from 'react';
@@ -15,11 +16,14 @@ export function LanternSetup({
   names,
   tasks,
   completions,
+  onHelp,
 }: {
   names: Names;
   /** Tâches du jour (encore à faire). */
   tasks: HouseholdTask[];
   completions: ChoreCompletion[];
+  /** Rouvrir l'explication en trois gestes. */
+  onHelp: () => void;
 }) {
   const [minutes, setMinutes] = useState<Duration>('10');
   const [who, setWho] = useState<LanternWho>('both');
@@ -47,9 +51,12 @@ export function LanternSetup({
 
   return (
     <div className="lantern-card lantern-setup">
-      <p className="lantern-setup__lead">
-        Un moment de calme pour une seule chose. La forêt tient la lanterne, vous tenez le cap.
-      </p>
+      <div className="lantern-setup__intro">
+        <p className="lantern-setup__lead">Un minuteur doux pour s’y mettre. La forêt s’illumine pendant que vous rangez.</p>
+        <button type="button" className="lantern-setup__help" onClick={onHelp}>
+          Comment ça marche{NB}?
+        </button>
+      </div>
 
       <Segmented
         name="lantern-minutes"
@@ -109,7 +116,7 @@ export function LanternSetup({
       />
 
       <Button variant="primary" size="lg" block icon="sparkle" onClick={start}>
-        Allumer la lanterne
+        Lancer {minutes}{NB}minutes
       </Button>
     </div>
   );

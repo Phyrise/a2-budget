@@ -50,9 +50,11 @@ import {
 import { LocalStorageAdapter, type StorageAdapter } from './storage';
 import { buildExportJson, parseImportJson, type ImportSummary } from './exportImport';
 import { useCareActions, type CareActions } from './careActions';
+import { useCalendarActions, type CalendarActions } from './calendarActions';
 import { newId } from './ids';
 
 export type { CareActions, CircleInput, FocusInput } from './careActions';
+export type { CalendarActions, CalendarActionResult, RemovedCalendarEvent } from './calendarActions';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -123,7 +125,7 @@ export interface RemovedGrocery {
   index: number;
 }
 
-export interface AppContextValue extends CareActions {
+export interface AppContextValue extends CareActions, CalendarActions {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
@@ -766,6 +768,7 @@ export function AppProvider({
 
   // --- V3 « Prendre soin ensemble » (passages, suggestions, cercle, lanternes)
   const care = useCareActions(transact);
+  const calendar = useCalendarActions(transact);
 
   // --- Courses ------------------------------------------------------------
 
@@ -891,6 +894,7 @@ export function AppProvider({
       toggleHomeTask,
       toggleHomePause,
       ...care,
+      ...calendar,
       addGrocery,
       toggleGrocery,
       removeGrocery,
@@ -936,6 +940,7 @@ export function AppProvider({
       toggleHomeTask,
       toggleHomePause,
       care,
+      calendar,
       addGrocery,
       toggleGrocery,
       removeGrocery,

@@ -1,4 +1,4 @@
-# A² Home — Contrats du domaine Maison / Forêt (V2, extensions V3)
+# A² Home — Contrats du domaine Maison / Forêt (V2, extensions V3 et V3.2)
 
 Ce document est la référence du **domaine Maison / Forêt** (A² Home), séparé
 du budget. En cas de divergence avec le code, **ce document fait foi** ; toute
@@ -12,9 +12,10 @@ Implémentation : `packages/core/src/home/**` (fichiers `types.ts`, `dates.ts`,
 `tasks.ts`, `choreActions.ts`, `forest.ts`, `groceries.ts`, `appState.ts`,
 `fixtures/v1.ts` ; V3 : `occurrences.ts`, `taskEdit.ts`, `upcoming.ts`,
 `skips.ts`, `balance.ts`, `rituals.ts`, `focus.ts`, `careValidation.ts`,
-`validationHelpers.ts`). Tests : `*.test.ts` du même dossier (V3 :
-`care.*.test.ts`). Store : `apps/web/src/state/store.tsx` (§9) et
-`careActions.ts` (§11.8).
+`validationHelpers.ts` ; V3.2 : `calendarTypes.ts`, `calendar.ts`,
+`calendarOccurrences.ts`, `forestProgress.ts`). Tests : `*.test.ts` du même
+dossier (V3 : `care.*.test.ts`). Store : `apps/web/src/state/store.tsx` (§9),
+`careActions.ts` (§11.8) et `calendarActions.ts` (§12.5).
 
 ---
 
@@ -52,9 +53,12 @@ AppState
 │   ├── tasks: HouseholdTask[]
 │   └── completions: ChoreCompletion[]
 ├── forest: ForestState
-└── groceries
-    ├── items: GroceryItem[]        // liste commune (à acheter + panier)
-    └── history?: GroceryPurchase[] // achats archivés (optionnel)
+├── groceries
+│   ├── items: GroceryItem[]        // liste commune (à acheter + panier)
+│   └── history?: GroceryPurchase[] // achats archivés (optionnel)
+├── rituals?: { circles }           // V3 (§11.6)
+├── focus?: { sessions }            // V3 (§11.7)
+└── calendar?: { events }           // V3.2 — calendrier commun (§12)
 ```
 
 - `household.people` : identité partagée des deux personnes (dérivée des
@@ -322,8 +326,14 @@ recompléter restaure le fait Maison mais ne redonne aucun crédit.**
 | `DAILY_CREDIT_CAP` | 3 | crédits significatifs max / jour local |
 | `DAILY_DECAY` | 6 | décroissance douce / jour sans action |
 | `GUARDIAN_STREAK` | 10 | streak déclenchant le gardien |
+| `INACTIVITY_GRACE_DAYS` | 2 | journées inactives offertes avant décroissance |
+| `GROWTH_THRESHOLDS` | 0, 10, 25, 50, 100, 200, 400 | lifetimeCare de chaque stade |
+| `VITALITY_STATE_THRESHOLDS` | 0 / 25 / 50 / 75 | calme / paisible / vivante / florissante |
+| `CREATURES`, `ENVIRONMENTS` | ids par stade | déblocages |
+| `WEEKLY_GOAL_TARGET`, `WEEKLY_GOAL_LEVELS` | 12 ; 0 / 5 / 12 | objectif de la semaine (§13.2) |
 
-Ces nombres sont **internes** ; ils peuvent évoluer sans impact sur les
+Toutes sont **exportées** par `@a2/core` pour le mode développeur (§13.1),
+qui seul les affiche. Ces nombres sont **internes** ; ils peuvent évoluer sans impact sur les
 garanties (anti-spam, croissance permanente, pas de punition).
 
 ---
@@ -404,6 +414,8 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 | `updateGrocery(id, patch)` | `updateGroceryItem` | — |
 | `clearDoneGroceries()` | vide le panier vers l'historique | nombre d'articles archivés |
 | `renamePerson('A' \| 'B', name)` | nom nettoyé ; `household.people` suit | `boolean` (false : vide) |
+| `addCalendarEvent(draft)` / `updateCalendarEvent(id, patch)` | `addEvent` / `updateEvent` (§12) | `{ ok: true, event } \| { ok: false, reason }` |
+| `removeCalendarEvent(id)` / `restoreCalendarEvent(removed)` | `removeEvent` / `restoreEvent` | `{ event, index } \| null` / `boolean` |
 
 Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `actionableTasksToday(tasks, today, completions, chores.skips)`,
@@ -412,7 +424,9 @@ Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `rebalanceSuggestions(tasks, completions, today, 3, names)`,
 `gratitudeSuggestions`, `circleForWeek`, `groupGroceryItems(items)`,
 `grocerySuggestions(items, 6, { history, now: today })`,
-`recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel`.
+`recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel` ; V3.2 :
+`eventsOn`, `eventsBetween`, `nextEvents` (§12.3), `forestProgress(forest,
+today)`, `weeklyCareGoal(forest, today)` (§13).
 
 Import : le résumé (`ImportSummary`) mentionne aussi `taskCount`,
 `completionCount` et `groceryCount`.
@@ -623,3 +637,134 @@ cocher la tâche). Validation : `focus-not-object`,
 actions : transition pure via `transact`, ids et horloge capturés hors de
 l'updater (StrictMode), résultat synchrone, écriture sérialisée. L'objet
 d'actions est mémoïsé (le contexte ne se recalcule pas à chaque rendu).
+
+---
+
+## 12. V3.2 — Calendrier commun (`calendar?: { events }`)
+
+Les événements partagés du couple (dîner prévu, repas chez des amis,
+anniversaire…). Champ **optionnel** d'`AppState` : absent tant qu'aucun
+événement n'a été créé ; `null` est toléré et omis ; présent → validation
+stricte. `schemaVersion` reste `2` et un JSON sans calendrier se recharge à
+l'identique.
+
+### 12.1 Type
+
+```
+CalendarEvent = {
+  id, title, date: 'YYYY-MM-DD', time?: 'HH:MM', endTime?: 'HH:MM',
+  allDay: boolean,
+  kind: 'repas' | 'sortie' | 'anniversaire' | 'rdv' | 'voyage' | 'maison' | 'autre',
+  who: 'a' | 'b' | 'both', place?, note?, yearly?: boolean, createdAt (ISO)
+}
+```
+
+- `allDay: true` ⇒ ni `time` ni `endTime` ; `allDay: false` ⇒ `time` requis.
+- `endTime` seulement avec `time`, différent de `time` ; une fin antérieure
+  au début signifie « se termine après minuit » (soirée 20:00 → 01:00).
+- `yearly` : se répète chaque année au même mois/jour, à partir de l'année
+  d'origine (jamais avant). Un **29 février** tombe le **28 février** les
+  années non bissextiles.
+- Limites : `CALENDAR_EVENTS_MAX` = 2000, titre ≤ 120 (`CALENDAR_TITLE_MAX`),
+  lieu ≤ 120, note ≤ 1000 ; `CALENDAR_KINDS` liste les natures.
+
+### 12.2 Opérations (`calendar.ts`, pures, jamais d'exception)
+
+- `addEvent(events, draft & { id, createdAt })` → `{ ok: true, events, event }`
+  ou `{ ok: false, reason }`. Normalisation douce : titre et lieu nettoyés
+  (espaces), titre tronqué à 120 ; note (retours à la ligne gardés) ; vides →
+  omis. Défauts : `allDay` vrai sans heure, `kind: 'autre'`, `who: 'both'`,
+  `yearly` vrai pour un `anniversaire`. Refus : saisie invalide (raisons de
+  §12.4), `duplicate-calendar-event-id`, `calendar-full` (2000 : on n'oublie
+  jamais un anniversaire en silence).
+- `updateEvent(events, id, patch)` : chaque champ présent remplace, `null`
+  retire un champ facultatif (`time`, `endTime`, `place`, `note`, `yearly`).
+  Donner une heure passe en horaire ; `time: null` ou `allDay: true` repasse
+  en journée entière (heures retirées). `id`/`createdAt` immuables. Seuls les
+  champs du patch sont nettoyés ; patch sans effet → même référence ; id
+  inconnu → `calendar-event-not-found`.
+- `removeEvent(events, id)` → `{ events, removed: { event, index } | null }` ;
+  `restoreEvent(events, removed)` remet à la même position (bornée) ; id déjà
+  présent, calendrier plein ou événement invalide → même référence.
+
+### 12.3 Occurrences (`calendarOccurrences.ts`)
+
+`CalendarOccurrence = { event, date, years? }` (`years` : annuels seulement,
+années depuis la date d'origine, 0 l'année d'origine).
+
+- `eventsOn(events, date)` : occurrences du jour, annuelles comprises.
+- `eventsBetween(events, from, to)` : bornes incluses (grille mensuelle,
+  agenda) ; intervalle invalide ou inversé → `[]`.
+- `nextEvents(events, now, n)` : les `n` prochaines à partir de `now` (date
+  et heure locales) — aujourd'hui : journée entière, début pas encore passé,
+  ou pas encore terminé (fin plus tard ou après minuit) ; un annuel apparaît
+  une seule fois (sa prochaine occurrence). `n` ≤ 0 ou invalide → `[]`.
+- Tri (`compareOccurrences`) : date, journée entière avant les horaires,
+  heure, titre (ordre français), id.
+
+### 12.4 Validation (raisons stables)
+
+`calendar-not-object`, `calendar-events-not-array`,
+`calendar-too-many-events`, `duplicate-calendar-event-id`,
+`calendar-event-not-object`, `calendar-event-invalid-id`,
+`calendar-event-invalid-title`, `calendar-event-invalid-date`,
+`calendar-event-invalid-all-day`, `calendar-event-invalid-kind`,
+`calendar-event-invalid-who`, `calendar-event-invalid-created-at`,
+`calendar-event-all-day-with-time`, `calendar-event-invalid-time`,
+`calendar-event-invalid-end-time`, `calendar-event-invalid-place`,
+`calendar-event-invalid-note`, `calendar-event-invalid-yearly`. Un événement
+valide ressort **champ pour champ identique** (y compris `yearly: false`).
+
+### 12.5 Store (`calendarActions.ts`, exposé par `useApp()`)
+
+| Action | Retour |
+|--------|--------|
+| `addCalendarEvent(draft)` | `{ ok: true, event }` ou `{ ok: false, reason }` |
+| `updateCalendarEvent(id, patch)` | idem |
+| `removeCalendarEvent(id)` | `RemovedCalendarEvent` (pour annuler) ou `null` |
+| `restoreCalendarEvent(removed)` | `boolean` |
+
+Même sémantique que les autres actions (transition pure via `transact`, id et
+horloge capturés hors de l'updater, résultat synchrone, écriture sérialisée).
+Lecture : `appState.calendar?.events ?? []`.
+
+---
+
+## 13. V3.2 — Progression et objectif de la semaine (`forestProgress.ts`)
+
+Lecture seule : rien n'est modifié, rien n'est persisté.
+
+### 13.1 `forestProgress(forest, today)` (mode développeur)
+
+`today` : `Date` ou clé `YYYY-MM-DD`. Renvoie `{ stage, lifetimeCare,
+stageFloor, nextThreshold (null au dernier stade), progressToNext (0..1, 1 au
+dernier stade), creditsToday (actifs + annulés du jour, ce qui compte pour le
+plafond), dailyCap, vitality, vitalityMax, vitalityState, currentStreak,
+longestStreak, paused }`. Ces nombres ne s'affichent **que** dans le mode
+développeur (réglage des constantes, §5.8) ; l'interface normale garde des
+états qualitatifs.
+
+### 13.2 `weeklyCareGoal(forest, now, opts?)` — jamais une sanction
+
+L'objectif dit seulement comment la forêt a été choyée cette semaine. Le
+niveau le plus bas s'appelle `resting` (« la forêt se repose ») : la forêt ne
+meurt jamais, ne rougit jamais, aucune dette ne se reporte d'une semaine sur
+l'autre, aucune comparaison entre les deux personnes. L'interface en tire
+une phrase douce, jamais un reproche.
+
+- `creditsThisWeek` : crédits **`active`** accordés du lundi au dimanche de la
+  semaine locale de `now` (`weekStart`, `weekEnd`).
+- `target` : 12 par défaut (`WEEKLY_GOAL_TARGET` = 4 jours de soins pleins),
+  configurable (`opts.target`, entier ≥ 1, sinon défaut).
+- `level` : `resting` < 5, `good` 5–11, `flourishing` ≥ 12
+  (`WEEKLY_GOAL_LEVELS`). Avec un autre objectif, `goodFrom` suit la même
+  proportion (round(target × 5/12), au moins 1) et `flourishing` = `target`.
+- `progress` : `creditsThisWeek / target` borné à 0..1 (jauge douce).
+- `trend` : si `opts.weekStartVitality` est fourni (l'état ne garde pas
+  d'instantané de vitalité, l'appelant peut l'avoir mémorisé), compare la
+  vitalité actuelle à celle-ci (`rising` / `steady` / `resting`). Sinon
+  compare `creditsThisWeek` à `previousWeekSameSpan` (crédits actifs de la
+  semaine précédente, du lundi au **même jour de semaine**, pour une
+  comparaison juste en cours de semaine) : plus → `rising`, moins ou rien
+  des deux côtés → `resting`, autant → `steady`.
+

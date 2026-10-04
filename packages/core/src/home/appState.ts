@@ -23,6 +23,7 @@ import type { PersistedStateInput } from '../types.js';
 import { isValidLocalDateKey } from './dates.js';
 import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
 import { isGroceryCategory } from './groceries.js';
+import { validateCalendar } from './calendar.js';
 import {
   validateCompletionCare,
   validateFocus,
@@ -547,7 +548,7 @@ export function validateAppState(
     if (!forest.ok) return forest;
     const groceries = validateGroceries(value.groceries);
     if (!groceries.ok) return groceries;
-    const care: Pick<AppState, 'rituals' | 'focus'> = {};
+    const care: Pick<AppState, 'rituals' | 'focus' | 'calendar'> = {};
     if (value.rituals !== undefined && value.rituals !== null) {
       const rituals = validateRituals(value.rituals);
       if (!rituals.ok) return rituals;
@@ -557,6 +558,11 @@ export function validateAppState(
       const focus = validateFocus(value.focus);
       if (!focus.ok) return focus;
       care.focus = focus.state;
+    }
+    if (value.calendar !== undefined && value.calendar !== null) {
+      const calendar = validateCalendar(value.calendar);
+      if (!calendar.ok) return calendar;
+      care.calendar = calendar.state;
     }
 
     return {

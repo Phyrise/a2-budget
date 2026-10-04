@@ -157,6 +157,51 @@ export {
   resumeForest,
 } from './forest.js';
 
+// V3.2 — calendrier commun, progression et objectif de la semaine de la forêt.
+export type {
+  CalendarEvent,
+  CalendarEventKind,
+  CalendarOccurrence,
+  CalendarState,
+  CalendarWho,
+} from './calendarTypes.js';
+export {
+  CALENDAR_EVENTS_MAX,
+  CALENDAR_TITLE_MAX,
+  CALENDAR_PLACE_MAX,
+  CALENDAR_NOTE_MAX,
+  CALENDAR_KINDS,
+  isCalendarKind,
+  isCalendarWho,
+  isTimeKey,
+  validateCalendar,
+  validateCalendarEvent,
+  addEvent,
+  updateEvent,
+  removeEvent,
+  restoreEvent,
+} from './calendar.js';
+export type {
+  CalendarEventDraft,
+  CalendarEventPatch,
+  CalendarResult,
+  RemovedCalendarEvent,
+} from './calendar.js';
+export { compareOccurrences, eventsBetween, eventsOn, nextEvents } from './calendarOccurrences.js';
+export {
+  WEEKLY_GOAL_TARGET,
+  WEEKLY_GOAL_LEVELS,
+  forestProgress,
+  weeklyCareGoal,
+} from './forestProgress.js';
+export type {
+  ForestProgress,
+  WeeklyCareGoal,
+  WeeklyGoalLevel,
+  WeeklyGoalOptions,
+  WeeklyGoalTrend,
+} from './forestProgress.js';
+
 export {
   migrateV1toV2,
   emptyAppState,

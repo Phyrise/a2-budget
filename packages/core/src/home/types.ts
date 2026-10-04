@@ -12,6 +12,7 @@
  */
 
 import type { MonthRecord, Settings } from '../types.js';
+import type { CalendarState } from './calendarTypes.js';
 
 // ---------------------------------------------------------------------------
 // Tâches (Maison)
@@ -367,4 +368,6 @@ export interface AppState {
   rituals?: RitualsState;
   /** V3 — lanternes (absent tant qu'aucune session n'a eu lieu). */
   focus?: FocusState;
+  /** V3.2 — calendrier commun (absent tant qu'aucun événement n'a été créé). */
+  calendar?: CalendarState;
 }

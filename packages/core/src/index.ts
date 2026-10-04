@@ -5,7 +5,7 @@
  * Sémantique, unités et cas limites : docs/CONTRACTS.md.
  *
  * Ce fichier ne fait que ré-exporter ; les implémentations vivent dans
- * amounts.ts, calculations.ts, months.ts et state.ts.
+ * amounts.ts, calculations.ts, income.ts, months.ts et state.ts.
  */
 
 export * from './types.js';
@@ -19,6 +19,14 @@ export {
 export type { ParseAmountResult } from './amounts.js';
 
 export { computeContributionBreakdown, computeMonthSummary } from './calculations.js';
+
+export {
+  normalizeMonthIncome,
+  sharedRates,
+  hasSharedRates,
+  setSharedRates,
+  monthIncomeCents,
+} from './income.js';
 
 export {
   currentMonthKey,

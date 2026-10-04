@@ -18,7 +18,8 @@
 
 import { currentMonthKey } from '../months.js';
 import { defaultSettings, validatePersistedState } from '../state.js';
-import type { PersistedState } from '../types.js';
+import { normalizeMonthIncome } from '../income.js';
+import type { PersistedStateInput } from '../types.js';
 import { isValidLocalDateKey } from './dates.js';
 import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
 import { isGroceryCategory } from './groceries.js';
@@ -72,9 +73,11 @@ function isRecurrence(value: unknown): value is TaskRecurrence {
  * Migration pure V1 → V2. Conserve **exactement** le budget (settings, mois,
  * mois sélectionné, réserve comprise) et initialise les domaines Maison/Forêt/
  * Courses à vide. Les personnes du foyer sont dérivées des réglages budget.
+ * Les revenus des mois sont normalisés (salaire + compléments, V3.1) par
+ * `normalizeMonthIncome` : contributions strictement identiques.
  * Ne lève jamais d'exception sur un état V1 déjà validé.
  */
-export function migrateV1toV2(v1: PersistedState): AppState {
+export function migrateV1toV2(v1: PersistedStateInput): AppState {
   return {
     schemaVersion: 2,
     household: {
@@ -90,7 +93,7 @@ export function migrateV1toV2(v1: PersistedState): AppState {
         personB: { ...v1.settings.personB },
         recurringExpenses: v1.settings.recurringExpenses.map((expense) => ({ ...expense })),
       },
-      months: v1.months.map((month) => ({
+      months: v1.months.map((month) => normalizeMonthIncome({
         ...month,
         personA: { ...month.personA },
         personB: { ...month.personB },
@@ -513,7 +516,8 @@ function validateGroceries(value: unknown): Ok<GroceriesState> | Fail {
 
 /**
  * Validation à l'exécution d'un état applicatif V2. Réutilise la validation
- * V1 (testée) pour la partie budget. Ne lève jamais d'exception.
+ * V1 (testée) pour la partie budget : les mois avec ou sans compléments sont
+ * acceptés et ressortent normalisés (V3.1). Ne lève jamais d'exception.
  */
 export function validateAppState(
   value: unknown,
@@ -584,6 +588,8 @@ export function validateAppState(
  * Charge et migre un état persisté vers l'état applicatif V2.
  * - `schemaVersion: 1` → validation V1 → migration pure vers V2.
  * - `schemaVersion: 2` → validation V2.
+ * Dans les deux cas, les revenus des mois sont normalisés (salaire +
+ * compléments) sans changer aucune contribution.
  * - autre / illisible → échec avec raison stable (le store conserve le contenu
  *   brut et bascule en mode récupération ; jamais d'écrasement silencieux).
  * Ne lève jamais d'exception.

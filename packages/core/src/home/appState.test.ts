@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatePersistedState } from '../state.js';
+import { computeMonthSummary } from '../calculations.js';
+import { normalizeMonthIncome } from '../income.js';
 import {
   emptyAppState,
   migrateState,
@@ -10,10 +12,21 @@ import { V1_FIXTURES, v1Basic, v1Custom, v1Empty, v1History } from './fixtures/v
 import type { AppState } from './types.js';
 import { grantCredit, pauseForest, tombstoneCredit, updateStreak } from './forest.js';
 
-/** Vérifie que le budget migré est profondément identique à la V1 d'origine. */
+/**
+ * Vérifie que le budget migré est profondément identique à la V1 d'origine,
+ * à la normalisation des revenus près (V3.1 : salaire + compléments), et que
+ * chaque contribution est strictement inchangée.
+ */
 function expectBudgetDeeplyIdentical(v2: AppState, v1: (typeof V1_FIXTURES)[number]['state']): void {
   expect(v2.budget.settings).toEqual(v1.settings);
-  expect(v2.budget.months).toEqual(v1.months);
+  expect(v2.budget.months).toEqual(v1.months.map((month) => normalizeMonthIncome(month)));
+  v1.months.forEach((month, i) => {
+    const before = computeMonthSummary(month);
+    const after = computeMonthSummary(v2.budget.months[i]!);
+    expect(after.contributionACents).toBe(before.contributionACents);
+    expect(after.contributionBCents).toBe(before.contributionBCents);
+    expect(after.remainingCents).toBe(before.remainingCents);
+  });
   expect(v2.budget.selectedMonth).toBe(v1.selectedMonth);
   // Réserve comprise (cachée mais conservée) :
   for (const month of v1.months) {

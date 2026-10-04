@@ -5,9 +5,10 @@
  */
 
 import { MAX_AMOUNT_CENTS, MAX_RATE_BPS } from './amounts.js';
+import { normalizeMonthIncome } from './income.js';
 import type {
   ContributionBreakdown,
-  MonthRecord,
+  MonthRecordInput,
   MonthSummary,
   PersonSettings,
 } from './types.js';
@@ -35,35 +36,37 @@ function roundHalfUpCents(incomeCents: number, rateBps: number): number {
 }
 
 /**
- * Contribution d'une personne pour un revenu donné.
+ * Contribution d'une personne pour un mois (modèle V3.1 salaire + compléments).
  *
- *   baseIncomeCents           = min(salaryCents, person.baseSalaryCents)
- *   variableIncomeCents       = max(0, salaryCents − person.baseSalaryCents)
- *   baseContributionCents     = roundHalfUp(baseIncomeCents × person.baseRateBps / 10000)
- *   variableContributionCents = roundHalfUp(variableIncomeCents × person.variableRateBps / 10000)
+ *   baseIncomeCents           = salaryCents          (entièrement au taux de base)
+ *   variableIncomeCents       = bonusCents           (compléments, au taux au-delà)
+ *   baseContributionCents     = roundHalfUp(salaryCents × person.baseRateBps / 10000)
+ *   variableContributionCents = roundHalfUp(bonusCents × person.variableRateBps / 10000)
  *   contributionCents         = baseContributionCents + variableContributionCents
  *
- * Chaque tranche est arrondie séparément au centime (demi-centime vers le
- * haut) avant l'addition. Lève une erreur sur entrée invalide (négatif,
- * non entier, hors plage).
+ * `person.baseSalaryCents` (salaire habituel) ne sert plus de seuil. Chaque
+ * tranche est arrondie séparément au centime (demi-centime vers le haut)
+ * avant l'addition. Lève une erreur sur entrée invalide (négatif, non
+ * entier, hors plage).
  */
 export function computeContributionBreakdown(
   salaryCents: number,
   person: PersonSettings,
+  bonusCents = 0,
 ): ContributionBreakdown {
   assertAmountCents(salaryCents, 'salaryCents');
+  assertAmountCents(bonusCents, 'bonusCents');
   assertAmountCents(person.baseSalaryCents, 'person.baseSalaryCents');
   assertRateBps(person.baseRateBps, 'person.baseRateBps');
   assertRateBps(person.variableRateBps, 'person.variableRateBps');
 
-  const baseIncomeCents = Math.min(salaryCents, person.baseSalaryCents);
-  const variableIncomeCents = Math.max(0, salaryCents - person.baseSalaryCents);
-  const baseContributionCents = roundHalfUpCents(baseIncomeCents, person.baseRateBps);
-  const variableContributionCents = roundHalfUpCents(variableIncomeCents, person.variableRateBps);
+  const baseContributionCents = roundHalfUpCents(salaryCents, person.baseRateBps);
+  const variableContributionCents = roundHalfUpCents(bonusCents, person.variableRateBps);
 
   return {
-    baseIncomeCents,
-    variableIncomeCents,
+    baseIncomeCents: salaryCents,
+    variableIncomeCents: bonusCents,
+    incomeCents: salaryCents + bonusCents,
     baseContributionCents,
     variableContributionCents,
     contributionCents: baseContributionCents + variableContributionCents,
@@ -72,7 +75,7 @@ export function computeContributionBreakdown(
 
 /**
  * Chiffres agrégés d'un mois : contributions A/B, total commun, total des
- * dépenses, reste (peut être négatif), loisirs après réserve, couverture de
+ * dépenses, reste (peut être négatif), détail par personne, loisirs après réserve, couverture de
  * la réserve.
  *
  *   remainingCents           = householdContributionCents − expensesTotalCents
@@ -80,9 +83,12 @@ export function computeContributionBreakdown(
  *   reserveCovered           = true si réserve = 0 (convention), sinon remaining ≥ réserve
  *   reserveShortfallCents    = max(0, reserveTargetCents − remainingCents)
  */
-export function computeMonthSummary(record: MonthRecord): MonthSummary {
-  const a = computeContributionBreakdown(record.salaryACents, record.personA);
-  const b = computeContributionBreakdown(record.salaryBCents, record.personB);
+export function computeMonthSummary(input: MonthRecordInput): MonthSummary {
+  // Un mois d'avant V3.1 (sans compléments) est normalisé à la volée :
+  // contributions strictement identiques à l'ancien modèle à seuil.
+  const record = normalizeMonthIncome(input);
+  const a = computeContributionBreakdown(record.salaryACents, record.personA, record.bonusACents);
+  const b = computeContributionBreakdown(record.salaryBCents, record.personB, record.bonusBCents);
   assertAmountCents(record.reserveTargetCents, 'record.reserveTargetCents');
 
   const householdContributionCents = a.contributionCents + b.contributionCents;
@@ -101,6 +107,8 @@ export function computeMonthSummary(record: MonthRecord): MonthSummary {
   return {
     contributionACents: a.contributionCents,
     contributionBCents: b.contributionCents,
+    breakdownA: a,
+    breakdownB: b,
     householdContributionCents,
     expensesTotalCents,
     remainingCents,

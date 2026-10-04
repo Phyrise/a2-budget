@@ -4,10 +4,12 @@
  */
 
 import { MAX_AMOUNT_CENTS, MAX_RATE_BPS } from './amounts.js';
+import { normalizeMonthIncome } from './income.js';
 import { currentMonthKey, isValidMonthKey } from './months.js';
 import type {
   Expense,
   MonthRecord,
+  MonthRecordInput,
   PersistedState,
   PersonSettings,
   Settings,
@@ -59,9 +61,9 @@ export function defaultSettings(): Settings {
 
 /**
  * Crée l'enregistrement d'un nouveau mois à partir des réglages courants :
- * copie des deux personnes, salaires préremplis avec les salaires de base
- * (prévision, à ajuster), copie des dépenses récurrentes (mêmes ids),
- * réserve par défaut.
+ * copie des deux personnes, salaires préremplis avec les salaires habituels
+ * (prévision, à ajuster), compléments à 0, copie des dépenses récurrentes
+ * (mêmes ids), réserve par défaut.
  */
 export function createMonthRecord(monthKey: string, settings: Settings): MonthRecord {
   if (!isValidMonthKey(monthKey)) {
@@ -73,6 +75,8 @@ export function createMonthRecord(monthKey: string, settings: Settings): MonthRe
     personB: { ...settings.personB },
     salaryACents: settings.personA.baseSalaryCents,
     salaryBCents: settings.personB.baseSalaryCents,
+    bonusACents: 0,
+    bonusBCents: 0,
     expenses: settings.recurringExpenses.map((e) => ({ ...e })),
     reserveTargetCents: settings.defaultReserveTargetCents,
   };
@@ -111,7 +115,7 @@ export function ensureMonth(state: PersistedState, monthKey: string): PersistedS
 /**
  * Action explicite « Appliquer au mois affiché » : remplace dans le mois les
  * copies des personnes, les dépenses et la cible de réserve par les réglages
- * courants. Les salaires saisis dans le mois sont conservés.
+ * courants. Les salaires et compléments saisis dans le mois sont conservés.
  * Sans effet si le mois n'existe pas. Pur : ne mute jamais l'entrée.
  */
 export function applySettingsToMonth(
@@ -240,6 +244,16 @@ function validateSettings(value: unknown): Ok<Settings> | Fail {
   };
 }
 
+/** Compléments : absents (ou null) = ancien modèle ; présents = montant valide. */
+function isOptionalAmount(value: unknown): value is number | undefined | null {
+  return value === undefined || value === null || isAmountCents(value);
+}
+
+/**
+ * Valide un mois et le **normalise** (modèle salaire + compléments, V3.1) :
+ * un mois sans compléments (ancien modèle à seuil) est converti par
+ * `normalizeMonthIncome`, contributions strictement identiques.
+ */
 function validateMonthRecord(value: unknown): Ok<MonthRecord> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'month-not-object' };
   if (typeof value.monthKey !== 'string' || !isValidMonthKey(value.monthKey)) {
@@ -251,21 +265,38 @@ function validateMonthRecord(value: unknown): Ok<MonthRecord> | Fail {
   if (!personB.ok) return personB;
   if (!isAmountCents(value.salaryACents)) return { ok: false, reason: 'month-invalid-salary-a' };
   if (!isAmountCents(value.salaryBCents)) return { ok: false, reason: 'month-invalid-salary-b' };
+  if (!isOptionalAmount(value.bonusACents)) return { ok: false, reason: 'month-invalid-bonus-a' };
+  if (!isOptionalAmount(value.bonusBCents)) return { ok: false, reason: 'month-invalid-bonus-b' };
   const expenses = validateExpenseList(value.expenses, 'month-duplicate-expense-id');
   if (!expenses.ok) return expenses;
   if (!isAmountCents(value.reserveTargetCents)) {
     return { ok: false, reason: 'month-invalid-reserve' };
   }
+  const month: MonthRecordInput = {
+    monthKey: value.monthKey,
+    personA: personA.state,
+    personB: personB.state,
+    salaryACents: value.salaryACents,
+    salaryBCents: value.salaryBCents,
+    expenses: expenses.state,
+    reserveTargetCents: value.reserveTargetCents,
+  };
+  if (typeof value.bonusACents === 'number') month.bonusACents = value.bonusACents;
+  if (typeof value.bonusBCents === 'number') month.bonusBCents = value.bonusBCents;
+  const normalized = normalizeMonthIncome(month);
+  // Ordre des champs stable (salaires, compléments, dépenses, réserve).
   return {
     ok: true,
     state: {
-      monthKey: value.monthKey,
-      personA: personA.state,
-      personB: personB.state,
-      salaryACents: value.salaryACents,
-      salaryBCents: value.salaryBCents,
-      expenses: expenses.state,
-      reserveTargetCents: value.reserveTargetCents,
+      monthKey: normalized.monthKey,
+      personA: normalized.personA,
+      personB: normalized.personB,
+      salaryACents: normalized.salaryACents,
+      salaryBCents: normalized.salaryBCents,
+      bonusACents: normalized.bonusACents,
+      bonusBCents: normalized.bonusBCents,
+      expenses: normalized.expenses,
+      reserveTargetCents: normalized.reserveTargetCents,
     },
   };
 }
@@ -274,6 +305,8 @@ function validateMonthRecord(value: unknown): Ok<MonthRecord> | Fail {
  * Validation à l'exécution d'un état persisté/importé : version du schéma,
  * types, entiers, plages, clés de mois, identifiants (uniques dans chaque
  * liste), relations. Retourne l'état validé ou une raison stable.
+ * Accepte les mois avec ou sans compléments (ancien modèle) et renvoie
+ * toujours des mois normalisés (`normalizeMonthIncome`).
  * Ne lève jamais d'exception.
  */
 export function validatePersistedState(

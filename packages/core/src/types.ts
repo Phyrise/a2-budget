@@ -13,11 +13,17 @@ export interface PersonSettings {
   id: string;
   /** Nom affiché, modifiable. */
   name: string;
-  /** Salaire de référence, en centimes (ex. 2200 € = 220000). */
+  /**
+   * Salaire habituel, en centimes (ex. 2200 € = 220000). Préremplit le
+   * salaire d'un nouveau mois ; ne sert plus de seuil de calcul (V3.1).
+   */
   baseSalaryCents: number;
-  /** Taux appliqué au revenu jusqu'au salaire de base, en bps (40 % = 4000). */
+  /**
+   * Taux appliqué au salaire du mois, en bps (40 % = 4000). Commun au couple :
+   * écrit pour les deux personnes par `setSharedRates` (A fait foi à la lecture).
+   */
   baseRateBps: number;
-  /** Taux appliqué au revenu au-delà du salaire de base, en bps (20 % = 2000). */
+  /** Taux appliqué aux compléments (heures sup, astreintes, gardes), en bps (20 % = 2000). Commun au couple. */
   variableRateBps: number;
 }
 
@@ -43,12 +49,21 @@ export interface MonthRecord {
   /** Copie des paramètres de la personne B pour ce mois. */
   personB: PersonSettings;
   /**
-   * Revenu de la personne A pour ce mois, en centimes. Prévisionnel :
-   * prérempli avec le salaire de base, à ajuster par l'utilisateur.
+   * Salaire de la personne A pour ce mois, en centimes, entièrement au taux
+   * de base. Prérempli avec le salaire habituel, à ajuster.
    */
   salaryACents: number;
-  /** Revenu de la personne B pour ce mois, en centimes (mêmes règles). */
+  /** Salaire de la personne B pour ce mois, en centimes (mêmes règles). */
   salaryBCents: number;
+  /**
+   * Compléments de la personne A pour ce mois (heures sup, astreintes,
+   * gardes — souvent payés le mois suivant), en centimes, au taux au-delà.
+   * 0 à la création d'un mois. Absent dans les données d'avant V3.1 :
+   * `normalizeMonthIncome` les reconstitue sans changer les contributions.
+   */
+  bonusACents: number;
+  /** Compléments de la personne B pour ce mois (mêmes règles). */
+  bonusBCents: number;
   /** Dépenses propres au mois (copiées des dépenses récurrentes à la création). */
   expenses: Expense[];
   /**
@@ -57,6 +72,14 @@ export interface MonthRecord {
    */
   reserveTargetCents: number;
 }
+
+/**
+ * Mois tel qu'il peut se présenter à l'entrée (stockage, import, fixtures) :
+ * les compléments peuvent être absents (ancien modèle à seuil, avant V3.1).
+ * À normaliser avec `normalizeMonthIncome` ; les validateurs le font.
+ */
+export type MonthRecordInput = Omit<MonthRecord, 'bonusACents' | 'bonusBCents'> &
+  Partial<Pick<MonthRecord, 'bonusACents' | 'bonusBCents'>>;
 
 /** Réglages par défaut, appliqués aux mois nouvellement créés. */
 export interface Settings {
@@ -80,12 +103,30 @@ export interface PersistedState {
   selectedMonth: string;
 }
 
-/** Détail du calcul de la contribution d'une personne pour un revenu donné. */
+/**
+ * État persisté tel qu'il peut se présenter à l'entrée (V1 ancien modèle :
+ * mois sans compléments). `validatePersistedState` le normalise.
+ */
+export type PersistedStateInput = Omit<PersistedState, 'months'> & {
+  months: MonthRecordInput[];
+};
+
+/** Taux communs du couple, en bps. */
+export interface SharedRates {
+  /** Taux appliqué aux salaires. */
+  baseRateBps: number;
+  /** Taux appliqué aux compléments. */
+  variableRateBps: number;
+}
+
+/** Détail du calcul de la contribution d'une personne pour un mois. */
 export interface ContributionBreakdown {
-  /** min(salaire, salaire de base). */
+  /** Salaire du mois (entièrement au taux de base). */
   baseIncomeCents: number;
-  /** max(0, salaire − salaire de base). */
+  /** Compléments du mois (heures sup, astreintes, gardes), au taux au-delà. */
   variableIncomeCents: number;
+  /** baseIncomeCents + variableIncomeCents : revenu total du mois. */
+  incomeCents: number;
   /** roundHalfUp(baseIncomeCents × baseRateBps / 10000). */
   baseContributionCents: number;
   /** roundHalfUp(variableIncomeCents × variableRateBps / 10000). */
@@ -98,6 +139,10 @@ export interface ContributionBreakdown {
 export interface MonthSummary {
   contributionACents: number;
   contributionBCents: number;
+  /** Détail du calcul de A (salaire, compléments, tranches). */
+  breakdownA: ContributionBreakdown;
+  /** Détail du calcul de B. */
+  breakdownB: ContributionBreakdown;
   /** contributionACents + contributionBCents. */
   householdContributionCents: number;
   /** Somme des dépenses du mois. */

@@ -10,13 +10,17 @@
  *
  * Ces fixtures sont la référence de la migration : le budget doit être
  * **profondément identique** après migration (montants, taux, noms, mois,
- * réserve comprise).
+ * réserve comprise), à la normalisation des revenus près (V3.1 : salaire +
+ * compléments, contributions strictement identiques).
+ *
+ * Elles sont au format brut d'avant V3.1 (mois sans compléments), d'où le
+ * type `PersistedStateInput`.
  */
 
-import type { PersistedState } from '../../types.js';
+import type { PersistedStateInput } from '../../types.js';
 
 /** 1. Premier lancement : réglages par défaut, aucun mois. */
-export const v1Empty: PersistedState = {
+export const v1Empty: PersistedStateInput = {
   schemaVersion: 1,
   settings: {
     personA: {
@@ -48,7 +52,7 @@ export const v1Empty: PersistedState = {
 };
 
 /** 2. Un mois courant : salaires par défaut, dépenses récurrentes copiées. */
-export const v1Basic: PersistedState = {
+export const v1Basic: PersistedStateInput = {
   schemaVersion: 1,
   settings: v1Empty.settings,
   months: [
@@ -73,7 +77,7 @@ export const v1Basic: PersistedState = {
 };
 
 /** 3. Personnalisé : noms, taux, salaires, dépenses et réserve modifiés. */
-export const v1Custom: PersistedState = {
+export const v1Custom: PersistedStateInput = {
   schemaVersion: 1,
   settings: {
     personA: {
@@ -117,7 +121,7 @@ export const v1Custom: PersistedState = {
 };
 
 /** 4. Historique : plusieurs mois avec des valeurs distinctes. */
-export const v1History: PersistedState = {
+export const v1History: PersistedStateInput = {
   schemaVersion: 1,
   settings: v1Empty.settings,
   months: [
@@ -167,7 +171,7 @@ export const v1History: PersistedState = {
 };
 
 /** Les quatre fixtures, pour itérer dans les tests. */
-export const V1_FIXTURES: { name: string; state: PersistedState }[] = [
+export const V1_FIXTURES: { name: string; state: PersistedStateInput }[] = [
   { name: 'v1Empty', state: v1Empty },
   { name: 'v1Basic', state: v1Basic },
   { name: 'v1Custom', state: v1Custom },

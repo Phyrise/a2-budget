@@ -1,0 +1,234 @@
+/* Cercle de la semaine. */
+
+.circle-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-bottom: 8px;
+  animation: circle-in 360ms var(--ease-out) both;
+}
+
+@keyframes circle-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Progression douce : trois points reliés par un fil. */
+.circle-progress {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 4px 0 2px;
+  padding: 0;
+  list-style: none;
+}
+
+.circle-progress__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.circle-progress__step + .circle-progress__step::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: calc(50% + 12px);
+  width: calc(100% - 24px);
+  height: 1px;
+  background: var(--line-strong);
+}
+
+.circle-progress__step.is-past + .circle-progress__step::before,
+.circle-progress__step.is-current::before {
+  background: linear-gradient(90deg, rgba(221, 179, 106, 0.6), rgba(221, 179, 106, 0.25));
+}
+
+.circle-progress__dot {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  transition: all var(--dur-slow) var(--ease-out);
+}
+
+.circle-progress__step.is-past .circle-progress__dot {
+  border-color: rgba(221, 179, 106, 0.7);
+  background: rgba(221, 179, 106, 0.55);
+}
+
+.circle-progress__step.is-current {
+  color: var(--ivory-50);
+}
+
+.circle-progress__step.is-current .circle-progress__dot {
+  border-color: var(--amber-300);
+  background: var(--amber-400);
+  box-shadow: 0 0 0 5px rgba(221, 179, 106, 0.16), 0 0 18px rgba(236, 208, 154, 0.5);
+}
+
+.circle-step {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.circle-step__lead {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.circle-step__quote {
+  margin-top: 4px;
+  font-size: 25px;
+  font-style: italic;
+  line-height: 1.25;
+  color: var(--amber-300);
+}
+
+.circle-step__quote + .circle-step__lead {
+  margin-top: -10px;
+}
+
+/* Une voix (une personne) : carte douce teintée de son compagnon. */
+.circle-voice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.5));
+}
+
+.circle-voice--a {
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgba(198, 211, 230, 0.07), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.5));
+}
+
+.circle-voice--b {
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgba(235, 161, 90, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.5));
+}
+
+.circle-voice--both {
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgba(231, 200, 126, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.5));
+}
+
+.circle-voice__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.circle-voice__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  font-size: 18px;
+  font-weight: 520;
+  line-height: 1.25;
+  color: var(--ivory-50);
+}
+
+.circle-voice__optional {
+  color: var(--text-faint);
+  font-size: 12.5px;
+  font-style: italic;
+}
+
+/* Ajuster : équilibre qualitatif + suggestions applicables. */
+.circle-balance {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.circle-stones {
+  flex: none;
+  width: 96px;
+  height: 42px;
+}
+
+.circle-balance__text {
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  line-height: 1.4;
+  color: var(--ivory-100);
+}
+
+.circle-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.circle-suggestion {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(7, 13, 10, 0.32);
+}
+
+.circle-suggestion > svg {
+  margin-top: 2px;
+  color: var(--moss-300);
+}
+
+.circle-suggestion__text {
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.circle-suggestion .btn,
+.circle-suggestion__done {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.circle-suggestion__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  color: var(--moss-300);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.circle-suggestion.is-applied {
+  border-color: rgba(147, 173, 124, 0.35);
+}
+
+.circle-sheet .sheet__footer .btn--primary {
+  flex: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle-body {
+    animation: none;
+  }
+}

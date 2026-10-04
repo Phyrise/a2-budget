@@ -1,0 +1,345 @@
+/* Lanterne : feuille transparente posée sur la forêt. */
+
+/* Pendant la lanterne, l'interface s'efface et la forêt prend tout l'écran
+   (la feuille elle-même reste visible : visibility est rétabli sur le dialog). */
+html:has(dialog.lantern-sheet[open]) .app-header,
+html:has(dialog.lantern-sheet[open]) .app-dock {
+  visibility: hidden;
+}
+
+@media (max-width: 1023px) {
+  html:has(dialog.lantern-sheet[open]) .app-main {
+    visibility: hidden;
+  }
+
+  html:has(dialog.lantern-sheet[open]) .app-world {
+    height: 100svh;
+  }
+}
+
+dialog.sheet.lantern-sheet {
+  visibility: visible;
+}
+
+dialog.sheet.lantern-sheet::backdrop {
+  background: rgba(3, 7, 5, 0.08);
+}
+
+dialog.lantern-sheet.sheet--full .sheet__panel {
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(7, 13, 10, 0.55) 0,
+    rgba(7, 13, 10, 0) calc(var(--safe-top) + 120px),
+    rgba(7, 13, 10, 0) 30%,
+    rgba(7, 13, 10, 0.62) 56%,
+    rgba(7, 13, 10, 0.94) 100%
+  );
+  box-shadow: none;
+  animation: lantern-fade 520ms var(--ease-soft) both;
+}
+
+dialog.lantern-sheet[data-state='closing'] .sheet__panel {
+  animation: lantern-fade-out 220ms var(--ease-soft) both;
+}
+
+.lantern-sheet .sheet__header {
+  padding-top: calc(var(--safe-top) + 14px);
+}
+
+.lantern-sheet .sheet__handle {
+  top: calc(var(--safe-top) + 6px);
+}
+
+.lantern-sheet .sheet__title {
+  font-size: 21px;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
+}
+
+.lantern-sheet .sheet__body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.lantern-body {
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+@keyframes lantern-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes lantern-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Carte encre (préparation, commandes). */
+.lantern-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(236, 230, 211, 0.1);
+  border-radius: 26px;
+  background: var(--paper-grain), rgba(15, 26, 21, 0.94);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+
+.lantern-setup__lead {
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.lantern-who {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 0 2px;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.lantern-who > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lantern-tasks {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lantern-tasks__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Scène : la lanterne, le temps, l'intention. */
+.lantern-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.lantern-stage__ring {
+  display: grid;
+  place-items: center;
+  margin-bottom: -6px;
+  border-radius: 50%;
+  /* Un voile sombre sous l'anneau : lisible sur n'importe quelle peinture. */
+  background: radial-gradient(closest-side, rgba(7, 13, 10, 0.5), rgba(7, 13, 10, 0.28) 78%, transparent);
+}
+
+.lantern-stage__time {
+  font-size: 54px;
+  font-weight: 420;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ivory-50);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.5);
+}
+
+.lantern-stage__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+.lantern-stage__label em {
+  font-family: var(--font-display);
+  color: var(--ivory-100);
+}
+
+.lantern-stage__title {
+  font-size: 27px;
+  line-height: 1.2;
+  color: var(--ivory-50);
+}
+
+.lantern-stage__sub {
+  max-width: 34ch;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.lantern-stage .lantern-card {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.lantern-controls__row {
+  display: flex;
+  gap: 10px;
+}
+
+.lantern-controls__row > .btn {
+  flex: 1;
+}
+
+.lantern-controls__hide {
+  min-height: 44px;
+  margin: -6px auto -8px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font-size: 13.5px;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+
+.lantern-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lantern-offer__q {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--ivory-50);
+}
+
+.lantern-offer__done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--moss-300);
+  font-size: 14.5px;
+}
+
+/* L'anneau et sa lanterne de papier. */
+.lantern-ring {
+  overflow: visible;
+}
+
+.lantern-ring__progress {
+  transition: stroke-dashoffset 900ms linear;
+}
+
+.lantern-ring__glow {
+  transition: y 900ms linear, height 900ms linear;
+}
+
+.lantern-ring__halo {
+  transition: opacity 900ms linear, r 900ms ease;
+  transform-origin: 120px 124px;
+}
+
+.lantern-ring.is-burning .lantern-ring__flame {
+  animation: lantern-flame 2.6s ease-in-out infinite;
+  transform-origin: 120px 150px;
+}
+
+.lantern-ring.is-burning .lantern-ring__halo {
+  animation: lantern-halo 4.8s ease-in-out infinite;
+}
+
+.lantern-ring.is-bloom .lantern-ring__halo {
+  animation: lantern-bloom 2.4s var(--ease-out) both;
+}
+
+@keyframes lantern-flame {
+  0%,
+  100% {
+    transform: scale(1, 1);
+    opacity: 0.85;
+  }
+  35% {
+    transform: scale(0.94, 1.06);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1.05, 0.95);
+    opacity: 0.78;
+  }
+}
+
+@keyframes lantern-halo {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes lantern-bloom {
+  0% {
+    transform: scale(0.85);
+  }
+  45% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1.08);
+  }
+}
+
+@media (max-height: 700px) {
+  .lantern-ring {
+    width: 170px !important;
+    height: 170px !important;
+  }
+
+  .lantern-stage__time {
+    font-size: 44px;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Le carnet reste là, assoupi sous un voile ; la forêt garde la lumière. */
+  dialog.lantern-sheet.sheet--full .sheet__panel {
+    background:
+      linear-gradient(to right, transparent calc(100% - 480px), rgba(7, 13, 10, 0.72) calc(100% - 480px)),
+      linear-gradient(to bottom, rgba(7, 13, 10, 0.5) 0, rgba(7, 13, 10, 0) 140px, rgba(7, 13, 10, 0) 45%, rgba(7, 13, 10, 0.7) 100%);
+  }
+
+  /* La forêt occupe la gauche (la colonne du carnet est à droite) : la
+     lanterne se pose au milieu de la forêt. */
+  .lantern-sheet .sheet__body {
+    padding-right: 480px;
+    padding-bottom: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lantern-ring__flame,
+  .lantern-ring__halo {
+    animation: none !important;
+  }
+}

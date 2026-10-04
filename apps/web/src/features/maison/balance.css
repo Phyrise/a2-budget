@@ -235,34 +235,45 @@
 .week-detail {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  margin: 0;
   padding: 2px 6px 14px;
+  list-style: none;
+}
+
+.week-detail__task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(236, 230, 211, 0.05);
+}
+
+.week-detail__title {
+  font-size: 13.5px;
+  color: var(--fog-300);
+}
+
+.week-detail__people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
 }
 
 .week-detail__who {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12.5px;
   font-weight: 650;
   color: var(--ivory-200);
 }
 
-.week-detail__items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  margin: 6px 0 0;
-}
-
-.week-detail__item {
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  background: rgba(236, 230, 211, 0.05);
-  font-size: 13px;
-  color: var(--fog-300);
-}
-
-.week-detail__count {
+.week-detail__sep {
+  margin-right: 3px;
   color: var(--text-faint);
 }

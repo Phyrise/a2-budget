@@ -105,9 +105,12 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   };
 
   const completions = appState?.chores.completions ?? [];
+  // Dès qu'un historique existe (même si le tour à tour vient d'être coché),
+  // c'est lui qui décide du prochain tour : on l'annonce tel quel plutôt que
+  // de promettre « en commençant par » un choix qui serait ignoré.
   const nextTurn =
-    editing?.rotation === true && personChosen && rotation && completions.some((c) => c.taskId === editing.id)
-      ? nextAssignee({ ...editing, assignee }, completions)
+    editing != null && personChosen && rotation && completions.some((c) => c.taskId === editing.id)
+      ? nextAssignee({ ...editing, assignee, rotation: true }, completions)
       : null;
   const rotationText =
     nextTurn === 'a' || nextTurn === 'b'

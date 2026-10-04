@@ -5,13 +5,17 @@
 }
 
 .maison-hero__date {
-  font-size: 12px;
-  font-weight: 650;
-  letter-spacing: 0.16em;
+  /* Petit texte posé sur la brume claire du matin : ombre serrée (contour)
+     + ombre diffuse, teinte claire pleine, 13 px. */
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ivory-200);
-  opacity: 0.9;
-  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.7);
+  color: #f4efe0;
+  text-shadow:
+    0 0 2px rgba(0, 0, 0, 0.85),
+    0 1px 3px rgba(0, 0, 0, 0.7),
+    0 1px 12px rgba(0, 0, 0, 0.6);
 }
 
 .maison-hero__mood {

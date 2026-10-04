@@ -1,10 +1,11 @@
 /**
- * Feuille d'actions d'une tâche (menu ⋯) : qui s'en charge (« AL s'en
- * occupe », « C'est AC qui l'a fait », « Fait ensemble »), « Pas
+ * Feuille d'actions d'une tâche (menu ⋯) : marquer comme fait, par qui
+ * (« AL l'a fait », « C'est AC qui l'a fait », « Fait ensemble »), « Pas
  * aujourd'hui » (sans rattrapage ni compteur), « Modifier ».
  *
  * L'app ne sait pas qui tient le téléphone : « je m'en occupe » s'écrit
- * donc avec le prénom de la personne. Choisir quelqu'un coche la tâche.
+ * donc avec le prénom de la personne. Choisir quelqu'un coche la tâche :
+ * les libellés sont au passé pour le dire clairement.
  */
 import type { ChoreDoer, HouseholdTask, TaskAssignee } from '@a2/core';
 import { Companion, Icon, Sheet } from '../../ui';
@@ -37,16 +38,16 @@ export function doneChoices(task: HouseholdTask, turn: TaskAssignee, names: Name
     return [
       {
         doneBy: turn,
-        label: `${names[turn]} s’en occupe`,
-        hint: task.rotation === true ? 'c’est son tour' : 'comme prévu',
+        label: `${names[turn]} l’a fait`,
+        hint: task.rotation === true ? 'c’était son tour' : 'comme prévu',
       },
-      { doneBy: other, label: `C’est ${names[other]} qui l’a fait`, hint: 'un coup de main, ça se remercie' },
+      { doneBy: other, label: `C’est ${names[other]} qui l’a fait`, hint: 'un coup de main' },
     ];
   }
   const people: Choice[] = (['a', 'b'] as const).map((p) => ({
     doneBy: p,
-    label: `${names[p]} s’en occupe`,
-    hint: turn === 'both' ? 'pour cette fois, en solo' : 'merci de la prendre',
+    label: `${names[p]} l’a fait`,
+    hint: turn === 'both' ? 'pour cette fois, en solo' : 'merci de l’avoir prise',
   }));
   return turn === 'both' ? [{ doneBy: 'both', label: 'Fait ensemble', hint: 'comme prévu' }, ...people] : people;
 }
@@ -64,7 +65,7 @@ export function TaskActions({ task, open, turn, names, onClose, onDone, onSkip, 
     <Sheet open={open && task !== null} onClose={onClose} title={task?.title ?? ''} description={description} size="auto" className="task-actions">
       {task && (
         <>
-          <ActionList label="Qui s’en charge&#8239;?" labelVisible>
+          <ActionList label="Marquer comme fait, par qui&#8239;?" labelVisible>
             {doneChoices(task, turn, names).map((choice) => (
               <ActionItem
                 key={choice.doneBy}

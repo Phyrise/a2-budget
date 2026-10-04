@@ -9,6 +9,7 @@ import { useApp } from '../../../state/store';
 import { Icon, Sheet, cx, type IconName } from '../../../ui';
 import { manifest } from '../../../world/manifest';
 import type { GrowthStage } from '../../../world/types';
+import { ofName } from '../../maison/taskText';
 import { NB, capitalizeFirst, countWords, durationWords, numberWords, typo } from '../ritualText';
 import { CREATURE_ENTRIES, KODAMA, STAGE_NAMES } from './carnetData';
 
@@ -72,7 +73,7 @@ function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName;
     const names = { a: app.budget.settings.personA.name, b: app.budget.settings.personB.name };
     out.push({
       icon: 'feather',
-      text: `Le dernier merci, de ${names[lastThanks.from]} à ${names[lastThanks.to]}${NB}: «${NB}${typo(lastThanks.text)}${NB}»`,
+      text: `Le dernier merci, ${ofName(names[lastThanks.from])} à ${names[lastThanks.to]}${NB}: «${NB}${typo(lastThanks.text)}${NB}»`,
     });
   }
   return out;

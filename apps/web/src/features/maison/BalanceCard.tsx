@@ -3,7 +3,8 @@
  * (weeklyBalance), phrase bienveillante, suggestions applicables en un
  * geste (rebalanceSuggestions → applySuggestion, annulable). Jamais de
  * score comparé ni de gagnant (V3_BRIEF §1.2) : les intermédiaires a / b ne
- * servent qu'à incliner la branche ; le détail se limite aux gestes faits.
+ * servent qu'à incliner la branche ; le détail se limite aux gestes faits,
+ * regroupés par tâche, sans décompte.
  */
 import {
   completionsOfWeek,
@@ -17,7 +18,7 @@ import {
 } from '@a2/core';
 import { useMemo } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Companion, Disclosure, Icon, NBSP, fr, useToast } from '../../ui';
+import { Button, Companion, Disclosure, Icon, fr, useToast } from '../../ui';
 import { BalanceStones } from './BalanceStones';
 import type { Names } from './TaskRow';
 import { assigneeName } from './taskText';
@@ -37,29 +38,29 @@ function verdictText(verdict: BalanceVerdict, total: number, names: Names): { ti
   }
 }
 
-interface DetailGroup {
-  who: TaskAssignee;
-  items: Array<{ title: string; count: number }>;
+interface DetailItem {
+  title: string;
+  /** Qui y a mis la main cette semaine (ordre fixe a, b, ensemble, libre). */
+  who: TaskAssignee[];
 }
 
-function weekDetail(tasks: HouseholdTask[], completions: ReturnType<typeof completionsOfWeek>): DetailGroup[] {
+/**
+ * Gestes de la semaine regroupés **par tâche** (ordre alphabétique) : qui y a
+ * mis la main, sans nombre de fois ni colonne par personne — rien qui
+ * ressemble à un tableau de score.
+ */
+function weekDetail(tasks: HouseholdTask[], completions: ReturnType<typeof completionsOfWeek>): DetailItem[] {
   const order: TaskAssignee[] = ['a', 'b', 'both', 'unassigned'];
-  const groups = new Map<TaskAssignee, Map<string, number>>();
+  const byTitle = new Map<string, Set<TaskAssignee>>();
   for (const c of completions) {
-    const who = whoDid(c);
     const title = tasks.find((t) => t.id === c.taskId)?.title ?? c.taskTitle;
-    const g = groups.get(who) ?? new Map<string, number>();
-    g.set(title, (g.get(title) ?? 0) + 1);
-    groups.set(who, g);
+    const set = byTitle.get(title) ?? new Set<TaskAssignee>();
+    set.add(whoDid(c));
+    byTitle.set(title, set);
   }
-  return order
-    .filter((who) => groups.has(who))
-    .map((who) => ({
-      who,
-      items: [...groups.get(who)!.entries()]
-        .map(([title, count]) => ({ title, count }))
-        .sort((x, y) => y.count - x.count || x.title.localeCompare(y.title, 'fr')),
-    }));
+  return [...byTitle.entries()]
+    .map(([title, set]) => ({ title, who: order.filter((w) => set.has(w)) }))
+    .sort((x, y) => x.title.localeCompare(y.title, 'fr'));
 }
 
 export function BalanceCard({ names }: { names: Names }) {
@@ -130,24 +131,27 @@ export function BalanceCard({ names }: { names: Names }) {
 
       {detail.length > 0 && (
         <Disclosure summary="Les gestes de la semaine" className="balance__detail">
-          <dl className="week-detail">
-            {detail.map((group) => (
-              <div key={group.who} className="week-detail__group">
-                <dt className="week-detail__who">
-                  <Companion who={group.who} size={group.who === 'both' ? 18 : 22} />
-                  {assigneeName(group.who, names)}
-                </dt>
-                <dd className="week-detail__items">
-                  {group.items.map((item) => (
-                    <span key={item.title} className="week-detail__item">
-                      {item.title}
-                      {item.count > 1 && <span className="week-detail__count">{`${NBSP}×${item.count}`}</span>}
+          <ul className="week-detail">
+            {detail.map((item) => (
+              <li key={item.title} className="week-detail__task">
+                <span className="week-detail__title">{item.title}</span>
+                <span className="week-detail__people">
+                  {item.who.map((w, i) => (
+                    <span key={w} className="week-detail__who">
+                      {i > 0 && (
+                        <span className="week-detail__sep" aria-hidden="true">
+                          ·
+                        </span>
+                      )}
+                      {i > 0 && <span className="visually-hidden">, </span>}
+                      <Companion who={w} size={w === 'both' ? 16 : 18} />
+                      {assigneeName(w, names)}
                     </span>
                   ))}
-                </dd>
-              </div>
+                </span>
+              </li>
             ))}
-          </dl>
+          </ul>
         </Disclosure>
       )}
     </section>

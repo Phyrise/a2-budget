@@ -53,10 +53,13 @@ export function Companion({
 }) {
   const a11y = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true as const };
   const style = { '--cmp-size': `${size}px` } as CSSProperties;
+  // Petites tailles : Jiji (chat noir) reçoit un liseré clair pour rester
+  // aussi présent que Calcifer sur les fonds sombres.
+  const small = size < 40 && 'companion--small';
 
   if (who === 'both') {
     return (
-      <span className={cx('companion', 'companion--both', perched && 'companion--perched', className)} style={style} {...a11y}>
+      <span className={cx('companion', 'companion--both', small, perched && 'companion--perched', className)} style={style} {...a11y}>
         <span key={`a-${reactKey ?? ''}`} className="companion__figure companion__figure--a" data-mood={mood}>
           <Figure who="a" mood={mood} />
         </span>
@@ -68,7 +71,7 @@ export function Companion({
   }
 
   return (
-    <span className={cx('companion', `companion--${who}`, perched && 'companion--perched', className)} style={style} {...a11y}>
+    <span className={cx('companion', `companion--${who}`, small, perched && 'companion--perched', className)} style={style} {...a11y}>
       <span key={reactKey ?? 'still'} className="companion__figure" data-mood={mood}>
         {who === 'unassigned' ? <KodamaArt /> : <Figure who={who} mood={mood} />}
       </span>

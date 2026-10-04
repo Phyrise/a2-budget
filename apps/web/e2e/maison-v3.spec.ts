@@ -74,7 +74,7 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(next.locator('.companion--b')).toHaveCount(1);
   });
 
-  test('« AC s’en occupe » et « C’est AC qui l’a fait » : doneBy, coup de main, merci', async ({ page }) => {
+  test('« AC l’a fait » et « C’est AC qui l’a fait » : doneBy, coup de main, merci', async ({ page }) => {
     await openApp(page, 'maison');
     await addTask(page, 'Appeler le plombier', 'unassigned', 'none');
     await addTask(page, 'Arroser les plantes', 'a', 'daily');
@@ -82,8 +82,8 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
 
     // Tâche libre : quelqu'un s'en occupe → coché, doneBy enregistré, merci de l'autre compagnon.
     let menu = await openMenu(page, 'Appeler le plombier');
-    await expect(menu.getByRole('group', { name: /Qui s’en charge/ })).toBeVisible();
-    await menu.getByRole('button', { name: /AC s’en occupe/ }).click();
+    await expect(menu.getByRole('group', { name: /Marquer comme fait, par qui/ })).toBeVisible();
+    await menu.getByRole('button', { name: /^AC l’a fait/ }).click();
     await expect(menu).toBeHidden();
     await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(0, { timeout: 5_000 });
     await expect(page.locator('.cbubble')).toBeVisible();

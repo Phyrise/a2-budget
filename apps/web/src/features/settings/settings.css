@@ -105,7 +105,7 @@
 
 /* Le prénom, modifiable en place : un titre, souligné en pointillés. */
 .settings-person__name .field__input {
-  min-height: 40px;
+  min-height: 44px;
   padding: 2px 2px 4px;
   border: 0;
   border-bottom: 1px dashed rgba(236, 230, 211, 0.24);

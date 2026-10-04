@@ -22,10 +22,19 @@ import type { PersistedState } from '../types.js';
 import { isValidLocalDateKey } from './dates.js';
 import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
 import { isGroceryCategory } from './groceries.js';
+import {
+  validateCompletionCare,
+  validateFocus,
+  validateRituals,
+  validateSkips,
+  validateTaskCare,
+} from './careValidation.js';
+import { isIntInRange, isIsoTimestamp, isPlainObject, type Fail, type Ok } from './validationHelpers.js';
 import { ONCE, splitCreditKey } from './tasks.js';
 import type {
   AppState,
   ChoreCompletion,
+  ChoresState,
   CreditLedger,
   ForestState,
   GroceriesState,
@@ -42,22 +51,6 @@ import type {
 // ---------------------------------------------------------------------------
 // Helpers de validation (locaux)
 // ---------------------------------------------------------------------------
-
-type Ok<T> = { ok: true; state: T };
-type Fail = { ok: false; reason: string };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isIntInRange(value: unknown, min: number, max: number): value is number {
-  return (
-    typeof value === 'number' &&
-    Number.isInteger(value) &&
-    value >= min &&
-    value <= max
-  );
-}
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((v) => typeof v === 'string');
@@ -188,6 +181,8 @@ function validateTask(value: unknown): Ok<HouseholdTask> | Fail {
     }
     monthlyDay = value.monthlyDay;
   }
+  const care = validateTaskCare(value, value.assignee, value.recurrence);
+  if (!care.ok) return care;
   return {
     ok: true,
     state: {
@@ -199,6 +194,7 @@ function validateTask(value: unknown): Ok<HouseholdTask> | Fail {
       weeklyDay,
       monthlyDay,
       createdAt: value.createdAt,
+      ...care.state,
     },
   };
 }
@@ -248,6 +244,8 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
     const occKey = `${c.taskId}|${c.dueDate}`;
     if (seen.has(occKey)) return { ok: false, reason: 'duplicate-completion-occurrence' };
     seen.add(occKey);
+    const care = validateCompletionCare(c);
+    if (!care.ok) return care;
     out.push({
       id: c.id,
       taskId: c.taskId,
@@ -255,6 +253,7 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
       assignee: c.assignee,
       dueDate: c.dueDate,
       completedAt: c.completedAt,
+      ...care.state,
     });
   }
   return { ok: true, state: out };
@@ -262,13 +261,19 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
 
 function validateChores(
   value: unknown,
-): Ok<{ tasks: HouseholdTask[]; completions: ChoreCompletion[] }> | Fail {
+): Ok<ChoresState> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'chores-not-object' };
   const tasks = validateTasks(value.tasks);
   if (!tasks.ok) return tasks;
   const completions = validateCompletions(value.completions);
   if (!completions.ok) return completions;
-  return { ok: true, state: { tasks: tasks.state, completions: completions.state } };
+  const state: ChoresState = { tasks: tasks.state, completions: completions.state };
+  if (value.skips !== undefined && value.skips !== null) {
+    const skips = validateSkips(value.skips);
+    if (!skips.ok) return skips;
+    state.skips = skips.state;
+  }
+  return { ok: true, state };
 }
 
 function validatePauses(value: unknown): Ok<PauseInterval[]> | Fail {
@@ -414,19 +419,6 @@ function validateForest(value: unknown): Ok<ForestState> | Fail {
   };
 }
 
-const ISO_TIMESTAMP_RE =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
-
-/** Horodatage ISO 8601 complet et valide (ex. new Date().toISOString()). */
-function isIsoTimestamp(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    ISO_TIMESTAMP_RE.test(value) &&
-    isValidLocalDateKey(value.slice(0, 10)) &&
-    !Number.isNaN(Date.parse(value))
-  );
-}
-
 function isGroceryAuthor(value: unknown): value is GroceryAuthor {
   return value === 'a' || value === 'b';
 }
@@ -551,6 +543,17 @@ export function validateAppState(
     if (!forest.ok) return forest;
     const groceries = validateGroceries(value.groceries);
     if (!groceries.ok) return groceries;
+    const care: Pick<AppState, 'rituals' | 'focus'> = {};
+    if (value.rituals !== undefined && value.rituals !== null) {
+      const rituals = validateRituals(value.rituals);
+      if (!rituals.ok) return rituals;
+      care.rituals = rituals.state;
+    }
+    if (value.focus !== undefined && value.focus !== null) {
+      const focus = validateFocus(value.focus);
+      if (!focus.ok) return focus;
+      care.focus = focus.state;
+    }
 
     return {
       ok: true,
@@ -565,6 +568,7 @@ export function validateAppState(
         chores: chores.state,
         forest: forest.state,
         groceries: groceries.state,
+        ...care,
       },
     };
   } catch {

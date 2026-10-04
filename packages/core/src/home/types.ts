@@ -44,7 +44,30 @@ export interface HouseholdTask {
   monthlyDay?: number;
   /** Date de création « YYYY-MM-DD » (fuseau local). */
   createdAt: string;
+  /**
+   * V3 — effort ressenti : 1 = petit geste, 2 = tâche, 3 = corvée. Absent =
+   * 1 pour l'équilibre. Ne change jamais les crédits de la forêt.
+   */
+  effort?: TaskEffort;
+  /**
+   * V3 — tour à tour : l'assignation alterne entre A et B à chaque occurrence
+   * (voir nextAssignee). Exige `assignee` 'a' ou 'b' (= qui commence).
+   */
+  rotation?: boolean;
+  /**
+   * V3 — hebdomadaire souple (seulement avec `recurrence: 'weekly'`) : à faire
+   * n'importe quel jour de la semaine ISO, une fois. L'occurrence est
+   * identifiée par la date du lundi de la semaine. `weeklyDay` reste requis
+   * (jour suggéré, conservé si l'on repasse en jour fixe).
+   */
+  flexible?: boolean;
 }
+
+/** V3 — effort d'une tâche : 1 petit geste · 2 tâche · 3 corvée. */
+export type TaskEffort = 1 | 2 | 3;
+
+/** V3 — qui a réellement fait une occurrence. */
+export type ChoreDoer = 'a' | 'b' | 'both';
 
 /**
  * Fait Maison : une occurrence terminée. C'est la source de la répartition
@@ -64,6 +87,91 @@ export interface ChoreCompletion {
   dueDate: string;
   /** Horodatage ISO de la complétion. */
   completedAt: string;
+  /**
+   * V3 — qui l'a réellement fait, seulement s'il diffère de `assignee`
+   * (« je m'en occupe », « c'est l'autre qui l'a fait »). Qui a fait =
+   * `doneBy ?? assignee`. Sans effet sur les crédits de la forêt.
+   */
+  doneBy?: ChoreDoer;
+}
+
+/**
+ * V3 — « Pas aujourd'hui » : une occurrence volontairement passée. Ni crédit,
+ * ni pénalité, réversible. `dueDate` = date de l'occurrence (lundi pour une
+ * hebdomadaire souple — « pas cette semaine » ; date du jour pour une
+ * ponctuelle — elle revient demain).
+ */
+export interface ChoreSkip {
+  id: string;
+  taskId: string;
+  dueDate: string;
+  /** Horodatage ISO du choix. */
+  at: string;
+  /** Qui a choisi de passer (facultatif). */
+  by?: 'a' | 'b';
+}
+
+/** État du module Maison (tâches, faits, occurrences passées). */
+export interface ChoresState {
+  tasks: HouseholdTask[];
+  completions: ChoreCompletion[];
+  /** V3 — occurrences passées (« pas aujourd'hui »), optionnel. */
+  skips?: ChoreSkip[];
+}
+
+// ---------------------------------------------------------------------------
+// Rituels (V3) — cercle de la semaine
+// ---------------------------------------------------------------------------
+
+/** Un merci adressé à l'autre. */
+export interface GratitudeNote {
+  from: 'a' | 'b';
+  to: 'a' | 'b';
+  text: string;
+}
+
+/** Ce qui pèse à quelqu'un (dit sans reproche). */
+export interface BurdenNote {
+  who: 'a' | 'b';
+  text: string;
+}
+
+/** Cercle de la semaine (merci → ce qui pèse → ajuster). Un par semaine ISO. */
+export interface Circle {
+  id: string;
+  /** Lundi de la semaine « YYYY-MM-DD ». */
+  weekStart: string;
+  /** Horodatage ISO du cercle. */
+  heldAt: string;
+  gratitude: GratitudeNote[];
+  burdens: BurdenNote[];
+  intentions: string[];
+}
+
+/** État des rituels (optionnel dans AppState). */
+export interface RitualsState {
+  circles: Circle[];
+}
+
+// ---------------------------------------------------------------------------
+// Lanternes (V3) — sessions de concentration
+// ---------------------------------------------------------------------------
+
+/** Une session de lanterne (minuteur doux) terminée. */
+export interface FocusSession {
+  id: string;
+  /** Horodatage ISO du début. */
+  startedAt: string;
+  /** Durée en minutes entières 1..120. */
+  minutes: number;
+  who: ChoreDoer;
+  label?: string;
+  taskId?: string;
+}
+
+/** État des lanternes (optionnel dans AppState). Au plus FOCUS_SESSIONS_MAX. */
+export interface FocusState {
+  sessions: FocusSession[];
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +347,8 @@ export interface Person {
  * - `chores`    : tâches + faits Maison.
  * - `forest`    : état de la forêt (vitalité, croissance, crédits, pause).
  * - `groceries` : liste de courses commune (+ historique des achats, optionnel).
+ * - `rituals`   : V3, cercles de la semaine (optionnel).
+ * - `focus`     : V3, sessions de lanterne (optionnel).
  */
 export interface AppState {
   schemaVersion: 2;
@@ -250,10 +360,11 @@ export interface AppState {
     months: MonthRecord[];
     selectedMonth: string;
   };
-  chores: {
-    tasks: HouseholdTask[];
-    completions: ChoreCompletion[];
-  };
+  chores: ChoresState;
   forest: ForestState;
   groceries: GroceriesState;
+  /** V3 — cercles de la semaine (absent tant qu'aucun cercle n'a eu lieu). */
+  rituals?: RitualsState;
+  /** V3 — lanternes (absent tant qu'aucune session n'a eu lieu). */
+  focus?: FocusState;
 }

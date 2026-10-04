@@ -11,7 +11,17 @@
 
 export type {
   AppState,
+  BurdenNote,
   ChoreCompletion,
+  ChoreDoer,
+  ChoreSkip,
+  ChoresState,
+  Circle,
+  FocusSession,
+  FocusState,
+  GratitudeNote,
+  RitualsState,
+  TaskEffort,
   CreditKey,
   CreditLedger,
   CreditRecord,
@@ -55,11 +65,46 @@ export {
   updateTask,
   deleteTask,
   upcomingOccurrences,
+  isTaskEffort,
+  isFlexibleWeekly,
+  weekStartKey,
+  occurrenceDateFor,
+  skipDateFor,
+  findOccurrenceCompletion,
+  isSkipped,
+  whoDid,
+  nextAssignee,
+  completionsOfWeek,
 } from './tasks.js';
 export type { TaskPatch, UpcomingOccurrence } from './tasks.js';
 
 export { toggleTaskToday } from './choreActions.js';
 export type { ChoresAndForest, ToggleTaskResult } from './choreActions.js';
+
+// V3 « Prendre soin ensemble » — passages, équilibre, rituels, lanternes.
+export { SKIPS_MAX, skipOccurrence, unskipOccurrence } from './skips.js';
+export {
+  BALANCE_QUIET_BELOW,
+  BALANCE_TOLERANCE,
+  weeklyBalance,
+  rebalanceSuggestions,
+} from './balance.js';
+export type { BalanceVerdict, WeeklyBalance, RebalanceSuggestion } from './balance.js';
+export {
+  CIRCLE_TEXT_MAX,
+  CIRCLES_MAX,
+  isWeekStartKey,
+  saveCircle,
+  circleForWeek,
+  pastParticiplePhrase,
+  gratitudeSuggestions,
+} from './rituals.js';
+export {
+  FOCUS_SESSIONS_MAX,
+  FOCUS_MINUTES_MAX,
+  FOCUS_LABEL_MAX,
+  addFocusSession,
+} from './focus.js';
 
 export {
   GROCERY_CATEGORIES,

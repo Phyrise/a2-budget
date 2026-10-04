@@ -4,7 +4,7 @@
  */
 
 import { MAX_AMOUNT_CENTS, MAX_RATE_BPS } from './amounts.js';
-import { normalizeMonthIncome } from './income.js';
+import { normalizeMonthIncome, sharedRates } from './income.js';
 import { currentMonthKey, isValidMonthKey } from './months.js';
 import type {
   Expense,
@@ -61,7 +61,9 @@ export function defaultSettings(): Settings {
 
 /**
  * Crée l'enregistrement d'un nouveau mois à partir des réglages courants :
- * copie des deux personnes, salaires préremplis avec les salaires habituels
+ * copie des deux personnes **avec les taux communs** (`sharedRates` : si des
+ * réglages anciens avaient des taux différents, la personne A fait foi — ce
+ * que l'interface affiche comme « Taux communs »), salaires préremplis avec les salaires habituels
  * (prévision, à ajuster), compléments à 0, copie des dépenses récurrentes
  * (mêmes ids), réserve par défaut.
  */
@@ -69,16 +71,30 @@ export function createMonthRecord(monthKey: string, settings: Settings): MonthRe
   if (!isValidMonthKey(monthKey)) {
     throw new RangeError(`invalid month key: ${String(monthKey)}`);
   }
+  const people = withSharedRates(settings);
   return {
     monthKey,
-    personA: { ...settings.personA },
-    personB: { ...settings.personB },
+    personA: people.personA,
+    personB: people.personB,
     salaryACents: settings.personA.baseSalaryCents,
     salaryBCents: settings.personB.baseSalaryCents,
     bonusACents: 0,
     bonusBCents: 0,
     expenses: settings.recurringExpenses.map((e) => ({ ...e })),
     reserveTargetCents: settings.defaultReserveTargetCents,
+  };
+}
+
+/**
+ * Copies des deux personnes des réglages, taux communs écrits pour les deux
+ * (aucune lecture de taux propre à B : les réglages anciens divergents ne
+ * s'appliquent jamais à un nouveau mois ni à « Appliquer au mois affiché »).
+ */
+function withSharedRates(settings: Settings): Pick<Settings, 'personA' | 'personB'> {
+  const rates = sharedRates(settings);
+  return {
+    personA: { ...settings.personA, ...rates },
+    personB: { ...settings.personB, ...rates },
   };
 }
 
@@ -114,8 +130,8 @@ export function ensureMonth(state: PersistedState, monthKey: string): PersistedS
 
 /**
  * Action explicite « Appliquer au mois affiché » : remplace dans le mois les
- * copies des personnes, les dépenses et la cible de réserve par les réglages
- * courants. Les salaires et compléments saisis dans le mois sont conservés.
+ * copies des personnes (taux communs), les dépenses et la cible de réserve
+ * par les réglages courants. Les salaires et compléments saisis dans le mois sont conservés.
  * Sans effet si le mois n'existe pas. Pur : ne mute jamais l'entrée.
  */
 export function applySettingsToMonth(
@@ -126,10 +142,11 @@ export function applySettingsToMonth(
   if (index === -1) return state;
 
   const month = state.months[index]!;
+  const people = withSharedRates(state.settings);
   const updated: MonthRecord = {
     ...month,
-    personA: { ...state.settings.personA },
-    personB: { ...state.settings.personB },
+    personA: people.personA,
+    personB: people.personB,
     expenses: state.settings.recurringExpenses.map((e) => ({ ...e })),
     reserveTargetCents: state.settings.defaultReserveTargetCents,
   };

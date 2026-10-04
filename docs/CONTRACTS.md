@@ -53,8 +53,13 @@ commentaires. Points clés :
   personne (compatibilité) ; `setSharedRates(target, base, variable)` écrit
   les deux personnes (réglages ou règles d'un mois), `sharedRates(settings)`
   lit (la personne A fait foi si elles diffèrent), `hasSharedRates` indique
-  si elles sont déjà alignées. Les données existantes ne sont jamais
-  alignées automatiquement.
+  si elles sont déjà alignées. Les données existantes (réglages et mois) ne
+  sont jamais réécrites automatiquement, mais un **nouveau mois**
+  (`createMonthRecord`) et « Appliquer au mois affiché »
+  (`applySettingsToMonth`) prennent toujours les taux communs
+  `sharedRates(settings)` : ce que l'interface affiche comme « Taux communs »
+  est bien ce qui est calculé, même si d'anciens réglages divergent encore
+  (les Réglages le signalent avec « Les rendre communs »).
 - **Normalisation des données existantes** (`normalizeMonthIncome`, pure,
   idempotente) : pour une personne sans compléments (ancien modèle),
   `compléments = max(0, salaire − salaireDeBase du mois)` et
@@ -143,7 +148,7 @@ Sémantique :
   personnalisés déjà saisis sont préservés), dépenses récurrentes : loyer +
   charges 130000, électricité 10000, courses 40000, internet 3000, assurance
   1500, autres 0 ; réserve par défaut 0.
-- `createMonthRecord` : copie des personnes, salaires = salaires habituels
+- `createMonthRecord` : copie des personnes (taux communs pour les deux), salaires = salaires habituels
   (prévision à ajuster), compléments = 0, copie des dépenses récurrentes
   (mêmes ids), réserve = `defaultReserveTargetCents`.
 
@@ -157,6 +162,15 @@ Sémantique :
   - `LoadResult` : `{ status: 'absent' }` | `{ status: 'ok'; state }` |
     `{ status: 'error'; reason: 'parse' | 'access'; raw? }`. Le contenu brut
     illisible est **préservé** dans la clé (jamais remplacé automatiquement).
+  - **Copie de sécurité d'avant V3.1** : au chargement de données dont un mois
+    n'a pas encore de compléments (`bonusACents`/`bonusBCents`), le contenu
+    brut est copié une seule fois dans `a2-budget:backup-pre-v31` (jamais
+    effacé automatiquement), avant la première réécriture au nouveau format.
+    Un build antérieur à V3.1 (retour en arrière du déploiement, onglet resté
+    ouvert) ignore les compléments et les perdrait en réécrivant l'état.
+    Restauration : exporter une sauvegarde JSON depuis un build V3.1 avant
+    tout retour en arrière, ou recopier la valeur de la clé de sécurité dans
+    `a2-budget:state:v1`.
 - `apps/web/src/state/store.tsx` : `AppProvider` + `useApp()`. Charge avant de
   sauvegarder (garde-fou StrictMode). Sauvegarde à chaque modification valide.
   `saveStatus: 'idle' | 'saving' | 'saved' | 'error'`.
@@ -164,7 +178,8 @@ Sémantique :
     `setBonus(monthKey, person, cents)` (compléments ; invalide ignoré),
     `setSharedRates(base, variable)` (réglages, les deux personnes ; nouveaux
     mois), `setMonthSharedRates(monthKey, base, variable)` (règles du mois
-    indiqué, action explicite ; taux invalides ignorés),
+    indiqué, action explicite ; taux invalides ignorés ; le Budget propose
+    « Annuler » via `restoreMonthRates(monthKey, previous)`),
     `updatePersonSettings` (nom, salaire habituel).
   - **Mode de récupération** (`recovery`) : si les données locales sont
     illisibles (JSON corrompu, version inconnue) ou le stockage inaccessible,

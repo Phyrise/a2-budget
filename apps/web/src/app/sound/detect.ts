@@ -5,7 +5,8 @@
  *
  * Règles :
  * - on ne joue que des transitions **pas à pas**, celles d'un geste pendant
- *   la session (cocher, annuler, passer, cercle, lanterne) ;
+ *   la session (cocher, annuler, passer, cercle) ; la floraison d'une
+ *   lanterne est jouée par son contrôleur (useLanternController) ;
  * - un remplacement en bloc (import d'une sauvegarde, remise à zéro,
  *   rechargement) ne joue rien : le store remplace alors toutes les
  *   branches à la fois (nouvelles références), alors qu'un geste ne touche
@@ -102,7 +103,9 @@ export function detectSoundEvents(prev: AppState | null, next: AppState | null):
   } else if (removedCount(prev.chores.skips, next.chores.skips) > 0) {
     events.push({ cue: 'undo' });
   }
-  if (added(prev.focus?.sessions, next.focus?.sessions).length > 0) events.push({ cue: 'lantern' });
+  // La lanterne n'est pas détectée ici : une session est aussi mémorisée
+  // après un arrêt anticipé. Sa floraison est jouée par le contrôleur de la
+  // lanterne, seulement menée au bout et si son son n'est pas coupé.
   if (circleChanged(prev, next)) events.push({ cue: 'circle' });
 
   // 2. Ce que la forêt en fait.

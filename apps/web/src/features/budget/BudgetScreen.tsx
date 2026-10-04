@@ -8,13 +8,15 @@
 import { currentMonthKey, hasSharedRates, monthKeyToLabel, sharedRates } from '@a2/core';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, euroMinus, percent, shiftMonthKey } from '../../ui';
+import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, euroMinus, percent, shiftMonthKey, useToast } from '../../ui';
 import { ExpenseList } from './ExpenseList';
 import { BreakdownLine, PersonCard } from './PersonCard';
 import './budget.css';
 
 export function BudgetScreen() {
-  const { state, currentMonth, currentSummary, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, today } = useApp();
+  const { state, currentMonth, currentSummary, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, restoreMonthRates, today } =
+    useApp();
+  const toast = useToast();
 
   if (currentMonth === null || currentSummary === null) {
     return (
@@ -46,6 +48,23 @@ export function BudgetScreen() {
     (!hasSharedRates(currentMonth) ||
       monthRates.baseRateBps !== common.baseRateBps ||
       monthRates.variableRateBps !== common.variableRateBps);
+  const monthShared = hasSharedRates(currentMonth);
+
+  /** Action explicite, réversible : toast « Annuler » qui remet les taux d'avant. */
+  const applyCommonRates = () => {
+    if (common === null) return;
+    const { personA: a, personB: b } = currentMonth;
+    const previous = {
+      a: { baseRateBps: a.baseRateBps, variableRateBps: a.variableRateBps },
+      b: { baseRateBps: b.baseRateBps, variableRateBps: b.variableRateBps },
+    };
+    setMonthSharedRates(key, common.baseRateBps, common.variableRateBps);
+    toast.show({
+      message: `Taux communs appliqués à ${label}`,
+      icon: 'check',
+      action: { label: 'Annuler', onClick: () => restoreMonthRates(key, previous) },
+    });
+  };
 
   return (
     <>
@@ -123,19 +142,22 @@ export function BudgetScreen() {
               <BreakdownLine name={currentMonth.personB.name} breakdown={s.breakdownB} settings={currentMonth.personB} />
               <p className="breakdown__help">
                 Le salaire compte au taux de base, les compléments (heures sup, astreintes, gardes, souvent payés le mois
-                suivant) au taux au-delà. Les taux sont communs à vous deux et se règlent dans les Réglages.
+                suivant) au taux au-delà.{' '}
+                {monthShared
+                  ? 'Les taux sont communs à vous deux et se règlent dans les Réglages.'
+                  : 'Ce mois garde des taux différents pour chacun, comme au moment où il a été créé.'}
               </p>
               {ratesDiffer && common !== null && (
                 <div className="breakdown__rates">
                   <p className="breakdown__help">
-                    Ce mois garde ses taux d’origine. Les taux communs actuels sont {percent(common.baseRateBps)} et{' '}
+                    {monthShared ? 'Ce mois garde ses taux d’origine. ' : ''}Les taux communs actuels sont {percent(common.baseRateBps)} et{' '}
                     {percent(common.variableRateBps)}.
                   </p>
                   <Button
                     variant="quiet"
                     size="sm"
                     icon="check"
-                    onClick={() => setMonthSharedRates(key, common.baseRateBps, common.variableRateBps)}
+                    onClick={applyCommonRates}
                   >
                     Appliquer les taux communs à ce mois
                   </Button>

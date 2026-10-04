@@ -10,6 +10,9 @@
 }
 
 .shared-rates__note {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
   padding: 10px 12px;
   border-radius: 14px;
   background: rgba(221, 179, 106, 0.08);

@@ -12,8 +12,17 @@ import { useWorld } from '../../../world/WorldContext';
 import { ambience } from './ambience';
 import { getLantern, lantern, progressOf, useLantern } from './lanternStore';
 import { getSoundPrefs } from '../../../app/sound/prefs';
+import { soundEngine } from '../../../app/sound/engine';
 
 const BLOOM_MS = 2600;
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 
 export function usePageVisible(): boolean {
   const [visible, setVisible] = useState(() => typeof document === 'undefined' || document.visibilityState !== 'hidden');
@@ -96,8 +105,13 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
     if (s.completed) {
       litRef.current = true;
       focus(1, config.who);
-      // Les « petits sons » jouent déjà la floraison : pas de double carillon.
-      if (s.sound !== 'off' && !getSoundPrefs().enabled) ambience.chime();
+      // Son de floraison : seulement pour une lanterne menée au bout, jamais
+      // si son son est coupé. Petits sons actifs → leur floraison (un seul
+      // carillon) ; sinon le carillon de l'ambiance.
+      if (s.sound !== 'off') {
+        if (getSoundPrefs().enabled) soundEngine.play('lantern', { gentle: prefersReducedMotion(), maxWakeLagMs: 1500 });
+        else ambience.chime();
+      }
     }
     if (!s.recorded && s.minutesSpent >= 1) {
       addFocusSession({

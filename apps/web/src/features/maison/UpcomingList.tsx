@@ -141,7 +141,7 @@ export function UpcomingList({
             <span className="upcoming-fold__label">Replier la liste</span>
           ) : (
             <span className="upcoming-fold__preview">
-              <span className="visually-hidden">Voir tout « À venir » — </span>
+              <span className="visually-hidden">{`Voir tout «${NBSP}À venir${NBSP}» — `}</span>
               {previewOf(groups[0]!)}
             </span>
           )

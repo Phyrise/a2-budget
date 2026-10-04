@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeMonthSummary,
+  applySettingsToMonth,
   createMonthRecord,
   defaultSettings,
+  emptyState,
+  ensureMonth,
   hasSharedRates,
   migrateState,
   monthIncomeCents,
@@ -214,6 +217,39 @@ describe('taux communs du couple', () => {
     expect(next.personB.baseRateBps).toBe(5000);
     expect(next.salaryACents).toBe(month.salaryACents);
     expect(computeMonthSummary(next).contributionACents).toBe(110_000);
+  });
+
+  it('réglages anciens divergents → un nouveau mois prend les taux communs (A fait foi)', () => {
+    const base = emptyState();
+    const settings = {
+      ...base.settings,
+      personA: { ...base.settings.personA, baseRateBps: 4000, variableRateBps: 2000 },
+      personB: { ...base.settings.personB, baseRateBps: 3000, variableRateBps: 1500 },
+    };
+    const before = structuredClone(settings);
+    const state = ensureMonth({ ...base, settings }, '2026-11');
+    const month = state.months[0]!;
+    expect(hasSharedRates(month)).toBe(true);
+    expect(sharedRates(month)).toEqual(sharedRates(settings));
+    expect(month.personB.baseSalaryCents).toBe(settings.personB.baseSalaryCents);
+    // B est calculé au taux commun affiché : 3000 € × 40 %.
+    expect(computeMonthSummary(month).contributionBCents).toBe(120_000);
+    // Les réglages eux-mêmes ne sont pas réécrits.
+    expect(state.settings).toEqual(before);
+  });
+
+  it('« Appliquer au mois affiché » écrit aussi les taux communs', () => {
+    let state = ensureMonth(emptyState(), '2026-10');
+    state = {
+      ...state,
+      settings: {
+        ...state.settings,
+        personB: { ...state.settings.personB, baseRateBps: 3000, variableRateBps: 1500 },
+      },
+    };
+    const month = applySettingsToMonth(state, '2026-10').months[0]!;
+    expect(hasSharedRates(month)).toBe(true);
+    expect(month.personB.baseRateBps).toBe(4000);
   });
 
   it('taux invalides → RangeError', () => {

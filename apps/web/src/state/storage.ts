@@ -37,6 +37,39 @@ export interface StorageAdapter {
 const STORAGE_KEY = 'a2-budget:state:v1';
 
 /**
+ * Copie brute des données d'avant V3.1 (salaire + compléments). Écrite une
+ * seule fois, avant la première réécriture au nouveau format, et jamais
+ * effacée automatiquement : un build antérieur (retour en arrière du
+ * déploiement, onglet resté ouvert) ignore les compléments et pourrait les
+ * perdre. Restauration manuelle : copier cette valeur dans STORAGE_KEY.
+ */
+export const BACKUP_PRE_V31_KEY = 'a2-budget:backup-pre-v31';
+
+/** Vrai si des mois du budget n'ont pas encore de compléments (ancien format). */
+export function isPreV31(parsed: unknown): boolean {
+  if (typeof parsed !== 'object' || parsed === null) return false;
+  const root = parsed as { budget?: { months?: unknown }; months?: unknown };
+  const months = root.budget?.months ?? root.months;
+  if (!Array.isArray(months)) return false;
+  return months.some((m: unknown) => {
+    if (typeof m !== 'object' || m === null) return false;
+    const r = m as Record<string, unknown>;
+    return typeof r.bonusACents !== 'number' || typeof r.bonusBCents !== 'number';
+  });
+}
+
+/** Écrit la copie de sécurité si elle n'existe pas encore. Silencieux en cas d'échec (quota). */
+function backupOnce(raw: string): void {
+  try {
+    if (window.localStorage.getItem(BACKUP_PRE_V31_KEY) === null) {
+      window.localStorage.setItem(BACKUP_PRE_V31_KEY, raw);
+    }
+  } catch {
+    // Pas de copie possible : le chargement continue normalement.
+  }
+}
+
+/**
  * Adaptateur basé sur localStorage.
  *
  * - N'appelle JAMAIS localStorage.clear() : seule sa propre clé est écrite
@@ -62,6 +95,7 @@ export class LocalStorageAdapter implements StorageAdapter {
     }
     try {
       const parsed: unknown = JSON.parse(raw);
+      if (isPreV31(parsed)) backupOnce(raw);
       return Promise.resolve({ status: 'ok', state: parsed });
     } catch {
       return Promise.resolve({ status: 'error', raw, reason: 'parse' });

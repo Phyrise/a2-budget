@@ -93,14 +93,15 @@ test('gardien : redéclenché par une nouvelle série, pas par 11, 12…', () =>
   assert.deepEqual(cues(detectSoundEvents(broken, again)), ['guardian']);
 });
 
-test('cercle enregistré (nouveau ou ré-enregistré) et lanterne', () => {
+test('cercle enregistré (nouveau ou ré-enregistré) ; lanterne laissée au contrôleur', () => {
   const circle = { id: 'r1', weekStart: '2026-09-28', heldAt: 'h1', gratitude: [], burdens: [], intentions: [] };
   const c1 = step(s0, { rituals: { circles: [circle] } });
   assert.deepEqual(cues(detectSoundEvents(s0, c1)), ['circle']);
   const c2 = step(c1, { rituals: { circles: [{ ...circle, heldAt: 'h2' }] } });
   assert.deepEqual(cues(detectSoundEvents(c1, c2)), ['circle']);
   const f1 = step(s0, { focus: { sessions: [{ id: 'f1', startedAt: 'x', minutes: 10, who: 'a' }] } });
-  assert.deepEqual(cues(detectSoundEvents(s0, f1)), ['lantern']);
+  // Une session mémorisée (y compris après un arrêt anticipé) ne sonne pas ici.
+  assert.deepEqual(cues(detectSoundEvents(s0, f1)), []);
 });
 
 test('remplacement en bloc (import, remise à zéro) : silence', () => {

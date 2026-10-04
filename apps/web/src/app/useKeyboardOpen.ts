@@ -7,6 +7,11 @@
  * le focus ET que la zone visible (`visualViewport`) est nettement plus basse
  * que la hauteur pleine connue pour cette largeur.
  *
+ * Hauteur pleine : remesurée à chaque évaluation sans champ ciblé (c'est
+ * alors la vraie hauteur, y compris après un redimensionnement en hauteur
+ * seule — écran partagé, Stage Manager) ; pendant la saisie, elle ne fait
+ * que croître. Rotation clavier ouvert : état gardé jusqu'à la fermeture.
+ *
  * - iOS : le viewport de mise en page ne bouge pas, `visualViewport` rétrécit.
  * - Android : le viewport de mise en page rétrécit aussi (`innerHeight`) ;
  *   la hauteur pleine mémorisée sert de référence.
@@ -48,20 +53,48 @@ export function useKeyboardOpen(): boolean {
     let fullHeight = Math.max(window.innerHeight, visibleHeight());
     let width = window.innerWidth;
     let frame = 0;
+    let open = false;
+    // Largeur changée clavier ouvert (rotation) : la nouvelle hauteur pleine
+    // est inconnue. On garde l'état jusqu'à ce que la zone visible regagne
+    // une hauteur de clavier (fermé) ou que le champ perde le focus.
+    let untrusted = false;
+    let minVisible = Infinity;
+
+    const commit = (next: boolean) => {
+      open = next;
+      setOpen((prev) => (prev === next ? prev : next));
+    };
 
     const evaluate = () => {
       frame = 0;
-      // Nouvelle largeur (rotation, fenêtre) : nouvelle référence.
+      const visible = visibleHeight();
+      const focused = isTextEntry(document.activeElement);
+      if (!focused) {
+        // Aucun champ : pas de clavier, la hauteur actuelle EST la hauteur
+        // pleine (fenêtre redimensionnée, écran partagé, barres du navigateur).
+        width = window.innerWidth;
+        fullHeight = Math.max(window.innerHeight, visible);
+        untrusted = false;
+        commit(false);
+        return;
+      }
       if (window.innerWidth !== width) {
         width = window.innerWidth;
-        fullHeight = Math.max(window.innerHeight, visibleHeight());
+        fullHeight = Math.max(window.innerHeight, visible);
+        untrusted = open;
+        minVisible = visible;
       }
-      const visible = visibleHeight();
-      fullHeight = Math.max(fullHeight, window.innerHeight, visible);
-      const shrink = fullHeight - visible;
       const threshold = Math.max(MIN_KEYBOARD_PX, fullHeight * MIN_KEYBOARD_RATIO);
-      const next = isTextEntry(document.activeElement) && shrink >= threshold;
-      setOpen((prev) => (prev === next ? prev : next));
+      if (untrusted) {
+        minVisible = Math.min(minVisible, visible);
+        if (visible - minVisible < threshold) return; // état gardé
+        untrusted = false;
+        fullHeight = Math.max(window.innerHeight, visible);
+        commit(false);
+        return;
+      }
+      fullHeight = Math.max(fullHeight, window.innerHeight, visible);
+      commit(fullHeight - visible >= threshold);
     };
     const schedule = () => {
       if (frame === 0) frame = requestAnimationFrame(evaluate);

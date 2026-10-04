@@ -46,11 +46,12 @@ export function setSoundEnabled(enabled: boolean): void {
   listeners.forEach((l) => l());
 }
 
-function subscribe(listener: () => void): () => void {
+/** Observe les changements de préférence (moteur : mise en veille immédiate si coupé). */
+export function subscribeSoundPrefs(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 export function useSoundPrefs(): SoundPrefs {
-  return useSyncExternalStore(subscribe, getSoundPrefs, getSoundPrefs);
+  return useSyncExternalStore(subscribeSoundPrefs, getSoundPrefs, getSoundPrefs);
 }

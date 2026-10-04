@@ -209,6 +209,8 @@ export interface AppContextValue extends CareActions {
    * personnes). Action explicite : les autres mois ne changent pas.
    */
   setMonthSharedRates: (monthKey: string, baseRateBps: number, variableRateBps: number) => void;
+  /** Annule `setMonthSharedRates` : remet les taux (par personne) relevés avant. */
+  restoreMonthRates: (monthKey: string, previous: MonthRates) => void;
   setReserve: (monthKey: string, cents: number) => void;
   setExpenseAmount: (monthKey: string, expenseId: string, cents: number) => void;
   renameExpense: (monthKey: string, expenseId: string, label: string) => void;
@@ -232,6 +234,12 @@ export interface AppContextValue extends CareActions {
   // Sauvegarde / transfert manuel
   exportJson: () => string;
   importJson: (text: string) => { ok: true; summary: ImportSummary } | { ok: false; reason: string };
+}
+
+/** Taux d'un mois relevés par personne (pour annuler un alignement). */
+export interface MonthRates {
+  a: { baseRateBps: number; variableRateBps: number };
+  b: { baseRateBps: number; variableRateBps: number };
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -468,6 +476,21 @@ export function AppProvider({
     (monthKey: string, baseRateBps: number, variableRateBps: number) => {
       if (!isRateBps(baseRateBps) || !isRateBps(variableRateBps)) return;
       mutate((s) => mapMonth(s, monthKey, (m) => coreSetSharedRates(m, baseRateBps, variableRateBps)));
+    },
+    [mutate],
+  );
+
+  const restoreMonthRates = useCallback(
+    (monthKey: string, previous: MonthRates) => {
+      const rates = [previous.a.baseRateBps, previous.a.variableRateBps, previous.b.baseRateBps, previous.b.variableRateBps];
+      if (!rates.every(isRateBps)) return;
+      mutate((s) =>
+        mapMonth(s, monthKey, (m) => ({
+          ...m,
+          personA: { ...m.personA, ...previous.a },
+          personB: { ...m.personB, ...previous.b },
+        })),
+      );
     },
     [mutate],
   );
@@ -886,6 +909,7 @@ export function AppProvider({
       setSalary,
       setBonus,
       setMonthSharedRates,
+      restoreMonthRates,
       setReserve,
       setExpenseAmount,
       renameExpense,
@@ -930,6 +954,7 @@ export function AppProvider({
       setSalary,
       setBonus,
       setMonthSharedRates,
+      restoreMonthRates,
       setReserve,
       setExpenseAmount,
       renameExpense,

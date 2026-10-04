@@ -5,7 +5,7 @@
  */
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { Button } from '../../ui';
+import { Button, NBSP } from '../../ui';
 import { Switch } from '../../ui/Switch';
 import type { SoundCue, SoundVoice } from './cues';
 import { soundEngine } from './engine';
@@ -24,7 +24,7 @@ const SAMPLES: readonly Sample[] = [
   { cue: 'chore', who: 'both', label: () => 'Une corvée, faite ensemble' },
   { cue: 'creature', label: () => 'Une créature rencontrée' },
   { cue: 'growth', label: () => 'La forêt grandit' },
-  { cue: 'skip', label: () => '« Pas aujourd’hui »' },
+  { cue: 'skip', label: () => `«${NBSP}Pas aujourd’hui${NBSP}»` },
   { cue: 'circle', label: () => 'Le cercle de la semaine' },
   { cue: 'lantern', label: () => 'Une lanterne terminée' },
 ];

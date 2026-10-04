@@ -20,10 +20,18 @@ test.use({ viewport: PHONE });
  * Loyer 1300 + Électricité 100 + Courses 400 + Internet 30 + Assurance 15 = 1845 €.
  */
 test.describe('Budget — critère de réussite', () => {
-  test('2200/3675 → AL 880, AC 1335, total 2215 ; dépenses 1845 → reste 370 ; persistant', async ({ page }) => {
+  test('A 2200 ; B 3000 + compléments 675 → AL 880, AC 1335, total 2215 ; dépenses 1845 → reste 370 ; persistant', async ({ page }) => {
     await openApp(page, 'budget');
     await setAmount(page, 'salary-a', '2200');
-    await setAmount(page, 'salary-b', '3675');
+    await setAmount(page, 'salary-b', '3000');
+    await expect(page.getByTestId('contribution-b')).toHaveText(fmt(120_000));
+
+    // Compléments repliés tant qu'ils valent 0 ; le bouton ouvre le champ et lui donne le focus.
+    await expect(page.locator('#bonus-b')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
+    await expect(page.locator('#bonus-b')).toBeFocused();
+    await page.locator('#bonus-b').fill('675');
+    await page.locator('#bonus-b').blur();
 
     await expect(page.getByTestId('contribution-a')).toHaveText(fmt(88_000));
     await expect(page.getByTestId('contribution-b')).toHaveText(fmt(133_500));
@@ -31,31 +39,51 @@ test.describe('Budget — critère de réussite', () => {
     await expect(page.getByTestId('expenses-total')).toContainText(fmt(184_500));
     await expect(page.getByTestId('remaining')).toHaveText(fmt(37_000));
 
-    // Règle des 2 secondes : tout tient dans le premier écran (390 × 844).
-    for (const id of ['salary-a', 'salary-b']) {
+    // Règle des 2 secondes : tout tient dans le premier écran (390 × 844), compléments dépliés.
+    for (const id of ['salary-a', 'salary-b', 'bonus-b']) {
       await expect(page.locator(`#${id}`)).toBeInViewport();
     }
     for (const id of ['contribution-a', 'contribution-b', 'household-total', 'expenses-total', 'remaining']) {
       await expect(page.getByTestId(id)).toBeInViewport();
     }
+    await expect(page.getByText(/prérempli/i)).toHaveCount(0);
 
-    // Persistance après rechargement (et module mémorisé).
+    // Persistance après rechargement (et module mémorisé) : les compléments restent dépliés.
     await page.reload();
     await expect(page.locator('#salary-a')).toHaveValue(fmt(220_000));
-    await expect(page.locator('#salary-b')).toHaveValue(fmt(367_500));
+    await expect(page.locator('#salary-b')).toHaveValue(fmt(300_000));
+    await expect(page.locator('#bonus-b')).toHaveValue(fmt(67_500));
+    await expect(page.locator('#bonus-a')).toHaveCount(0);
     await expect(page.getByTestId('household-total')).toHaveText(fmt(221_500));
     await expect(page.getByTestId('remaining')).toHaveText(fmt(37_000));
+    await expect.poll(async () => {
+      const s = await persisted(page);
+      const m = s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
+      return [m.salaryBCents, m.bonusBCents];
+    }).toEqual([300_000, 67_500]);
   });
 
-  test('le détail du calcul est repliable et suit les taux du mois', async ({ page }) => {
+  test('un salaire au-delà du salaire habituel reste au taux de base', async ({ page }) => {
     await openApp(page, 'budget');
     await setAmount(page, 'salary-b', '3675');
+    await expect(page.getByTestId('contribution-b')).toHaveText(fmt(147_000));
+  });
+
+  test('le détail du calcul est repliable et montre salaire + compléments', async ({ page }) => {
+    await openApp(page, 'budget');
+    await setAmount(page, 'salary-b', '3000');
+    await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
+    await page.locator('#bonus-b').fill('675');
+    await page.locator('#bonus-b').blur();
     const toggle = page.getByRole('button', { name: 'Détail du calcul' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
     await expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('.breakdown__line').nth(1)).toContainText('20');
-    await expect(page.locator('.breakdown__line').nth(1)).toContainText(fmt(133_500).replace(',00', ''));
+    const line = page.locator('.breakdown__line').nth(1);
+    await expect(line).toContainText('40');
+    await expect(line).toContainText('20');
+    await expect(line).toContainText('de compléments');
+    await expect(line).toContainText(fmt(133_500).replace(',00', ''));
   });
 
   test('déficit visible en terre cuite, jamais masqué', async ({ page }) => {
@@ -65,6 +93,51 @@ test.describe('Budget — critère de réussite', () => {
     await expect(page.locator('.ledger--deficit')).toBeVisible();
     await expect(page.locator('.ledger__row--rest .ledger__label')).toHaveText('Déficit');
     await expect(page.locator('.ledger__note')).toBeVisible();
+  });
+});
+
+test.describe('Taux communs au curseur', () => {
+  test('un seul couple de taux, réglé au clavier et aux boutons, écrit pour les deux', async ({ page }) => {
+    await openApp(page, 'budget');
+    await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+    const settings = sheet(page, 'Réglages');
+    await expect(settings.getByText(/prérempli/i)).toHaveCount(0);
+    await expect(settings.locator('input[type="range"]')).toHaveCount(2);
+    const base = settings.getByRole('slider', { name: 'Taux de base' });
+    const variable = settings.getByRole('slider', { name: 'Taux au-delà' });
+    await expect(base).toHaveAttribute('aria-valuetext', /^40\s%$/u);
+
+    await base.focus();
+    for (let i = 0; i < 5; i += 1) await page.keyboard.press('ArrowLeft');
+    await expect(base).toHaveAttribute('aria-valuetext', /^35\s%$/u);
+    await settings.getByRole('button', { name: 'Taux au-delà : plus 1 %' }).click();
+    await expect(variable).toHaveAttribute('aria-valuetext', /^21\s%$/u);
+    await expect.poll(async () => {
+      const s = (await persisted(page)).budget.settings;
+      return [s.personA.baseRateBps, s.personB.baseRateBps, s.personA.variableRateBps, s.personB.variableRateBps];
+    }).toEqual([3500, 3500, 2100, 2100]);
+
+    await variable.focus();
+    await page.keyboard.press('End');
+    await expect(variable).toHaveAttribute('aria-valuetext', /^100\s%$/u);
+    await page.keyboard.press('PageDown');
+    await expect(variable).toHaveAttribute('aria-valuetext', /^90\s%$/u);
+    await page.keyboard.press('Home');
+    await expect(variable).toHaveAttribute('aria-valuetext', /^0\s%$/u);
+    await page.keyboard.press('PageUp');
+    await page.keyboard.press('PageUp');
+    await expect.poll(async () => (await persisted(page)).budget.settings.personB.variableRateBps).toBe(2000);
+    await closeSheet(page, 'Réglages');
+
+    // Le mois affiché garde ses taux : l'application aux règles du mois est explicite.
+    await page.getByRole('button', { name: 'Détail du calcul' }).click();
+    await page.getByRole('button', { name: 'Appliquer les taux communs à ce mois', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Appliquer les taux communs à ce mois', exact: true })).toHaveCount(0);
+    await expect.poll(async () => {
+      const s = await persisted(page);
+      const m = s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
+      return [m.personA.baseRateBps, m.personB.baseRateBps];
+    }).toEqual([3500, 3500]);
   });
 });
 

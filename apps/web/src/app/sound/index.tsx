@@ -9,9 +9,12 @@
  *   observe l'AppState (useApp) et joue les sons ; ne rend rien.
  * - `<SoundSetting />` : ligne de réglage « Petits sons » (interrupteur +
  *   « Écouter ») à placer dans les Réglages.
- * - `soundEngine` : accès direct (unlock dans un geste, play d'un son).
+ * - `playCue(cue)` : un son joué par un écran, à travers la même porte
+ *   anti-rafale que la coquille (jamais `soundEngine.play` directement).
+ * - `soundEngine` : accès direct (unlock dans un geste, « Écouter »).
  */
 export { useSoundEvents } from './useSoundEvents';
 export { SoundSetting } from './SoundSetting';
+export { playCue } from './play';
 export { soundEngine } from './engine';
 export type { SoundCue, SoundVoice } from './cues';

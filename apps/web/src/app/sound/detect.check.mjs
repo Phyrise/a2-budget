@@ -5,7 +5,7 @@
  * QA Chromium (scripts/qa-sons.mjs) rejoue les vraies actions du store.
  */
 import assert from 'node:assert/strict';
-import { detectSoundEvents, isWholesaleChange, planSounds } from './detect.ts';
+import { detectSoundEvents, isWholesaleChange, planSounds, removedKeys } from './detect.ts';
 import { createSoundGate } from './gate.ts';
 
 const forest = (o = {}) => ({
@@ -164,6 +164,30 @@ test('calendrier : note de bois à l’ajout, rien au retrait ni pour un bloc', 
   assert.deepEqual(cues(detectSoundEvents(c1, step(c1, { calendar: { events: [] } }))), []);
   const bulk = step(s0, { calendar: { events: ['a', 'b', 'c', 'd'].map(ev) } });
   assert.deepEqual(detectSoundEvents(s0, bulk), [], 'quatre événements d’un coup');
+});
+
+test('annuler un retrait (toast « Annuler ») : rien, ce n’est pas un ajout', () => {
+  const ev = (id) => ({ id, title: id, date: '2026-10-10', allDay: true, kind: 'repas', who: 'both', createdAt: 'x' });
+  const c2 = step(s0, { calendar: { events: [ev('e1'), ev('e2')] } });
+  const c1 = step(c2, { calendar: { events: [ev('e2')] } });
+  const gone = new Set(removedKeys(c2, c1));
+  assert.deepEqual([...gone], ['cal:e1']);
+  assert.deepEqual(cues(detectSoundEvents(c1, c2, gone)), [], 'événement remis');
+  const c3 = step(c1, { calendar: { events: [ev('e2'), ev('e3')] } });
+  assert.deepEqual(cues(detectSoundEvents(c1, c3, gone)), ['woodNote'], 'un vrai ajout sonne toujours');
+
+  const month = (expenses) => ({
+    monthKey: '2026-10', salaryACents: 0, salaryBCents: 0, bonusACents: 0, bonusBCents: 0, reserveTargetCents: 0, expenses,
+  });
+  const exp = (id) => ({ id, label: id, amountCents: 1000 });
+  const withMonth = (s, m) => step(s, { budget: { ...s.budget, months: [m] } });
+  const b2 = withMonth(s0, month([exp('x1'), exp('x2')]));
+  const b1 = withMonth(b2, month([exp('x2')]));
+  const away = new Set(removedKeys(b2, b1));
+  assert.deepEqual([...away], ['exp:x1']);
+  assert.deepEqual(cues(detectSoundEvents(b1, b2, away)), [], 'dépense remise');
+  assert.deepEqual(cues(detectSoundEvents(b1, b2)), ['konpeito'], 'sans mémoire : comme un ajout');
+  assert.deepEqual(removedKeys(b2, b2), []);
 });
 
 test('anti-rafale : ≥ 120 ms, regroupement, pas de retard accumulé', () => {

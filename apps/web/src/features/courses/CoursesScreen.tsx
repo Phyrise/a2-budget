@@ -114,12 +114,10 @@ export function CoursesScreen() {
   };
 
   const toggle = (item: GroceryItem) => {
-    const reduced = prefersReducedMotion();
     toggleGrocery(item.id);
     if (!item.done) {
       returning.remove(item.id);
       sweeping.add(item.id);
-      coursesSounds.sweep(reduced);
     } else if (sweeping.has(item.id)) {
       // Décoché pendant le coup de balai : il reste dans son rayon.
       sweeping.remove(item.id);

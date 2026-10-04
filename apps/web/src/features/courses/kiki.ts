@@ -6,14 +6,15 @@
  *   mémorisé sous une clé dédiée `a2-budget:courses:v1` (comme les petits
  *   sons, `a2-budget:ui:v1` appartenant à la coquille), lecture et écriture
  *   protégées. Jamais `localStorage.clear()`.
- * - Sons : le coup de balai (`broom`) et la clochette du panier vidé
- *   (`shopBell`) sont joués par la coquille à partir du changement d'état
- *   (app/sound/detect.ts) ; l'écran n'ajoute que ce que l'état ne dit pas :
- *   un carillon discret quand l'article tombe dans le panier et une note
- *   douce quand on le ressort.
+ * - Sons : un geste, un son. Le coup de balai (`broom`, qui finit par un
+ *   petit tintement d'osier quand l'article tombe dans le panier) et la
+ *   clochette du panier vidé (`shopBell`) sont joués par la coquille à
+ *   partir du changement d'état (app/sound/detect.ts) ; l'écran n'ajoute que
+ *   ce que l'état ne dit pas : une note douce quand on ressort un article,
+ *   à travers la même porte anti-rafale (`playCue`).
  */
 import { localDateKey, type GroceryItem } from '@a2/core';
-import { soundEngine } from '../../app/sound';
+import { playCue } from '../../app/sound';
 import type { BasketFill, JijiPose } from '../../themes/types';
 
 /** À partir de ce nombre d'articles cochés, le panier est plein. */
@@ -91,12 +92,8 @@ export function prefersReducedMotion(): boolean {
 
 /** Petits sons des courses (sans effet si les sons sont coupés). */
 export const coursesSounds = {
-  /** L'article tombe dans le panier (le balai, lui, sonne via la coquille). */
-  sweep(reduced: boolean): void {
-    if (!reduced) soundEngine.play('done', { delayMs: 520 });
-  },
-  /** L'article ressort du panier. */
+  /** L'article ressort du panier (cocher sonne via la coquille : `broom`). */
   unsweep(): void {
-    soundEngine.play('undo');
+    playCue('undo');
   },
 };

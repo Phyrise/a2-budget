@@ -57,8 +57,12 @@ export function konpeito(bus: Bus, t: number, gentle: boolean): void {
   bell(bus, t, N.B5, { peak: 0.04, decay: 0.5, bright: 0.6, wet: 0.45 });
 }
 
-/** Coup de balai de Kiki : souffle filtré qui balaie vers l'aigu, puis retombe. */
-export function broom(bus: Bus, t: number): void {
+/**
+ * Coup de balai de Kiki : souffle filtré qui balaie vers l'aigu, puis
+ * retombe ; l'article atterrit dans le panier d'osier (petit tintement
+ * feutré, omis en mouvement réduit). Un seul son pour le geste « cocher ».
+ */
+export function broom(bus: Bus, t: number, gentle: boolean): void {
   breath(bus, t, {
     sweep: [
       [0, 900],
@@ -87,6 +91,11 @@ export function broom(bus: Bus, t: number): void {
     ],
     wet: 0.2,
   });
+  if (!gentle) {
+    // Dans le panier : deux brins d'osier qui tintent tout doucement.
+    tone(bus, t + 0.46, N.Gs6, { peak: 0.028, attack: 0.003, decay: 0.16, wet: 0.4, type: 'triangle' });
+    bell(bus, t + 0.5, N.E6, { peak: 0.03, decay: 0.38, bright: 0.5, wet: 0.45 });
+  }
 }
 
 /** Clochette de la porte de la boulangerie : deux petites cloches qui se balancent. */

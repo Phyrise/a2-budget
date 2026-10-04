@@ -17,7 +17,10 @@
  * - univers des modules (V3.2) : un montant du mois affiché qui change
  *   (pièces), une dépense ajoutée (kompeitō), un article coché (balai), le
  *   panier vidé (clochette), un événement ajouté au calendrier (bois).
- *   Changer de mois, retirer, décocher : rien.
+ *   Changer de mois, retirer, décocher : rien. Annuler un retrait (toast
+ *   « Annuler ») non plus : l'élément qui revient n'est pas un ajout. Le
+ *   hook mémorise les éléments retirés pendant la session (`removedKeys`)
+ *   et les passe à `detectSoundEvents`.
  */
 import type { AppState, ChoreCompletion, MonthRecord } from '@a2/core';
 import type { PlannedSound, SoundCue, SoundEvent, SoundVoice } from './cues';
@@ -35,6 +38,25 @@ function added<T extends { id: string }>(prev: readonly T[] | undefined, next: r
   const before = idsOf(prev);
   return (next ?? []).filter((x) => !before.has(x.id));
 }
+
+/** Clés « nature:id » des éléments retirés par une transition (dépenses du mois affiché, événements). */
+export function removedKeys(prev: AppState | null, next: AppState | null): string[] {
+  if (prev === null || next === null || prev === next) return [];
+  const out: string[] = [];
+  if (prev.calendar !== next.calendar) {
+    const after = idsOf(next.calendar?.events);
+    for (const e of prev.calendar?.events ?? []) if (!after.has(e.id)) out.push(`cal:${e.id}`);
+  }
+  const pm = prev.budget.months.find((m) => m.monthKey === prev.budget.selectedMonth);
+  const nm = next.budget.months.find((m) => m.monthKey === next.budget.selectedMonth);
+  if (pm !== undefined && pm !== nm) {
+    const after = idsOf(nm?.expenses);
+    for (const e of pm.expenses) if (!after.has(e.id)) out.push(`exp:${e.id}`);
+  }
+  return out;
+}
+
+const NONE: ReadonlySet<string> = new Set();
 
 function removedCount<T extends { id: string }>(prev: readonly T[] | undefined, next: readonly T[] | undefined): number {
   const after = idsOf(next);
@@ -95,7 +117,7 @@ function expenseAmounts(month: MonthRecord): Map<string, number> {
  * changement de mois ou un mois créé ne sonne pas). Dépense ajoutée →
  * kompeitō ; montant modifié (salaire, compléments, dépense, réserve) → pièces.
  */
-function budgetEvents(prev: AppState, next: AppState): SoundEvent[] {
+function budgetEvents(prev: AppState, next: AppState, removed: ReadonlySet<string>): SoundEvent[] {
   const pb = prev.budget;
   const nb = next.budget;
   if (pb === nb || pb.months === nb.months || pb.selectedMonth !== nb.selectedMonth) return [];
@@ -104,7 +126,10 @@ function budgetEvents(prev: AppState, next: AppState): SoundEvent[] {
   if (pm === undefined || nm === undefined || pm === nm) return [];
   const newExpenses = added(pm.expenses, nm.expenses);
   if (newExpenses.length > MAX_STEP_ITEMS) return [];
-  if (newExpenses.length > 0) return [{ cue: 'konpeito' }];
+  // Une dépense remise (« Annuler ») ne sonne pas comme un ajout.
+  if (newExpenses.length > 0) {
+    return newExpenses.some((e) => !removed.has(`exp:${e.id}`)) ? [{ cue: 'konpeito' }] : [];
+  }
   const before = expenseAmounts(pm);
   const amountChanged =
     pm.salaryACents !== nm.salaryACents ||
@@ -135,18 +160,25 @@ function groceryEvents(prev: AppState, next: AppState): SoundEvent[] {
   return [];
 }
 
-/** Calendrier : un événement ajouté → note de bois. */
-function calendarEvents(prev: AppState, next: AppState): SoundEvent[] {
+/** Calendrier : un événement ajouté → note de bois (pas un événement remis). */
+function calendarEvents(prev: AppState, next: AppState, removed: ReadonlySet<string>): SoundEvent[] {
   if (prev.calendar === next.calendar) return [];
-  return added(prev.calendar?.events, next.calendar?.events).length > 0 ? [{ cue: 'woodNote' }] : [];
+  const fresh = added(prev.calendar?.events, next.calendar?.events).filter((e) => !removed.has(`cal:${e.id}`));
+  return fresh.length > 0 ? [{ cue: 'woodNote' }] : [];
 }
 
 /**
  * Événements sonores d'une transition, dans l'ordre où on les entend :
  * le geste (lumière, souffle, cercle, lanterne), puis la créature, la
  * croissance et le gardien. Vide au premier rendu et pour un remplacement.
+ * `removed` : clés (`removedKeys`) des éléments retirés plus tôt dans la
+ * session ; s'ils réapparaissent, c'est une annulation, pas un ajout.
  */
-export function detectSoundEvents(prev: AppState | null, next: AppState | null): SoundEvent[] {
+export function detectSoundEvents(
+  prev: AppState | null,
+  next: AppState | null,
+  removed: ReadonlySet<string> = NONE,
+): SoundEvent[] {
   if (prev === null || next === null || prev === next) return [];
   if (isWholesaleChange(prev, next)) return [];
   const events: SoundEvent[] = [];
@@ -168,7 +200,11 @@ export function detectSoundEvents(prev: AppState | null, next: AppState | null):
   // après un arrêt anticipé. Sa floraison est jouée par le contrôleur de la
   // lanterne, seulement menée au bout et si son son n'est pas coupé.
   if (circleChanged(prev, next)) events.push({ cue: 'circle' });
-  events.push(...budgetEvents(prev, next), ...groceryEvents(prev, next), ...calendarEvents(prev, next));
+  events.push(
+    ...budgetEvents(prev, next, removed),
+    ...groceryEvents(prev, next),
+    ...calendarEvents(prev, next, removed),
+  );
 
   // 2. Ce que la forêt en fait.
   const pf = prev.forest;

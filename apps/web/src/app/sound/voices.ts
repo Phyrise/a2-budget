@@ -158,7 +158,7 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
       konpeito(bus, t, gentle);
       return;
     case 'broom':
-      broom(bus, t);
+      broom(bus, t, gentle);
       return;
     case 'shopBell':
       shopBell(bus, t, gentle);

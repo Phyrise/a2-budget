@@ -19,7 +19,7 @@ import { useApp } from '../../state/store';
 import { IconButton, fr, shiftMonthKey, useToast } from '../../ui';
 import { CalendarBanner } from './CalendarBanner';
 import { CalendarEmpty, DayEmpty } from './CalendarEmpty';
-import { dayHeading, displayTitle, eventsCount, monthKeyOf, monthLabel, monthWeeks } from './calendarText';
+import { dayHeading, dayPhrase, displayTitle, eventsCount, monthKeyOf, monthLabel, monthWeeks } from './calendarText';
 import { DayEvents, UpcomingEvents } from './EventList';
 import { EventSheet } from './EventSheet';
 import type { EventSheetState } from './eventForm';
@@ -181,7 +181,7 @@ export function CalendarScreen() {
             {!selectedInMonth && monthOccurrences.length > 0 && <span className="section-head__meta">{eventsCount(monthOccurrences.length)}</span>}
             <IconButton
               icon="plus"
-              label={selectedInMonth ? `Ajouter un événement le ${dayHeading(selected, today).toLowerCase()}` : 'Ajouter un événement'}
+              label={selectedInMonth ? `Ajouter un événement ${dayPhrase(selected, today)}` : 'Ajouter un événement'}
               variant="accent"
               size="sm"
               onClick={() => openCreate()}

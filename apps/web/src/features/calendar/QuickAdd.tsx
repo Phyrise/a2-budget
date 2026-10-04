@@ -63,7 +63,7 @@ export function QuickAdd({ now, onSubmit }: { now: Date; onSubmit: (prefill: Qui
         Prévoir
       </Button>
       <span id="cal-quick-hint" className="visually-hidden">
-        Le jour, l’heure et le genre de moment sont reconnus ; vous pourrez tout relire avant d’ajouter.
+        Le jour, l’heure et le genre de moment sont reconnus ; vous pourrez tout relire avant d’ajouter.
       </span>
     </form>
   );

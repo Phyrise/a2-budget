@@ -2,12 +2,14 @@
  * Objectif de la semaine — carte compacte et bienveillante (V3.2).
  *
  * Une lanterne dans un anneau qui se remplit de lumière au fil des soins de
- * la semaine (weeklyCareGoal de @a2/core), un niveau en mots, une tendance
- * et une ligne qui dit ce qui compte. Jamais de chiffre, jamais de sanction,
+ * la semaine (weeklyCareGoal de @a2/core), un niveau en mots, parfois un
+ * encouragement (« la lumière monte », seulement quand ça monte et que la
+ * forêt n'est pas déjà épanouie : jamais de comparaison à la baisse avec la
+ * semaine passée) et une ligne qui dit ce qui compte. Jamais de chiffre, jamais de sanction,
  * jamais de rouge : le niveau le plus bas est « la forêt se repose », la
  * forêt ne meurt jamais et rien ne se reporte d'une semaine à l'autre.
  */
-import { DAILY_CREDIT_CAP, weeklyCareGoal, type WeeklyGoalLevel, type WeeklyGoalTrend } from '@a2/core';
+import { DAILY_CREDIT_CAP, weeklyCareGoal, type WeeklyGoalLevel } from '@a2/core';
 import { useMemo } from 'react';
 import { useApp } from '../../state/store';
 import { cx } from '../../ui';
@@ -22,14 +24,11 @@ const LEVEL_TITLES: Record<WeeklyGoalLevel, string> = {
 const LEVEL_BODIES: Record<WeeklyGoalLevel, string> = {
   resting: 'Elle n’attend rien de vous. Un geste, quand vous pourrez, suffira à la réveiller doucement.',
   good: 'Elle profite de vos soins de la semaine, tranquillement.',
-  flourishing: 'Une semaine bien choyée : la clairière rayonne.',
+  flourishing: 'Une semaine bien choyée : la clairière rayonne.',
 };
 
-const TRENDS: Record<WeeklyGoalTrend, string> = {
-  rising: 'elle reprend des forces',
-  steady: 'stable',
-  resting: 'elle se repose',
-};
+/** Seule tendance jamais montrée : celle qui monte. */
+const RISING = 'la lumière monte';
 
 const WORDS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept'];
 const FEM = ['zéro', 'une', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept'];
@@ -93,8 +92,10 @@ export function WeeklyGoalCard() {
       : early
         ? 'La semaine commence à peine : chaque geste y pose déjà sa lumière.'
         : LEVEL_BODIES[goal.level];
-  // Tendance masquée quand elle redirait le niveau (« se repose · elle se repose »).
-  const showTrend = !paused && !fresh && !(goal.level === 'resting' && goal.trend === 'resting');
+  // Seulement l'élan qui monte, et pas sur une forêt déjà épanouie : une
+  // tendance stable ou descendante ne serait qu'un « moins que la semaine
+  // dernière » déguisé (V3_BRIEF §1 : jamais de dette visible).
+  const showTrend = !paused && !fresh && goal.trend === 'rising' && goal.level !== 'flourishing';
   const days = Math.max(1, Math.ceil(goal.target / DAILY_CREDIT_CAP));
   const capWord = WORDS[DAILY_CREDIT_CAP] ?? String(DAILY_CREDIT_CAP);
   const daysWord = FEM[days] ?? String(days);
@@ -110,7 +111,7 @@ export function WeeklyGoalCard() {
           {showTrend && (
             <span className="weekly-goal__trend" data-trend={goal.trend}>
               <span className="visually-hidden">, </span>
-              {TRENDS[goal.trend]}
+              {RISING}
             </span>
           )}
         </p>

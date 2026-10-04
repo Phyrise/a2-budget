@@ -40,7 +40,8 @@ export function ImportControl({
   label?: string;
   block?: boolean;
 }) {
-  const { importJson } = useApp();
+  const { importJson, appState } = useApp();
+  const currentEvents = appState?.calendar?.events.length ?? 0;
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const [pending, setPending] = useState<{ text: string; summary: ImportSummary; name: string } | null>(null);
@@ -125,6 +126,10 @@ export function ImportControl({
                 Maison&nbsp;: {plural(s.taskCount, 'tâche')}, {plural(s.completionCount, 'geste')} dans l’historique
               </li>
               <li>Courses&nbsp;: {plural(s.groceryCount, 'article')}</li>
+              <li>
+                Calendrier&nbsp;: {plural(s.calendarEventCount, 'événement')}
+                {s.calendarEventCount < currentEvents && ` (${plural(currentEvents, 'événement')} sur cet appareil aujourd’hui)`}
+              </li>
             </ul>
           </div>
         )}

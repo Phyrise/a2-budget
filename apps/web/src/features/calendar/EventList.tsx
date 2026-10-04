@@ -27,7 +27,7 @@ function spokenLabel(o: CalendarOccurrence, names: Names, withDay: string | null
   const e = o.event;
   const years = yearsLabel(o);
   const parts = [
-    `Modifier « ${displayTitle(e)} »`,
+    `Modifier « ${displayTitle(e)} »`,
     years,
     withDay,
     timeRangeSpoken(e),

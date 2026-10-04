@@ -15,6 +15,8 @@ export interface ImportSummary {
   completionCount: number;
   /** Articles de la liste de courses active (à acheter + panier). */
   groceryCount: number;
+  /** Événements du Calendrier commun (0 pour une sauvegarde d'avant la V3.2). */
+  calendarEventCount: number;
 }
 
 /** Enveloppe d'export versionnée. */
@@ -94,6 +96,7 @@ export function parseImportJson(
       taskCount: check.state.chores.tasks.length,
       completionCount: check.state.chores.completions.length,
       groceryCount: check.state.groceries.items.length,
+      calendarEventCount: check.state.calendar?.events.length ?? 0,
     },
   };
 }

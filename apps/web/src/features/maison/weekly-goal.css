@@ -102,14 +102,6 @@
   color: var(--moss-300);
 }
 
-.weekly-goal__trend[data-trend='steady'] {
-  color: var(--fog-300);
-}
-
-.weekly-goal__trend[data-trend='resting'] {
-  color: var(--fog-400);
-}
-
 .weekly-goal__body {
   margin-top: 4px;
   font-size: 14px;

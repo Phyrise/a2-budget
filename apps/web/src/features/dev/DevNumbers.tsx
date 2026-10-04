@@ -9,7 +9,7 @@ import { CREATURE_ENTRIES, STAGE_NAMES } from '../rituals/carnet/carnetData';
 import { CONSTANTS, VITALITY_LABELS, num, pct, type DevData } from './devData';
 
 const GOAL_LEVELS = { resting: 'se repose', good: 'va bien', flourishing: 's’épanouit' } as const;
-const TRENDS = { rising: 'reprend des forces', steady: 'stable', resting: 'se repose' } as const;
+const TRENDS = { rising: 'la lumière monte (montrée)', steady: 'stable (jamais montrée)', resting: 'en baisse (jamais montrée)' } as const;
 const VERDICTS = { quiet: 'calme', balanced: 'équilibré', 'a-carried': 'A a porté', 'b-carried': 'B a porté' } as const;
 function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return (
@@ -100,7 +100,7 @@ export function DevNumbers({ data }: { data: DevData }) {
         <h3 id="dev-constants" className="dev-section__title">
           Constantes
         </h3>
-        <p className="dev-section__lead">Dans packages/core (forest.ts, forestProgress.ts) : à modifier ensemble, puis recharger.</p>
+        <p className="dev-section__lead">Dans packages/core (forest.ts, forestProgress.ts) : à modifier ensemble, puis recharger.</p>
         <ol className="dev-thresholds" aria-label="Seuils de croissance (GROWTH_THRESHOLDS)">
           {CONSTANTS.GROWTH_THRESHOLDS.map((t, i) => (
             <li key={i} className={cx('dev-threshold', i + 1 === p.stage && 'is-current', i + 1 < p.stage && 'is-past')}>

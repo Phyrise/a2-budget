@@ -124,6 +124,14 @@ export function dayHeading(dateKey: string, today: Date): string {
   return longDate(parseLocalDateKey(dateKey));
 }
 
+/** Dans une phrase : « aujourd’hui », « demain », « le samedi 10 octobre ». */
+export function dayPhrase(dateKey: string, today: Date): string {
+  const heading = dayHeading(dateKey, today);
+  const lower = heading.charAt(0).toLowerCase() + heading.slice(1);
+  if (dateKey === localDateKey(today) || dateKey === localDateKey(addDays(today, 1))) return lower;
+  return `le ${lower}`;
+}
+
 /** « 1 événement », « 3 événements ». */
 export function eventsCount(n: number): string {
   return `${n}${NBSP}événement${n > 1 ? 's' : ''}`;

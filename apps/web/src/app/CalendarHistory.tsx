@@ -6,6 +6,7 @@
 import { addDays, eventsBetween, localDateKey, type CalendarEvent, type CalendarOccurrence } from '@a2/core';
 import { useMemo, type ReactNode } from 'react';
 import { useApp } from '../state/store';
+import { displayTitle, timeRangeLabel } from '../features/calendar/calendarText';
 import { Companion, EmptyState, relativeDayLabel } from '../ui';
 import '../features/history/history.css';
 
@@ -31,8 +32,8 @@ function timeLabel(o: CalendarOccurrence): string | null {
 
 function meta(o: CalendarOccurrence, names: { a: string; b: string }): ReactNode {
   const parts = [KIND_LABELS[o.event.kind]];
-  const time = timeLabel(o);
-  if (time) parts.push(time);
+  // Mêmes heures que l'écran Calendrier (« 20 h », « 9 h 30 – 11 h »).
+  if (!o.event.allDay && o.event.time !== undefined) parts.push(timeRangeLabel(o.event));
   if (o.event.place) parts.push(o.event.place);
   if (o.event.who !== 'both') parts.push(o.event.who === 'a' ? names.a : names.b);
   return parts.join(' · ');
@@ -79,7 +80,7 @@ export function CalendarHistory() {
               <li key={`${o.event.id}-${o.date}`} className="history-entry">
                 <Companion who={o.event.who} size={30} />
                 <span className="history-entry__text">
-                  <span className="history-entry__title">{o.event.title}</span>
+                  <span className="history-entry__title">{displayTitle(o.event)}</span>
                   <span className="history-entry__meta">{meta(o, names)}</span>
                 </span>
               </li>

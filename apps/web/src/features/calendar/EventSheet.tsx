@@ -167,7 +167,7 @@ export function EventSheet({
             enterKeyHint="done"
             error={errors.title}
             autoCapitalize="sentences"
-            hint={birthday ? 'Le prénom suffit : on affichera « Anniversaire de… ».' : undefined}
+            hint={birthday ? 'Le prénom suffit : on affichera « Anniversaire de… ».' : undefined}
           />
 
           <KindPicker value={v.kind} onChange={setKind} />

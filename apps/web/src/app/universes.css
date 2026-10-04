@@ -158,11 +158,21 @@
   background: rgba(236, 208, 154, 0.24);
 }
 
+/* Ordinateur : sur la colonne du monde, sous la marque, là où l'aperçu se
+   voit, plutôt que par-dessus la phrase d'humeur de la colonne de contenu. */
 @media (min-width: 1024px) {
   .preview-banner {
-    left: auto;
-    right: 24px;
+    left: 40px;
+    right: auto;
     max-width: 432px;
     transform: none;
+  }
+}
+
+/* Téléphone étroit : le bouton DEV dépasse un peu sous l'en-tête, le bandeau
+   « Aperçu » s'écarte pour ne pas le recouvrir. */
+@media (max-width: 419px) {
+  .preview-banner {
+    top: calc(var(--safe-top) + 74px);
   }
 }

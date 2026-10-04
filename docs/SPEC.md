@@ -24,17 +24,19 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 ### 1. Ce mois
 
 - Mois affiché + sélection d'un autre mois + retour simple au mois courant.
-- Deux champs de salaire faciles à ajuster (un par personne).
+- Par personne : un champ **salaire** facile à ajuster et un champ
+  facultatif de **compléments** (heures sup, astreintes, gardes — souvent
+  payés le mois suivant).
 - Carte principale « À verser sur le compte commun » : contribution A,
   contribution B, total. Ces informations essentielles doivent apparaître dans
   le premier écran à 390 × 844 px.
-- Sous la carte : détail du calcul repliable (ex. « B : 40 % × 3 000 € +
-  20 % × 675 € »), liste compacte des dépenses modifiables (ajouter, renommer,
+- Sous la carte : détail du calcul repliable (ex. « B : 40 % × 3 000 € de
+  salaire + 20 % × 675 € de compléments »), liste compacte des dépenses modifiables (ajouter, renommer,
   retirer), total des dépenses, « Reste après dépenses », puis « Disponible
   pour les loisirs » si une réserve est configurée.
-- Les revenus d'un nouveau mois sont préremplis avec les salaires de base,
-  avec une indication claire qu'ils sont à ajuster. Ce sont des prévisions,
-  jamais présentées comme des transactions bancaires constatées.
+- Le salaire d'un nouveau mois est prérempli avec le salaire habituel de
+  chacun, les compléments à 0. Ce sont des prévisions, jamais présentées
+  comme des transactions bancaires constatées.
 
 ### 2. Historique
 
@@ -46,7 +48,9 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 ### 3. Réglages
 
-- Noms, salaires de base, deux taux par personne.
+- Noms, salaire habituel de chacun (préremplit les nouveaux mois), et **deux
+  taux communs au couple** (taux de base pour les salaires, taux au-delà pour
+  les compléments).
 - Dépenses récurrentes (ajouter, renommer, modifier, retirer).
 - Réserve mensuelle par défaut.
 - Export / import JSON (sauvegarde et transfert manuel).
@@ -65,16 +69,23 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
   doit **jamais** recalculer silencieusement les mois existants. Les dépenses
   modifiées dans un mois n'altèrent pas les dépenses récurrentes.
 - Mois courant déterminé dans le **fuseau local** de l'utilisateur (jamais UTC).
-- Contribution individuelle (chaque tranche arrondie séparément au centime,
-  demi-centime vers le haut, puis addition) :
+- Contribution individuelle (V3.1 ; chaque tranche arrondie séparément au
+  centime, demi-centime vers le haut, puis addition) :
 
   ```
-  baseIncomeCents           = min(actualSalaryCents, baseSalaryCents)
-  variableIncomeCents       = max(0, actualSalaryCents − baseSalaryCents)
-  baseContributionCents     = roundHalfUp(baseIncomeCents × baseRateBps / 10000)
-  variableContributionCents = roundHalfUp(variableIncomeCents × variableRateBps / 10000)
+  baseContributionCents     = roundHalfUp(salaryCents × baseRateBps / 10000)
+  variableContributionCents = roundHalfUp(bonusCents × variableRateBps / 10000)
   contributionCents         = baseContributionCents + variableContributionCents
   ```
+
+  `salaryCents` = salaire du mois (entièrement au taux de base) ;
+  `bonusCents` = compléments du mois (heures sup, astreintes, gardes). Les
+  taux sont communs au couple. Le salaire habituel ne sert qu'à préremplir.
+
+- Données d'avant V3.1 (modèle à seuil `min/max(salaire, salaire de base)`) :
+  normalisées au chargement et à l'import en `salaire = min(salaire, base)`,
+  `compléments = max(0, salaire − base)` — contributions strictement
+  identiques, aucune valeur affichée ne change.
 
   Pour des entiers non négatifs sûrs : `floor((incomeCents × rateBps + 5000) / 10000)`.
 
@@ -95,20 +106,20 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 ## Valeurs initiales
 
-- Personne A : base 2200 €, taux 40 % / 20 %. Personne B : base 3000 €, taux
-  40 % / 20 %. Noms modifiables.
+- Personne A : salaire habituel 2200 €. Personne B : salaire habituel
+  3000 €. Taux communs 40 % / 20 %. Noms modifiables.
 - Dépenses récurrentes : loyer + charges 1300 €, électricité 100 €, courses
   400 €, internet 30 €, assurance 15 €, autres 0 €. Total : 1845 €.
 - Réserve initiale : 0 €.
 
 ## Résultats attendus (réserve nulle, dépenses 1845 €)
 
-| Salaire A | Salaire B | Contrib. A | Contrib. B | Total commun | Reste |
-|---|---|---|---|---|---|
-| 2200 € | 3000 € | 880 € | 1200 € | 2080 € | 235 € |
-| 2200 € | 3500 € | 880 € | 1300 € | 2180 € | 335 € |
-| 2200 € | 3675 € | 880 € | 1335 € | 2215 € | 370 € |
-| 2200 € | 4000 € | 880 € | 1400 € | 2280 € | 435 € |
+| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total commun | Reste |
+|---|---|---|---|---|---|---|
+| 2200 € | 3000 € | 0 € | 880 € | 1200 € | 2080 € | 235 € |
+| 2200 € | 3000 € | 500 € | 880 € | 1300 € | 2180 € | 335 € |
+| 2200 € | 3000 € | 675 € | 880 € | 1335 € | 2215 € | 370 € |
+| 2200 € | 3000 € | 1000 € | 880 € | 1400 € | 2280 € | 435 € |
 
 - Cas 3 avec réserve 500 € : loisirs = 0 €, réserve non couverte de 130 €.
 - A à 1800 € (sous la base) : contribution A = 720 €.
@@ -191,7 +202,8 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 ## Critère de réussite
 
-Ouvrir l'app sur mobile, saisir B = 3675 € avec A = 2200 €, lire
+Ouvrir l'app sur mobile, saisir A = 2200 € de salaire, B = 3000 € de
+salaire + 675 € de compléments, lire
 A = 880 €, B = 1335 €, total = 2215 €, dépenses = 1845 €, reste = 370 €,
 modifier une dépense, fermer/rouvrir sans perte, puis utiliser l'application
 hors ligne une fois son cache prêt. Les sauvegardes JSON et l'historique

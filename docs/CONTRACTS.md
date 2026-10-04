@@ -1,4 +1,4 @@
-# A² Budget — Contrats (V1)
+# A² Budget — Contrats (V1, revenus V3.1)
 
 Ce document est la référence des agents. En cas de divergence avec le code,
 **ce document fait foi** ; toute modification de contrat est coordonnée avec le
@@ -26,14 +26,43 @@ Définis dans `packages/core/src/types.ts` (fichier contrat, lead) :
 commentaires. Points clés :
 
 - `MonthRecord` contient une **copie** des paramètres des deux personnes, les
-  revenus du mois (`salaryACents`, `salaryBCents` — prévisionnels, préremplis
-  avec les salaires de base), les dépenses propres au mois et
-  `reserveTargetCents`.
-- `PersistedState = { schemaVersion: 1, settings, months, selectedMonth }`.
+  revenus du mois — `salaryACents`/`salaryBCents` (salaire, prérempli avec le
+  salaire habituel) et `bonusACents`/`bonusBCents` (compléments : heures
+  sup, astreintes, gardes ; 0 à la création) —, les dépenses propres au mois
+  et `reserveTargetCents`.
+- `MonthRecordInput` / `PersistedStateInput` : même forme, compléments
+  **facultatifs** (données d'avant V3.1). Les validateurs les acceptent et
+  renvoient toujours des mois normalisés.
+- `PersistedState = { schemaVersion: 1, settings, months, selectedMonth }`
+  (forme du budget V1 ; dans l'état applicatif, `schemaVersion` reste `2`).
+- `SharedRates = { baseRateBps, variableRateBps }` : taux communs du couple.
 - `MonthSummary.remainingCents` peut être **négatif** (déficit affiché, jamais
   masqué). `leisureCents = max(0, remainingCents − reserveTargetCents)`.
   `reserveCovered` est vrai par convention si `reserveTargetCents = 0`.
   `reserveShortfallCents = max(0, reserveTargetCents − remainingCents)`.
+
+## 2bis. Revenus (V3.1) : salaire + compléments, taux communs
+
+- Chaque mois, chaque personne a un **salaire** (entièrement au taux de base)
+  et des **compléments** facultatifs (heures sup, astreintes, gardes — souvent
+  payés le mois suivant) au **taux au-delà**.
+- `settings.personX.baseSalaryCents` est le **salaire habituel** : il
+  préremplit le salaire d'un nouveau mois (compléments à 0). Il ne sert plus
+  de seuil de calcul.
+- **Taux communs** : le couple partage les deux taux. Les champs restent par
+  personne (compatibilité) ; `setSharedRates(target, base, variable)` écrit
+  les deux personnes (réglages ou règles d'un mois), `sharedRates(settings)`
+  lit (la personne A fait foi si elles diffèrent), `hasSharedRates` indique
+  si elles sont déjà alignées. Les données existantes ne sont jamais
+  alignées automatiquement.
+- **Normalisation des données existantes** (`normalizeMonthIncome`, pure,
+  idempotente) : pour une personne sans compléments (ancien modèle),
+  `compléments = max(0, salaire − salaireDeBase du mois)` et
+  `salaire = min(salaire, salaireDeBase)`. Contributions **strictement
+  identiques** (chaque tranche était déjà arrondie séparément). Appliquée par
+  `validatePersistedState`/`validateAppState`, donc au chargement
+  (`migrateState`, V1 et V2) et à l'import ; `computeMonthSummary` normalise
+  aussi à la volée un mois brut.
 
 ## 3. API publique de `@a2/core`
 
@@ -52,8 +81,18 @@ export type ParseAmountResult =
 export function computeContributionBreakdown(
   salaryCents: number,
   person: PersonSettings,
+  bonusCents?: number,                          // compléments, 0 par défaut
 ): ContributionBreakdown;
-export function computeMonthSummary(record: MonthRecord): MonthSummary;
+export function computeMonthSummary(record: MonthRecordInput): MonthSummary; // + breakdownA/B
+
+// Revenus (V3.1)
+export function normalizeMonthIncome(month: MonthRecordInput): MonthRecord;
+export function sharedRates(settings: Settings): SharedRates;
+export function hasSharedRates(settings: Settings): boolean;
+export function setSharedRates<T extends { personA; personB }>(
+  target: T, baseRateBps: number, variableRateBps: number,
+): T;                                           // Settings ou MonthRecord
+export function monthIncomeCents(month: MonthRecordInput, person: 'A' | 'B'): number;
 
 // Montants
 export function parseAmountInput(raw: string): ParseAmountResult;
@@ -78,8 +117,12 @@ export function validatePersistedState(
 
 Sémantique :
 
-- `computeContributionBreakdown` : formule de la SPEC. Lève une erreur sur
-  entrée invalide (négatif, non entier, hors plage).
+- `computeContributionBreakdown` : formule de la SPEC (salaire × taux de
+  base + compléments × taux au-delà). Le détail expose `baseIncomeCents`
+  (salaire), `variableIncomeCents` (compléments), `incomeCents` (total) et
+  les deux tranches. Lève une erreur sur entrée invalide (négatif, non
+  entier, hors plage).
+- `computeMonthSummary` : expose aussi `breakdownA`/`breakdownB`.
 - `parseAmountInput` : déterministe. Accepte « 1 234,56 », « 1234.56 »,
   « 1 234,56 € », espaces français au collage. Rejette (sans tronquer) : vide,
   ambigu, > 2 décimales, négatif, hors plage. « 0 » est valide.
@@ -90,17 +133,19 @@ Sémantique :
   (`createMonthRecord`) et le sélectionne.
 - `applySettingsToMonth` : pur ; remplace dans le mois les copies des
   personnes, les dépenses et la réserve par les réglages courants ; conserve
-  les salaires saisis ; sans effet si le mois n'existe pas.
+  les salaires et compléments saisis ; sans effet si le mois n'existe pas.
 - `validatePersistedState` : ne lève jamais ; valide version, types, entiers,
-  plages, clés de mois, identifiants (uniques dans chaque liste), relations.
+  plages, clés de mois, identifiants (uniques dans chaque liste), relations ;
+  compléments absents acceptés (ancien modèle), présents → montant valide
+  (`month-invalid-bonus-a`/`-b`) ; renvoie des mois normalisés.
 - `defaultSettings` : A = 2200 € / 4000 / 2000, B = 3000 € / 4000 / 2000,
   noms par défaut « AL » et « AC » (ids `a`/`b` inchangés ; les noms
   personnalisés déjà saisis sont préservés), dépenses récurrentes : loyer +
   charges 130000, électricité 10000, courses 40000, internet 3000, assurance
   1500, autres 0 ; réserve par défaut 0.
-- `createMonthRecord` : copie des personnes, salaires = salaires de base
-  (prévision à ajuster), copie des dépenses récurrentes (mêmes ids), réserve =
-  `defaultReserveTargetCents`.
+- `createMonthRecord` : copie des personnes, salaires = salaires habituels
+  (prévision à ajuster), compléments = 0, copie des dépenses récurrentes
+  (mêmes ids), réserve = `defaultReserveTargetCents`.
 
 ## 4. Stockage (lead)
 
@@ -115,6 +160,12 @@ Sémantique :
 - `apps/web/src/state/store.tsx` : `AppProvider` + `useApp()`. Charge avant de
   sauvegarder (garde-fou StrictMode). Sauvegarde à chaque modification valide.
   `saveStatus: 'idle' | 'saving' | 'saved' | 'error'`.
+  - Revenus (V3.1) : `setSalary(monthKey, person, cents)`,
+    `setBonus(monthKey, person, cents)` (compléments ; invalide ignoré),
+    `setSharedRates(base, variable)` (réglages, les deux personnes ; nouveaux
+    mois), `setMonthSharedRates(monthKey, base, variable)` (règles du mois
+    indiqué, action explicite ; taux invalides ignorés),
+    `updatePersonSettings` (nom, salaire habituel).
   - **Mode de récupération** (`recovery`) : si les données locales sont
     illisibles (JSON corrompu, version inconnue) ou le stockage inaccessible,
     l'état en mémoire reste utilisable (état neuf) mais **aucune écriture n'est
@@ -173,13 +224,16 @@ pnpm build                       # tsc + vite build (apps/web)
 pnpm preview                     # serveur de preview du build (port 4173)
 ```
 
-## 8. Résultats de référence (réserve nulle, dépenses 1845 €)
+## 8. Résultats de référence (réserve nulle, dépenses 1845 €, taux 40 % / 20 %)
 
-| Salaire A | Salaire B | Contrib. A | Contrib. B | Total | Reste |
-|---|---|---|---|---|---|
-| 2200 € | 3000 € | 880 € | 1200 € | 2080 € | 235 € |
-| 2200 € | 3500 € | 880 € | 1300 € | 2180 € | 335 € |
-| 2200 € | 3675 € | 880 € | 1335 € | 2215 € | 370 € |
-| 2200 € | 4000 € | 880 € | 1400 € | 2280 € | 435 € |
+| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total | Reste |
+|---|---|---|---|---|---|---|
+| 2200 € | 3000 € | 0 € | 880 € | 1200 € | 2080 € | 235 € |
+| 2200 € | 3000 € | 500 € | 880 € | 1300 € | 2180 € | 335 € |
+| 2200 € | 3000 € | 675 € | 880 € | 1335 € | 2215 € | 370 € |
+| 2200 € | 3000 € | 1000 € | 880 € | 1400 € | 2280 € | 435 € |
 
 Cas 3 + réserve 500 € : loisirs 0 €, non couvert 130 €. A = 1800 € → 720 €.
+Un salaire saisi au-delà du salaire habituel reste entièrement au taux de
+base (B 3675 € de salaire sans compléments → 1470 €). Un mois d'avant V3.1
+avec B = 3675 € (sans compléments) est normalisé en 3000 € + 675 € → 1335 €.

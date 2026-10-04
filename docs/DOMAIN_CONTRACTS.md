@@ -79,10 +79,12 @@ AppState
 
 ## 3. Migration V1 → V2
 
-`migrateV1toV2(v1: PersistedState): AppState` — **pure** :
+`migrateV1toV2(v1: PersistedStateInput): AppState` — **pure** :
 
 - Conserve **exactement** le budget : `settings`, `months`, `selectedMonth`
-  (montants, taux, noms, mois, **réserve comprise**).
+  (montants, taux, noms, mois, **réserve comprise**), à la seule
+  normalisation des revenus près (V3.1, `normalizeMonthIncome`, voir
+  `CONTRACTS.md` §2bis) : contributions **strictement identiques**.
 - Dérive `household.people` de `settings.personA/personB` (id + name).
 - Initialise `chores` (vide), `forest` (`emptyForest()`), `groceries` (vide).
 - Pose `schemaVersion: 2`.
@@ -102,14 +104,18 @@ chargement) :
 
 `validateAppState(value: unknown)` — validation V2 :
 
-- Réutilise la validation V1 (testée) pour la partie `budget`.
+- Réutilise la validation V1 (testée) pour la partie `budget` : les mois avec
+  ou sans compléments (`bonusACents`/`bonusBCents`) sont acceptés et
+  ressortent normalisés. `schemaVersion` reste `2`.
 - Valide `household`, `chores` (tâches + complétions, unicité des ids et des
   occurrences), `forest` (plages, dates, ledger), `groceries`.
 - Retourne l'état validé (normalisé) ou une raison stable.
 
 **Fixtures de référence** : `packages/core/src/home/fixtures/v1.ts` — quatre
-états V1 valides (`v1Empty`, `v1Basic`, `v1Custom`, `v1History`). Les tests
-vérifient que le budget migré est **profondément identique** pour chacun.
+états V1 valides (`v1Empty`, `v1Basic`, `v1Custom`, `v1History`), au format
+brut d'avant V3.1 (`PersistedStateInput`). Les tests vérifient que le budget
+migré est **profondément identique** pour chacun (mois normalisés) et que
+chaque contribution est inchangée.
 
 ---
 

@@ -124,7 +124,8 @@ export function MaisonScreen() {
     }, SHEET_SWAP_MS + 40);
   const onMenuDone = (task: HouseholdTask, doneBy: ChoreDoer) => {
     closeMenu();
-    actions.toggle(task, checkCenter(task.id), doneBy);
+    // Déjà cochée (menu ouvert pendant l'animation) : ne surtout pas décocher.
+    if (actionableIds.has(task.id)) actions.toggle(task, checkCenter(task.id), doneBy);
     focusTitleIfLost();
   };
   const onMenuSkip = (task: HouseholdTask) => {

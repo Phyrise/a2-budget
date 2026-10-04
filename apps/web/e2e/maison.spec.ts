@@ -99,9 +99,11 @@ test.describe('Maison — parcours', () => {
     await dialog.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     await expect(dialog).toBeHidden();
     await expect(todayRow(page, 'Sortir le verre')).toHaveCount(0);
-    const upcoming = page.locator('.upcoming');
-    await expect(upcoming).toContainText('Demain');
-    await expect(upcoming).toContainText('Sortir le verre');
+    // « À venir » replié : l'aperçu suffit (« Demain : Sortir le verre »).
+    const fold = page.locator('.upcoming-fold .disclosure__toggle');
+    await expect(fold).toHaveAttribute('aria-expanded', 'false');
+    await expect(fold).toContainText('Demain');
+    await expect(fold).toContainText('Sortir le verre');
 
     // Suppression confirmée depuis la feuille d'édition (via « À venir » → tâche du jour recréée).
     dialog = await createTask(page, 'Appeler le plombier', 'unassigned', 'none');
@@ -116,14 +118,5 @@ test.describe('Maison — parcours', () => {
     await expect.poll(async () => (await persisted(page)).chores.tasks.length).toBe(1);
   });
 
-  test('pause : la forêt dort, puis se réveille', async ({ page }) => {
-    await openApp(page);
-    await page.getByRole('button', { name: 'Mettre la maison en pause', exact: true }).click();
-    await expect(page.locator('.pause-card')).toBeVisible();
-    await expect(page.locator('.maison-hero__mood')).toHaveText('La forêt dort');
-    await expect.poll(async () => (await persisted(page)).forest.paused).toBe(true);
-    await page.getByRole('button', { name: 'Réveiller la forêt', exact: true }).click();
-    await expect(page.locator('.pause-card')).toHaveCount(0);
-    await expect.poll(async () => (await persisted(page)).forest.paused).toBe(false);
-  });
+  // La pause (V3.1) se met depuis l'en-tête ou les Réglages : voir maison-v31.spec.ts.
 });

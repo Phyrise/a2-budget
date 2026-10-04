@@ -1,0 +1,123 @@
+/* « À venir » V3.1 : replié en un aperçu, ouvert par jour (3 tâches, « +N autres »). */
+
+.upcoming-fold.disclosure--card {
+  padding: 0 14px 0 16px;
+}
+
+.upcoming-fold .disclosure__toggle {
+  min-height: 54px;
+  color: var(--fog-300);
+}
+
+.upcoming-fold .disclosure__toggle:hover {
+  color: var(--ivory-100);
+}
+
+.upcoming-fold__preview {
+  display: block;
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.upcoming-fold__label {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.upcoming-fold .upcoming {
+  padding-bottom: 6px;
+}
+
+.upcoming-fold .upcoming__day:first-child {
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.upcoming-fold .upcoming__day {
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.upcoming__edit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background-color var(--dur-fast, 140ms) var(--ease-out);
+}
+
+.upcoming__edit:hover {
+  background: rgba(147, 173, 124, 0.08);
+  color: var(--ivory-100);
+}
+
+.upcoming__edit:active {
+  background: rgba(147, 173, 124, 0.14);
+}
+
+.upcoming__edit:focus-visible,
+.upcoming__more:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.upcoming-fold .upcoming__who {
+  width: 32px;
+}
+
+.upcoming__title {
+  flex: 1;
+}
+
+.upcoming__go {
+  flex: none;
+  color: var(--fog-400);
+  opacity: 0.55;
+}
+
+.upcoming__edit:hover .upcoming__go {
+  opacity: 1;
+}
+
+.upcoming__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 4px 0 42px;
+  border: 0;
+  background: none;
+  color: var(--moss-300);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.upcoming__more:hover {
+  color: var(--ivory-50);
+}
+
+.upcoming__more-chevron {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.upcoming__more[aria-expanded='true'] .upcoming__more-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upcoming__more-chevron,
+  .upcoming__edit {
+    transition: none;
+  }
+}

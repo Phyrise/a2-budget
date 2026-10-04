@@ -174,9 +174,12 @@ for (const vp of [
   await bar.getByRole('button', { name: /lanterne/i }).click();
   const lanternDialog = page.getByRole('dialog', { name: 'Allumer une lanterne' });
   await lanternDialog.waitFor();
+  // V3.1 : explication en trois gestes tant qu'aucune lanterne n'a été allumée.
+  const intro = lanternDialog.getByRole('button', { name: 'Choisir une durée' });
+  if (await intro.isVisible()) await intro.click();
   await lanternDialog.locator('.ritual-chip').first().click();
   await shot(page, `${vp.tag}-08-lanterne-preparer`);
-  await lanternDialog.getByRole('button', { name: 'Allumer la lanterne' }).click();
+  await lanternDialog.getByRole('button', { name: /^Lancer \d+\s*minutes$/ }).click();
   const running = page.getByRole('dialog', { name: 'Lanterne allumée', exact: true });
   await running.waitFor();
   if (noClock) await page.waitForTimeout(4000);

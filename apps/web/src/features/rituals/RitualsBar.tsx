@@ -38,7 +38,7 @@ function LanternStatus() {
   }
   if (s.phase === 'paused') return <>En pause</>;
   if (s.phase === 'done') return <>Elle a fleuri</>;
-  return <>5 à 25{NB}min</>;
+  return <>Un minuteur doux pour s’y mettre</>;
 }
 
 export function RitualsBar() {
@@ -142,7 +142,7 @@ export function RitualsBar() {
           <span className="ritual-card__glyph">
             <RitualGlyph name="lantern" />
           </span>
-          <span className="ritual-card__title">{lanternLive ? 'Lanterne allumée' : 'Allumer une lanterne'}</span>
+          <span className="ritual-card__title">{lanternLive ? 'Lanterne allumée' : 'Lanterne'}</span>
           <span className="ritual-card__sub">
             <LanternStatus />
           </span>

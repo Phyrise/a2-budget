@@ -1,0 +1,142 @@
+/* Lanterne : explication en trois gestes (première ouverture) et lien d'aide. */
+
+.lantern-intro {
+  gap: 18px;
+}
+
+.lantern-intro__lead {
+  color: var(--ivory-100);
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.lantern-intro__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lantern-intro__step {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.lantern-intro__figure {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  background: rgba(147, 173, 124, 0.08);
+  color: var(--fog-300);
+}
+
+.lantern-intro__step:nth-child(2) .lantern-intro__figure {
+  background: radial-gradient(circle at 50% 56%, rgba(236, 208, 154, 0.18), rgba(147, 173, 124, 0.06) 72%);
+}
+
+.lantern-intro__warm {
+  color: var(--amber-300);
+  stroke: var(--amber-300);
+}
+
+.lantern-intro__glow {
+  fill: rgba(236, 208, 154, 0.16);
+}
+
+.lantern-intro__num {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink-900, #0d1612);
+  border: 1px solid rgba(236, 208, 154, 0.4);
+  color: var(--amber-300);
+  font-size: 11.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.lantern-intro__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lantern-intro__title {
+  color: var(--ivory-50);
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.lantern-intro__body {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lantern-intro__step {
+    animation: lantern-intro-in 520ms var(--ease-soft) both;
+  }
+
+  .lantern-intro__step:nth-child(2) {
+    animation-delay: 120ms;
+  }
+
+  .lantern-intro__step:nth-child(3) {
+    animation-delay: 240ms;
+  }
+}
+
+@keyframes lantern-intro-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Préparation : la phrase d'accroche et « Comment ça marche ? » */
+.lantern-setup__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.lantern-setup__help {
+  min-height: 40px;
+  margin-left: -4px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--moss-300);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(147, 173, 124, 0.4);
+  text-underline-offset: 3px;
+}
+
+.lantern-setup__help:hover {
+  color: var(--ivory-50);
+}
+
+.lantern-setup__help:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+  border-radius: 6px;
+}

@@ -4,7 +4,9 @@
  * (useWorld().pulse, plus forte pour une corvée) + réaction et réplique du
  * compagnon. Menu ⋯ : qui s'en charge, « pas aujourd'hui », modifier.
  * Les tâches restantes ne sont jamais représentées dans la forêt ; aucun
- * score, aucune compétition : l'équilibre se lit dans une carte qualitative.
+ * score, aucune compétition : le partage se lit dans une carte qualitative.
+ * La pause se met depuis l'en-tête ou les Réglages ; ici, seulement la carte
+ * « La maison est en pause » et son « Réveiller la forêt ».
  */
 import {
   ONCE,
@@ -147,7 +149,6 @@ export function MaisonScreen() {
 
   const mood = world.state?.mood ?? 'peaceful';
 
-
   return (
     <>
       <div className={cx('world-window', 'maison-hero', bubble && perchVisible && 'is-listening')}>
@@ -235,22 +236,21 @@ export function MaisonScreen() {
           )}
         </div>
 
-        <UpcomingList upcoming={upcoming} completions={completions} pendingToday={actionableIds} />
+        <UpcomingList
+          upcoming={upcoming}
+          completions={completions}
+          pendingToday={actionableIds}
+          onEdit={(task) => setSheet({ mode: 'edit', task })}
+        />
 
-        {/* La semaine en douceur (équilibre), puis les rituels qui en prennent soin. */}
+        {/* La semaine en douceur (partage), puis les rituels qui en prennent soin.
+            La pause se règle dans l'en-tête (lune) et les Réglages. */}
         <div className="sheet-section">
           <BalanceCard names={names} />
         </div>
 
         <RitualsBar />
 
-        {!paused && (
-          <div className="sheet-section maison__footer">
-            <Button variant="ghost" icon="moon" onClick={actions.togglePause} className="maison__pause">
-              Mettre la maison en pause
-            </Button>
-          </div>
-        )}
         <div className="perch" ref={perchRef}>
           <span className="perch__figures" aria-hidden="true">
             <Companion who="a" size={60} mood={perchedMood('a')} reactKey={perchedKey('a')} perched />

@@ -142,7 +142,7 @@ export function RitualsBar() {
           <span className="ritual-card__glyph">
             <RitualGlyph name="lantern" />
           </span>
-          <span className="ritual-card__title">{lanternLive ? 'Lanterne allumée' : 'Allumer une lanterne'}</span>
+          <span className="ritual-card__title">{lanternLive ? 'Lanterne allumée' : 'Lanterne'}</span>
           <span className="ritual-card__sub">
             <LanternStatus />
           </span>

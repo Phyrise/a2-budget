@@ -103,13 +103,30 @@ test.describe('Rituels', () => {
     const errors = trackErrors(page);
     await page.clock.install();
     await openSeeded(page);
-    await rituals(page).getByRole('button', { name: /Allumer une lanterne/ }).click();
+    const card = rituals(page).getByRole('button', { name: /^Lanterne/ });
+    await expect(card).toContainText('Un minuteur doux pour s’y mettre');
+    await card.click();
     const setup = page.getByRole('dialog', { name: 'Allumer une lanterne', exact: true });
     await expect(setup).toBeVisible();
+
+    // Première fois : l'explication en trois gestes, puis la préparation.
+    const intro = setup.locator('.lantern-intro');
+    await expect(intro.locator('.lantern-intro__step')).toHaveCount(3);
+    await expect(intro).toContainText('Choisissez une durée');
+    await expect(intro).toContainText('La lanterne s’allume dans la forêt');
+    await expect(intro).toContainText('À la fin, elle fleurit');
+    await setup.getByRole('button', { name: 'Choisir une durée' }).click();
+    await expect(intro).toHaveCount(0);
+    // « Comment ça marche ? » la rouvre à la demande.
+    await setup.getByRole('button', { name: /Comment ça marche/ }).click();
+    await expect(setup.locator('.lantern-intro')).toBeVisible();
+    await setup.getByRole('button', { name: 'Choisir une durée' }).click();
+
+    await expect(setup.getByRole('button', { name: /^Lancer 10\s+minutes$/ })).toBeVisible();
     await setup.locator('#lantern-minutes-5').check();
     await setup.getByRole('button', { name: 'Ranger le bureau' }).click();
     await expect(setup.locator('#lantern-who-a')).toBeChecked();
-    await setup.getByRole('button', { name: 'Allumer la lanterne' }).click();
+    await setup.getByRole('button', { name: /^Lancer 5\s+minutes$/ }).click();
 
     const running = page.getByRole('dialog', { name: 'Lanterne allumée', exact: true });
     await expect(running).toBeVisible();

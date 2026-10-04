@@ -258,10 +258,6 @@
   color: var(--on-accent);
 }
 
-.cal-day.has-birthday:not(.is-selected) {
-  background: radial-gradient(circle at 50% 90%, rgba(235, 163, 180, 0.13), transparent 70%);
-}
-
 /* ------------------------------------------------------------------ */
 /* Jour choisi / mois                                                  */
 /* ------------------------------------------------------------------ */

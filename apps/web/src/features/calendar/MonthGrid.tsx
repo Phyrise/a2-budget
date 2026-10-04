@@ -12,7 +12,7 @@
 import { addDays, localDateKey, parseLocalDateKey, type CalendarOccurrence } from '@a2/core';
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { WEEKDAYS, cx, fr, longDate } from '../../ui';
-import { displayTitle, eventsCount, monthKeyOf, monthWeeks } from './calendarText';
+import { displayTitle, eventsCount, monthWeeks } from './calendarText';
 import { kindStyle } from './kinds';
 
 /** Pastilles montrées par jour avant « + ». */
@@ -42,6 +42,7 @@ export function MonthGrid({
   labelledBy,
 }: {
   monthKey: string;
+  /** Jour choisi « YYYY-MM-DD », ou '' (aperçu du mois). */
   selected: string;
   todayKey: string;
   byDay: ReadonlyMap<string, CalendarOccurrence[]>;
@@ -52,8 +53,9 @@ export function MonthGrid({
   const weeks = monthWeeks(monthKey);
   const gridRef = useRef<HTMLDivElement>(null);
   const wantsFocus = useRef(false);
-  // Le jour focalisable : le jour choisi s'il est dans ce mois, sinon le 1er.
-  const focusKey = monthKeyOf(parseLocalDateKey(selected)) === monthKey ? selected : `${monthKey}-01`;
+  // Le jour focalisable : le jour choisi s'il est dans ce mois, sinon
+  // aujourd'hui s'il y est, sinon le 1er.
+  const focusKey = selected.startsWith(monthKey) ? selected : todayKey.startsWith(monthKey) ? todayKey : `${monthKey}-01`;
 
   useLayoutEffect(() => {
     if (!wantsFocus.current) return;

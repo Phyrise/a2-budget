@@ -109,11 +109,11 @@ export function yearsLabel(occurrence: CalendarOccurrence): string | null {
   return `${years}${NBSP}an${years > 1 ? 's' : ''}`;
 }
 
-/** « Pour AL », « Pour AC », « Tous les deux ». */
+/** « Pour AL », « Pour AC », « Ensemble ». */
 export function whoLabel(who: CalendarWho, names: { a: string; b: string }): string {
   if (who === 'a') return `Pour ${names.a}`;
   if (who === 'b') return `Pour ${names.b}`;
-  return 'Tous les deux';
+  return 'Ensemble';
 }
 
 /** « Aujourd’hui », « Demain », « Samedi 10 octobre ». */

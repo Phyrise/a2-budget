@@ -5,10 +5,10 @@
  * naissance facultative pour afficher l'âge). Suppression : le parent
  * retire l'événement et propose « Annuler » dans un toast.
  */
-import type { CalendarEvent, CalendarEventKind, CalendarWho } from '@a2/core';
+import { parseLocalDateKey, type CalendarEvent, type CalendarEventKind, type CalendarWho } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Companion, Icon, Segmented, Sheet, TextField, cx } from '../../ui';
+import { Button, Companion, Icon, Segmented, Sheet, TextField, cx, longDate } from '../../ui';
 import { Switch } from '../../ui/Switch';
 import { initialValues, reasonMessage, toDraft, validate, type EventFormValues, type EventSheetState, type FieldErrors } from './eventForm';
 import { KINDS, KindIcon, kindStyle } from './kinds';
@@ -120,7 +120,7 @@ export function EventSheet({
   };
 
   const whoOptions = [
-    { value: 'both' as const, ariaLabel: 'Tous les deux', label: <WhoOption who="both" name="Tous les deux" /> },
+    { value: 'both' as const, ariaLabel: 'Ensemble', label: <WhoOption who="both" name="Ensemble" /> },
     { value: 'a' as const, ariaLabel: names.a, label: <WhoOption who="a" name={names.a} /> },
     { value: 'b' as const, ariaLabel: names.b, label: <WhoOption who="b" name={names.b} /> },
   ];
@@ -184,9 +184,15 @@ export function EventSheet({
                 value={v.date}
                 onChange={(event) => set('date', event.target.value)}
                 aria-invalid={errors.date ? true : undefined}
-                aria-describedby={errors.date ? 'event-date-error' : undefined}
+                aria-describedby={errors.date ? 'event-date-error' : 'event-date-hint'}
                 required
               />
+              {!errors.date && /^\d{4}-\d{2}-\d{2}$/.test(v.date) && (
+                <p className="field__hint" id="event-date-hint">
+                  {longDate(parseLocalDateKey(v.date))}
+                  {v.yearly ? ', puis chaque année' : ''}
+                </p>
+              )}
               {errors.date && (
                 <p className="field__error" id="event-date-error" role="alert">
                   {errors.date}

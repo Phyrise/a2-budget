@@ -52,7 +52,7 @@ export function QuickAdd({ now, onSubmit }: { now: Date; onSubmit: (prefill: Qui
         type="text"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder="Ex. dîner chez Léa samedi 20h"
+        placeholder="dîner chez Léa samedi 20h"
         autoComplete="off"
         autoCapitalize="sentences"
         enterKeyHint="go"

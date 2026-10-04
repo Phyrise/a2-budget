@@ -25,14 +25,16 @@ export function CalendarEmpty({ hasPast, onAdd }: { hasPast: boolean; onAdd: () 
   );
 }
 
-export function DayEmpty({ month = false, onAdd }: { month?: boolean; onAdd: () => void }) {
+export function DayEmpty({ month = false, onAdd }: { month?: boolean; onAdd?: () => void }) {
   return (
     <div className="cal-day-empty">
       {KODAMA && <img className="cal-day-empty__art" src={KODAMA} alt="" decoding="async" draggable={false} />}
       <p className="cal-day-empty__text">{month ? 'Rien de prévu ce mois-ci, pour l’instant.' : 'Rien de prévu ce jour-là. Une journée tranquille.'}</p>
-      <Button variant="ghost" size="sm" icon="plus" onClick={onAdd} className="cal-day-empty__add">
-        Prévoir
-      </Button>
+      {onAdd && (
+        <Button variant="ghost" size="sm" icon="plus" onClick={onAdd} className="cal-day-empty__add">
+          Prévoir
+        </Button>
+      )}
     </div>
   );
 }

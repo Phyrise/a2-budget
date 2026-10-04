@@ -95,7 +95,14 @@ export function CalendarScreen() {
     const last = weeks[weeks.length - 1]!;
     return groupByDay(eventsBetween(events, weeks[0]![0]!, last[last.length - 1]!));
   }, [events, weeks]);
-  const upcoming = useMemo(() => nextEvents(events, now, UPCOMING_COUNT), [events, now]);
+  // Quand le jour présent est montré juste au-dessus, « À venir » commence après lui.
+  const upcoming = useMemo(() => {
+    const hideToday = selected === todayKey;
+    const todayCount = hideToday ? eventsOn(events, todayKey).length : 0;
+    return nextEvents(events, now, UPCOMING_COUNT + todayCount)
+      .filter((o) => !(hideToday && o.date === todayKey))
+      .slice(0, UPCOMING_COUNT);
+  }, [events, now, selected, todayKey]);
   const dayOccurrences = useMemo(() => (selected ? eventsOn(events, selected) : []), [events, selected]);
   const monthOccurrences = useMemo(() => {
     const last = weeks[weeks.length - 1]!;
@@ -184,12 +191,12 @@ export function CalendarScreen() {
             dayOccurrences.length > 0 ? (
               <DayEvents occurrences={dayOccurrences} names={names} highlightId={highlightId} onOpen={openEdit} />
             ) : (
-              <DayEmpty onAdd={() => openCreate()} />
+              <DayEmpty onAdd={events.length > 0 ? () => openCreate() : undefined} />
             )
           ) : monthOccurrences.length > 0 ? (
             <UpcomingEvents occurrences={monthOccurrences} today={today} names={names} highlightId={highlightId} onOpen={openEdit} />
           ) : (
-            <DayEmpty month onAdd={() => openCreate()} />
+            <DayEmpty month onAdd={events.length > 0 ? () => openCreate() : undefined} />
           )}
         </section>
 

@@ -26,7 +26,7 @@ export function CalendarBanner({
       <div className="cal-bar">
         <div className="cal-bar__titles">
           {away ? (
-            <button type="button" className="chip chip--glass cal-bar__today" onClick={onToday}>
+            <button type="button" className="chip chip--glass cal-bar__today" onClick={onToday} aria-label="Revenir à aujourd’hui">
               <Icon name="today" size={15} strokeWidth={1.9} />
               Aujourd’hui
             </button>

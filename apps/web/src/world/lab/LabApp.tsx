@@ -10,6 +10,7 @@ import { LivingForest, type LivingForestDebugHandle } from '../LivingForest';
 import type { EngineStats, QualitySetting } from '../engine';
 import type { LivingForestHandle, Mood, WorldLight, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { labManifest, type LabData } from './labManifest';
+import { seasonOf } from '../worldState';
 
 interface LabSettings {
   stage: number;
@@ -78,6 +79,7 @@ export function LabApp() {
       growthProgress: s.progress,
       mood: s.mood,
       paused: s.paused,
+      season: seasonOf(new Date()),
       creatures: s.creature ? ['lab-creature'] : [],
       lights: [...lightList(s.lights), ...extra],
     }),

@@ -8,7 +8,16 @@ import {
   vitalityState,
   type AppState,
 } from '@a2/core';
-import type { Mood, WorldState } from './types';
+import type { Mood, Season, WorldState } from './types';
+
+/** Saison météorologique (hémisphère nord) d'après le mois local. */
+export function seasonOf(now: Date): Season {
+  const m = now.getMonth();
+  if (m >= 2 && m <= 4) return 'spring';
+  if (m >= 5 && m <= 7) return 'summer';
+  if (m >= 8 && m <= 10) return 'autumn';
+  return 'winter';
+}
 
 export function toWorldState(app: AppState, now: Date): WorldState {
   const forest = app.forest;
@@ -28,5 +37,6 @@ export function toWorldState(app: AppState, now: Date): WorldState {
     paused: forest.paused,
     creatures: forest.unlockedCreatureIds,
     lights,
+    season: seasonOf(now),
   };
 }

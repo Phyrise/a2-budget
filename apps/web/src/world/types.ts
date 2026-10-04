@@ -7,6 +7,9 @@
 /** Humeur visible de la forêt (dérivée de vitalityState, jamais de nombre). */
 export type Mood = 'quiet' | 'peaceful' | 'lively' | 'flourishing';
 
+/** Saison (hémisphère nord, date locale). */
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+
 /** Qui a fait la tâche (repère de couleur des lumières du jour). */
 export type Who = 'a' | 'b' | 'both' | 'unassigned';
 
@@ -30,6 +33,8 @@ export interface WorldState {
   creatures: string[];
   /** Tâches faites aujourd'hui, ordre stable. */
   lights: WorldLight[];
+  /** Saison réelle (date locale) : particules saisonnières dans la forêt. */
+  season: Season;
 }
 
 /**
@@ -58,15 +63,30 @@ export interface LivingForestProps {
   onReady?: () => void;
 }
 
+export interface PulseOptions {
+  id: string;
+  who: Who;
+  fromClientX?: number;
+  fromClientY?: number;
+  /** Corvée (effort 3) : lumière plus grande et plus chaude, souffle plus long. */
+  strong?: boolean;
+}
+
 /** Commandes impératives exposées par <LivingForest ref={…}>. */
 export interface LivingForestHandle {
   /**
    * Retour de complétion : une lumière monte depuis le point d'écran donné
    * (ex. la case cochée) et se pose sur son ancre. Coordonnées client (px).
    */
-  pulse(opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number }): void;
+  pulse(opts: PulseOptions): void;
   /** Événement rare du gardien (≈10 s, passable au tap). */
   playGuardian(): void;
+  /**
+   * Lanterne (minuteur de concentration) : progress 0..1 allume une lanterne
+   * dans la clairière dont la lumière grandit ; null l'éteint en douceur.
+   * À 1, courte floraison de lumière. Sans effet si le moteur n'est pas prêt.
+   */
+  focus(progress: number | null, who?: Who): void;
 }
 
 // ---------------------------------------------------------------------------

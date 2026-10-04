@@ -34,6 +34,7 @@ import {
 } from '../../ui';
 import type { CompanionMood, Who } from '../../world/types';
 import { useWorld } from '../../world/WorldContext';
+import { RitualsBar } from '../rituals/RitualsBar';
 import { TaskSheet, type TaskSheetState } from './TaskSheet';
 import { assigneeName, moodPhrase, recurrenceLabel } from './taskText';
 import './maison.css';
@@ -344,6 +345,8 @@ export function MaisonScreen() {
             </ol>
           </div>
         )}
+
+        <RitualsBar />
 
         <div className="sheet-section maison__footer">
           <p className="week-line">

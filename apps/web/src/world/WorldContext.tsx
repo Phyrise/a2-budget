@@ -17,7 +17,7 @@ import {
 } from 'react';
 import { useApp } from '../state/store';
 import { LivingForest } from './LivingForest';
-import type { LivingForestHandle, WorldMotion, WorldState, WorldVariant, Who } from './types';
+import type { LivingForestHandle, PulseOptions, WorldMotion, WorldState, WorldVariant, Who } from './types';
 import { toWorldState } from './worldState';
 
 export interface WorldPresentation {
@@ -32,8 +32,10 @@ interface WorldContextValue {
   state: WorldState | null;
   presentation: WorldPresentation;
   setPresentation: (p: WorldPresentation) => void;
-  pulse: (opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number }) => void;
+  pulse: (opts: PulseOptions) => void;
   playGuardian: () => void;
+  /** Lanterne : progression 0..1, ou null pour l'éteindre. */
+  focus: (progress: number | null, who?: Who) => void;
   /** Utilisé uniquement par <WorldStage>. */
   handleRef: React.MutableRefObject<LivingForestHandle | null>;
 }
@@ -51,10 +53,11 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   }, []);
   const pulse = useCallback<WorldContextValue['pulse']>((opts) => handleRef.current?.pulse(opts), []);
   const playGuardian = useCallback(() => handleRef.current?.playGuardian(), []);
+  const focus = useCallback((progress: number | null, who?: Who) => handleRef.current?.focus(progress, who), []);
 
   const value = useMemo(
-    () => ({ state, presentation, setPresentation, pulse, playGuardian, handleRef }),
-    [state, presentation, setPresentation, pulse, playGuardian],
+    () => ({ state, presentation, setPresentation, pulse, playGuardian, focus, handleRef }),
+    [state, presentation, setPresentation, pulse, playGuardian, focus],
   );
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;
 }

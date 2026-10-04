@@ -179,6 +179,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
     (): LivingForestDebugHandle => ({
       pulse: (opts) => engineRef.current?.pulse(opts),
       playGuardian: () => engineRef.current?.playGuardian(),
+      // TODO(MONDE V3) : lanterne dans la scène ; sans effet en attendant.
+      focus: () => {},
       stats: () => engineRef.current?.stats() ?? null,
       setQuality: (q) => {
         qualityRef.current = q;

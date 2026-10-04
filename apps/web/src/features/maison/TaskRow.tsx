@@ -30,9 +30,9 @@ export function TaskMeta({ task, turn, names, id }: { task: HouseholdTask; turn:
       ) : (
         <span>{assigneeName(turn, names)}</span>
       )}
+      {task.effort === 3 && <span className="visually-hidden">, </span>}
       {task.effort === 3 && (
         <span className="chore-badge">
-          <span className="visually-hidden">, </span>
           <CairnMark size={12} />
           corvée
         </span>

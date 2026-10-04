@@ -22,7 +22,7 @@ const FORBIDDEN = [
   /merci serait/i,
   /un merci s[’']impose/i,
   /tu as de la chance/i,
-  /quand tu veux/i,
+  /quand tu veux, tu/i,
   /enfin quelqu[’']un/i,
   /moins attendu|en attendais pas moins/i,
   /te juger/i,

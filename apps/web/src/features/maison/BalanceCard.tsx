@@ -18,7 +18,7 @@ import {
 } from '@a2/core';
 import { useMemo } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Companion, Disclosure, Icon, fr, useToast } from '../../ui';
+import { Button, Companion, Disclosure, Icon, NBSP, fr, useToast } from '../../ui';
 import { BalanceStones } from './BalanceStones';
 import type { Names } from './TaskRow';
 import { assigneeName } from './taskText';

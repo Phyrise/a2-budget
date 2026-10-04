@@ -317,12 +317,24 @@
   }
 }
 
-/* Clavier ouvert sur mobile : la navigation s'efface. */
+/*
+ * Clavier ouvert sur mobile : la navigation s'efface, et revient dès qu'il
+ * se ferme — même si le champ garde le focus (iPhone). Détection par la
+ * géométrie de visualViewport (app/useKeyboardOpen.ts), pas par le focus.
+ */
 @media (pointer: coarse) {
-  .app:has(.app-main input:focus, .app-main textarea:focus, .app-main select:focus) .app-dock {
+  .app--keyboard .app-dock {
     transform: translateY(140%);
     opacity: 0;
+    pointer-events: none;
   }
+}
+
+/* Lune / soleil de l'en-tête (pause de la maison). */
+.pause-toggle.is-paused {
+  color: var(--amber-300);
+  border-color: rgba(221, 179, 106, 0.4);
+  box-shadow: 0 0 18px rgba(221, 179, 106, 0.25);
 }
 
 /* ------------------------------------------------------------------ */

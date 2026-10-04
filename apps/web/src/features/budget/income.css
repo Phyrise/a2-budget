@@ -1,0 +1,68 @@
+/* Revenus V3.1 : compléments (heures sup, astreintes, gardes), repliés tant qu'ils valent 0. */
+
+.person-card__add-bonus {
+  position: relative;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  margin-top: 8px;
+  padding: 0 11px 0 8px;
+  border: 1px dashed color-mix(in srgb, var(--who) 35%, rgba(185, 198, 189, 0.3));
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fog-300);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color var(--dur-base) var(--ease-soft),
+    color var(--dur-base) var(--ease-soft);
+}
+
+/* Zone tactile de 44 px sans alourdir la carte. */
+.person-card__add-bonus::after {
+  content: '';
+  position: absolute;
+  inset: -7px -6px;
+}
+
+.person-card__add-bonus:hover {
+  background: rgba(236, 230, 211, 0.06);
+  color: var(--ivory-100);
+}
+
+.person-card__add-bonus .icon {
+  color: color-mix(in srgb, var(--who) 80%, var(--fog-300));
+}
+
+.person-card__bonus {
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.person-card__bonus .amount-input__field {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 17px;
+}
+
+.person-card__bonus .field__hint {
+  padding-left: 2px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.person-card__bonus .field__error {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.breakdown__rates {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(185, 198, 189, 0.16);
+}

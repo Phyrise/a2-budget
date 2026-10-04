@@ -25,7 +25,10 @@ import { WorldProvider, WorldStage, useWorld } from '../world/WorldContext';
 import { MODULES, type ModuleId } from './prefs';
 import { SaveIndicator } from './SaveIndicator';
 import { ShellProvider, useMediaQuery, useShell } from './ShellContext';
+import { useSoundEvents } from './sound';
 import { UpdatePrompt } from './UpdatePrompt';
+import { useKeyboardOpen } from './useKeyboardOpen';
+import { usePauseToggle } from './usePauseToggle';
 
 const NAV_ICONS: Record<ModuleId, IconName> = { budget: 'budget', maison: 'home', courses: 'basket' };
 
@@ -82,6 +85,20 @@ function usePageVisible(): boolean {
   return visible;
 }
 
+/** Lune (mettre en pause) / soleil (réveiller), à côté des Réglages sur Maison. */
+function PauseButton() {
+  const { paused, toggle } = usePauseToggle();
+  return (
+    <IconButton
+      icon={paused ? 'sun' : 'moon'}
+      label={paused ? 'Réveiller la forêt' : 'Mettre la maison en pause'}
+      variant="glass"
+      className={cx('pause-toggle', paused && 'is-paused')}
+      onClick={toggle}
+    />
+  );
+}
+
 function Header({ solid }: { solid: boolean }) {
   const { module, openSheet } = useShell();
   return (
@@ -100,6 +117,7 @@ function Header({ solid }: { solid: boolean }) {
       <div className="app-header__end">
         <SaveIndicator />
         <IconButton icon="history" label={HISTORY_TITLES[module]} variant="glass" onClick={() => openSheet('history')} />
+        {module === 'maison' && <PauseButton />}
         <IconButton icon="settings" label="Réglages" variant="glass" onClick={() => openSheet('settings')} />
       </div>
     </header>
@@ -141,6 +159,9 @@ function Shell() {
   const visible = usePageVisible();
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const shownModule = useRef(module);
+  const keyboardOpen = useKeyboardOpen();
+  // Petits sons de la forêt (tâche faite, créature, croissance…), montés une fois.
+  useSoundEvents();
 
   // Présentation du monde selon module, largeur, recouvrement et préférence.
   const variant = isDesktop ? 'backdrop' : module === 'maison' ? 'hero' : 'banner';
@@ -162,7 +183,7 @@ function Shell() {
 
   return (
     <div
-      className={cx('app', `app--${module}`, isDesktop && 'app--desktop')}
+      className={cx('app', `app--${module}`, isDesktop && 'app--desktop', keyboardOpen && 'app--keyboard')}
       style={{ '--world-ratio': WORLD_RATIO[module] } as CSSProperties}
     >
       <div className="app-world" aria-hidden="true">

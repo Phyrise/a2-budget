@@ -16,14 +16,17 @@ import {
   ConfirmDialog,
   Icon,
   InlineTextField,
-  RateInput,
   Segmented,
+  Switch,
   useToast,
   type IconName,
 } from '../../ui';
 import type { WorldMotion } from '../../world/types';
 import { ExpenseAddForm, ExpenseEditorList } from '../budget/ExpenseList';
 import { ImportControl } from './ImportControl';
+import { SharedRatesEditor } from './SharedRates';
+import { SoundSetting } from '../../app/sound';
+import { usePauseToggle } from '../../app/usePauseToggle';
 import './settings.css';
 
 function Section({ id, icon, title, children, description }: { id: string; icon: IconName; title: string; description?: ReactNode; children: ReactNode }) {
@@ -68,25 +71,10 @@ function PersonSettingsCard({ person, settings }: { person: 'A' | 'B'; settings:
       </div>
       <AmountInput
         id={`base-salary-${who}`}
-        label="Salaire de base"
+        label="Salaire habituel"
         valueCents={settings.baseSalaryCents}
         onCommit={(cents) => updatePersonSettings(person, { baseSalaryCents: cents })}
-        hint="Prérempli chaque nouveau mois."
       />
-      <div className="settings-person__rates">
-        <RateInput
-          id={`base-rate-${who}`}
-          label="Taux de base"
-          valueBps={settings.baseRateBps}
-          onCommit={(bps) => updatePersonSettings(person, { baseRateBps: bps })}
-        />
-        <RateInput
-          id={`variable-rate-${who}`}
-          label="Taux au-delà"
-          valueBps={settings.variableRateBps}
-          onCommit={(bps) => updatePersonSettings(person, { variableRateBps: bps })}
-        />
-      </div>
     </div>
   );
 }
@@ -113,12 +101,12 @@ export function SettingsSheetContent() {
     addRecurringExpense,
     setDefaultReserve,
     applySettingsToCurrentMonth,
-    toggleHomePause,
     exportJson,
     confirmReset,
   } = useApp();
   const { prefs, updatePrefs } = useShell();
   const toast = useToast();
+  const { toggle: togglePause } = usePauseToggle();
   const [adding, setAdding] = useState(false);
   const [confirmApply, setConfirmApply] = useState(false);
   const [confirmReset2, setConfirmReset2] = useState(false);
@@ -145,11 +133,20 @@ export function SettingsSheetContent() {
 
   return (
     <div className="settings">
-      <Section id="people" icon="users" title="Vous deux" description="Noms, salaires de base et taux. Ils s’appliquent aux nouveaux mois.">
+      <Section id="people" icon="users" title="Vous deux" description="Prénoms et salaires habituels, repris à chaque nouveau mois.">
         <div className="settings-people">
           <PersonSettingsCard person="A" settings={settings.personA} />
           <PersonSettingsCard person="B" settings={settings.personB} />
         </div>
+      </Section>
+
+      <Section
+        id="rates"
+        icon="budget"
+        title="Taux communs"
+        description="Les mêmes pour vous deux : la part de chaque revenu versée au pot commun. Ils s’appliquent aux nouveaux mois."
+      >
+        <SharedRatesEditor settings={settings} />
       </Section>
 
       <Section id="recurring" icon="repeat" title="Dépenses récurrentes" description="Copiées dans chaque nouveau mois.">
@@ -186,8 +183,8 @@ export function SettingsSheetContent() {
         title="Appliquer au mois affiché"
         description={
           <>
-            Remplace les personnes, dépenses et réserve de <strong>{monthLabel}</strong> par ces réglages. Les salaires saisis sont
-            conservés.
+            Remplace les taux, dépenses et réserve de <strong>{monthLabel}</strong> par ces réglages. Les salaires et compléments
+            saisis sont conservés.
           </>
         }
       >
@@ -201,20 +198,28 @@ export function SettingsSheetContent() {
         )}
       </Section>
 
-      <Section id="forest" icon="leaf" title="Forêt" description="La maison en pause : la forêt dort, rien ne se perd.">
-        <Button variant={paused ? 'primary' : 'quiet'} icon={paused ? 'sun' : 'moon'} onClick={toggleHomePause}>
-          {paused ? 'Réveiller la forêt' : 'Mettre la maison en pause'}
-        </Button>
+      <Section id="pause" icon="moon" title="Maison en pause" description="Vacances, semaine chargée, coup de fatigue : la forêt dort, rien ne se perd.">
+        <Switch
+          id="home-pause"
+          checked={paused}
+          onChange={togglePause}
+          label="Maison en pause"
+          description={paused ? 'La forêt dort. Elle reprendra où vous l’avez laissée.' : 'Aussi d’un geste, avec la lune en haut de Maison.'}
+        />
+      </Section>
+
+      <Section id="prefs" icon="leaf" title="Préférences" description="Rien que pour cet appareil.">
         <div className="settings__motion">
           <Segmented
             name="forest-motion"
-            legend="Mouvement de la forêt"
+            legend="Forêt"
             options={MOTION_OPTIONS}
             value={prefs.forestMotion}
             onChange={(forestMotion) => updatePrefs({ forestMotion })}
           />
           <p className="field__hint">{MOTION_HELP[prefs.forestMotion]}</p>
         </div>
+        <SoundSetting />
       </Section>
 
       <Section id="backup" icon="download" title="Sauvegarde" description="Un fichier JSON pour garder vos données ou les passer sur un autre appareil.">
@@ -256,7 +261,7 @@ export function SettingsSheetContent() {
           toast.show({ message: `Réglages appliqués à ${monthLabel}`, icon: 'check' });
         }}
       >
-        <p>Les personnes, les dépenses et la réserve de ce mois seront remplacées par les réglages actuels. Les salaires saisis restent.</p>
+        <p>Les taux, les dépenses et la réserve de ce mois seront remplacés par les réglages actuels. Les salaires et compléments saisis restent.</p>
       </ConfirmDialog>
 
       <ConfirmDialog

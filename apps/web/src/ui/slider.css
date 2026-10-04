@@ -1,0 +1,185 @@
+/* Curseur (ui/Slider) : piste mousse, remplissage ambre, pouce ivoire 28 px. */
+
+.slider {
+  --slider-track: 8px;
+  --slider-thumb: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.slider__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.slider__titles {
+  min-width: 0;
+}
+
+.slider__label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ivory-100);
+}
+
+.slider__hint {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-faint);
+}
+
+.slider__value {
+  flex: none;
+  min-width: 3.2em;
+  font-size: 28px;
+  font-weight: 520;
+  line-height: 1;
+  text-align: right;
+  color: var(--ivory-50);
+  transform-origin: right bottom;
+  transition:
+    transform var(--dur-base, 200ms) var(--ease-out, ease-out),
+    color var(--dur-base, 200ms) var(--ease-soft, ease);
+}
+
+/* Pendant le geste : la valeur grandit et prend la lumière. */
+.slider.is-active .slider__value {
+  color: var(--amber-300);
+  transform: scale(1.22);
+}
+
+.slider__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.slider__step {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: rgba(236, 230, 211, 0.05);
+  color: var(--ivory-100);
+  transition:
+    background-color var(--dur-base, 200ms) var(--ease-soft, ease),
+    transform 120ms var(--ease-soft, ease);
+}
+
+.slider__step:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.1);
+}
+
+.slider__step:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.slider__step:disabled {
+  opacity: 0.35;
+}
+
+.slider__input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.slider__input:focus {
+  outline: none;
+}
+
+.slider__input::-webkit-slider-runnable-track {
+  height: var(--slider-track);
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--amber-500) 0%,
+    var(--amber-400) var(--fill, 0%),
+    rgba(185, 198, 189, 0.18) var(--fill, 0%)
+  );
+}
+
+.slider__input::-webkit-slider-thumb {
+  width: var(--slider-thumb);
+  height: var(--slider-thumb);
+  margin-top: calc((var(--slider-track) - var(--slider-thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fffaf0, var(--ivory-100) 60%, var(--ivory-200));
+  box-shadow:
+    0 0 0 4px rgba(221, 179, 106, 0.22),
+    0 3px 10px rgba(0, 0, 0, 0.45);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: box-shadow var(--dur-base, 200ms) var(--ease-soft, ease), transform 140ms var(--ease-out, ease-out);
+}
+
+.slider__input::-moz-range-track {
+  height: var(--slider-track);
+  border-radius: 999px;
+  background: rgba(185, 198, 189, 0.18);
+}
+
+.slider__input::-moz-range-progress {
+  height: var(--slider-track);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--amber-500), var(--amber-400));
+}
+
+.slider__input::-moz-range-thumb {
+  width: var(--slider-thumb);
+  height: var(--slider-thumb);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ivory-100);
+  box-shadow:
+    0 0 0 4px rgba(221, 179, 106, 0.22),
+    0 3px 10px rgba(0, 0, 0, 0.45);
+}
+
+.slider.is-dragging .slider__input::-webkit-slider-thumb,
+.slider__input:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 9px rgba(221, 179, 106, 0.2),
+    0 3px 12px rgba(0, 0, 0, 0.5);
+}
+
+.slider__input:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 3px var(--ink-900, #0d1712),
+    0 0 0 6px var(--focus-ring);
+}
+
+.slider__input:focus-visible::-moz-range-thumb {
+  box-shadow:
+    0 0 0 3px var(--ink-900, #0d1712),
+    0 0 0 6px var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slider__value,
+  .slider__input::-webkit-slider-thumb {
+    transition: none;
+  }
+
+  .slider.is-active .slider__value {
+    transform: none;
+  }
+}

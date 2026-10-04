@@ -4,67 +4,16 @@
  * ensemble), dépenses, reste. Tous les chiffres viennent de @a2/core
  * (computeMonthSummary, computeContributionBreakdown) : aucun calcul ici.
  */
-import { computeContributionBreakdown, currentMonthKey, monthKeyToLabel, type MonthRecord } from '@a2/core';
+import { currentMonthKey, hasSharedRates, monthKeyToLabel, sharedRates } from '@a2/core';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
-import { AmountInput, Companion, Disclosure, Icon, IconButton, cx, euro, euroMinus, euroShort, percent, shiftMonthKey } from '../../ui';
+import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, euroMinus, percent, shiftMonthKey } from '../../ui';
 import { ExpenseList } from './ExpenseList';
+import { BreakdownLine, PersonCard } from './PersonCard';
 import './budget.css';
 
-function PersonCard({ person, month, contributionCents }: { person: 'A' | 'B'; month: MonthRecord; contributionCents: number }) {
-  const { setSalary } = useApp();
-  const who = person === 'A' ? 'a' : 'b';
-  const settings = person === 'A' ? month.personA : month.personB;
-  const salary = person === 'A' ? month.salaryACents : month.salaryBCents;
-  return (
-    <article className={cx('person-card', `person-card--${who}`)} aria-label={`${settings.name}`}>
-      <header className="person-card__head">
-        <Companion who={who} size={34} />
-        <h3 className="person-card__name">{settings.name}</h3>
-      </header>
-      <AmountInput
-        id={`salary-${who}`}
-        label={`Salaire de ${settings.name}`}
-        labelVisible={false}
-        appearance="large"
-        valueCents={salary}
-        onCommit={(cents) => setSalary(month.monthKey, person, cents)}
-        className="person-card__salary"
-      />
-      <p className="person-card__caption" aria-hidden="true">
-        Salaire du mois
-      </p>
-      <div className="person-card__gives">
-        <span className="person-card__gives-label">verse</span>
-        <strong className="amount person-card__contribution" data-testid={`contribution-${who}`}>
-          {euro(contributionCents)}
-        </strong>
-      </div>
-    </article>
-  );
-}
-
-function BreakdownLine({ name, salary, settings }: { name: string; salary: number; settings: MonthRecord['personA'] }) {
-  const b = computeContributionBreakdown(salary, settings);
-  return (
-    <p className="breakdown__line">
-      <span className="breakdown__who">{name}&nbsp;:</span>{' '}
-      <span className="num">
-        {percent(settings.baseRateBps)} × {euroShort(b.baseIncomeCents)}
-        {b.variableIncomeCents > 0 && (
-          <>
-            {' '}
-            + {percent(settings.variableRateBps)} × {euroShort(b.variableIncomeCents)}
-          </>
-        )}
-      </span>{' '}
-      <span className="breakdown__eq">= {euroShort(b.contributionCents)}</span>
-    </p>
-  );
-}
-
 export function BudgetScreen() {
-  const { currentMonth, currentSummary, selectMonth, selectCurrentMonth, setReserve, today } = useApp();
+  const { state, currentMonth, currentSummary, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, today } = useApp();
 
   if (currentMonth === null || currentSummary === null) {
     return (
@@ -88,6 +37,14 @@ export function BudgetScreen() {
   const split = label.lastIndexOf(' ');
   const monthName = split > 0 ? label.slice(0, split) : label;
   const year = split > 0 ? label.slice(split + 1) : '';
+  // Taux du mois ≠ taux communs des réglages : proposé, jamais imposé.
+  const common = state ? sharedRates(state.settings) : null;
+  const monthRates = sharedRates(currentMonth);
+  const ratesDiffer =
+    common !== null &&
+    (!hasSharedRates(currentMonth) ||
+      monthRates.baseRateBps !== common.baseRateBps ||
+      monthRates.variableRateBps !== common.variableRateBps);
 
   return (
     <>
@@ -128,8 +85,8 @@ export function BudgetScreen() {
             <h2 className="section-title">À verser ce mois</h2>
           </div>
           <div className="person-grid">
-            <PersonCard person="A" month={currentMonth} contributionCents={s.contributionACents} />
-            <PersonCard person="B" month={currentMonth} contributionCents={s.contributionBCents} />
+            <PersonCard key={`${key}-a`} person="A" month={currentMonth} contributionCents={s.contributionACents} />
+            <PersonCard key={`${key}-b`} person="B" month={currentMonth} contributionCents={s.contributionBCents} />
           </div>
 
           <div className={cx('ledger', deficit && 'ledger--deficit')} aria-label="Équilibre du mois">
@@ -161,12 +118,28 @@ export function BudgetScreen() {
 
           <Disclosure summary="Détail du calcul" className="breakdown">
             <div className="breakdown__body">
-              <BreakdownLine name={currentMonth.personA.name} salary={currentMonth.salaryACents} settings={currentMonth.personA} />
-              <BreakdownLine name={currentMonth.personB.name} salary={currentMonth.salaryBCents} settings={currentMonth.personB} />
+              <BreakdownLine name={currentMonth.personA.name} breakdown={s.breakdownA} settings={currentMonth.personA} />
+              <BreakdownLine name={currentMonth.personB.name} breakdown={s.breakdownB} settings={currentMonth.personB} />
               <p className="breakdown__help">
-                Jusqu’au salaire de base, chacun verse son taux de base&#8239;; au-delà, le taux variable. Les taux se règlent dans
-                les Réglages.
+                Le salaire compte au taux de base, les compléments (heures sup, astreintes, gardes, souvent payés le mois
+                suivant) au taux au-delà. Les taux sont communs à vous deux et se règlent dans les Réglages.
               </p>
+              {ratesDiffer && common !== null && (
+                <div className="breakdown__rates">
+                  <p className="breakdown__help">
+                    Ce mois garde ses taux d’origine. Les taux communs actuels sont {percent(common.baseRateBps)} et{' '}
+                    {percent(common.variableRateBps)}.
+                  </p>
+                  <Button
+                    variant="quiet"
+                    size="sm"
+                    icon="check"
+                    onClick={() => setMonthSharedRates(key, common.baseRateBps, common.variableRateBps)}
+                  >
+                    Appliquer les taux communs à ce mois
+                  </Button>
+                </div>
+              )}
             </div>
           </Disclosure>
         </div>

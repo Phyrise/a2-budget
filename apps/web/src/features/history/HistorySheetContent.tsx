@@ -6,7 +6,7 @@
  * - Courses : derniers articles achetés.
  * Lecture seule (aucune écriture, sauf « Effacer les mois passés » confirmé).
  */
-import { compareMonthKeys, computeMonthSummary, localDateKey, monthKeyToLabel, recentGroceryPurchases } from '@a2/core';
+import { compareMonthKeys, computeMonthSummary, localDateKey, monthIncomeCents, monthKeyToLabel, recentGroceryPurchases } from '@a2/core';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
@@ -77,9 +77,9 @@ function BudgetHistory() {
                   <span className="history-stat">
                     <span className="history-stat__label">Revenus</span>
                     <span className="history-stat__value num">
-                      {m.personA.name} {euro(m.salaryACents)}
+                      {m.personA.name} {euro(monthIncomeCents(m, 'A'))}
                       <br />
-                      {m.personB.name} {euro(m.salaryBCents)}
+                      {m.personB.name} {euro(monthIncomeCents(m, 'B'))}
                     </span>
                   </span>
                   <span className="history-stat">

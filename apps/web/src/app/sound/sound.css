@@ -1,0 +1,21 @@
+/* Réglage « Petits sons » — même langage que les autres lignes des Réglages. */
+
+.sound-setting {
+  display: grid;
+  gap: 8px;
+}
+
+.sound-setting__try {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding-left: 4px;
+}
+
+.sound-setting__sample {
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}

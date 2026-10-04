@@ -10,7 +10,10 @@ import {
 } from 'react';
 import {
   applySettingsToMonth as coreApplySettingsToMonth,
+  setSharedRates as coreSetSharedRates,
   computeMonthSummary,
+  MAX_AMOUNT_CENTS,
+  MAX_RATE_BPS,
   ensureMonth as coreEnsureMonth,
   emptyAppState,
   migrateState,
@@ -197,7 +200,15 @@ export interface AppContextValue extends CareActions {
   clearHistory: () => void;
 
   // Édition du mois
+  /** Salaire du mois (entièrement au taux de base). */
   setSalary: (monthKey: string, person: 'A' | 'B', cents: number) => void;
+  /** Compléments du mois (heures sup, astreintes, gardes), au taux au-delà. */
+  setBonus: (monthKey: string, person: 'A' | 'B', cents: number) => void;
+  /**
+   * Taux communs du couple appliqués aux règles du mois indiqué (les deux
+   * personnes). Action explicite : les autres mois ne changent pas.
+   */
+  setMonthSharedRates: (monthKey: string, baseRateBps: number, variableRateBps: number) => void;
   setReserve: (monthKey: string, cents: number) => void;
   setExpenseAmount: (monthKey: string, expenseId: string, cents: number) => void;
   renameExpense: (monthKey: string, expenseId: string, label: string) => void;
@@ -205,7 +216,10 @@ export interface AppContextValue extends CareActions {
   removeExpense: (monthKey: string, expenseId: string) => void;
 
   // Réglages (s'appliquent aux NOUVEAUX mois, jamais aux mois existants)
+  /** Nom, salaire habituel (préremplit un nouveau mois)… Les taux : `setSharedRates`. */
   updatePersonSettings: (person: 'A' | 'B', patch: Partial<Omit<PersonSettings, 'id'>>) => void;
+  /** Taux communs du couple (réglages : écrits pour les deux personnes). */
+  setSharedRates: (baseRateBps: number, variableRateBps: number) => void;
   /** Renomme une personne (nom nettoyé, vide ignoré → false) ; household.people suit. */
   renamePerson: (person: 'A' | 'B', name: string) => boolean;
   updateRecurringExpense: (expenseId: string, patch: Partial<Omit<Expense, 'id'>>) => void;
@@ -232,6 +246,11 @@ const STORAGE_UNAVAILABLE_MESSAGE =
   'mais aucune modification ne sera sauvegardée. Réessayez, ou vérifiez les paramètres du navigateur.';
 
 /** Identifiant stable, avec repli hors contexte sécurisé (LAN en HTTP). */
+/** Taux en bps valide (entier 0–10000) : garde-fou avant une transition qui lèverait. */
+function isRateBps(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= MAX_RATE_BPS;
+}
+
 function mapMonth(
   state: PersistedState,
   monthKey: string,
@@ -433,6 +452,26 @@ export function AppProvider({
     [mutate],
   );
 
+  const setBonus = useCallback(
+    (monthKey: string, person: 'A' | 'B', cents: number) => {
+      if (!Number.isInteger(cents) || cents < 0 || cents > MAX_AMOUNT_CENTS) return;
+      mutate((s) =>
+        mapMonth(s, monthKey, (m) =>
+          person === 'A' ? { ...m, bonusACents: cents } : { ...m, bonusBCents: cents },
+        ),
+      );
+    },
+    [mutate],
+  );
+
+  const setMonthSharedRates = useCallback(
+    (monthKey: string, baseRateBps: number, variableRateBps: number) => {
+      if (!isRateBps(baseRateBps) || !isRateBps(variableRateBps)) return;
+      mutate((s) => mapMonth(s, monthKey, (m) => coreSetSharedRates(m, baseRateBps, variableRateBps)));
+    },
+    [mutate],
+  );
+
   const setReserve = useCallback(
     (monthKey: string, cents: number) => {
       mutate((s) => mapMonth(s, monthKey, (m) => ({ ...m, reserveTargetCents: cents })));
@@ -502,6 +541,14 @@ export function AppProvider({
           },
         },
       }));
+    },
+    [mutate],
+  );
+
+  const setSharedRates = useCallback(
+    (baseRateBps: number, variableRateBps: number) => {
+      if (!isRateBps(baseRateBps) || !isRateBps(variableRateBps)) return;
+      mutate((s) => ({ ...s, settings: coreSetSharedRates(s.settings, baseRateBps, variableRateBps) }));
     },
     [mutate],
   );
@@ -837,12 +884,15 @@ export function AppProvider({
       selectCurrentMonth,
       clearHistory,
       setSalary,
+      setBonus,
+      setMonthSharedRates,
       setReserve,
       setExpenseAmount,
       renameExpense,
       addExpense,
       removeExpense,
       updatePersonSettings,
+      setSharedRates,
       renamePerson,
       updateRecurringExpense,
       addRecurringExpense,
@@ -878,12 +928,15 @@ export function AppProvider({
       selectCurrentMonth,
       clearHistory,
       setSalary,
+      setBonus,
+      setMonthSharedRates,
       setReserve,
       setExpenseAmount,
       renameExpense,
       addExpense,
       removeExpense,
       updatePersonSettings,
+      setSharedRates,
       renamePerson,
       updateRecurringExpense,
       addRecurringExpense,

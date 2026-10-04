@@ -6,9 +6,11 @@
  *   mémorisé sous une clé dédiée `a2-budget:courses:v1` (comme les petits
  *   sons, `a2-budget:ui:v1` appartenant à la coquille), lecture et écriture
  *   protégées. Jamais `localStorage.clear()`.
- * - Les sons réutilisent le vocabulaire existant (`soundEngine`) : un souffle
- *   pour le coup de balai, un carillon discret quand l'article tombe dans le
- *   panier, une note douce quand on le ressort, deux notes pour l'envol.
+ * - Sons : le coup de balai (`broom`) et la clochette du panier vidé
+ *   (`shopBell`) sont joués par la coquille à partir du changement d'état
+ *   (app/sound/detect.ts) ; l'écran n'ajoute que ce que l'état ne dit pas :
+ *   un carillon discret quand l'article tombe dans le panier et une note
+ *   douce quand on le ressort.
  */
 import { localDateKey, type GroceryItem } from '@a2/core';
 import { soundEngine } from '../../app/sound';
@@ -89,18 +91,12 @@ export function prefersReducedMotion(): boolean {
 
 /** Petits sons des courses (sans effet si les sons sont coupés). */
 export const coursesSounds = {
-  /** Coup de balai, puis l'article tombe dans le panier. */
+  /** L'article tombe dans le panier (le balai, lui, sonne via la coquille). */
   sweep(reduced: boolean): void {
-    if (!reduced) soundEngine.play('skip');
-    soundEngine.play('done', { delayMs: reduced ? 0 : 480 });
+    if (!reduced) soundEngine.play('done', { delayMs: 520 });
   },
   /** L'article ressort du panier. */
   unsweep(): void {
     soundEngine.play('undo');
-  },
-  /** Kiki s'envole avec le sac de provisions. */
-  flight(reduced: boolean): void {
-    if (!reduced) soundEngine.play('skip');
-    soundEngine.play('circle', { delayMs: reduced ? 0 : 520 });
   },
 };

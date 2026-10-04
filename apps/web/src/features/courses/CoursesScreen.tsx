@@ -174,7 +174,6 @@ export function CoursesScreen() {
     const reduced = prefersReducedMotion();
     const message = `${plural(n, 'article')} rangé${n > 1 ? 's' : ''} dans l’historique`;
     setFlight({ reduced });
-    coursesSounds.flight(reduced);
     if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
     flightTimer.current = window.setTimeout(
       () => {

@@ -22,7 +22,7 @@ export function fmt(cents: number): string {
 }
 
 /** Ouvre l'app sur un module donné (via `?module=`, toujours pris en charge). */
-export async function openApp(page: Page, module?: 'budget' | 'maison' | 'courses') {
+export async function openApp(page: Page, module?: 'budget' | 'maison' | 'courses' | 'calendar') {
   await page.goto(module ? `${APP}?module=${module}` : APP);
   await expect(page.locator('.screen-sheet')).toBeVisible();
 }
@@ -31,7 +31,7 @@ export function nav(page: Page) {
   return page.getByRole('navigation', { name: 'Modules de la maison' });
 }
 
-export async function goTo(page: Page, name: 'Budget' | 'Maison' | 'Courses') {
+export async function goTo(page: Page, name: 'Budget' | 'Maison' | 'Courses' | 'Calendrier') {
   const button = nav(page).getByRole('button', { name, exact: true });
   await button.click();
   await expect(button).toHaveAttribute('aria-current', 'page');

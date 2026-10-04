@@ -106,14 +106,14 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
       return;
     case 'undo':
       // Note douce qui redescend, à peine.
-      tone(bus, t, N.B4, { peak: 0.085, attack: 0.012, decay: 0.34, glideTo: N.Fs5 / 2, glideTime: 0.16, wet: 0.25 });
+      tone(bus, t, N.B4, { peak: 0.2, attack: 0.012, decay: 0.36, glideTo: N.Fs5 / 2, glideTime: 0.16, wet: 0.25 });
       return;
     case 'skip':
       // Souffle de vent léger : monte, puis s'en va.
       breath(bus, t, {
         sweep: [[0, 420], [0.38, 1100], [0.85, 600]],
         q: 0.9,
-        shape: [[0.32, 0.2], [0.6, 0.09], [0.9, 0]],
+        shape: [[0.32, 0.3], [0.6, 0.13], [0.9, 0]],
         wet: 0.45,
       });
       return;
@@ -130,7 +130,7 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
     case 'guardian':
       // Nappe éthérée, longue mais discrète (≤ 3 s).
       [N.E4, N.B4, N.E5, N.Gs5].forEach((f, i) => {
-        const peak = 0.034 - i * 0.004;
+        const peak = 0.026 - i * 0.003;
         tone(bus, t, f, { peak, attack: 0.9, hold: 1.5, decay: 2.9, wet: 0.85, detune: -5 });
         tone(bus, t, f, { peak: peak * 0.8, attack: 1.0, hold: 1.5, decay: 2.9, wet: 0.85, detune: 5, type: 'triangle' });
       });

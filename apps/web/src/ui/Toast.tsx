@@ -2,7 +2,7 @@
  * Messages éphémères (« Pommes retirées · Annuler »). Région aria-live polie,
  * au-dessus de la navigation. Un seul message à la fois : le suivant remplace.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 import { cx } from './format';
 
@@ -37,6 +37,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const idRef = useRef(0);
   const currentRef = useRef<ToastItem | null>(null);
   const pendingRef = useRef<ToastOptions | null>(null);
+  const toastEl = useRef<HTMLDivElement | null>(null);
+
+  // Hauteur occupée par le message (--toast-lift) : la bulle flottante d'un
+  // compagnon s'empile au-dessus au lieu d'être recouverte.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    const el = toastEl.current;
+    if (toast === null || leaving || el === null) {
+      root.style.removeProperty('--toast-lift');
+      return;
+    }
+    const apply = () => root.style.setProperty('--toast-lift', `${Math.ceil(el.getBoundingClientRect().height) + 10}px`);
+    apply();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [toast, leaving]);
 
   const show = useCallback((options: ToastOptions) => {
     if (options.priority === 'low' && currentRef.current !== null) {
@@ -79,7 +97,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-region" role="status" aria-live="polite">
         {toast && (
-          <div key={toast.id} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, leaving && 'is-leaving')}>
+          <div key={toast.id} ref={toastEl} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, leaving && 'is-leaving')}>
             {toast.icon && <Icon name={toast.icon} size={20} className="toast__icon" />}
             <span className="toast__message">{toast.message}</span>
             {toast.action && (

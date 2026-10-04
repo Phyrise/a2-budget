@@ -4,7 +4,7 @@
  * - Éphémère et jamais bloquante : aucun focus, aucun clic intercepté
  *   (pointer-events: none) ; le parent décide de la durée.
  * - La région `aria-live="polite"` est toujours montée : chaque nouvelle
- *   réplique est annoncée une fois par les lecteurs d'écran.
+ *   réplique est annoncée une fois par les lecteurs d'écran (sauf `quiet`).
  * - Variantes : `perch` (au-dessus des compagnons perchés sur la feuille,
  *   queue vers la droite), `floating` (en bas d'écran avec une petite tête
  *   du compagnon, quand les compagnons perchés sont hors de vue), `inline`
@@ -22,6 +22,11 @@ export interface CompanionBubbleData {
   key: number;
   /** Phase de sortie (fondu) avant retrait. */
   leaving?: boolean;
+  /**
+   * Non annoncée aux lecteurs d'écran : un message (toast) parle déjà du
+   * même geste, inutile d'empiler deux annonces.
+   */
+  quiet?: boolean;
 }
 
 const NAMES = { a: 'Jiji', b: 'Calcifer' } as const;
@@ -38,7 +43,11 @@ export function CompanionBubble({
   return (
     <div className={cx('cbubble-region', `cbubble-region--${variant}`, className)} aria-live="polite" aria-atomic="true">
       {bubble && (
-        <div key={bubble.key} className={cx('cbubble', `cbubble--${bubble.who}`, bubble.leaving && 'is-leaving')}>
+        <div
+          key={bubble.key}
+          className={cx('cbubble', `cbubble--${bubble.who}`, bubble.leaving && 'is-leaving')}
+          aria-hidden={bubble.quiet === true ? true : undefined}
+        >
           {variant === 'floating' && <Companion who={bubble.who} size={34} mood="happy" className="cbubble__face" />}
           <p className="cbubble__body">
             <span className="cbubble__name">{NAMES[bubble.who]}</span>

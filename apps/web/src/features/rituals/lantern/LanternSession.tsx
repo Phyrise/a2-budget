@@ -25,6 +25,19 @@ function useNow(active: boolean): number {
   return now;
 }
 
+/**
+ * Annonce vocale du temps restant, seulement aux paliers (début, mi-parcours,
+ * dernière minute) et à la pause : un moment calme ne doit pas être
+ * interrompu chaque minute. Entre deux paliers, le texte ne change pas.
+ */
+function spokenRemaining(total: number, minuteLeft: number, paused: boolean): string {
+  if (paused) return `Lanterne en pause, ${remainingWords(minuteLeft * 60000)}`;
+  const half = Math.ceil(total / 2);
+  const milestone =
+    minuteLeft >= total ? total : minuteLeft > half ? total : minuteLeft > 1 ? half : 1;
+  return remainingWords(milestone * 60000);
+}
+
 const SOUNDS: ReadonlyArray<{ value: LanternSound; label: string }> = [
   { value: 'off', label: 'Silence' },
   { value: 'rain', label: 'Pluie' },
@@ -48,9 +61,11 @@ export function LanternRunning({ names, onHide }: { names: Names; onHide: () => 
         <p className="lantern-stage__time display num" aria-hidden="true">
           {clock(remaining)}
         </p>
-        <p className="visually-hidden" aria-live="polite">
-          {paused ? 'Lanterne en pause, ' : ''}
+        <p className="visually-hidden" role="timer">
           {remainingWords(minuteLeft * 60000)}
+        </p>
+        <p className="visually-hidden" aria-live="polite">
+          {spokenRemaining(config.minutes, minuteLeft, paused)}
         </p>
         <p className="lantern-stage__label">
           <Companion who={config.who} size={22} />
@@ -143,7 +158,7 @@ export function LanternDone({ names, onAgain, onClose }: { names: Names; onAgain
       <p className="lantern-stage__sub">
         {s.minutesSpent >= 1
           ? `${durationWords(s.minutesSpent).replace(/^./, (c) => c.toUpperCase())} de calme${config.who === 'both' ? ' à deux' : ''}${config.label ? ` pour «${NB}${config.label}${NB}»` : ''}.`
-          : 'Rien n’est perdu : la forêt garde la lumière pour la prochaine fois.'}
+          : `Rien n’est perdu${NB}: la forêt garde la lumière pour la prochaine fois.`}
       </p>
 
       <div className="ritual-bubble" role="status">

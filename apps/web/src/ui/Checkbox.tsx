@@ -18,8 +18,10 @@ export const Checkbox = forwardRef<
     className?: string;
     disabled?: boolean;
     size?: 'md' | 'sm';
+    /** id d'un élément qui décrit la case (aria-describedby). */
+    describedBy?: string;
   }
->(function Checkbox({ checked, label, onToggle, tone = 'neutral', className, disabled, size = 'md' }, ref) {
+>(function Checkbox({ checked, label, onToggle, tone = 'neutral', className, disabled, size = 'md', describedBy }, ref) {
   const handle = (event: MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const fromKeyboard = event.detail === 0;
@@ -35,6 +37,7 @@ export const Checkbox = forwardRef<
       role="checkbox"
       aria-checked={checked}
       aria-label={label}
+      aria-describedby={describedBy}
       disabled={disabled}
       onClick={handle}
       className={cx('check', `check--${tone}`, size === 'sm' && 'check--sm', checked && 'is-checked', className)}

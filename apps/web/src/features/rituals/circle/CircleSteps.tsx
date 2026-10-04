@@ -138,7 +138,7 @@ export function StepBurdens({ names, draft, onChange }: { names: Names; draft: C
             label={`Ce qui a pesé pour ${names[who]} cette semaine`}
             value={draft.burdens[who]}
             onChange={(v) => onChange(who, v)}
-            placeholder="Par exemple : penser à tout pour le week-end"
+            placeholder="Par exemple : penser à tout pour le week-end"
           />
         </section>
       ))}

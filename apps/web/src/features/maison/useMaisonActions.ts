@@ -53,6 +53,23 @@ export function checkContext(opts: {
   return { context: 'check', speaker: speakerFor(who), mood: 'happy' };
 }
 
+/**
+ * Avant qu'une ligne cochée ne quitte la liste : si le focus clavier / lecteur
+ * d'écran y était, le confier à la case suivante (à défaut la précédente, puis
+ * le titre « Aujourd'hui ») au lieu de le laisser retomber sur <body>.
+ */
+function handOffFocus(taskId: string) {
+  if (typeof document === 'undefined') return;
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('.task-list:not(.task-list--done) > .task-row'));
+  const row = rows.find((r) => r.dataset.taskId === taskId);
+  if (!row || !row.classList.contains('is-leaving') || !row.contains(document.activeElement)) return;
+  const i = rows.indexOf(row);
+  const candidates = [...rows.slice(i + 1), ...rows.slice(0, i).reverse()];
+  const next = candidates.find((r) => !r.classList.contains('is-leaving'));
+  const target = next?.querySelector<HTMLElement>('button.check') ?? document.getElementById('maison-title');
+  target?.focus();
+}
+
 export function useMaisonActions(names: Names, snapshot: Snapshot) {
   const { toggleHomeTask, skipToday, unskipToday, toggleHomePause } = useApp();
   const world = useWorld();
@@ -99,7 +116,10 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
     const who = (result.doneBy ?? planned) as Who;
     world.pulse({ id: completionId, who, fromClientX: origin.x, fromClientY: origin.y, ...(task.effort === 3 ? { strong: true } : {}) });
     setLingering((m) => ({ ...m, [task.id]: completionId }));
-    later(() => dropLingering(task.id, completionId), LINGER_MS);
+    later(() => {
+      handOffFocus(task.id);
+      dropLingering(task.id, completionId);
+    }, LINGER_MS);
     const { context, speaker, mood } = checkContext({
       task,
       planned,
@@ -124,7 +144,8 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
     });
     const speaker = speakerFor(planned);
     react(speaker, 'curious');
-    voice.say('skip', speaker);
+    // Le toast annonce déjà le geste : la bulle reste visuelle.
+    voice.say('skip', speaker, { quiet: true });
   };
 
   const restore = (task: HouseholdTask) => {

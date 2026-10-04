@@ -6,7 +6,7 @@ import { Icon, cx } from '../ui';
  * Indicateur d'enregistrement discret :
  * - « Enregistré » éphémère, seulement après une action de l'utilisateur
  *   (pas à l'ouverture de l'app ni au changement de jour) ;
- * - erreur persistante tant que la sauvegarde échoue.
+ * - erreur persistante tant que la sauvegarde échoue (seule annonce vocale).
  *
  * Le statut du store peut passer « saved → saving → saved » dans le même
  * rendu (écriture synchrone résolue en microtâche) : on s'appuie donc sur le
@@ -68,7 +68,10 @@ export function SaveIndicator() {
   }
 
   return (
-    <p className={cx('save-indicator', visible && 'is-visible')} role="status" aria-live="polite">
+    // Purement visuel : chaque geste a déjà son retour (case, toast, bulle) ;
+    // l'annoncer en plus rendrait le lecteur d'écran bavard. Seule l'erreur
+    // est annoncée (role=alert ci-dessus).
+    <p className={cx('save-indicator', visible && 'is-visible')} aria-hidden="true">
       <Icon name="check" size={14} strokeWidth={2} />
       <span>{visible ? 'Enregistré' : ''}</span>
     </p>

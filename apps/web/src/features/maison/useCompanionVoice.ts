@@ -30,13 +30,13 @@ export function useCompanionVoice(names: { a: string; b: string }) {
 
   useEffect(() => clearTimers, []);
 
-  const say = useCallback((context: BubbleContext, speaker: Speaker) => {
+  const say = useCallback((context: BubbleContext, speaker: Speaker, opts: { quiet?: boolean } = {}) => {
     const n = namesRef.current;
     const text = pickLine(speaker, context, { humain: n[speaker], autre: speaker === 'a' ? n.b : n.a });
     clearTimers();
     seq.current += 1;
     const key = seq.current;
-    setBubble({ who: speaker, text, key });
+    setBubble(opts.quiet === true ? { who: speaker, text, key, quiet: true } : { who: speaker, text, key });
     const duration = bubbleDuration(text);
     timers.current.push(
       window.setTimeout(() => setBubble((b) => (b?.key === key ? { ...b, leaving: true } : b)), duration),

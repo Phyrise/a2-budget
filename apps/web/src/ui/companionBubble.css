@@ -17,8 +17,9 @@
 .cbubble-region--floating {
   position: fixed;
   right: max(14px, calc((100vw - var(--content-max)) / 2 + 14px));
-  bottom: calc(var(--nav-height) + var(--safe-bottom) + 26px);
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 26px + var(--toast-lift, 0px));
   z-index: 40;
+  transition: bottom 220ms var(--ease-out);
   width: min(300px, calc(100vw - 28px));
   display: flex;
   justify-content: flex-end;

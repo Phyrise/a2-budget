@@ -4,6 +4,7 @@
  * annulable). Qui s'en charge = nextAssignee (« Tour d’AL » en tour à tour).
  */
 import type { ChoreCompletion, HouseholdTask, TaskAssignee } from '@a2/core';
+import { useId } from 'react';
 import { Checkbox, Companion, Icon, clockTime, cx } from '../../ui';
 import type { CompanionMood } from '../../world/types';
 import { CairnMark } from './EffortArt';
@@ -12,14 +13,15 @@ import { assigneeName, recurrenceLabel, turnLabel } from './taskText';
 export type Names = { a: string; b: string };
 export type Origin = { x: number; y: number };
 
-export function TaskMeta({ task, turn, names }: { task: HouseholdTask; turn: TaskAssignee; names: Names }) {
+export function TaskMeta({ task, turn, names, id }: { task: HouseholdTask; turn: TaskAssignee; names: Names; id?: string }) {
   const rotating = task.rotation === true && (turn === 'a' || turn === 'b');
   return (
-    <span className="task-row__meta">
+    <span className="task-row__meta" id={id}>
       <span>{recurrenceLabel(task)}</span>
       <span className="task-row__dot" aria-hidden="true">
         ·
       </span>
+      <span className="visually-hidden">, </span>
       {rotating ? (
         <span className="task-row__turn">
           <Icon name="repeat" size={13} strokeWidth={1.8} />
@@ -30,6 +32,7 @@ export function TaskMeta({ task, turn, names }: { task: HouseholdTask; turn: Tas
       )}
       {task.effort === 3 && (
         <span className="chore-badge">
+          <span className="visually-hidden">, </span>
           <CairnMark size={12} />
           corvée
         </span>
@@ -58,6 +61,8 @@ export function TaskRow({
   onToggle: (task: HouseholdTask, origin: Origin) => void;
   onMenu: (task: HouseholdTask) => void;
 }) {
+  const uid = useId();
+  const metaId = `${uid}-meta`;
   return (
     <li
       className={cx('task-row', checked && 'is-done', celebrating && 'is-leaving', task.effort === 3 && 'is-chore')}
@@ -69,17 +74,24 @@ export function TaskRow({
         tone={turn}
         onToggle={(origin) => onToggle(task, origin)}
         className={celebrating ? 'is-celebrating' : undefined}
+        describedBy={metaId}
       />
       <button
         type="button"
         className="task-row__body"
         onClick={() => onMenu(task)}
-        aria-label={`Options : ${task.title}`}
+        aria-labelledby={`${uid}-opt ${uid}-title`}
+        aria-describedby={metaId}
         aria-haspopup="dialog"
       >
+        <span id={`${uid}-opt`} className="visually-hidden">
+          Options :
+        </span>
         <span className="task-row__text">
-          <span className="task-row__title">{task.title}</span>
-          <TaskMeta task={task} turn={turn} names={names} />
+          <span id={`${uid}-title`} className="task-row__title">
+            {task.title}
+          </span>
+          <TaskMeta task={task} turn={turn} names={names} id={metaId} />
         </span>
         <Companion who={turn} size={34} mood={mood} reactKey={celebrating ? 'go' : 'rest'} />
         <span className="task-row__more" aria-hidden="true">

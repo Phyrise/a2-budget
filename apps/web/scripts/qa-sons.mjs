@@ -162,7 +162,9 @@ check('« pas aujourd’hui » : souffle de vent', JSON.stringify(heard) === '["
 heard = await act(() => window.__app.saveCircle({ gratitude: [{ from: 'a', to: 'b', text: 'Merci pour le dîner' }], burdens: [], intentions: [] }));
 check('cercle de la semaine : deux notes', JSON.stringify(heard) === '["circle"]', heard);
 heard = await act(() => window.__app.addFocusSession({ minutes: 10, who: 'a', label: 'Rangement' }));
-check('lanterne terminée : floraison', JSON.stringify(heard) === '["lantern"]', heard);
+// La floraison est jouée par le contrôleur de la lanterne (menée au bout
+// seulement) : une session mémorisée seule ne sonne pas (qa-corrections-v31).
+check('session de lanterne mémorisée : silence (floraison au contrôleur)', heard.length === 0, heard);
 heard = await act(() => window.__app.importJson(window.__app.exportJson()));
 check('import d’une sauvegarde : aucun son', heard.length === 0, heard);
 await page.evaluate(() => window.__app.addGrocery('2 pommes'));

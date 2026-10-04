@@ -79,7 +79,7 @@ let idleTimer: number | null = null;
 let suspending = false;
 let busyUntil = 0;
 /** Durée laissée à un son (réverbération comprise) avant la veille. */
-const CUE_TAIL_MS = 2500;
+const CUE_TAIL_MS = 3000;
 /** Repos avant la mise en veille du contexte. */
 const IDLE_MS = 1500;
 const listeners = new Set<(record: CueRecord) => void>();

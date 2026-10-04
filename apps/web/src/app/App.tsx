@@ -7,8 +7,10 @@
  *   et carnet de 480 px à droite.
  * - Le contenu défile par-dessus : fenêtre sur la forêt (--world-h) puis la
  *   feuille encre. La scène se fige quand elle est recouverte ou masquée.
- * - En-tête (marque + Historique / Réglages), pilule de navigation, feuilles
- *   globales, indicateur d'enregistrement, mise à jour PWA.
+ * - En-tête (marque + Historique / lune de pause sur Maison / Réglages),
+ *   pilule de navigation (effacée seulement pendant que le clavier est
+ *   ouvert), feuilles globales, indicateur d'enregistrement, mise à jour PWA,
+ *   petits sons de la forêt (useSoundEvents, monté une fois).
  */
 import '../styles/base.css';
 import '../styles/ui.css';

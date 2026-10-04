@@ -1,6 +1,7 @@
 /**
- * Réglages (feuille) : personnes, dépenses récurrentes, réserve par défaut,
- * « Appliquer au mois affiché », forêt (pause, mouvement), sauvegarde,
+ * Réglages (feuille) : personnes (prénom, salaire habituel), taux communs au
+ * curseur, dépenses récurrentes, réserve par défaut, « Appliquer au mois
+ * affiché », maison en pause, préférences (forêt, sons), sauvegarde,
  * recommencer à zéro, à propos. Les valeurs par défaut s'appliquent aux
  * nouveaux mois ; les mois existants ne changent jamais sans action explicite.
  */

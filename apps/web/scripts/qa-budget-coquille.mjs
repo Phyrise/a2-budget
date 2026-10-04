@@ -208,6 +208,30 @@ await page.waitForTimeout(500);
 check('blur : barre visible', await dockShown());
 await page.setViewportSize({ width: 390, height: 844 });
 
+// --- 6. Petits et grands écrans ---------------------------------------------------
+const small = await browser.newContext({ ...devices['iPhone SE'], viewport: { width: 320, height: 640 }, deviceScaleFactor: 2 });
+const p320 = await small.newPage();
+p320.on('pageerror', (e) => errors.push(String(e)));
+await seed(p320, 'budget');
+await p320.getByRole('button', { name: 'Ajouter des compléments pour AL' }).tap();
+await p320.locator('#bonus-a').fill('120,50');
+await p320.locator('#bonus-a').blur();
+await p320.waitForTimeout(250);
+check('320 px : pas de débordement horizontal', await p320.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+await shot(p320, '09-budget-320');
+await small.close();
+
+const desk = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const pd = await desk.newPage();
+pd.on('pageerror', (e) => errors.push(String(e)));
+await seed(pd, 'maison');
+await pd.getByRole('button', { name: 'Réglages', exact: true }).click();
+await pd.getByRole('dialog', { name: 'Réglages' }).waitFor();
+await pd.waitForTimeout(500);
+await pd.locator('#rates-title').scrollIntoViewIfNeeded();
+await shot(pd, '10-reglages-1440');
+await desk.close();
+
 check('aucune erreur console', errors.length === 0, errors);
 await browser.close();
 console.log(failures.length === 0 ? '\nQA budget-coquille : tout est vert.' : `\nQA budget-coquille : ${failures.length} échec(s).`);

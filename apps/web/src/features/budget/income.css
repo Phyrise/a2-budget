@@ -33,7 +33,16 @@
 }
 
 .person-card__add-bonus .icon {
+  flex: none;
   color: color-mix(in srgb, var(--who) 80%, var(--fog-300));
+}
+
+@media (max-width: 359px) {
+  .person-card__add-bonus {
+    gap: 3px;
+    padding: 0 8px 0 6px;
+    font-size: 12.5px;
+  }
 }
 
 .person-card__bonus {

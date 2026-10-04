@@ -1,8 +1,9 @@
 /**
  * Budget — « le Foyer ». Règle d'or : lisible en 2 secondes, rien ne bouge.
- * Premier écran (390 × 844) : mois, salaires des deux, à verser (AL, AC,
- * ensemble), dépenses, reste. Tous les chiffres viennent de @a2/core
- * (computeMonthSummary, computeContributionBreakdown) : aucun calcul ici.
+ * Premier écran (390 × 844) : mois, salaires des deux (+ compléments
+ * repliables : heures sup, astreintes, gardes), à verser (AL, AC, ensemble),
+ * dépenses, reste. Tous les chiffres viennent de @a2/core
+ * (computeMonthSummary et son détail breakdownA/B) : aucun calcul ici.
  */
 import { currentMonthKey, hasSharedRates, monthKeyToLabel, sharedRates } from '@a2/core';
 import { ShellNotices } from '../../app/ShellNotices';

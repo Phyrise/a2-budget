@@ -43,6 +43,7 @@ interface KodamaState {
   peekUntil: number;
 }
 
+/** Durée d'un hochement spontané / pour un pulse fort (s). */
 const NOD = 1.4;
 const NOD_STRONG = 2.2;
 
@@ -173,11 +174,10 @@ export class Spirits {
   }
 
   busy(now: number): boolean {
-    // Seuls les kodama visibles comptent : un hochement caché ne relance pas le rendu.
-    return (
-      this.k.some((s) => (s.vis > 0.01 && now - s.nodAt < (s.nodAmp > 0.1 ? NOD_STRONG : NOD)) || now < s.peekUntil + 2) ||
-      this.guardianActive(now)
-    );
+    // Les hochements spontanés suivent la cadence courante (lents : 15–30 fps
+    // suffisent) ; seuls un regard vers un pulse fort, une sortie ou le gardien
+    // demandent 60 fps.
+    return this.k.some((s) => (s.nodAmp > 0.1 && now - s.nodAt < NOD_STRONG) || now < s.peekUntil + 2) || this.guardianActive(now);
   }
 
   draws(now: number, night: number, fog: number, guardian: GuardianFrame): SpriteDraw[] {

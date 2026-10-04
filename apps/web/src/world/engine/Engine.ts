@@ -10,18 +10,21 @@ import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, LutName, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
+import { changeStage, GROW_SECONDS } from './growth';
 import { bindEngineEvents } from './input';
 import { Lantern } from './lantern';
 import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
 import { Pipeline } from './pipeline';
+import { DPR_CAPS, QualityMeter, type EngineStats, type QualitySetting } from './quality';
 import { Resources, type StageTextures } from './resources';
 import { SeasonFx } from './seasons';
 import { Spirits } from './spirits';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
-export type QualitySetting = 'auto' | 0 | 1 | 2;
+export type { EngineStats, QualitySetting } from './quality';
+export { DPR_CAPS } from './quality';
 
 export interface EngineConfig {
   manifest: WorldManifest;
@@ -33,19 +36,6 @@ export interface EngineConfig {
   onContextLost?: () => void;
 }
 
-export interface EngineStats {
-  fps: number;
-  frameMs: number;
-  tier: number;
-  targetFps: number;
-  memoryMB: number;
-  dpr: number;
-  /** Images rendues depuis la création (mesure du débit réel). */
-  frames: number;
-}
-
-export const DPR_CAPS = [1.5, 1.25, 1] as const;
-const GROW_SECONDS = 3.6;
 const LUT_SECONDS = 3;
 
 export class WorldEngine {
@@ -84,20 +74,16 @@ export class WorldEngine {
   gust = 0;
   rayBoost = 0;
   tier = 0;
-  private ema = 16;
-  private frames = 0;
-  private slowFor = 0;
-  private emaFrame = 0;
-  private emaInterval = 16;
+  private readonly meter = new QualityMeter();
   private lastFrameAt = 0;
-  private startAt = 0;
   private raf = 0;
   private visible = true;
   private destroyed = false;
   private lost = false;
   private firstFrame = false;
   private ready = false;
-  private loadingStage: GrowthStage | null = null;
+  /** Stade en cours de chargement (growth.ts). */
+  loadingStage: GrowthStage | null = null;
   readonly cleanups: (() => void)[] = [];
 
   constructor(
@@ -194,7 +180,7 @@ export class WorldEngine {
     const animate = this.animated;
     if (!old || old.mood !== s.mood || old.paused !== s.paused) this.applyMoodTarget(false);
     this.lights.sync(s.lights, now(), animate || this.cfg.motion === 'still');
-    if (clampStage(s.stage) !== this.stage?.stage) void this.changeStage(clampStage(s.stage));
+    if (clampStage(s.stage) !== this.stage?.stage) void changeStage(this, clampStage(s.stage));
     if (old?.creatures.join() !== s.creatures.join()) void this.syncCreatures().then(() => this.requestFrame(true));
     if (old && old.season !== s.season) this.requestFrame(true);
     this.requestFrame(true);
@@ -226,35 +212,6 @@ export class WorldEngine {
     if (dur === 0) return 1;
     const k = Math.min(1, Math.max(0, (n - this.lutStart) / dur));
     return k * k * (3 - 2 * k);
-  }
-
-  private async changeStage(stage: GrowthStage) {
-    if (this.loadingStage === stage) return;
-    this.loadingStage = stage;
-    try {
-      const st = await this.res.loadStage(stage);
-      if (this.destroyed || this.loadingStage !== stage) {
-        this.res.free(st.color);
-        this.res.free(st.depth);
-        return;
-      }
-      this.disposePrev();
-      const smooth = this.animated || (this.cfg.motion === 'still' && this.cfg.live);
-      if (smooth && this.stage) {
-        this.prev = this.stage;
-        this.growStart = now();
-        this.growDur = this.animated ? GROW_SECONDS : 0.7;
-      } else if (this.stage) {
-        this.res.free(this.stage.color);
-        this.res.free(this.stage.depth);
-      }
-      this.stage = st;
-      this.requestFrame(true);
-    } catch {
-      /* échec de chargement : on garde le stade affiché */
-    } finally {
-      if (this.loadingStage === stage) this.loadingStage = null;
-    }
   }
 
   disposePrev() {
@@ -407,8 +364,7 @@ export class WorldEngine {
     const dt = this.lastNow ? Math.min(0.1, Math.max(0, n - this.lastNow)) : 0;
     this.lastNow = n;
     renderWorld(this, n, dt, fps);
-    this.frames++;
-    this.emaFrame += (performance.now() - t0 - this.emaFrame) * 0.1;
+    this.meter.frame(performance.now() - t0);
     if (!this.firstFrame) {
       this.firstFrame = true;
       // Laisse le compositeur afficher l'image avant le fondu enchaîné.
@@ -417,24 +373,18 @@ export class WorldEngine {
   }
 
   private trackQuality(interval: number) {
-    this.emaInterval += (interval * 1000 - this.emaInterval) * 0.1;
-    if (!this.startAt) this.startAt = this.lastNow;
-    if (this.cfg.quality !== 'auto' || this.tier >= 2 || this.lastNow - this.startAt < 3) return;
-    this.ema = this.emaInterval;
-    if (this.ema > 24) this.slowFor += interval;
-    else this.slowFor = Math.max(0, this.slowFor - interval);
-    if (this.slowFor > 1.5) {
+    if (this.meter.interval(interval, this.lastNow, this.cfg.quality === 'auto' && this.tier < 2)) {
       this.tier++;
-      this.slowFor = 0;
       this.applySize();
     }
   }
 
   stats(): EngineStats {
+    const m = this.meter;
+    const n = now();
     return {
-      fps: 1000 / Math.max(1, this.emaInterval), frameMs: this.emaFrame, tier: this.tier,
-      targetFps: this.targetFps(now(), this.isBusy(now())), memoryMB: this.res.memoryMB, dpr: this.dpr,
-      frames: this.frames,
+      fps: m.fps, frameMs: m.frameMs, tier: this.tier, targetFps: this.targetFps(n, this.isBusy(n)),
+      memoryMB: this.res.memoryMB, dpr: this.dpr, frames: m.frames,
     };
   }
 }

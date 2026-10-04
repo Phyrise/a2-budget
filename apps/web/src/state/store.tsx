@@ -33,7 +33,9 @@ import {
   type GroceryAuthor,
   type GroceryItem,
   type GroceryItemPatch,
+  type ChoreDoer,
   type TaskAssignee,
+  type TaskEffort,
   type TaskRecurrence,
   type HouseholdTask,
   type Expense,
@@ -44,6 +46,10 @@ import {
 } from '@a2/core';
 import { LocalStorageAdapter, type StorageAdapter } from './storage';
 import { buildExportJson, parseImportJson, type ImportSummary } from './exportImport';
+import { useCareActions, type CareActions } from './careActions';
+import { newId } from './ids';
+
+export type { CareActions, CircleInput, FocusInput } from './careActions';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -70,11 +76,20 @@ export interface NewHomeTaskInput {
   weeklyDay?: number;
   /** monthly : jour du mois 1..31 (ajusté au dernier jour des mois courts). Défaut : aujourd'hui. */
   monthlyDay?: number;
+  /** V3 — 1 petit geste · 2 tâche · 3 corvée. */
+  effort?: TaskEffort;
+  /** V3 — tour à tour (exige assignee 'a' ou 'b' = qui commence). */
+  rotation?: boolean;
+  /** V3 — hebdomadaire souple : n'importe quel jour de la semaine (weekly seulement). */
+  flexible?: boolean;
 }
 
 /** Champs modifiables d'une tâche Maison. */
 export type HomeTaskPatch = Partial<
-  Pick<HouseholdTask, 'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay'>
+  Pick<
+    HouseholdTask,
+    'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'effort' | 'rotation' | 'flexible'
+  >
 >;
 
 /** Résultat synchrone d'une bascule de tâche (pour lancer l'animation). */
@@ -87,6 +102,8 @@ export interface ToggleHomeTaskResult {
    * due aujourd'hui, état pas encore chargé).
    */
   completionId: string | null;
+  /** V3 — qui a fait l'occurrence cochée / décochée (`doneBy ?? assignee`) ; null si rien n'a changé. */
+  doneBy: TaskAssignee | null;
 }
 
 /** Résultat synchrone d'un ajout aux courses. */
@@ -103,7 +120,7 @@ export interface RemovedGrocery {
   index: number;
 }
 
-export interface AppContextValue {
+export interface AppContextValue extends CareActions {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
@@ -135,9 +152,11 @@ export interface AppContextValue {
    * Coche / décoche l'occurrence du jour (ou l'unique occurrence d'une
    * ponctuelle). Synchrone : le résultat est calculé avant setState.
    * Crédits forêt : cap quotidien, tombstone à l'annulation, recocher ne
-   * redonne pas de crédit.
+   * redonne pas de crédit. V3 : `opts.doneBy` = qui l'a vraiment fait
+   * (« je m'en occupe ») ; défaut : à qui c'était le tour. Une occurrence
+   * passée (« pas aujourd'hui ») n'est pas cochable (unskipToday d'abord).
    */
-  toggleHomeTask: (task: HouseholdTask) => ToggleHomeTaskResult;
+  toggleHomeTask: (task: HouseholdTask, opts?: { doneBy?: ChoreDoer }) => ToggleHomeTaskResult;
   /** « Mettre la maison en pause » / « Réveiller la forêt ». */
   toggleHomePause: () => void;
 
@@ -213,13 +232,6 @@ const STORAGE_UNAVAILABLE_MESSAGE =
   'mais aucune modification ne sera sauvegardée. Réessayez, ou vérifiez les paramètres du navigateur.';
 
 /** Identifiant stable, avec repli hors contexte sécurisé (LAN en HTTP). */
-function newId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
-  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 function mapMonth(
   state: PersistedState,
   monthKey: string,
@@ -599,6 +611,9 @@ export function AppProvider({
             recurrence: input.recurrence,
             weeklyDay: input.recurrence === 'weekly' ? (input.weeklyDay ?? isoWeekday(now)) : undefined,
             monthlyDay: input.recurrence === 'monthly' ? (input.monthlyDay ?? now.getDate()) : undefined,
+            ...(input.effort !== undefined ? { effort: input.effort } : {}),
+            ...(input.rotation === true ? { rotation: true } : {}),
+            ...(input.flexible === true && input.recurrence === 'weekly' ? { flexible: true } : {}),
           },
           localDateKey(now),
         );
@@ -656,15 +671,19 @@ export function AppProvider({
   );
 
   const toggleHomeTask = useCallback(
-    (task: HouseholdTask): ToggleHomeTaskResult => {
+    (task: HouseholdTask, opts?: { doneBy?: ChoreDoer }): ToggleHomeTaskResult => {
       const now = new Date();
       const completionId = newId();
+      const doneBy = opts?.doneBy;
       return transact<ToggleHomeTaskResult>(
         (s) => {
-          const r = toggleTaskToday(s, task.id, now, completionId);
-          return { state: r.state, result: { completed: r.completed, completionId: r.completionId } };
+          const r = toggleTaskToday(s, task.id, now, completionId, doneBy !== undefined ? { doneBy } : {});
+          return {
+            state: r.state,
+            result: { completed: r.completed, completionId: r.completionId, doneBy: r.doneBy ?? null },
+          };
         },
-        { completed: false, completionId: null },
+        { completed: false, completionId: null, doneBy: null },
       );
     },
     [transact],
@@ -674,6 +693,9 @@ export function AppProvider({
     const day = localDateKey(new Date());
     setAppState(previous => previous ? { ...previous, forest: previous.forest.paused ? resumeForest(previous.forest, day) : pauseForest(advanceDay(previous.forest, day), day) } : previous);
   }, []);
+
+  // --- V3 « Prendre soin ensemble » (passages, suggestions, cercle, lanternes)
+  const care = useCareActions(transact);
 
   // --- Courses ------------------------------------------------------------
 
@@ -798,6 +820,7 @@ export function AppProvider({
       deleteHomeTask,
       toggleHomeTask,
       toggleHomePause,
+      ...care,
       addGrocery,
       toggleGrocery,
       removeGrocery,
@@ -838,6 +861,7 @@ export function AppProvider({
       deleteHomeTask,
       toggleHomeTask,
       toggleHomePause,
+      care,
       addGrocery,
       toggleGrocery,
       removeGrocery,

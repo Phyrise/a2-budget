@@ -29,7 +29,7 @@ export function toWorldState(app: AppState, now: Date): WorldState {
   const lights = app.chores.completions
     .filter((c) => localDateKey(new Date(c.completedAt)) === today)
     .sort((x, y) => x.completedAt.localeCompare(y.completedAt))
-    .map((c) => ({ id: c.id, who: c.assignee }));
+    .map((c) => ({ id: c.id, who: c.doneBy ?? c.assignee }));
   return {
     stage,
     growthProgress,

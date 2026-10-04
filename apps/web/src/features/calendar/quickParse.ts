@@ -10,8 +10,9 @@
  *
  * Reconnus (accents et majuscules indifférents) :
  * - jours : aujourd'hui, ce soir, ce midi, demain, après-demain, lundi…
- *   dimanche (« samedi prochain » = le prochain samedi ; le jour même compte
- *   pour aujourd'hui), « le 12 », « 12 octobre (2027) », « 1er mai »,
+ *   dimanche (le jour même = aujourd'hui ; « samedi prochain » = le samedi
+ *   qui vient, dans 7 jours si c'est aujourd'hui), « le 12 », « 12 octobre
+ *   (2027) », « 1er mai »,
  *   « 12/10(/2027) » ;
  * - heures : « 20h », « 20 h 30 », « 20:30 », « à midi », plages « de 14h à
  *   16h », « 14h-16h » ;

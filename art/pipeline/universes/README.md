@@ -49,7 +49,7 @@ Ensuite : `pnpm typecheck && pnpm build`.
 | Script | Rôle |
 | --- | --- |
 | `ucommon.py` | chemins, défrangeage, réduction en alpha prémultiplié, propagation sous l'alpha nul, export WebP, planche de contrôle |
-| `banners.py` | bandeaux opaques (qualité 82, sans agrandissement) + `qa/banners.png` avec les cadrages recommandés (rouge = bandeau mobile 390×200, bleu = fond 16:9) |
+| `banners.py` | bandeaux opaques (qualité 82, sans agrandissement) + `qa/banner-crops.png` : rendu réel des cadrages recommandés (bandeau mobile 390×200, fond 16:9, fond téléphone 390×844) |
 | `sheets.py` | **description des planches** : case → nom, taille cible, groupe d'échelle, coupes |
 | `sprites.py` | découpe par composantes connexes de l'alpha, attribution aux cases, export, `qa/<planche>.png` |
 | `qa_edges.py` | `qa/edges.png` : bords agrandis ×2 sur fonds clair / sombre / coloré |

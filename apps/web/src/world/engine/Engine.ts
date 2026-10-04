@@ -40,6 +40,8 @@ export interface EngineStats {
   targetFps: number;
   memoryMB: number;
   dpr: number;
+  /** Images rendues depuis la création (mesure du débit réel). */
+  frames: number;
 }
 
 export const DPR_CAPS = [1.5, 1.25, 1] as const;
@@ -83,6 +85,7 @@ export class WorldEngine {
   rayBoost = 0;
   tier = 0;
   private ema = 16;
+  private frames = 0;
   private slowFor = 0;
   private emaFrame = 0;
   private emaInterval = 16;
@@ -400,6 +403,7 @@ export class WorldEngine {
     const dt = this.lastNow ? Math.min(0.1, Math.max(0, n - this.lastNow)) : 0;
     this.lastNow = n;
     renderWorld(this, n, dt, fps);
+    this.frames++;
     this.emaFrame += (performance.now() - t0 - this.emaFrame) * 0.1;
     if (!this.firstFrame) {
       this.firstFrame = true;
@@ -426,6 +430,7 @@ export class WorldEngine {
     return {
       fps: 1000 / Math.max(1, this.emaInterval), frameMs: this.emaFrame, tier: this.tier,
       targetFps: this.targetFps(now(), this.isBusy(now())), memoryMB: this.res.memoryMB, dpr: this.dpr,
+      frames: this.frames,
     };
   }
 }

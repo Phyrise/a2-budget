@@ -16,7 +16,7 @@ const WHIRL_SECONDS = 2.8;
 
 /** Densité par saison (avant paliers de qualité) et code du shader. */
 const SEASON_CFG: Record<Season, { count: number; code: number; tint: [number, number, number] }> = {
-  spring: { count: 22, code: 0, tint: [1.01, 0.995, 1.0] },
+  spring: { count: 30, code: 0, tint: [1.01, 0.995, 1.0] },
   summer: { count: 0, code: -1, tint: [1.0, 1.0, 0.99] },
   autumn: { count: 26, code: 1, tint: [1.035, 1.0, 0.94] },
   winter: { count: 90, code: 2, tint: [0.95, 0.985, 1.05] },
@@ -27,14 +27,14 @@ const SEASON_CFG: Record<Season, { count: number; code: number; tint: [number, n
  * le cadrage mobile (vérifié en capture), loin des visages des kodama.
  */
 const REST_POINTS: [number, number, number][] = [
-  [0.205, 0.735, 0.5],
-  [0.335, 0.705, 0.42],
-  [0.115, 0.69, 0.55],
-  [0.515, 0.655, 0.3],
-  [0.6, 0.705, 0.36],
-  [0.765, 0.69, 0.42],
-  [0.9, 0.725, 0.55],
-  [0.42, 0.75, 0.48],
+  [0.599, 0.66, 0.24],
+  [0.709, 0.685, 0.25],
+  [0.807, 0.709, 0.33],
+  [0.662, 0.624, 0.22],
+  [0.88, 0.662, 0.27],
+  [0.47, 0.664, 0.33],
+  [0.757, 0.756, 0.34],
+  [0.625, 0.715, 0.27],
 ];
 
 export interface SeasonFrame {
@@ -79,13 +79,15 @@ export class SeasonFx {
     let count = cfg.count;
     if (rest) count = cfg.code === 0 || cfg.code === 1 ? REST_POINTS.length : 0;
     let fireflies = 0;
-    if (season === 'summer' && animate) {
+    let tint = cfg.tint;
+    if (season === 'summer') {
       const h = this.hour(now);
-      // Le soir : de 19 h à l'aube, en fondu sur une heure.
-      const dusk = Math.min(1, Math.max(0, h - 18.5)) + Math.min(1, Math.max(0, 5.5 - h));
-      fireflies = Math.max(Math.min(1, dusk), 0.25) * (1 - night);
+      // Le soir : de 19 h à l'aube, en fondu sur une heure ; lumière un peu plus basse.
+      const dusk = Math.min(1, Math.min(1, Math.max(0, h - 18.5)) + Math.min(1, Math.max(0, 5.5 - h))) * (1 - night);
+      if (animate) fireflies = Math.max(dusk, 0.25) * (1 - night);
+      tint = [1 - 0.08 * dusk, 1 - 0.1 * dusk, 0.99 - 0.1 * dusk];
     }
-    return { code: cfg.code, count, rest, tint: cfg.tint, fireflies };
+    return { code: cfg.code, count, rest, tint, fireflies };
   }
 
   /** Uniformes du lot saisonnier (hors temps / taille, posés par frame.ts). */

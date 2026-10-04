@@ -109,7 +109,7 @@ export class Lantern {
     const bloom = bk >= 0 ? Math.sin(Math.PI * Math.min(1, bk * 1.6)) * (1 - bk * 0.4) : 0;
     const fl = flicker ? 0.92 + 0.05 * Math.sin(t * 7.3) + 0.03 * Math.sin(t * 13.1 + 1) : 1;
     const intensity = this.on * (0.3 + 0.7 * this.p) * fl + bloom * 0.9 * this.on;
-    const radius = 0.05 + 0.09 * this.p + bloom * 0.08;
+    const radius = 0.045 + 0.06 * this.p + bloom * 0.07;
     return { light: [s.x, s.y - 0.012, radius, intensity], color: this.color };
   }
 
@@ -122,7 +122,7 @@ export class Lantern {
     const glowK = 0.85 + 0.3 * night;
     const fl = animate ? 0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1 + 1) : 1;
     const bk = this.bloom(now);
-    const h = 0.036;
+    const h = 0.042;
     const cy = y - h * 0.5;
     const inten = (0.38 + 0.62 * p) * on;
     // Flaque de lumière sur la mousse, halo, lanterne, cœur.

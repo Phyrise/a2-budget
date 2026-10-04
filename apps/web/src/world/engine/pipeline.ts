@@ -146,7 +146,7 @@ export class Pipeline {
         ...f,
         uTime: u(0), uCount: u(0), uSeason: u(1), uSizeK: u(1), uAspect: u(aspect), uGust: u(0),
         uWhirl: u([0, 0, 0, 0.16]), uWhirlK: u(0), uAvoid: u(Array.from({ length: 6 }, () => [0, 0, 0, 0])),
-        uRest: u(0), uRestPts: u(restPoints()), uRestCount: u(0),
+        uRest: u(0), uRestPts: u(restPoints()), uRestCount: u(0), uFogColor: u([0.6, 0.66, 0.64]), uFog: u(0.5),
       },
     });
     seasonProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

@@ -189,7 +189,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   mu.uNight!.value = Math.max(night, sf.fireflies);
   mu.uGold!.value = mood.gold;
   mu.uSizeK!.value = sizeK;
-  mu.uIntensity!.value = 1;
+  mu.uIntensity!.value = 1 + 0.6 * sf.fireflies;
   const rainCount = mood.rain * day * RAIN * tierK;
   const ru = e.pipe.rain.program.uniforms;
   ru.uTime!.value = t;
@@ -202,6 +202,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
     const su = e.pipe.season.program.uniforms;
     su.uTime!.value = t * (e.cfg.motion === 'gentle' ? 0.7 : 1);
     su.uSizeK!.value = sizeK;
+    su.uFogColor!.value = fogColor;
+    su.uFog!.value = mood.fog;
     e.seasons.uniforms(su, sf, n, avoidList(m.kodamaSpots, (i) => e.spirits.visibility(i)), e.gust);
     su.uCount!.value = seasonCount;
   }

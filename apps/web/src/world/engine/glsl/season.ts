@@ -27,6 +27,8 @@ uniform vec4 uAvoid[6];     // visages des kodama : x, y, rayon, visibilité
 uniform float uRest;
 uniform vec3 uRestPts[8];   // feuilles posées : x, y, profondeur
 uniform float uRestCount;
+uniform vec3 uFogColor;
+uniform float uFog;
 varying vec4 vCol;
 varying float vAngle;
 varying float vFlip;
@@ -35,9 +37,9 @@ varying float vSoft;
 
 vec3 leafColor(float k) {
   // Rouille, ambre, mousse, brun-rouge : teintes sourdes, fondues dans la peinture.
-  vec3 c = mix(vec3(0.56, 0.24, 0.1), vec3(0.74, 0.47, 0.16), smoothstep(0.0, 0.4, k));
-  c = mix(c, vec3(0.42, 0.45, 0.17), smoothstep(0.55, 0.75, k));
-  return mix(c, vec3(0.46, 0.15, 0.09), smoothstep(0.85, 1.0, k));
+  vec3 c = mix(vec3(0.44, 0.21, 0.1), vec3(0.6, 0.4, 0.16), smoothstep(0.0, 0.4, k));
+  c = mix(c, vec3(0.36, 0.39, 0.17), smoothstep(0.55, 0.75, k));
+  return mix(c, vec3(0.38, 0.15, 0.09), smoothstep(0.85, 1.0, k));
 }
 
 void main() {
@@ -59,10 +61,10 @@ void main() {
     p = rp.xy + vec2((aSeed.x - 0.5) * 0.02, (aSeed.y - 0.5) * 0.006);
     alpha = step(aIdx + 0.5, uRestCount) * step(0.0, rp.x) * 0.92;
     vAngle = aSeed.z * 6.2832;
-    vFlip = 0.45 + 0.2 * aSeed.y;
-    size = (uSeason < 0.5 ? 12.0 : 20.0) * mix(0.55, 1.5, depth);
-    col = uSeason < 0.5 ? mix(vec3(0.96, 0.84, 0.86), vec3(0.98, 0.95, 0.93), aSeed.x) : leafColor(aSeed.x);
-    col *= 0.8;
+    vFlip = 0.62 + 0.25 * aSeed.y;
+    size = (uSeason < 0.5 ? 17.0 : 27.0) * mix(0.7, 1.5, depth);
+    col = uSeason < 0.5 ? mix(vec3(0.95, 0.78, 0.82), vec3(0.98, 0.92, 0.9), aSeed.x) : leafColor(aSeed.x);
+    col = mix(col * 0.85, uFogColor, uFog * 0.18);
     gl_Position = screenToClip(sceneToScreen(p + parallaxOf(depth)));
     gl_PointSize = size * uSizeK;
     vCol = vec4(col, alpha * step(uSeason, 1.5));
@@ -77,10 +79,10 @@ void main() {
     depth = mix(0.15, 1.3, pow(aSeed.z, 0.55));
     speed = mix(0.03, 0.055, aSeed.w) * mix(0.55, 1.6, depth);
     sway = 0.012 + 0.01 * aSeed.w;
-    size = mix(3.0, 6.0, aSeed.w) * mix(0.6, 2.4, smoothstep(0.3, 1.3, depth));
+    size = mix(5.0, 9.0, aSeed.w) * mix(0.7, 2.6, smoothstep(0.3, 1.3, depth));
     vSoft = smoothstep(0.9, 1.3, depth);
-    col = vec3(0.9, 0.94, 1.0);
-    alpha = mix(0.45, 0.85, aSeed.y) * mix(0.6, 1.0, depth) * (1.0 - vSoft * 0.45);
+    col = vec3(0.97, 0.98, 1.0);
+    alpha = mix(0.6, 1.0, aSeed.y) * mix(0.7, 1.0, depth) * (1.0 - vSoft * 0.4);
   } else if (uSeason > 0.5) {
     depth = mix(0.2, 1.12, aSeed.z);
     speed = mix(0.045, 0.075, aSeed.w) * mix(0.7, 1.25, depth);
@@ -92,9 +94,9 @@ void main() {
     depth = mix(0.2, 1.1, aSeed.z);
     speed = mix(0.028, 0.045, aSeed.w) * mix(0.7, 1.2, depth);
     sway = 0.03 + 0.025 * aSeed.y;
-    size = mix(11.0, 16.0, aSeed.w) * mix(0.55, 1.5, depth);
-    col = mix(vec3(0.97, 0.83, 0.86), vec3(0.99, 0.96, 0.94), aSeed.x) * 0.92;
-    alpha = 0.9;
+    size = mix(14.0, 20.0, aSeed.w) * mix(0.55, 1.5, depth);
+    col = mix(vec3(0.97, 0.7, 0.78), vec3(1.0, 0.86, 0.88), aSeed.x);
+    alpha = 0.95;
   }
 
   float fall = fract(aSeed.y + uTime * speed / cycle);
@@ -126,6 +128,11 @@ void main() {
   }
 
   alpha *= smoothstep(0.0, 0.06, fall) * smoothstep(1.0, 0.9, fall) * active;
+  // Au loin, la brume les adoucit ; tout près, l'ombre du sous-bois.
+  if (uSeason < 1.5) {
+    col = mix(col, uFogColor, uFog * (1.0 - smoothstep(0.2, 0.8, depth)) * 0.45);
+    col *= mix(1.0, 0.72, smoothstep(0.85, 1.12, depth));
+  }
   float spin = (aSeed.z - 0.5) * 2.2;
   vAngle = uTime * spin + aSeed.w * 6.2832 + sin(ph * 0.7) * 0.7;
   vFlip = uSeason > 1.5 ? 1.0 : cos(uTime * (0.9 + aSeed.y * 1.4) + aSeed.z * 9.0);
@@ -188,6 +195,8 @@ void main() {
     col *= face;
   }
   a *= vCol.a;
-  gl_FragColor = vec4(col * a, a);
+  // Neige et pétales : un peu de lumière propre (visibles sur la brume claire).
+  float own = uSeason > 1.5 ? 0.45 : uSeason < 0.5 ? 0.25 : 0.0;
+  gl_FragColor = vec4(col * a, a * (1.0 - own));
 }
 `;

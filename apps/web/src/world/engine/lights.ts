@@ -21,7 +21,7 @@ const FLIGHT = 1.6;
 const FLIGHT_STRONG = 2.0;
 /** Pluie de lumière après l'atterrissage d'un pulse fort. */
 const SHOWER = 2.4;
-const SHOWER_SPARKS = 14;
+const SHOWER_SPARKS = 18;
 const WARM: [number, number, number] = [1.0, 0.8, 0.5];
 const FADE_IN = 1.4;
 const FADE_OUT = 1.6;
@@ -196,14 +196,14 @@ export class DayLights {
       const u1 = ((h >>> (i % 24)) & 0xff) / 255;
       const u2 = (((h * (i + 7)) >>> 8) & 0xff) / 255;
       const delay = (i / SHOWER_SPARKS) * 0.9;
-      const k = (age - delay) / 1.4;
+      const k = (age - delay) / 1.5;
       if (k <= 0 || k >= 1) continue;
       const dx = ((u1 - 0.5) * 0.11 + Math.sin(k * 5 + i) * 0.006) / aspect;
       const y0 = l.y - 0.07 - u2 * 0.07;
       const y = y0 + k * (l.y - y0 + 0.01);
       const a = Math.sin(Math.PI * k) * (0.6 + 0.4 * Math.sin(age * 9 + i * 2.3));
-      const sz = 0.011 + u2 * 0.006;
-      out.push(l.x + dx, y, l.depth, sz, sz, 0, r * 0.5 + 0.5, g * 0.5 + 0.45, b * 0.5 + 0.3, a * 0.85 * glowK, GLOW);
+      const sz = 0.016 + u2 * 0.008;
+      out.push(l.x + dx, y, l.depth, sz, sz, 0, r * 0.5 + 0.5, g * 0.5 + 0.45, b * 0.5 + 0.3, a * glowK, GLOW);
     }
   }
 }

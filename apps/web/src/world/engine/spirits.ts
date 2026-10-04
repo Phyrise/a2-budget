@@ -173,7 +173,11 @@ export class Spirits {
   }
 
   busy(now: number): boolean {
-    return this.k.some((s) => now - s.nodAt < NOD_STRONG || now < s.peekUntil + 2) || this.guardianActive(now);
+    // Seuls les kodama visibles comptent : un hochement caché ne relance pas le rendu.
+    return (
+      this.k.some((s) => (s.vis > 0.01 && now - s.nodAt < (s.nodAmp > 0.1 ? NOD_STRONG : NOD)) || now < s.peekUntil + 2) ||
+      this.guardianActive(now)
+    );
   }
 
   draws(now: number, night: number, fog: number, guardian: GuardianFrame): SpriteDraw[] {

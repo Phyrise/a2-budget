@@ -1,0 +1,159 @@
+/* Calendrier — feuille d'ajout / d'édition. */
+
+.cal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cal-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cal-form__optional {
+  color: var(--fog-500);
+  font-weight: 500;
+}
+
+.cal-form__date,
+.cal-form__time {
+  min-height: 48px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Champs date / heure natifs : pictogramme du sélecteur adouci. */
+.cal-form__date::-webkit-calendar-picker-indicator,
+.cal-form__time::-webkit-calendar-picker-indicator {
+  opacity: 0.6;
+  filter: invert(0.85);
+  cursor: pointer;
+}
+
+.cal-form__times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cal-form__times-error {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+}
+
+.cal-form__note {
+  min-height: 72px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.cal-form__error {
+  margin-top: -6px;
+}
+
+.cal-form__who .segmented__label {
+  min-height: 48px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chips illustrées de nature                                          */
+/* ------------------------------------------------------------------ */
+
+.cal-kinds {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cal-kinds > legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+
+.cal-kinds__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cal-kind-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: rgba(5, 10, 8, 0.45);
+  color: var(--fog-300);
+  font-size: 14px;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft),
+    color var(--dur-fast) var(--ease-soft);
+}
+
+.cal-kind-chip__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cal-kind-chip__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--kind) 14%, transparent);
+  color: var(--kind);
+}
+
+.cal-kind-chip:hover {
+  color: var(--ivory-100);
+  border-color: rgba(185, 198, 189, 0.34);
+}
+
+.cal-kind-chip.is-checked {
+  border-color: color-mix(in srgb, var(--kind) 70%, transparent);
+  background: color-mix(in srgb, var(--kind) 16%, #101b16);
+  color: var(--ivory-50);
+}
+
+.cal-kind-chip.is-checked .cal-kind-chip__icon {
+  background: var(--kind);
+  color: #14100a;
+}
+
+.cal-kind-chip:has(.cal-kind-chip__input:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.event-sheet__delete {
+  margin-right: auto;
+}
+
+.cal-who-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cal-who-option > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

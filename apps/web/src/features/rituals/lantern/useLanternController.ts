@@ -11,6 +11,7 @@ import { useApp } from '../../../state/store';
 import { useWorld } from '../../../world/WorldContext';
 import { ambience } from './ambience';
 import { getLantern, lantern, progressOf, useLantern } from './lanternStore';
+import { getSoundPrefs } from '../../../app/sound/prefs';
 
 const BLOOM_MS = 2600;
 
@@ -95,7 +96,8 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
     if (s.completed) {
       litRef.current = true;
       focus(1, config.who);
-      if (s.sound !== 'off') ambience.chime();
+      // Les « petits sons » jouent déjà la floraison : pas de double carillon.
+      if (s.sound !== 'off' && !getSoundPrefs().enabled) ambience.chime();
     }
     if (!s.recorded && s.minutesSpent >= 1) {
       addFocusSession({

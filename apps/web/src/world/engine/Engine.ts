@@ -4,17 +4,22 @@
  * Politique : 60 fps pendant 3 s après une interaction → 30 → 15 → gel à 45 s
  * (reprise au toucher / changement d'état) ; arrêt hors écran ou onglet caché ;
  * paliers de qualité automatiques ; « still » / bandeau = images uniques.
+ * Lanterne allumée : jamais de gel (≥ 30 fps, 20 sur appareil lent).
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, LutName, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
+import { bindEngineEvents } from './input';
+import { Lantern } from './lantern';
 import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
 import { Pipeline } from './pipeline';
 import { Resources, type StageTextures } from './resources';
+import { SeasonFx } from './seasons';
 import { Spirits } from './spirits';
 import { renderWorld } from './frame';
+import { loadSecondary } from './secondary';
 
 export type QualitySetting = 'auto' | 0 | 1 | 2;
 
@@ -49,6 +54,8 @@ export class WorldEngine {
   readonly spirits: Spirits;
   readonly lights: DayLights;
   readonly fx: FxSystem;
+  readonly seasons = new SeasonFx();
+  readonly lantern: Lantern;
   cfg: Required<Omit<EngineConfig, 'onFirstFrame' | 'onContextLost'>> & Pick<EngineConfig, 'onFirstFrame' | 'onContextLost'>;
 
   framing: Framing;
@@ -88,8 +95,7 @@ export class WorldEngine {
   private firstFrame = false;
   private ready = false;
   private loadingStage: GrowthStage | null = null;
-  private touchStart: { x: number; y: number } | null = null;
-  private readonly cleanups: (() => void)[] = [];
+  readonly cleanups: (() => void)[] = [];
 
   constructor(
     readonly canvas: HTMLCanvasElement,
@@ -110,8 +116,9 @@ export class WorldEngine {
     this.spirits = new Spirits(m.kodamaSpots, m.creatureSpots, m.guardianSpot);
     this.lights = new DayLights(m.anchors);
     this.fx = new FxSystem(m.size.w / m.size.h, m.lightSource);
+    this.lantern = new Lantern(m.size.w / m.size.h);
     this.framing = computeFraming(1, 1, m.size.w, m.size.h);
-    this.bindEvents();
+    bindEngineEvents(this);
   }
 
   // ------------------------------------------------------------------ cycle de vie
@@ -134,43 +141,16 @@ export class WorldEngine {
     this.ready = true;
     this.requestFrame(true);
     // Non bloquant : sprites, effets peints, LUT restantes.
-    void this.loadSecondary();
-  }
-
-  private async loadSecondary() {
-    try {
-      await this.loadSecondaryInner();
-    } catch {
+    void loadSecondary(this).catch(() => {
       /* moteur détruit pendant le chargement */
-    }
-  }
-
-  private async loadSecondaryInner() {
-    const m = this.cfg.manifest;
-    await Promise.all(
-      m.sprites.kodama.length > 0
-        ? m.kodamaSpots.map((_, i) => this.res.sprite(m.sprites.kodama[i % m.sprites.kodama.length]!, i, m.sprites.kodama.length === 1))
-        : [],
-    ).then((assets) => {
-      this.spirits.kodama = assets.filter((a): a is NonNullable<typeof a> => a !== null);
     });
-    if (this.destroyed) return;
-    await this.syncCreatures();
-    await this.res.loadAtlas();
-    if (this.destroyed) return;
-    if (this.res.atlas) {
-      this.fx.atlas = this.res.atlas.map;
-      this.pipe.sceneFx.setAtlas(this.res.atlas.tex);
-      this.pipe.emissive.setAtlas(this.res.atlas.tex);
-      for (const mesh of [this.pipe.motes, this.pipe.burst]) mesh.program.uniforms.uAtlas!.value = this.res.atlas.tex;
-      const mote = this.res.atlas.map.motes[0];
-      if (mote) this.pipe.motes.program.uniforms.uSprite!.value = mote.rect;
-    }
-    void this.res.loadLut('night');
-    this.requestFrame(true);
   }
 
-  private async syncCreatures() {
+  get isDestroyed() {
+    return this.destroyed;
+  }
+
+  async syncCreatures() {
     const m = this.cfg.manifest;
     for (const id of this.state?.creatures ?? []) {
       if (this.spirits.creatures.has(id) || !m.creatureSpots[id] || !m.sprites.creatures[id]) continue;
@@ -190,6 +170,18 @@ export class WorldEngine {
     return this.lost;
   }
 
+  /** Perte du contexte WebGL : arrêt net, la vue recrée un moteur. */
+  markLost() {
+    this.lost = true;
+    this.stop();
+    this.cfg.onContextLost?.();
+  }
+
+  /** Onglet caché : plus aucune image. */
+  halt() {
+    this.stop();
+  }
+
   // ------------------------------------------------------------------ état
 
   setState(s: WorldState) {
@@ -201,6 +193,7 @@ export class WorldEngine {
     this.lights.sync(s.lights, now(), animate || this.cfg.motion === 'still');
     if (clampStage(s.stage) !== this.stage?.stage) void this.changeStage(clampStage(s.stage));
     if (old?.creatures.join() !== s.creatures.join()) void this.syncCreatures().then(() => this.requestFrame(true));
+    if (old && old.season !== s.season) this.requestFrame(true);
     this.requestFrame(true);
   }
 
@@ -271,7 +264,7 @@ export class WorldEngine {
 
   // ------------------------------------------------------------------ commandes
 
-  pulse(opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number }) {
+  pulse(opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number; strong?: boolean }) {
     let from: { x: number; y: number } | null = null;
     if (opts.fromClientX !== undefined && opts.fromClientY !== undefined) {
       const r = this.canvas.getBoundingClientRect();
@@ -280,8 +273,14 @@ export class WorldEngine {
       from.y = Math.min(from.y, this.framing.cy + this.framing.vh * 0.62);
     }
     const n = now();
-    if (this.animated) this.lights.pulse(opts.id, opts.who, from, n);
+    if (this.animated) this.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);
     else this.lights.sync([...(this.state?.lights ?? []).filter((l) => l.id !== opts.id), { id: opts.id, who: opts.who }], n, this.cfg.motion === 'still');
+    this.requestFrame(true);
+  }
+
+  /** Lanterne : progression 0..1 (null = extinction en fondu). Réveille le rendu. */
+  focus(progress: number | null, who?: Who) {
+    this.lantern.set(progress, who, now());
     this.requestFrame(true);
   }
 
@@ -366,9 +365,11 @@ export class WorldEngine {
     if (!this.animated) return busy ? 60 : 0;
     const idle = n - this.lastActivity;
     if (busy || idle < 3) return 60;
+    // Lanterne allumée : la scène ne se fige jamais, coût plafonné.
+    const floor = this.lantern.active ? (this.tier > 0 ? 20 : 30) : 0;
     if (idle < 15) return 30;
-    if (idle < 45) return 15;
-    return 0;
+    if (idle < 45) return Math.max(15, floor);
+    return floor;
   }
 
   private tick = (ts: number) => {
@@ -388,9 +389,10 @@ export class WorldEngine {
   };
 
   private isBusy(n: number): boolean {
-    const transitions = this.growStart >= 0 || this.lutMix(n) < 1 || this.lights.busy(n) || this.gust > 0.02 || this.rayBoost > 0.02;
+    const transitions =
+      this.growStart >= 0 || this.lutMix(n) < 1 || this.lights.busy(n) || this.gust > 0.02 || this.rayBoost > 0.02 || this.lantern.busy(n);
     if (!this.animated) return transitions && this.cfg.motion === 'still' && this.cfg.live;
-    return transitions || this.spirits.busy(n) || Math.abs(this.pointer.tx - this.pointer.x) + Math.abs(this.pointer.ty - this.pointer.y) > 1e-4;
+    return transitions || this.spirits.busy(n) || this.seasons.busy(n) || Math.abs(this.pointer.tx - this.pointer.x) + Math.abs(this.pointer.ty - this.pointer.y) > 1e-4;
   }
 
   private renderOnce(n: number, fps: number) {
@@ -425,54 +427,6 @@ export class WorldEngine {
       fps: 1000 / Math.max(1, this.emaInterval), frameMs: this.emaFrame, tier: this.tier,
       targetFps: this.targetFps(now(), this.isBusy(now())), memoryMB: this.res.memoryMB, dpr: this.dpr,
     };
-  }
-
-  // ------------------------------------------------------------------ entrées
-
-  private bindEvents() {
-    const on = <E extends Event>(target: Window | Document, type: string, fn: (e: E) => void) => {
-      target.addEventListener(type, fn as EventListener, { passive: true });
-      this.cleanups.push(() => target.removeEventListener(type, fn as EventListener));
-    };
-    on<PointerEvent>(window, 'pointermove', (e) => this.onPointer(e, 'move'));
-    on<PointerEvent>(window, 'pointerdown', (e) => this.onPointer(e, 'down'));
-    on<PointerEvent>(window, 'pointerup', (e) => this.onPointer(e, 'up'));
-    on<PointerEvent>(window, 'pointercancel', (e) => this.onPointer(e, 'up'));
-    on(window, 'keydown', () => this.requestFrame(true));
-    on(document, 'visibilitychange', () => (document.hidden ? this.stop() : this.requestFrame(true)));
-    const lost = (e: Event) => {
-      e.preventDefault();
-      this.lost = true;
-      this.stop();
-      this.cfg.onContextLost?.();
-    };
-    this.canvas.addEventListener('webglcontextlost', lost);
-    this.cleanups.push(() => this.canvas.removeEventListener('webglcontextlost', lost));
-  }
-
-  private onPointer(e: PointerEvent, kind: 'move' | 'down' | 'up') {
-    if (kind === 'down' && this.spirits.guardianActive(now())) this.spirits.skipGuardian(now());
-    const r = this.canvas.getBoundingClientRect();
-    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    if (e.pointerType === 'mouse') {
-      if (inside) {
-        this.pointer.tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
-        this.pointer.ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
-      } else {
-        this.pointer.tx = 0;
-        this.pointer.ty = 0;
-      }
-    } else if (kind === 'down') {
-      this.touchStart = inside ? { x: e.clientX, y: e.clientY } : null;
-    } else if (kind === 'move' && this.touchStart) {
-      this.pointer.tx = Math.max(-1, Math.min(1, (e.clientX - this.touchStart.x) / 180));
-      this.pointer.ty = Math.max(-1, Math.min(1, (e.clientY - this.touchStart.y) / 180));
-    } else if (kind === 'up') {
-      this.touchStart = null;
-      this.pointer.tx = 0;
-      this.pointer.ty = 0;
-    }
-    this.requestFrame(true);
   }
 }
 

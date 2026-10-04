@@ -37,7 +37,14 @@ interface KodamaState {
   nodAt: number;
   nodDir: number;
   nextNod: number;
+  /** Amplitude du hochement (plus marquée pour un pulse fort). */
+  nodAmp: number;
+  /** Un pulse fort fait sortir le kodama le plus proche, même caché (jusqu'à). */
+  peekUntil: number;
 }
+
+const NOD = 1.4;
+const NOD_STRONG = 2.2;
 
 export const GUARDIAN_DURATION = 10.5;
 
@@ -70,16 +77,25 @@ export class Spirits {
     private readonly creatureSpots: Record<string, ScenePoint>,
     private readonly guardianSpot: ScenePoint,
   ) {
-    this.k = spots.map((_, i) => ({ vis: 0, nodAt: -10, nodDir: 1, nextNod: 4 + i * 3.3 }));
+    this.k = spots.map((_, i) => ({ vis: 0, nodAt: -10, nodDir: 1, nextNod: 4 + i * 3.3, nodAmp: 0.09, peekUntil: -10 }));
   }
 
-  /** Le kodama le plus proche d'une lumière qui se pose tourne la tête vers elle. */
-  lookAt(x: number, y: number, now: number) {
+  /** Visibilité du kodama i (0..1). */
+  visibility(i: number): number {
+    return this.k[i]?.vis ?? 0;
+  }
+
+  /**
+   * Le kodama le plus proche d'une lumière qui se pose tourne la tête vers
+   * elle. Pulse fort : le plus proche, même caché, sort un instant et se
+   * tourne franchement.
+   */
+  lookAt(x: number, y: number, now: number, strong = false) {
     let best = -1;
     let bd = Infinity;
     this.spots.forEach((s, i) => {
       const d = Math.hypot(s.x - x, s.y - y);
-      if (this.k[i]!.vis > 0.3 && d < bd) {
+      if ((strong || this.k[i]!.vis > 0.3) && d < bd) {
         bd = d;
         best = i;
       }
@@ -88,6 +104,8 @@ export class Spirits {
       const st = this.k[best]!;
       st.nodAt = now;
       st.nodDir = x > this.spots[best]!.x ? 1 : -1;
+      st.nodAmp = strong ? 0.17 : 0.09;
+      if (strong && this.kodama.length > 0) st.peekUntil = now + 5;
     }
   }
 
@@ -135,11 +153,12 @@ export class Spirits {
   update(now: number, dt: number, count: number, creatures: string[], animate: boolean) {
     const k = animate ? 1 - Math.exp(-dt / 0.8) : 1;
     this.k.forEach((st, i) => {
-      const target = i < count && this.kodama.length > 0 ? 1 : 0;
+      const target = (i < count || now < st.peekUntil) && this.kodama.length > 0 ? 1 : 0;
       st.vis += (target - st.vis) * k;
       if (animate && now > st.nextNod) {
         st.nodAt = now;
         st.nodDir = this.rand() > 0.5 ? 1 : -1;
+        st.nodAmp = 0.09;
         st.nextNod = now + 7 + this.rand() * 12;
       }
     });
@@ -154,7 +173,7 @@ export class Spirits {
   }
 
   busy(now: number): boolean {
-    return this.k.some((s) => now - s.nodAt < 1.4) || this.guardianActive(now);
+    return this.k.some((s) => now - s.nodAt < NOD_STRONG || now < s.peekUntil + 2) || this.guardianActive(now);
   }
 
   draws(now: number, night: number, fog: number, guardian: GuardianFrame): SpriteDraw[] {
@@ -164,7 +183,8 @@ export class Spirits {
       const asset = this.kodama[i % Math.max(1, this.kodama.length)];
       if (!asset || st.vis < 0.01) return;
       const na = now - st.nodAt;
-      const nod = na < 1.4 ? Math.sin((na / 1.4) * Math.PI) * 0.09 * st.nodDir : 0;
+      const dur = st.nodAmp > 0.1 ? NOD_STRONG : NOD;
+      const nod = na < dur ? Math.sin((na / dur) * Math.PI) * st.nodAmp * st.nodDir : 0;
       out.push({
         asset, x: s.x, y: s.y, depth: s.depth, h: s.scale ?? 0.05, rot: nod,
         alpha: st.vis, reveal: 1, glow: night * 0.55 * st.vis, glowColor: [0.75, 0.95, 0.85],

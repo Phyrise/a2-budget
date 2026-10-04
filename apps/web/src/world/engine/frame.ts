@@ -6,6 +6,7 @@ import { drawFrame } from './draw';
 import type { WorldEngine } from './Engine';
 import { approachParams, cloneParams, kodamaCount } from './moods';
 import { BURST, MOTES, RAIN } from './pipeline';
+import { avoidList } from './seasons';
 
 const TIER_PARTICLES = [1, 0.7, 0.4];
 const TIER_FOG_LAYERS = [3, 2, 1];
@@ -59,10 +60,22 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   // --- Lumières qui se posent : souffle de vent, éclat de rayon, kodama attentif.
   e.lights.update(n);
   for (const land of e.lights.landed.splice(0)) {
-    e.gust = 1;
-    e.rayBoost = 0.5;
-    e.spirits.lookAt(land.x, land.y, n);
-    e.fx.gust(n);
+    e.gust = Math.max(e.gust, land.strong ? 1.8 : 1);
+    e.rayBoost = Math.max(e.rayBoost, land.strong ? 0.85 : 0.5);
+    e.spirits.lookAt(land.x, land.y, n, land.strong);
+    e.fx.gust(n, land.strong ? 2.2 : 1);
+    // Un pulse sur deux (toujours une corvée) fait tourbillonner les feuilles.
+    if (land.strong || e.fx.coin()) e.seasons.stir(land.x, land.y - 0.03, land.strong ? 1 : 0.6, n);
+  }
+
+  // --- Lanterne : progression lissée, floraison (souffle, éclat de rayon).
+  e.lantern.update(dt, n, animate || stillLive, stillLive);
+  if (e.lantern.bloomEvent) {
+    e.lantern.bloomEvent = false;
+    if (animate) {
+      e.gust = Math.max(e.gust, 0.9);
+      e.rayBoost = Math.max(e.rayBoost, 0.7);
+    }
   }
   e.gust *= animate ? Math.exp(-dt / 1.3) : 0;
   e.rayBoost *= animate ? Math.exp(-dt / 1.6) : 0;
@@ -118,6 +131,9 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   sc.uMoss!.value = mood.moss * day + s.growthProgress * 0.12 * day;
   sc.uMoon!.value = night * 0.9;
   sc.uDetail!.value = tier < 2 ? 1 : 0;
+  const lamp = e.lantern.sceneLight(n, t, animate);
+  sc.uLantern!.value = lamp.light;
+  sc.uLanternColor!.value = lamp.color;
 
   // --- Étalonnage.
   const pu = e.pipe.post.program.uniforms;
@@ -137,6 +153,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   pu.uGrain!.value = tier < 2 ? 0.022 : 0;
   pu.uSeed!.value = animate ? (t * 7.31) % 1 : 0;
   pu.uRes!.value = [e.pipe.target.width, e.pipe.target.height];
+  const sf = e.seasons.frame(s.season, n, animate, night);
+  pu.uTint!.value = sf.tint;
 
   // --- Fougères du premier plan.
   const fg = e.pipe.fg.program.uniforms;
@@ -157,16 +175,18 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   e.fx.emit(e.pipe.sceneFx, n, t, mood, night, rayAngles, e.rayBoost, g.fogGlow);
   e.pipe.emissive.reset();
   e.spirits.emitHalos(e.pipe.emissive, t, night, e.fx.atlas);
-  e.lights.emit(e.pipe.emissive, n, t, night, 1);
+  e.lights.emit(e.pipe.emissive, n, t, night, 1, aspect);
+  e.lantern.emit(e.pipe.emissive, n, t, night, animate);
 
   // --- Particules.
   const sizeK = e.dpr * Math.min(1.4, Math.max(0.75, e.cssH / 700));
   const tierK = TIER_PARTICLES[tier] ?? 0.4;
-  const motesCount = Math.min(MOTES, (mood.spores + s.growthProgress * 8) * day + 18 * night) * tierK;
+  // Été : lucioles plus nombreuses le soir (même lot que les spores).
+  const motesCount = Math.min(MOTES, (mood.spores + s.growthProgress * 8) * day + 18 * night + 30 * sf.fireflies) * tierK;
   const mu = e.pipe.motes.program.uniforms;
   mu.uTime!.value = t;
   mu.uCount!.value = motesCount;
-  mu.uNight!.value = night;
+  mu.uNight!.value = Math.max(night, sf.fireflies);
   mu.uGold!.value = mood.gold;
   mu.uSizeK!.value = sizeK;
   mu.uIntensity!.value = 1;
@@ -175,6 +195,16 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   ru.uTime!.value = t;
   ru.uCount!.value = rainCount;
   ru.uSizeK!.value = sizeK;
+  // Saisons : feuilles, neige, pétales (dans la scène) ; posés au sol en image fixe.
+  const seasonK = sf.rest ? 1 : tierK * (e.cfg.motion === 'gentle' ? 0.7 : 1);
+  const seasonCount = sf.code < 0 ? 0 : sf.count * seasonK;
+  if (seasonCount > 0.5) {
+    const su = e.pipe.season.program.uniforms;
+    su.uTime!.value = t * (e.cfg.motion === 'gentle' ? 0.7 : 1);
+    su.uSizeK!.value = sizeK;
+    e.seasons.uniforms(su, sf, n, avoidList(m.kodamaSpots, (i) => e.spirits.visibility(i)), e.gust);
+    su.uCount!.value = seasonCount;
+  }
   const bu = e.pipe.burst.program.uniforms;
   if (g.burst > 0) {
     const box = e.spirits.guardianBox();
@@ -193,5 +223,6 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
     drawRain: animate && rainCount > 1,
     drawBurst: g.burst > 0,
     drawMotes: motesCount > 0.5,
+    drawSeason: seasonCount > 0.5,
   });
 }

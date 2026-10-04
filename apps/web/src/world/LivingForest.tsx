@@ -12,13 +12,15 @@ import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, us
 import { framingFor, imageBoxStyle, type Framing } from './engine/framing';
 import type { EngineStats, QualitySetting, WorldEngine } from './engine';
 import { manifest as defaultManifest } from './manifest';
-import type { GrowthStage, LivingForestHandle, LivingForestProps, WorldManifest, WorldMotion } from './types';
+import type { GrowthStage, LivingForestHandle, LivingForestProps, Who, WorldManifest, WorldMotion } from './types';
 import { ForestMist } from './engine/ForestMist';
 
 /** Poignée étendue (labo de dev uniquement). */
 export interface LivingForestDebugHandle extends LivingForestHandle {
   stats(): EngineStats | null;
   setQuality(q: QualitySetting): void;
+  /** Heure locale simulée (lucioles du soir en été) ; null = horloge réelle. */
+  setHour(h: number | null): void;
 }
 
 type Mode = 'loading' | 'webgl' | 'fallback';
@@ -56,6 +58,9 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<WorldEngine | null>(null);
   const qualityRef = useRef<QualitySetting>('auto');
+  // Lanterne demandée avant que le moteur soit prêt : appliquée à l'initialisation.
+  const focusRef = useRef<{ progress: number | null; who?: Who }>({ progress: null });
+  const hourRef = useRef<number | null>(null);
   const latest = useRef({ state, variant, live: effLive, motion: effMotion });
   latest.current = { state, variant, live: effLive, motion: effMotion };
   const variantRef = useRef(variant);
@@ -140,6 +145,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         if (cancelled) return;
         engineRef.current = engine;
         engine.setState(latest.current.state);
+        engine.seasons.hourOverride = hourRef.current;
+        if (focusRef.current.progress !== null) engine.focus(focusRef.current.progress, focusRef.current.who);
         const io = new IntersectionObserver((entries) => {
           for (const en of entries) engine?.setVisible(en.isIntersecting);
         });
@@ -179,9 +186,19 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
     (): LivingForestDebugHandle => ({
       pulse: (opts) => engineRef.current?.pulse(opts),
       playGuardian: () => engineRef.current?.playGuardian(),
-      // TODO(MONDE V3) : lanterne dans la scène ; sans effet en attendant.
-      focus: () => {},
+      focus: (progress, who) => {
+        focusRef.current = { progress, who: who ?? focusRef.current.who };
+        engineRef.current?.focus(progress, who);
+      },
       stats: () => engineRef.current?.stats() ?? null,
+      setHour: (h) => {
+        hourRef.current = h;
+        const e = engineRef.current;
+        if (e) {
+          e.seasons.hourOverride = h;
+          e.requestFrame(true);
+        }
+      },
       setQuality: (q) => {
         qualityRef.current = q;
         engineRef.current?.configure({ quality: q });

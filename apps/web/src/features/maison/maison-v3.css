@@ -167,6 +167,17 @@ button.task-row__body:hover .task-row__more {
 /* Compagnons perchés + bulle                                         */
 /* ---------------------------------------------------------------- */
 
+/* Quand un compagnon parle, la phrase de la forêt s'efface un peu : la forêt écoute. */
+.maison-hero__mood,
+.maison-hero__date {
+  transition: opacity var(--dur-slow) var(--ease-soft);
+}
+
+.maison-hero.is-listening .maison-hero__mood,
+.maison-hero.is-listening .maison-hero__date {
+  opacity: 0.32;
+}
+
 .perch__figures {
   display: flex;
   align-items: flex-end;
@@ -176,7 +187,7 @@ button.task-row__body:hover .task-row__more {
    la phrase de la forêt ni le titre de la feuille. */
 .perch .cbubble-region--perch {
   right: calc(100% - 2px);
-  bottom: 6px;
+  bottom: -12px;
   width: min(250px, calc(100vw - 150px));
 }
 

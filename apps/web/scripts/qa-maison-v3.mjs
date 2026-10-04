@@ -52,8 +52,8 @@ async function getFixtures() {
 const fixtures = await getFixtures();
 const VP = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 
-async function open(state, { reduced = false } = {}) {
-  const context = await browser.newContext({ ...VP, locale: 'fr-FR', reducedMotion: reduced ? 'reduce' : 'no-preference' });
+async function open(state, { reduced = false, desktop = false } = {}) {
+  const context = await browser.newContext({ ...(desktop ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } : VP), locale: 'fr-FR', reducedMotion: reduced ? 'reduce' : 'no-preference' });
   await context.addInitScript(
     ([key, uiKey, value]) => {
       if (sessionStorage.getItem('qa-init')) return;
@@ -158,8 +158,35 @@ for (const mode of ['carried', 'balanced', 'quiet']) {
     await page.waitForTimeout(1900);
     await shot(page, `balance-${mode}`, '.balance');
     await shot(page, `balance-art-${mode}`, '.balance__visual');
+    if (mode === 'balanced') {
+      await page.getByRole('button', { name: 'Les gestes de la semaine' }).click();
+      await page.waitForTimeout(500);
+      await shot(page, 'balance-detail', '.balance');
+    }
   });
 }
+
+await scenario(
+  'desktop',
+  fixtures.carried,
+  async (page) => {
+    await page.getByRole('checkbox', { name: 'Courses du marché', exact: true }).click();
+    await page.waitForTimeout(700);
+    await shot(page, 'desktop-bubble');
+  },
+  { desktop: true },
+);
+
+await scenario(
+  'reduced',
+  fixtures.carried,
+  async (page) => {
+    await page.getByRole('checkbox', { name: 'Nettoyer la salle de bain', exact: true }).click();
+    await page.waitForTimeout(400);
+    await shot(page, 'reduced-chore');
+  },
+  { reduced: true },
+);
 
 await scenario('sheet', fixtures.carried, async (page) => {
   await page.getByRole('button', { name: 'Ajouter une tâche' }).click();
@@ -186,6 +213,8 @@ const plates = [
   ['balance-carried', 'balance-balanced', 'balance-quiet'],
   ['perch-scrolled', 'sheet-new-bottom'],
   ['balance-art-carried', 'balance-art-balanced', 'balance-art-quiet'],
+  ['bubble-perch', 'balance-detail'],
+  ['desktop-bubble'],
 ];
 const page = await browser.newPage({ viewport: { width: 720, height: 800 } });
 for (const [i, group] of plates.entries()) {

@@ -83,6 +83,21 @@
   bottom: 8px;
 }
 
+/* À gauche des compagnons perchés : queue horizontale vers la droite. */
+.cbubble-region--perch .cbubble__body {
+  border-radius: 18px;
+}
+
+.cbubble-region--perch .cbubble__body::after {
+  right: -7px;
+  bottom: 18px;
+  width: 9px;
+  height: 14px;
+  background: #ede6d3;
+  clip-path: polygon(0 0, 100% 55%, 0 100%);
+  border-radius: 0;
+}
+
 .cbubble__name {
   display: block;
   margin-bottom: 1px;

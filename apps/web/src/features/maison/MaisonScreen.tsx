@@ -149,7 +149,7 @@ export function MaisonScreen() {
 
   return (
     <>
-      <div className="world-window maison-hero">
+      <div className={cx('world-window', 'maison-hero', bubble && perchVisible && 'is-listening')}>
         <p className="maison-hero__date">{longDate(today)}</p>
         <p className="maison-hero__mood display">{moodPhrase(mood, paused, today)}</p>
       </div>

@@ -106,7 +106,10 @@ void main() {
     aSeed.x * 1.2 - 0.1 + sin(ph) * sway + fall * 0.06 + uGust * 0.035 * depth,
     fall * cycle - 0.12 + cos(ph * 2.0) * sway * 0.12
   );
-  p = uCenter + (s - 0.5) * uView;
+  // Seulement au-dessus de la peinture (écran large : pas de flocons sur le reflet latéral).
+  float lo = max(0.0, uCenter.x - uView.x * 0.5);
+  float hi = min(1.0, uCenter.x + uView.x * 0.5);
+  p = vec2(mix(lo, hi, s.x), uCenter.y + (s.y - 0.5) * uView.y);
 
   // Tourbillon léger au passage d'un pulse.
   if (uWhirl.z > 0.001) {

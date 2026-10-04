@@ -172,7 +172,7 @@ void main() {
     float lf = exp(-dot(lv, lv) / (uLantern.z * uLantern.z)) * uLantern.w;
     // Lumière orangée : le vert de la mousse ne doit pas virer au jaune acide.
     vec3 lc = uLanternColor * vec3(1.0, 0.78, 0.6);
-    col += col * lc * lf * 0.95 + lc * lf * (0.045 + fogA * 0.08);
+    col += col * lc * lf * 0.75 + lc * lf * (0.035 + fogA * 0.06);
   }
 
   gl_FragColor = vec4(col, 1.0);

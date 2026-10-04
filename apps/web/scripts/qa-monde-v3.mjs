@@ -18,6 +18,8 @@ mkdirSync(out, { recursive: true });
 const BASE = process.env.LAB_URL ?? 'http://localhost:5193/a2-budget/world-lab.html';
 const filter = process.argv[2] ?? '';
 const VIEW = { width: 390, height: 844 };
+/** Les noms en « d- » sont capturés en présentation bureau (backdrop 1440×900). */
+const DESKTOP = { width: 1440, height: 900 };
 
 const wait = (page, ms) => page.waitForTimeout(ms);
 
@@ -66,6 +68,15 @@ const SHOTS = [
     await p.evaluate(() => window.__lab.focus(0.5, 'b'));
     await wait(p, 2000);
   }],
+  ['d-winter-lantern', 'variant=backdrop&season=winter&mood=lively', async (p) => {
+    await p.evaluate(() => window.__lab.focus(0.7, 'a'));
+    await wait(p, 3500);
+  }],
+  ['lantern-live0', 'season=autumn&mood=peaceful&live=0', async (p) => {
+    await p.evaluate(() => window.__lab.focus(0.4, 'a'));
+    await wait(p, 3000);
+  }],
+  ['banner-autumn', 'variant=banner&season=autumn&mood=peaceful'],
   ['freeze', 'season=autumn&mood=peaceful', async (p, log) => {
     await wait(p, 47000);
     const f0 = await p.evaluate(() => window.__lab.stats().frames);
@@ -90,7 +101,8 @@ const browser = await chromium.launch({
 const errors = [];
 for (const [name, params, action] of SHOTS) {
   if (filter ? !name.includes(filter) : name === 'freeze') continue;
-  const ctx = await browser.newContext({ viewport: VIEW, deviceScaleFactor: 2 });
+  const desk = name.startsWith('d-');
+  const ctx = await browser.newContext({ viewport: desk ? DESKTOP : VIEW, deviceScaleFactor: desk ? 1 : 2 });
   const page = await ctx.newPage();
   page.on('console', (m) => {
     if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${name}] ${m.text()}`);
@@ -100,7 +112,8 @@ for (const [name, params, action] of SHOTS) {
   await page.waitForFunction(() => window.__lab?.stats() != null, null, { timeout: 20000 }).catch(() => {});
   await wait(page, 2800);
   if (action) await action(page, console.log);
-  // Temps par image mesuré dans la page (intervalles rAF sur 1 s).
+  // Débit réel : images rendues par le moteur pendant 1 s (et rAF du navigateur).
+  const f0 = await page.evaluate(() => window.__lab?.stats()?.frames ?? 0);
   const raf = await page.evaluate(
     () =>
       new Promise((res) => {
@@ -114,11 +127,12 @@ for (const [name, params, action] of SHOTS) {
       }),
   );
   const stats = await page.evaluate(() => window.__lab?.stats());
+  const engineFps = (stats?.frames ?? 0) - f0;
   await page.screenshot({ path: resolve(out, `${name}.png`) });
   console.log(
     name,
     stats
-      ? `${stats.fps.toFixed(0)} fps moteur · ${stats.frameMs.toFixed(2)} ms/image (CPU) · cible ${stats.targetFps} · palier ${stats.tier} · ${stats.memoryMB.toFixed(1)} Mo · rAF ${raf}/s`
+      ? `${engineFps} images/s · ${stats.frameMs.toFixed(2)} ms/image (CPU) · cible ${stats.targetFps} · palier ${stats.tier} · ${stats.memoryMB.toFixed(1)} Mo · rAF ${raf}/s`
       : 'pas de moteur',
   );
   await ctx.close();

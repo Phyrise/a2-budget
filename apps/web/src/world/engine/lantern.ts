@@ -126,11 +126,12 @@ export class Lantern {
     const cy = y - h * 0.5;
     const inten = (0.38 + 0.62 * p) * on;
     // Flaque de lumière sur la mousse, halo, lanterne, cœur.
-    out.push(x, y - 0.002, depth, h * (3.2 + 2.6 * p), h * (0.9 + 0.5 * p), 0, r, g * 0.95, b * 0.85, 0.32 * inten * glowK, GLOW);
-    const halo = h * (2.4 + 3.4 * p);
-    out.push(x, cy, depth, halo, halo, 0, r, g, b, (0.16 + 0.34 * p) * on * fl * glowK, GLOW);
-    out.push(x, cy, depth, h * 0.72, h, 0, r, g, b, (0.55 + 0.45 * p) * on * fl, LANTERN);
-    out.push(x, cy + h * 0.08, depth, h * 0.55, h * 0.55, 0, 1, 0.9, 0.7, (0.25 + 0.55 * p) * on * fl, GLOW);
+    // (Le jour, l'addition sature vite : halo large mais doux, le papier reste lisible.)
+    out.push(x, y - 0.002, depth, h * (3.2 + 2.6 * p), h * (0.9 + 0.5 * p), 0, r, g * 0.9, b * 0.75, 0.26 * inten * glowK, GLOW);
+    const halo = h * (2.6 + 4 * p);
+    out.push(x, cy, depth, halo, halo, 0, r, g * 0.92, b * 0.8, (0.12 + 0.2 * p) * on * fl * glowK, GLOW);
+    out.push(x, cy, depth, h * 0.72, h, 0, r, g, b, (0.6 + 0.3 * p) * on * fl, LANTERN);
+    out.push(x, cy + h * 0.1, depth, h * 0.4, h * 0.4, 0, 1, 0.88, 0.66, (0.2 + 0.3 * p) * on * fl, GLOW);
 
     // Lucioles qui s'approchent à mesure que la lumière grandit.
     const n = animate ? Math.round(2 + 8 * p) : 0;

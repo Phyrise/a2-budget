@@ -342,9 +342,13 @@ export class WorldEngine {
 
   // ------------------------------------------------------------------ boucle
 
-  /** Animation continue autorisée (hero / backdrop vivants, mouvement non immobile). */
+  /**
+   * Animation continue autorisée (hero / backdrop vivants, mouvement non
+   * immobile). Une lanterne allumée réveille aussi une scène figée par la
+   * coquille (`live: false`), sauf en bandeau.
+   */
   get animated(): boolean {
-    return this.cfg.live && this.cfg.variant !== 'banner' && this.cfg.motion !== 'still';
+    return (this.cfg.live || this.lantern.active) && this.cfg.variant !== 'banner' && this.cfg.motion !== 'still';
   }
 
   get canRun(): boolean {

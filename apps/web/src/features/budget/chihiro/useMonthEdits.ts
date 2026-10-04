@@ -1,0 +1,99 @@
+/**
+ * Repère les modifications enregistrées du mois affiché (salaire, compléments,
+ * réserve, dépenses, libellés, taux) pour les petites réactions de l'univers :
+ * - `bowing` : le Sans-Visage salue brièvement après toute modification ;
+ * - `run` : une Noiraude traverse en portant un kompeitō quand un MONTANT
+ *   change (couleur de la dépense touchée, or pour les revenus et la réserve).
+ * Changer de mois ou recharger le même état ne déclenche rien.
+ */
+import type { MonthRecord } from '@a2/core';
+import { useEffect, useRef, useState } from 'react';
+import { carrierFor, konpeitoColorFor, type SusuwatariCarrier } from './mood';
+
+export const BOW_MS = 1500;
+
+export interface SusuwatariRun {
+  id: number;
+  carrier: SusuwatariCarrier;
+}
+
+interface Snapshot {
+  key: string;
+  amounts: string;
+  full: string;
+  expenses: MonthRecord['expenses'];
+}
+
+function snapshot(month: MonthRecord): Snapshot {
+  const amounts = [
+    month.salaryACents,
+    month.salaryBCents,
+    month.bonusACents,
+    month.bonusBCents,
+    month.reserveTargetCents,
+    ...month.expenses.map((e) => `${e.id}:${e.amountCents}`),
+  ].join('|');
+  const full = [
+    amounts,
+    month.expenses.map((e) => e.label).join('|'),
+    month.personA.baseRateBps,
+    month.personA.variableRateBps,
+    month.personB.baseRateBps,
+    month.personB.variableRateBps,
+  ].join('#');
+  return { key: month.monthKey, amounts, full, expenses: month.expenses };
+}
+
+/** Dépense ajoutée, retirée ou dont le montant a changé (sinon : revenus / réserve). */
+function touchedExpenseLabel(before: MonthRecord['expenses'], after: MonthRecord['expenses']): string | null {
+  const old = new Map(before.map((e) => [e.id, e]));
+  for (const e of after) {
+    const prev = old.get(e.id);
+    if (!prev || prev.amountCents !== e.amountCents) return e.label;
+  }
+  const now = new Set(after.map((e) => e.id));
+  const removed = before.find((e) => !now.has(e.id));
+  return removed ? removed.label : null;
+}
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
+export function useMonthEdits(month: MonthRecord): { bowing: boolean; run: SusuwatariRun | null; endRun: () => void } {
+  const previous = useRef<Snapshot | null>(null);
+  const bowTimer = useRef<number | undefined>(undefined);
+  const runId = useRef(0);
+  const [bowing, setBowing] = useState(false);
+  const [run, setRun] = useState<SusuwatariRun | null>(null);
+
+  useEffect(() => {
+    const next = snapshot(month);
+    const prev = previous.current;
+    previous.current = next;
+    if (prev === null || prev.key !== next.key) {
+      setBowing(false);
+      setRun(null);
+      return;
+    }
+    if (prev.full === next.full) return;
+
+    setBowing(true);
+    window.clearTimeout(bowTimer.current);
+    bowTimer.current = window.setTimeout(() => setBowing(false), BOW_MS);
+
+    if (prev.amounts !== next.amounts && !prefersReducedMotion()) {
+      const label = touchedExpenseLabel(prev.expenses, next.expenses);
+      runId.current += 1;
+      setRun({ id: runId.current, carrier: label === null ? 'carryYellow' : carrierFor(konpeitoColorFor(label)) });
+    }
+  }, [month]);
+
+  useEffect(() => () => window.clearTimeout(bowTimer.current), []);
+
+  return { bowing, run, endRun: () => setRun(null) };
+}

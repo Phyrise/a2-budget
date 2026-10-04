@@ -1,0 +1,378 @@
+/* Budget — univers « Le Voyage de Chihiro » : la maison de bains au crépuscule.
+   Couleurs locales à .budget (tokens.css n'est pas touché) : indigo du soir,
+   vermillon laqué des balustrades, or des pépites du Sans-Visage. */
+
+.budget,
+.budget-banner {
+  --chi-indigo-950: #11142a;
+  --chi-indigo-900: #171b36;
+  --chi-indigo-800: #1f2547;
+  --chi-indigo-600: #39427a;
+  --chi-indigo-300: #a9b2e6;
+  --chi-vermilion: #c4483a;
+  --chi-vermilion-300: #ec8a73; /* lisible sur fond sombre */
+  --chi-gold: #e2ac45;
+  --chi-gold-300: #f2d386;
+  --chi-lantern: #ffb36b;
+}
+
+/* ---------------------------------------------------------------- Bandeau */
+
+.budget-banner .month-bar__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #f1dcc0;
+}
+
+/* Petite lanterne de papier qui luit. */
+.month-bar__lantern {
+  flex: none;
+  width: 8px;
+  height: 11px;
+  border-radius: 45% 45% 40% 40%;
+  background: radial-gradient(circle at 50% 40%, #ffe2a8, var(--chi-lantern) 45%, var(--chi-vermilion) 100%);
+  box-shadow:
+    0 0 10px rgba(255, 179, 107, 0.75),
+    0 0 22px rgba(196, 72, 58, 0.45);
+}
+
+.budget-banner .month-bar__label {
+  text-shadow:
+    0 2px 18px rgba(0, 0, 0, 0.65),
+    0 0 28px rgba(255, 179, 107, 0.16);
+}
+
+.budget-banner .month-bar__year {
+  color: #f0cfb4;
+}
+
+/* ---------------------------------------------------------- Feuille, cartes */
+
+.budget .section-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 9px 0 1px;
+  vertical-align: 0.2em;
+  border-radius: 1px;
+  background: var(--chi-vermilion-300);
+  transform: rotate(45deg);
+  opacity: 0.85;
+}
+
+.budget .person-card {
+  background:
+    radial-gradient(120% 70% at 0% 0%, color-mix(in srgb, var(--who) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, rgba(31, 37, 71, 0.62), rgba(20, 24, 46, 0.7));
+  border-color: rgba(169, 178, 230, 0.13);
+}
+
+.budget .ledger {
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 12px;
+  border-color: rgba(226, 172, 69, 0.24);
+  background:
+    radial-gradient(70% 90% at 12% 100%, rgba(255, 179, 107, 0.1), transparent 65%),
+    radial-gradient(90% 120% at 100% 0%, rgba(226, 172, 69, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(31, 37, 71, 0.94), rgba(19, 22, 43, 0.96));
+}
+
+/* Balustrade laquée en haut de la carte. */
+.budget .ledger::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, var(--chi-vermilion) 18%, var(--chi-vermilion) 82%, transparent);
+  opacity: 0.8;
+}
+
+.budget .ledger__row--total .ledger__value {
+  color: var(--chi-gold-300);
+}
+
+.budget .ledger__rest {
+  color: var(--chi-gold-300);
+}
+
+.budget .ledger--deficit {
+  border-color: rgba(217, 138, 108, 0.42);
+}
+
+.budget .ledger--deficit .ledger__rest,
+.budget .ledger--deficit .ledger__row--rest .ledger__label {
+  color: var(--danger);
+}
+
+/* -------------------------------------------- Le reste, avec le Sans-Visage */
+
+.ledger__rest-block {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-left: -6px;
+}
+
+.ledger__rest-main {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 10px;
+}
+
+.ledger__rest-block .ledger__row--rest {
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+
+.noface {
+  position: relative;
+  flex: none;
+  width: 74px;
+  height: 108px;
+}
+
+.noface__glow {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 179, 107, 0.4), rgba(196, 72, 58, 0.14) 46%, transparent 70%);
+  transition:
+    opacity 600ms var(--ease-soft),
+    background 600ms var(--ease-soft);
+}
+
+.noface[data-pose='offering'] .noface__glow {
+  background: radial-gradient(circle, rgba(242, 211, 134, 0.5), rgba(226, 172, 69, 0.16) 46%, transparent 70%);
+}
+
+/* Timide : clair de lune doux, jamais d'alarme. */
+.noface[data-pose='shy'] .noface__glow {
+  background: radial-gradient(circle, rgba(169, 178, 230, 0.32), rgba(57, 66, 122, 0.16) 48%, transparent 70%);
+}
+
+/* Planche du pont, sous ses pieds. */
+.noface__plank {
+  position: absolute;
+  left: 4px;
+  right: -2px;
+  bottom: 2px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(196, 72, 58, 0.2), var(--chi-vermilion), rgba(196, 72, 58, 0.2));
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+.noface__img {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: auto;
+  max-width: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(2px);
+  transition:
+    opacity 420ms var(--ease-soft),
+    transform 520ms var(--ease-out);
+  filter: drop-shadow(0 0 1px rgba(236, 230, 211, 0.18)) drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  user-select: none;
+}
+
+.noface__img.is-shown {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.noface__img--bow {
+  transition-duration: 260ms, 320ms;
+}
+
+/* ---------------------------------------------------------- Rigole d'or */
+
+.gold-gauge {
+  margin-top: 8px;
+}
+
+.gold-gauge__track {
+  position: relative;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, #0e1024, #1b1f3c);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(226, 172, 69, 0.22);
+}
+
+.gold-gauge__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(226, 172, 69, 0.3), rgba(242, 211, 134, 0.62));
+  box-shadow: 0 0 14px rgba(226, 172, 69, 0.35);
+  transition: width 1100ms var(--ease-out);
+}
+
+.gold-gauge__nugget {
+  position: absolute;
+  top: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) translateY(calc(var(--lift) - 10px)) rotate(var(--rot)) scale(0.3);
+  transition:
+    opacity 260ms var(--ease-soft),
+    transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+  user-select: none;
+}
+
+.gold-gauge__nugget.is-on {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateY(var(--lift)) rotate(var(--rot)) scale(1);
+}
+
+.gold-gauge--deficit .gold-gauge__track {
+  background: var(--danger-soft);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(217, 138, 108, 0.42);
+}
+
+.gold-gauge--deficit .gold-gauge__fill {
+  opacity: 0;
+}
+
+/* --------------------------------------------------- Dépenses : kompeitō */
+
+.expense-list--konpeito .expense-row {
+  grid-template-columns: 28px minmax(0, 1fr) minmax(100px, 124px) 44px;
+}
+
+.expense-list--konpeito .expense-row__label .field__input {
+  margin-left: -6px;
+  width: calc(100% + 6px);
+}
+
+.konpeito {
+  width: 22px;
+  height: 22px;
+  justify-self: start;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55));
+  user-select: none;
+}
+
+.susu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.susu-empty__img {
+  width: 77px;
+  height: auto;
+  margin-bottom: -10px;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+
+/* ------------------------------------------------ Noiraude qui traverse */
+
+.susu-lane {
+  position: fixed;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 26px);
+  z-index: 35;
+  height: 70px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.susu-runner {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation-name: susu-run;
+  animation-timing-function: cubic-bezier(0.42, 0.1, 0.58, 0.95);
+  animation-fill-mode: forwards;
+}
+
+.susu-runner__img {
+  height: 56px;
+  width: auto;
+  transform-origin: 50% 100%;
+  animation: susu-hop 190ms ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 1.5px rgba(236, 230, 211, 0.4)) drop-shadow(0 0 12px rgba(255, 214, 150, 0.22));
+}
+
+.susu-runner__dust {
+  width: 30px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
+  animation: susu-shadow 190ms ease-in-out infinite alternate;
+}
+
+@keyframes susu-run {
+  from {
+    transform: translateX(-72px);
+  }
+  to {
+    transform: translateX(calc(var(--lane) + 12px));
+  }
+}
+
+@keyframes susu-hop {
+  from {
+    transform: translateY(0) scale(1.04, 0.94);
+  }
+  to {
+    transform: translateY(-9px) scale(0.98, 1.03);
+  }
+}
+
+@keyframes susu-shadow {
+  from {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(0.7);
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noface__img,
+  .noface__glow,
+  .gold-gauge__fill,
+  .gold-gauge__nugget {
+    transition: none !important;
+  }
+
+  .susu-lane {
+    display: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .noface {
+    width: 62px;
+    height: 96px;
+  }
+
+  .noface__img {
+    zoom: 0.88;
+  }
+}

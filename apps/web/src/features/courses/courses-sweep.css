@@ -27,6 +27,9 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
+  /* Les traversées se mesurent en largeur de ligne (100cqw) : tout passe
+     par transform (composité), rien ne relance la mise en page. */
+  container-type: inline-size;
 }
 
 .sweep-fx img {
@@ -82,7 +85,7 @@
 
 @keyframes kiki-cross {
   0% {
-    left: -76px;
+    transform: translateX(-76px);
     opacity: 0;
   }
   12% {
@@ -92,7 +95,7 @@
     opacity: 1;
   }
   100% {
-    left: calc(100% + 4px);
+    transform: translateX(calc(100cqw + 4px));
     opacity: 0;
   }
 }
@@ -147,9 +150,8 @@
 
 @keyframes broom-back {
   0% {
-    right: -140px;
     opacity: 0;
-    transform: rotate(-4deg);
+    transform: translateX(0) rotate(-4deg);
   }
   20% {
     opacity: 1;
@@ -158,9 +160,9 @@
     opacity: 1;
   }
   100% {
-    right: calc(100% - 20px);
     opacity: 0;
-    transform: rotate(3deg);
+    /* De right: -140px à right: calc(100% - 20px). */
+    transform: translateX(calc(-100cqw - 120px)) rotate(3deg);
   }
 }
 

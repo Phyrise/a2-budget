@@ -41,6 +41,32 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+// Peintures portrait des univers (fond fixe sur ordinateur seulement) :
+// hors précache, mises en cache au premier affichage (cache d'abord), en
+// gardant au plus quelques versions (les noms changent à chaque build).
+const PORTRAITS_CACHE = 'a2-budget-portraits';
+const PORTRAITS_KEEP = 4;
+const PORTRAIT_RE = /\/assets\/banner-portrait-[\w-]+\.webp$/;
+
+async function portraitFirst(request: Request): Promise<Response> {
+  const cache = await caches.open(PORTRAITS_CACHE);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok) {
+    await cache.put(request, response.clone());
+    const keys = await cache.keys();
+    for (const old of keys.slice(0, Math.max(0, keys.length - PORTRAITS_KEEP))) await cache.delete(old);
+  }
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET' || !PORTRAIT_RE.test(new URL(request.url).pathname)) return;
+  event.respondWith(portraitFirst(request).catch(() => fetch(request)));
+});
+
 // Mise à jour volontaire : workbox-window (updateServiceWorker(true)) envoie
 // SKIP_WAITING au service worker en attente ; on l'active alors. Sans ce
 // message, le nouveau worker reste en attente et l'ancienne version sert.

@@ -38,7 +38,9 @@ export function GoldGauge({ fill, deficit }: { fill: number; deficit: boolean })
   return (
     <div className={cx('gold-gauge', deficit && 'gold-gauge--deficit')} aria-hidden="true" data-fill={target.toFixed(3)}>
       <div className="gold-gauge__track">
-        <span className="gold-gauge__fill" style={{ width: `${shown * 100}%` }} />
+        <span className="gold-gauge__clip">
+          <span className="gold-gauge__fill" style={{ transform: `scaleX(${Math.min(1, Math.max(0, shown))})` }} />
+        </span>
         {NUGGETS.map((n, i) => {
           const at = (i + 0.5) / SLOTS;
           const on = i === 0 ? shown > 0 : at <= shown;

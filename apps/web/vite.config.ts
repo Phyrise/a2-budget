@@ -51,6 +51,12 @@ export default defineConfig({
       // (forêt, avatars) pour le mode hors ligne.
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,webmanifest}'],
+        // Hors précache : la scène du pont (budgetTheme.scene) et l'ancien
+        // bandeau forestier des Courses (manifest.banners.courses), émis par
+        // les manifests générés mais jamais affichés ; les peintures portrait
+        // des univers, qui ne servent que sur ordinateur (cache à l'exécution,
+        // voir sw.ts) — le téléphone ne les télécharge plus à l'installation.
+        globIgnores: ['**/node_modules/**', 'assets/scene-bridge-*.webp', 'assets/courses-*.webp', 'assets/banner-portrait-*.webp'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),

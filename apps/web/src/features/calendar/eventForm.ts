@@ -5,6 +5,7 @@
  * stricte reste celle de @a2/core (addEvent / updateEvent).
  */
 import type { CalendarEvent, CalendarEventDraft, CalendarEventKind, CalendarWho } from '@a2/core';
+import { birthdayOrigin } from './birthdayDate';
 import { originYearKnown } from './calendarText';
 
 export interface EventFormValues {
@@ -20,6 +21,10 @@ export interface EventFormValues {
   yearly: boolean;
   /** Anniversaire : année de naissance si connue (« 1991 »), sinon ''. */
   birthYear: string;
+  /** Jour montré à l'ouverture (pour savoir s'il a été touché). */
+  initialDate: string;
+  /** Date d'origine de l'événement modifié ('' pour un ajout). */
+  originDate: string;
 }
 
 /** Ce qu'une saisie rapide ou un jour choisi pré-remplit. */
@@ -52,14 +57,18 @@ export function initialValues(state: Exclude<EventSheetState, null>): EventFormV
       note: '',
       yearly: kind === 'anniversaire',
       birthYear: '',
+      initialDate: p.date,
+      originDate: '',
     };
   }
   const e = state.event;
   const known = e.kind === 'anniversaire' && originYearKnown(e);
+  // Année connue : on montre le jour de l'occurrence touchée, l'année à part
+  // (un 29 février reste un 29 février : voir birthdayDate.ts).
+  const date = known ? state.occurrenceDate : e.date;
   return {
     title: e.title,
-    // Année connue : on montre le jour de l'occurrence touchée, l'année à part.
-    date: known ? state.occurrenceDate : e.date,
+    date,
     allDay: e.allDay,
     time: e.time ?? '',
     endTime: e.endTime ?? '',
@@ -69,11 +78,14 @@ export function initialValues(state: Exclude<EventSheetState, null>): EventFormV
     note: e.note ?? '',
     yearly: e.yearly === true,
     birthYear: known ? e.date.slice(0, 4) : '',
+    initialDate: date,
+    originDate: e.date,
   };
 }
 
 export type FieldErrors = Partial<Record<'title' | 'date' | 'time' | 'endTime' | 'birthYear', string>>;
 
+const NBSP = '\u00a0';
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_KEY = /^\d{2}:\d{2}$/;
 
@@ -91,14 +103,29 @@ export function validate(v: EventFormValues, now: Date): FieldErrors {
       errors.birthYear = `Une année entre 1900 et ${now.getFullYear()}, ou rien du tout.`;
     }
   }
+  if (v.kind === 'anniversaire' && !errors.birthYear && !errors.date) {
+    const origin = birthdayOrigin({ ...v, nowYear: now.getFullYear() });
+    if (!origin.ok) {
+      errors.birthYear = `${origin.year} n’avait pas de 29${NBSP}février${NBSP}: vérifiez l’année ou le jour.`;
+    }
+  }
   return errors;
 }
 
-/** Brouillon pour addCalendarEvent / updateCalendarEvent (null retire un champ). */
-export function toDraft(v: EventFormValues): CalendarEventDraft {
+/**
+ * Brouillon pour addCalendarEvent / updateCalendarEvent (null retire un
+ * champ). Anniversaire : date d'origine et `yearKnown` selon birthdayDate.ts.
+ */
+export function toDraft(v: EventFormValues, now: Date): CalendarEventDraft {
   let date = v.date;
-  const year = v.birthYear.trim();
-  if (v.kind === 'anniversaire' && /^\d{4}$/.test(year)) date = `${year}${v.date.slice(4)}`;
+  let yearKnown: boolean | null = null;
+  if (v.kind === 'anniversaire') {
+    const origin = birthdayOrigin({ ...v, nowYear: now.getFullYear() });
+    if (origin.ok) {
+      date = origin.date;
+      yearKnown = origin.yearKnown;
+    }
+  }
   return {
     title: v.title,
     date,
@@ -110,6 +137,7 @@ export function toDraft(v: EventFormValues): CalendarEventDraft {
     place: v.place.trim() === '' ? null : v.place,
     note: v.note.trim() === '' ? null : v.note,
     yearly: v.yearly,
+    yearKnown,
   };
 }
 

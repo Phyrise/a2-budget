@@ -59,4 +59,17 @@ check('25h', { time: undefined });
 // Fin d'année : « 3 janvier » en décembre = l'an prochain.
 check('soldes 3 janvier', { date: '2027-01-03' }, new Date(2026, 11, 20, 9));
 
+// Jours qui n'existent pas toutes les années, ou jamais.
+check('anniv de Léa le 29 février', { title: 'Anniv de Léa', date: '2028-02-29', kind: 'anniversaire' });
+check('anniv de Léa 29/02', { title: 'Anniv de Léa', date: '2028-02-29' });
+check('anniv de Léa le 29 février', { date: '2028-02-29' }, new Date(2028, 1, 29, 9)); // le jour même
+check('anniv de Léa le 29 février', { date: '2032-02-29' }, new Date(2028, 2, 1, 9));
+check('fête le 29/02/2027', { title: 'Fête le 29/02/2027', date: undefined });
+check('pot le 31 avril', { title: 'Pot le 31 avril', date: undefined });
+check('pot le 31 avril samedi', { title: 'Pot le 31 avril samedi', date: undefined }); // rien n'est deviné à la place
+check('loyer le 31', { title: 'Loyer', date: '2026-10-31' });
+check('loyer le 31', { title: 'Loyer', date: '2026-12-31' }, new Date(2026, 10, 5, 9)); // novembre : 30 jours
+check('loyer le 30', { date: '2027-03-30' }, new Date(2027, 1, 5, 9)); // février : pas de 30
+check('table 45', { title: 'Table 45', date: undefined });
+
 console.log(`quickParse : ${count} cas vérifiés.`);

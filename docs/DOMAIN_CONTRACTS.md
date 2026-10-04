@@ -655,7 +655,8 @@ CalendarEvent = {
   id, title, date: 'YYYY-MM-DD', time?: 'HH:MM', endTime?: 'HH:MM',
   allDay: boolean,
   kind: 'repas' | 'sortie' | 'anniversaire' | 'rdv' | 'voyage' | 'maison' | 'autre',
-  who: 'a' | 'b' | 'both', place?, note?, yearly?: boolean, createdAt (ISO)
+  who: 'a' | 'b' | 'both', place?, note?, yearly?: boolean,
+  yearKnown?: boolean, createdAt (ISO)
 }
 ```
 
@@ -665,6 +666,13 @@ CalendarEvent = {
 - `yearly` : se répète chaque année au même mois/jour, à partir de l'année
   d'origine (jamais avant). Un **29 février** tombe le **28 février** les
   années non bissextiles.
+- `yearKnown` : l'année d'origine est réellement connue (anniversaire saisi
+  avec l'année de naissance → âge affichable) ; `false` → seuls mois et jour
+  comptent (aucun âge, même pour une origine passée : un 29 février sans
+  année est rangé sur la dernière année bissextile pour fêter le 28 février
+  dès cette année). Absent (données d'avant) : déduit, connue si l'année
+  d'origine précède l'année de création. L'interface pose `yearKnown` pour
+  chaque anniversaire enregistré.
 - Limites : `CALENDAR_EVENTS_MAX` = 2000, titre ≤ 120 (`CALENDAR_TITLE_MAX`),
   lieu ≤ 120, note ≤ 1000 ; `CALENDAR_KINDS` liste les natures.
 
@@ -678,7 +686,8 @@ CalendarEvent = {
   §12.4), `duplicate-calendar-event-id`, `calendar-full` (2000 : on n'oublie
   jamais un anniversaire en silence).
 - `updateEvent(events, id, patch)` : chaque champ présent remplace, `null`
-  retire un champ facultatif (`time`, `endTime`, `place`, `note`, `yearly`).
+  retire un champ facultatif (`time`, `endTime`, `place`, `note`, `yearly`,
+  `yearKnown`).
   Donner une heure passe en horaire ; `time: null` ou `allDay: true` repasse
   en journée entière (heures retirées). `id`/`createdAt` immuables. Seuls les
   champs du patch sont nettoyés ; patch sans effet → même référence ; id
@@ -712,8 +721,9 @@ années depuis la date d'origine, 0 l'année d'origine).
 `calendar-event-invalid-who`, `calendar-event-invalid-created-at`,
 `calendar-event-all-day-with-time`, `calendar-event-invalid-time`,
 `calendar-event-invalid-end-time`, `calendar-event-invalid-place`,
-`calendar-event-invalid-note`, `calendar-event-invalid-yearly`. Un événement
-valide ressort **champ pour champ identique** (y compris `yearly: false`).
+`calendar-event-invalid-note`, `calendar-event-invalid-yearly`,
+`calendar-event-invalid-year-known`. Un événement valide ressort **champ
+pour champ identique** (y compris `yearly: false`, `yearKnown: false`).
 
 ### 12.5 Store (`calendarActions.ts`, exposé par `useApp()`)
 

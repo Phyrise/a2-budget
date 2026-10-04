@@ -108,6 +108,10 @@ export function validateCalendarEvent(value: unknown): Ok<CalendarEvent> | Fail 
     if (typeof value.yearly !== 'boolean') return { ok: false, reason: 'calendar-event-invalid-yearly' };
     out.yearly = value.yearly;
   }
+  if (value.yearKnown !== undefined) {
+    if (typeof value.yearKnown !== 'boolean') return { ok: false, reason: 'calendar-event-invalid-year-known' };
+    out.yearKnown = value.yearKnown;
+  }
   return { ok: true, state: out };
 }
 
@@ -149,6 +153,8 @@ export interface CalendarEventDraft {
   note?: string | null;
   /** Défaut : vrai pour un anniversaire, faux sinon. */
   yearly?: boolean | null;
+  /** Année d'origine réellement connue (âge affichable) ; null ou absent → non renseigné. */
+  yearKnown?: boolean | null;
 }
 
 /** Modification : chaque champ présent remplace ; null retire un champ facultatif. */
@@ -210,6 +216,9 @@ function buildEvent(base: CalendarEvent | null, patch: CalendarEventPatch & { id
   } else if (base !== null) {
     if (base.yearly !== undefined) candidate.yearly = base.yearly;
   } else if (kind === 'anniversaire') candidate.yearly = true;
+  if (patch.yearKnown !== undefined) {
+    if (patch.yearKnown !== null) candidate.yearKnown = patch.yearKnown;
+  } else if (base?.yearKnown !== undefined) candidate.yearKnown = base.yearKnown;
   return validateCalendarEvent(candidate);
 }
 

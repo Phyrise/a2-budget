@@ -53,6 +53,15 @@ export interface CalendarEvent {
    * d'origine.
    */
   yearly?: boolean;
+  /**
+   * L'année d'origine est-elle réellement connue ? Vrai : anniversaire saisi
+   * avec l'année de naissance (un âge peut être affiché). Faux : seuls le
+   * mois et le jour comptent (aucun âge, même si l'année d'origine est
+   * passée, ex. un 29 février rangé sur la dernière année bissextile).
+   * Absent (données d'avant) : déduit, connue si l'année d'origine précède
+   * l'année de création.
+   */
+  yearKnown?: boolean;
   /** Horodatage ISO de création. */
   createdAt: string;
 }

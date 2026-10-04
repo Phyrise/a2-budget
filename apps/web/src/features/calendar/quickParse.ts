@@ -12,8 +12,9 @@
  * - jours : aujourd'hui, ce soir, ce midi, demain, après-demain, lundi…
  *   dimanche (le jour même = aujourd'hui ; « samedi prochain » = le samedi
  *   qui vient, dans 7 jours si c'est aujourd'hui), « le 12 », « 12 octobre
- *   (2027) », « 1er mai »,
- *   « 12/10(/2027) » ;
+ *   (2027) », « 1er mai », « 12/10(/2027) » ; sans année, la prochaine
+ *   occurrence (« 29 février » → le prochain 29 février) ; un jour qui
+ *   n'existe pas reste dans le titre ;
  * - heures : « 20h », « 20 h 30 », « 20:30 », « à midi », plages « de 14h à
  *   16h », « 14h-16h » ;
  * - nature par mots-clés (dîner → repas, ciné → sortie, dentiste → rdv…).
@@ -87,6 +88,19 @@ function makeDate(year: number, month: number, day: number): Date | null {
   return d.getMonth() === month - 1 && d.getDate() === day ? d : null;
 }
 
+/**
+ * Prochaine occurrence (aujourd'hui compris) d'un jour sans année : cette
+ * année, sinon la suivante… « 29 février » → le prochain 29 février qui
+ * existe. Jour impossible (« 31 avril ») → null.
+ */
+function nextYearly(today: Date, month: number, day: number): Date | null {
+  for (let y = today.getFullYear(); y <= today.getFullYear() + 8; y += 1) {
+    const d = makeDate(y, month, day);
+    if (d && d >= today) return d;
+  }
+  return null;
+}
+
 function timeKey(h: number, m: number): string | null {
   if (h < 0 || h > 23 || m < 0 || m > 59) return null;
   return `${pad(h)}:${pad(m)}`;
@@ -129,6 +143,15 @@ export function quickParse(input: string, now: Date): QuickParse {
     return null;
   };
 
+  /** Rend au titre un texte consommé à tort (jour inexistant). */
+  const release = (m: RegExpExecArray): true => {
+    const start = m.index;
+    const end = start + m[0].length;
+    for (let i = start; i < end; i += 1) consumed[i] = false;
+    folded = folded.slice(0, start) + foldKeepingLength(original).slice(start, end) + folded.slice(end);
+    return true;
+  };
+
   const result: QuickParse = { title: '' };
 
   // Nature d'abord (lecture seule : les mots restent dans le titre).
@@ -154,20 +177,19 @@ export function quickParse(input: string, now: Date): QuickParse {
     }
   }
 
-  // Jours.
+  // Jours. Un jour qui n'existe pas (« 31 avril », « 29/02/2027 ») n'est
+  // jamais consommé en silence : le texte reste dans le titre et aucune
+  // autre date n'est devinée à sa place.
   let date: Date | null = null;
+  let rejected = false;
   const named = take(new RegExp(String.raw`\b(?:le\s+)?(1er|\d{1,2})\s+(${MONTH_WORD})\.?(?:\s+(\d{4}))?\b`));
   if (named) {
     const day = named[1] === '1er' ? 1 : Number(named[1]);
     const month = MONTHS.find(([, re]) => re.test(named[2]!))?.[0] ?? 0;
-    if (named[3]) {
-      date = makeDate(Number(named[3]), month, day);
-    } else {
-      date = makeDate(today.getFullYear(), month, day);
-      if (date && date < today) date = makeDate(today.getFullYear() + 1, month, day);
-    }
+    date = named[3] ? makeDate(Number(named[3]), month, day) : nextYearly(today, month, day);
+    if (!date) rejected = release(named);
   }
-  if (!date) {
+  if (!date && !rejected) {
     const numeric = take(/\b(?:le\s+)?(\d{1,2})[/.](\d{1,2})(?:[/.](\d{2}|\d{4}))?\b/);
     if (numeric) {
       const day = Number(numeric[1]);
@@ -176,12 +198,12 @@ export function quickParse(input: string, now: Date): QuickParse {
         const y = Number(numeric[3]);
         date = makeDate(y < 100 ? 2000 + y : y, month, day);
       } else {
-        date = makeDate(today.getFullYear(), month, day);
-        if (date && date < today) date = makeDate(today.getFullYear() + 1, month, day);
+        date = nextYearly(today, month, day);
       }
+      if (!date) rejected = release(numeric);
     }
   }
-  if (!date) {
+  if (!date && !rejected) {
     const rel = take(/\b(aujourd'hui|ce\s+soir|ce\s+midi|ce\s+matin|cet\s+apres[- ]midi|apres[- ]demain|demain)(?:\s+(soir|midi|matin|apres[- ]midi))?\b/);
     if (rel) {
       const word = rel[1]!.replace(/\s+/g, ' ');
@@ -193,7 +215,7 @@ export function quickParse(input: string, now: Date): QuickParse {
   if (date) {
     // « samedi 10 octobre » : le jour de la semaine est redondant, on le retire du titre.
     take(weekdayPattern);
-  } else {
+  } else if (!rejected) {
     const wd = take(weekdayPattern);
     if (wd) {
       const iso = WEEKDAYS.indexOf(wd[1]!) + 1;
@@ -205,15 +227,17 @@ export function quickParse(input: string, now: Date): QuickParse {
       if (wd[3] === 'midi' && result.time === undefined) result.time = '12:00';
     }
   }
-  if (!date) {
+  if (!date && !rejected) {
     const dayOnly = take(/\ble\s+(1er|\d{1,2})\b(?!\s*(?:h|:|\/|\.\d))/);
     if (dayOnly) {
+      // « le 31 » : le prochain mois qui a un 31 (aujourd'hui compris).
       const day = dayOnly[1] === '1er' ? 1 : Number(dayOnly[1]);
-      date = makeDate(today.getFullYear(), today.getMonth() + 1, day);
-      if (date && date < today) {
-        const next = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-        date = makeDate(next.getFullYear(), next.getMonth() + 1, day);
+      for (let k = 0; k < 12 && !date; k += 1) {
+        const first = new Date(today.getFullYear(), today.getMonth() + k, 1);
+        const candidate = makeDate(first.getFullYear(), first.getMonth() + 1, day);
+        if (candidate && candidate >= today) date = candidate;
       }
+      if (!date) release(dayOnly);
     }
   }
   if (date) result.date = keyOf(date);

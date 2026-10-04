@@ -110,7 +110,7 @@ export function EventSheet({
       if (found.title) titleRef.current?.focus();
       return;
     }
-    const draft = toDraft(v);
+    const draft = toDraft(v, new Date());
     const result = editing ? updateCalendarEvent(editing.id, draft) : addCalendarEvent(draft);
     if (!result.ok) {
       setFormError(reasonMessage(result.reason));
@@ -191,6 +191,7 @@ export function EventSheet({
                 <p className="field__hint" id="event-date-hint">
                   {longDate(parseLocalDateKey(v.date))}
                   {v.yearly ? ', puis chaque année' : ''}
+                  {v.yearly && v.date.endsWith('-02-29') ? ' (le 28\u00a0février les années sans 29)' : ''}
                 </p>
               )}
               {errors.date && (

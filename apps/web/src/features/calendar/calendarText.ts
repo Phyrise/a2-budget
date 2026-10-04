@@ -3,9 +3,9 @@
  * répétitions annuelles viennent de @a2/core).
  *
  * Âge d'un anniversaire : on ne l'affiche que si l'année d'origine est
- * réellement connue, c'est-à-dire antérieure à l'année de création de
- * l'événement (« Léa, née en 1991 », saisi en 2026). Un anniversaire saisi
- * avec la date de cette année (année inconnue) ne montre jamais d'âge.
+ * réellement connue : `yearKnown` posé par la feuille (année de naissance
+ * saisie ou non), sinon (données d'avant) une année d'origine antérieure à
+ * l'année de création (« Léa, née en 1991 », saisi en 2026).
  */
 import {
   addDays,
@@ -95,8 +95,9 @@ export function displayTitle(event: CalendarEvent): string {
   return `Anniversaire ${article}${event.title}`;
 }
 
-/** L'année d'origine est connue (antérieure à l'année de création). */
+/** L'année d'origine est connue (`yearKnown`, sinon antérieure à l'année de création). */
 export function originYearKnown(event: CalendarEvent): boolean {
+  if (event.yearKnown !== undefined) return event.yearKnown;
   const created = Number(event.createdAt.slice(0, 4));
   const origin = Number(event.date.slice(0, 4));
   return Number.isFinite(created) && Number.isFinite(origin) && origin < created;

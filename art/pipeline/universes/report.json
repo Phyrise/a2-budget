@@ -1,0 +1,322 @@
+{
+ "budget/banner-landscape.webp": {
+  "w": 1536,
+  "h": 1024,
+  "bytes": 212254
+ },
+ "budget/banner-portrait.webp": {
+  "w": 1024,
+  "h": 1536,
+  "bytes": 238048
+ },
+ "budget/gold-coin-1.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 4680
+ },
+ "budget/gold-coin-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 4706
+ },
+ "budget/gold-coin-3.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 4646
+ },
+ "budget/gold-nugget-1.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3906
+ },
+ "budget/gold-nugget-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3660
+ },
+ "budget/gold-nugget-3.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3708
+ },
+ "budget/gold-nugget-4.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3660
+ },
+ "budget/gold-nugget-5.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 4204
+ },
+ "budget/gold-nugget-6.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3938
+ },
+ "budget/konpeito-blue-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3608
+ },
+ "budget/konpeito-blue.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3368
+ },
+ "budget/konpeito-green-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3134
+ },
+ "budget/konpeito-green.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 2942
+ },
+ "budget/konpeito-pink.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3002
+ },
+ "budget/konpeito-purple-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 3038
+ },
+ "budget/konpeito-purple.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 2930
+ },
+ "budget/konpeito-white.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 2570
+ },
+ "budget/konpeito-yellow-2.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 2888
+ },
+ "budget/konpeito-yellow.webp": {
+  "w": 96,
+  "h": 96,
+  "bytes": 2668
+ },
+ "budget/noface-bow.webp": {
+  "w": 233,
+  "h": 356,
+  "bytes": 8132
+ },
+ "budget/noface-calm.webp": {
+  "w": 182,
+  "h": 382,
+  "bytes": 7748
+ },
+ "budget/noface-content.webp": {
+  "w": 247,
+  "h": 362,
+  "bytes": 8662
+ },
+ "budget/noface-fading.webp": {
+  "w": 263,
+  "h": 362,
+  "bytes": 19908
+ },
+ "budget/noface-offering.webp": {
+  "w": 191,
+  "h": 377,
+  "bytes": 9046
+ },
+ "budget/noface-shy.webp": {
+  "w": 194,
+  "h": 366,
+  "bytes": 7576
+ },
+ "budget/scene-bridge.webp": {
+  "w": 1536,
+  "h": 1024,
+  "bytes": 195440
+ },
+ "budget/susuwatari-carry-blue-duo.webp": {
+  "w": 194,
+  "h": 167,
+  "bytes": 9510
+ },
+ "budget/susuwatari-carry-green.webp": {
+  "w": 121,
+  "h": 196,
+  "bytes": 6798
+ },
+ "budget/susuwatari-carry-pink.webp": {
+  "w": 124,
+  "h": 200,
+  "bytes": 6800
+ },
+ "budget/susuwatari-carry-yellow.webp": {
+  "w": 123,
+  "h": 197,
+  "bytes": 6798
+ },
+ "budget/susuwatari-hiding.webp": {
+  "w": 154,
+  "h": 138,
+  "bytes": 4994
+ },
+ "budget/susuwatari-jump-white.webp": {
+  "w": 138,
+  "h": 162,
+  "bytes": 6604
+ },
+ "budget/susuwatari-sleeping.webp": {
+  "w": 149,
+  "h": 113,
+  "bytes": 3464
+ },
+ "budget/susuwatari-trio.webp": {
+  "w": 185,
+  "h": 157,
+  "bytes": 7188
+ },
+ "courses/banner-landscape.webp": {
+  "w": 1536,
+  "h": 1024,
+  "bytes": 359596
+ },
+ "courses/banner-portrait.webp": {
+  "w": 1024,
+  "h": 1536,
+  "bytes": 342214
+ },
+ "courses/basket-empty.webp": {
+  "w": 354,
+  "h": 314,
+  "bytes": 31412
+ },
+ "courses/basket-full.webp": {
+  "w": 374,
+  "h": 342,
+  "bytes": 51706
+ },
+ "courses/basket-half.webp": {
+  "w": 335,
+  "h": 317,
+  "bytes": 34104
+ },
+ "courses/broom.webp": {
+  "w": 540,
+  "h": 106,
+  "bytes": 12126
+ },
+ "courses/category-autre.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4190
+ },
+ "courses/category-boissons.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5826
+ },
+ "courses/category-boulangerie.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4716
+ },
+ "courses/category-epicerie.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5598
+ },
+ "courses/category-frais.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4454
+ },
+ "courses/category-fruits-legumes.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 6188
+ },
+ "courses/category-hygiene.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 3322
+ },
+ "courses/category-maison.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4894
+ },
+ "courses/category-surgeles.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5426
+ },
+ "courses/dust.webp": {
+  "w": 541,
+  "h": 210,
+  "bytes": 31840
+ },
+ "courses/jiji-in-bag.webp": {
+  "w": 250,
+  "h": 267,
+  "bytes": 15938
+ },
+ "courses/jiji-in-basket.webp": {
+  "w": 231,
+  "h": 254,
+  "bytes": 18040
+ },
+ "courses/jiji-on-basket.webp": {
+  "w": 256,
+  "h": 281,
+  "bytes": 18146
+ },
+ "courses/jiji-sleeping.webp": {
+  "w": 278,
+  "h": 201,
+  "bytes": 15502
+ },
+ "courses/jiji-teacup.webp": {
+  "w": 252,
+  "h": 265,
+  "bytes": 15366
+ },
+ "courses/kiki-basket.webp": {
+  "w": 224,
+  "h": 381,
+  "bytes": 17748
+ },
+ "courses/kiki-flying.webp": {
+  "w": 402,
+  "h": 308,
+  "bytes": 22966
+ },
+ "courses/kiki-list.webp": {
+  "w": 157,
+  "h": 363,
+  "bytes": 12610
+ },
+ "courses/kiki-sweep-a.webp": {
+  "w": 283,
+  "h": 333,
+  "bytes": 19836
+ },
+ "courses/kiki-sweep-b.webp": {
+  "w": 283,
+  "h": 333,
+  "bytes": 17934
+ },
+ "courses/kiki-wave.webp": {
+  "w": 208,
+  "h": 369,
+  "bytes": 14746
+ },
+ "courses/sparkles.webp": {
+  "w": 423,
+  "h": 268,
+  "bytes": 22680
+ }
+}

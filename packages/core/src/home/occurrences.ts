@@ -111,7 +111,10 @@ export function hasCompletion(
 /**
  * Fait Maison de l'occurrence couvrant `date`, ou undefined. Pour une
  * hebdomadaire souple, tout fait daté dans la semaine compte (y compris un
- * fait enregistré quand la tâche était encore à jour fixe).
+ * fait enregistré quand la tâche était encore à jour fixe). Pour une
+ * hebdomadaire à jour fixe, le fait daté du lundi de la semaine (enregistré
+ * quand elle était souple) compte aussi : pas de double fait ni de double
+ * crédit après un passage souple → fixe.
  */
 export function findOccurrenceCompletion(
   task: HouseholdTask,
@@ -127,7 +130,12 @@ export function findOccurrenceCompletion(
     );
   }
   const dueDate = occurrenceDateFor(task, date);
-  return completions.find((c) => c.taskId === task.id && c.dueDate === dueDate);
+  const exact = completions.find((c) => c.taskId === task.id && c.dueDate === dueDate);
+  if (exact !== undefined || task.recurrence !== 'weekly') return exact;
+  // Hebdomadaire repassée en jour fixe : le fait de la semaine enregistré
+  // quand elle était souple (daté du lundi) couvre encore la semaine.
+  const monday = weekStartKey(date);
+  return completions.find((c) => c.taskId === task.id && c.dueDate === monday);
 }
 
 /** Vrai si l'occurrence couvrant `date` a été passée (« pas aujourd'hui »). */
@@ -138,5 +146,8 @@ export function isSkipped(
 ): boolean {
   if (skips === undefined || skips.length === 0) return false;
   const dueDate = skipDateFor(task, date);
-  return skips.some((s) => s.taskId === task.id && s.dueDate === dueDate);
+  // Hebdomadaire repassée en jour fixe : un « pas cette semaine » posé quand
+  // elle était souple (daté du lundi) vaut encore pour la semaine.
+  const monday = task.recurrence === 'weekly' ? weekStartKey(date) : dueDate;
+  return skips.some((s) => s.taskId === task.id && (s.dueDate === dueDate || s.dueDate === monday));
 }

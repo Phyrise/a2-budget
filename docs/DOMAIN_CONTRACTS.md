@@ -508,7 +508,11 @@ une RangeError ; une valeur **héritée** devenue sans objet (assignee passé à
 - `toggleTaskToday` : coche l'occurrence de la semaine ; décocher un autre
   jour de la même semaine retire ce fait (tombstone de sa clé d'origine).
 - `upcomingOccurrences` : une entrée par **semaine suivante**, datée du lundi.
-- Tâches non souples : comportement V2 inchangé.
+- Souple → jour fixe la même semaine : `findOccurrenceCompletion` /
+  `isSkipped` d'une hebdomadaire à jour fixe acceptent aussi le fait / le
+  passage daté du **lundi** de la semaine (pas de second fait ni de second
+  crédit) ; décocher retire ce fait (tombstone de `taskId|lundi`).
+- Autres tâches non souples : comportement V2 inchangé.
 
 ### 11.3 Tour à tour et « qui l'a vraiment fait »
 
@@ -516,9 +520,10 @@ une RangeError ; une valeur **héritée** devenue sans objet (assignee passé à
   `whoDid(c) = doneBy ?? assignee`. `doneBy` n'est stocké que s'il diffère
   de `assignee`.
 - `nextAssignee(task, completions)` : tour à tour → l'opposé de la personne
-  ('a'/'b') du plus récent fait de la tâche (par `completedAt`, faits
-  « ensemble » ignorés), sinon `task.assignee` ; autres tâches →
-  `task.assignee`.
+  qui avait le tour au plus récent fait de la tâche (par `completedAt`) :
+  `doneBy ?? assignee` si c'est 'a'/'b', sinon (fait « à deux ») l'`assignee`
+  enregistré — le tour tourne aussi après un fait à deux ; sans fait
+  exploitable, `task.assignee` ; autres tâches → `task.assignee`.
 - `addCompletion(…, id, doneBy?)` : `assignee` du fait = `nextAssignee`
   (identique à V2 hors tour à tour). `toggleTaskToday(state, id, now,
   completionId, { doneBy? })` renvoie aussi `doneBy` (absent si rien n'a

@@ -104,6 +104,31 @@ describe('hebdomadaire souple', () => {
     expect(isActionableToday(flex, THU, [legacy])).toBe(false);
   });
 
+  it('souple → jour fixe la même semaine : ni second fait ni second crédit', () => {
+    const tue = new Date(2026, 9, 13, 9, 0, 0);
+    const r = toggleTaskToday(stateWith(flex), 'flex', tue, 'c1');
+    const fixedAgain = updateTask(r.state.chores.tasks, 'flex', { flexible: false, weeklyDay: 4 });
+    const s: AppState = { ...r.state, chores: { ...r.state.chores, tasks: fixedAgain } };
+    expect(actionableTasksToday(fixedAgain, THU, s.chores.completions)).toEqual([]);
+    // Cocher le jeudi décoche le fait de la semaine (pas de doublon).
+    const t = toggleTaskToday(s, 'flex', THU, 'c2');
+    expect(t.completed).toBe(false);
+    expect(t.completionId).toBe('c1');
+    expect(t.state.chores.completions).toEqual([]);
+    expect(t.state.forest.creditLedger['flex|2026-10-12']?.status).toBe('tombstoned');
+    expect(Object.keys(t.state.forest.creditLedger)).toEqual(['flex|2026-10-12']);
+    expect(valid(t.state)).toBe(true);
+    // La semaine suivante, le jour fixe reprend normalement.
+    expect(isActionableToday(fixedAgain[0]!, new Date(2026, 9, 22, 9), s.chores.completions)).toBe(true);
+  });
+
+  it('souple → jour fixe : un « pas cette semaine » reste valable', () => {
+    const skips: ChoreSkip[] = [{ id: 's1', taskId: 'flex', dueDate: '2026-10-12', at: MON.toISOString() }];
+    const [fixedAgain] = updateTask([flex], 'flex', { flexible: false, weeklyDay: 4 });
+    expect(isActionableToday(fixedAgain!, THU, [], skips)).toBe(false);
+    expect(isActionableToday(fixedAgain!, new Date(2026, 9, 22, 9), [], skips)).toBe(true);
+  });
+
   it('les tâches à jour fixe ne changent pas', () => {
     expect(isDueOn(fixed, THU)).toBe(true);
     expect(isDueOn(fixed, SAT)).toBe(false);
@@ -130,9 +155,20 @@ describe('tour à tour + doneBy', () => {
     cs = addCompletion(cs, turn, '2026-10-14', new Date(2026, 9, 14), 'c3', 'b').completions;
     expect(cs[2]).toMatchObject({ assignee: 'a', doneBy: 'b' });
     expect(nextAssignee(turn, cs)).toBe('a');
-    // Ensemble : ignoré pour l'alternance.
+    // Ensemble pendant le tour de A : le tour passe quand même à B.
     cs = addCompletion(cs, turn, '2026-10-15', THU, 'c4', 'both').completions;
-    expect(nextAssignee(turn, cs)).toBe('a');
+    expect(cs[3]).toMatchObject({ assignee: 'a', doneBy: 'both' });
+    expect(nextAssignee(turn, cs)).toBe('b');
+  });
+
+  it('faits « à deux » répétés : le tour continue d’alterner', () => {
+    let cs: ChoreCompletion[] = [];
+    const turns: string[] = [];
+    for (let d = 12; d <= 15; d += 1) {
+      turns.push(nextAssignee(turn, cs));
+      cs = addCompletion(cs, turn, `2026-10-${d}`, new Date(2026, 9, d, 9), `c${d}`, d === 12 ? undefined : 'both').completions;
+    }
+    expect(turns).toEqual(['a', 'b', 'a', 'b']);
   });
 
   it('doneBy égal à l’assignee n’est pas stocké ; tâche fixe : nextAssignee = assignee', () => {

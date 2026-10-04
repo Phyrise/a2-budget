@@ -73,9 +73,11 @@ export function isActionableToday(
 /**
  * À qui revient la **prochaine** occurrence :
  * - tâche en tour à tour (`rotation`, assignee 'a'/'b') : l'opposé de la
- *   personne ('a' ou 'b') qui a fait le plus récent fait de cette tâche
- *   (`doneBy ?? assignee`, par completedAt) ; sans fait de ce type,
- *   `task.assignee` (la personne qui commence) ;
+ *   personne qui avait le tour au plus récent fait de cette tâche (par
+ *   completedAt). Ce « tour » vaut `doneBy ?? assignee` quand c'est 'a' ou
+ *   'b' ; pour un fait « à deux », c'est l'`assignee` enregistré (la
+ *   personne dont c'était le tour) : le tour tourne quand même. Sans fait
+ *   exploitable, `task.assignee` (la personne qui commence) ;
  * - autres tâches : `task.assignee`.
  */
 export function nextAssignee(task: HouseholdTask, completions: ChoreCompletion[]): TaskAssignee {
@@ -83,14 +85,26 @@ export function nextAssignee(task: HouseholdTask, completions: ChoreCompletion[]
     return task.assignee;
   }
   let last: ChoreCompletion | undefined;
+  let lastOwner: 'a' | 'b' | undefined;
   for (const c of completions) {
     if (c.taskId !== task.id) continue;
-    const who = whoDid(c);
-    if (who !== 'a' && who !== 'b') continue;
-    if (last === undefined || c.completedAt >= last.completedAt) last = c;
+    const owner = turnOwner(c);
+    if (owner === undefined) continue;
+    if (last === undefined || c.completedAt >= last.completedAt) {
+      last = c;
+      lastOwner = owner;
+    }
   }
-  if (last === undefined) return task.assignee;
-  return whoDid(last) === 'a' ? 'b' : 'a';
+  if (lastOwner === undefined) return task.assignee;
+  return lastOwner === 'a' ? 'b' : 'a';
+}
+
+/** Personne dont c'était le tour pour ce fait ('a' / 'b'), si connue. */
+function turnOwner(c: ChoreCompletion): 'a' | 'b' | undefined {
+  const who = whoDid(c);
+  if (who === 'a' || who === 'b') return who;
+  if (c.assignee === 'a' || c.assignee === 'b') return c.assignee;
+  return undefined;
 }
 
 /**

@@ -1,6 +1,7 @@
 /**
  * Labo du monde (dev seulement, servi par le serveur de dev : /a2-budget/world-lab.html).
- * Contrôles : stade, humeur, pause, lumières ±, pulse, gardien, mouvement,
+ * Contrôles : stade, humeur, pause, lumières ±, pulse (fort), gardien,
+ * saison (soir d'été), lanterne (progression, floraison), mouvement,
  * variante, qualité, données, LUT de test ; fps et temps par image.
  * Paramètres d'URL identiques aux clés de LabSettings (captures Playwright),
  * `ui=0` masque le panneau ; window.__lab pilote la scène.
@@ -8,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { LivingForest, type LivingForestDebugHandle } from '../LivingForest';
 import type { EngineStats, QualitySetting } from '../engine';
-import type { LivingForestHandle, Mood, WorldLight, WorldMotion, WorldState, WorldVariant, Who } from '../types';
+import type { LivingForestHandle, Mood, Season, WorldLight, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { labManifest, type LabData } from './labManifest';
 import { seasonOf } from '../worldState';
 
@@ -25,11 +26,20 @@ interface LabSettings {
   lut: boolean;
   progress: number;
   creature: boolean;
+  season: Season | 'auto';
+  /** Soirée simulée (lucioles d'été). */
+  evening: boolean;
+  /** Lanterne : progression 0..1, ou -1 = éteinte. */
+  lantern: number;
+  lanternWho: Who;
 }
 
 const WHO: Who[] = ['a', 'b', 'both', 'unassigned'];
 const MOODS: Mood[] = ['quiet', 'peaceful', 'lively', 'flourishing'];
 const MOOD_FR: Record<Mood, string> = { quiet: 'calme', peaceful: 'paisible', lively: 'vive', flourishing: 'florissante' };
+const SEASONS: (Season | 'auto')[] = ['auto', 'spring', 'summer', 'autumn', 'winter'];
+const SEASON_FR: Record<Season | 'auto', string> = { auto: 'auto', spring: 'printemps', summer: 'été', autumn: 'automne', winter: 'hiver' };
+const WHO_FR: Record<Who, string> = { a: 'AL', b: 'AC', both: 'ensemble', unassigned: '—' };
 
 function readSettings(): LabSettings {
   const q = new URLSearchParams(location.search);
@@ -44,10 +54,14 @@ function readSettings(): LabSettings {
     motion: (q.get('motion') as WorldMotion) ?? 'full',
     live: q.get('live') !== '0',
     quality: qual === null || qual === 'auto' ? 'auto' : (Number(qual) as 0 | 1 | 2),
-    data: (q.get('data') as LabData) ?? 'labo',
+    data: (q.get('data') as LabData) ?? 'stub',
     lut: q.get('lut') === '1',
     progress: num('progress', 0.4),
     creature: q.get('creature') === '1',
+    season: (q.get('season') as Season | null) ?? 'auto',
+    evening: q.get('evening') === '1',
+    lantern: num('lantern', -1),
+    lanternWho: (q.get('who') as Who | null) ?? 'b',
   };
 }
 
@@ -57,7 +71,8 @@ declare global {
   interface Window {
     __lab?: {
       set: (p: Partial<LabSettings>) => void;
-      pulse: (x?: number, y?: number) => void;
+      pulse: (x?: number, y?: number, strong?: boolean) => void;
+      focus: (progress: number | null, who?: Who) => void;
       guardian: () => void;
       stats: () => EngineStats | null;
     };
@@ -79,20 +94,20 @@ export function LabApp() {
       growthProgress: s.progress,
       mood: s.mood,
       paused: s.paused,
-      season: seasonOf(new Date()),
+      season: s.season === 'auto' ? seasonOf(new Date()) : s.season,
       creatures: s.creature ? ['lab-creature'] : [],
       lights: [...lightList(s.lights), ...extra],
     }),
-    [s.stage, s.progress, s.mood, s.paused, s.lights, s.creature, extra],
+    [s.stage, s.progress, s.mood, s.paused, s.lights, s.creature, s.season, extra],
   );
 
   const debug = () => ref.current as LivingForestDebugHandle | null;
 
-  const pulse = (x?: number, y?: number) => {
+  const pulse = (x?: number, y?: number, strong = false) => {
     const id = `pulse-${Date.now()}`;
     const who = WHO[Math.floor(Math.random() * 4)]!;
     setExtra((e) => [...e, { id, who }]);
-    ref.current?.pulse({ id, who, fromClientX: x ?? innerWidth * 0.3, fromClientY: y ?? innerHeight * 0.85 });
+    ref.current?.pulse({ id, who, strong, fromClientX: x ?? innerWidth * 0.3, fromClientY: y ?? innerHeight * 0.85 });
   };
 
   useEffect(() => {
@@ -100,7 +115,16 @@ export function LabApp() {
   }, [s.quality]);
 
   useEffect(() => {
-    window.__lab = { set, pulse, guardian: () => ref.current?.playGuardian(), stats: () => debug()?.stats() ?? null };
+    debug()?.setHour(s.evening ? 21 : null);
+  }, [s.evening]);
+
+  useEffect(() => {
+    ref.current?.focus(s.lantern < 0 ? null : s.lantern, s.lanternWho);
+  }, [s.lantern, s.lanternWho]);
+
+  useEffect(() => {
+    const focus = (progress: number | null, who?: Who) => set({ lantern: progress ?? -1, ...(who ? { lanternWho: who } : {}) });
+    window.__lab = { set, pulse, focus, guardian: () => ref.current?.playGuardian(), stats: () => debug()?.stats() ?? null };
     const id = window.setInterval(() => setStats(debug()?.stats() ?? null), 500);
     return () => window.clearInterval(id);
   });
@@ -157,9 +181,28 @@ export function LabApp() {
             <button style={btn} onClick={() => set({ lights: Math.max(0, s.lights - 1) })}>−</button>
             <button style={btn} onClick={() => set({ lights: s.lights + 1 })}>+</button>
             <button style={btn} onClick={(e) => pulse(e.clientX, e.clientY)}>pulse</button>
+            <button style={btn} onClick={(e) => pulse(e.clientX, e.clientY, true)}>pulse fort</button>
             <button style={btn} onClick={() => setExtra((x) => x.slice(0, -1))}>annuler</button>
             <button style={btn} onClick={() => ref.current?.playGuardian()}>gardien</button>
             <button style={on(s.creature)} onClick={() => set({ creature: !s.creature })}>créature</button>
+          </div>
+          <div style={row}>
+            {SEASONS.map((x) => (
+              <button key={x} style={on(s.season === x)} onClick={() => set({ season: x })}>{SEASON_FR[x]}</button>
+            ))}
+            <button style={on(s.evening)} onClick={() => set({ evening: !s.evening })}>soir</button>
+          </div>
+          <div style={row}>
+            <button style={on(s.lantern >= 0)} onClick={() => set({ lantern: s.lantern >= 0 ? -1 : 0 })}>lanterne</button>
+            <input
+              type="range" min={0} max={1} step={0.01} value={Math.max(0, s.lantern)} aria-label="Progression de la lanterne"
+              onChange={(e) => set({ lantern: Number(e.target.value) })} style={{ flex: '1 1 120px' }}
+            />
+            <span style={{ font: '12px ui-monospace, monospace', minWidth: 36 }}>{s.lantern < 0 ? '—' : `${Math.round(s.lantern * 100)} %`}</span>
+            <button style={btn} onClick={() => set({ lantern: 1 })}>floraison</button>
+            {(['a', 'b', 'both'] as Who[]).map((w) => (
+              <button key={w} style={on(s.lanternWho === w)} onClick={() => set({ lanternWho: w })}>{WHO_FR[w]}</button>
+            ))}
           </div>
           <div style={row}>
             {(['full', 'gentle', 'still'] as WorldMotion[]).map((m) => (
@@ -177,7 +220,7 @@ export function LabApp() {
             ))}
             Données
             {(['stub', 'labo'] as LabData[]).map((d) => (
-              <button key={d} style={on(s.data === d)} onClick={() => set({ data: d })}>{d}</button>
+              <button key={d} style={on(s.data === d)} onClick={() => set({ data: d })}>{d === 'stub' ? 'réel' : 'labo'}</button>
             ))}
             <button style={on(s.lut)} onClick={() => set({ lut: !s.lut })}>LUT test</button>
           </div>

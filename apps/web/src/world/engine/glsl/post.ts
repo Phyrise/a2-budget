@@ -25,6 +25,7 @@ uniform float uVignette;
 uniform float uGrain;
 uniform float uSeed;
 uniform vec2  uRes;
+uniform vec3  uTint;        // teinte de saison (multiplicative, très légère)
 
 vec3 lut(sampler2D t, vec3 c) {
   c = clamp(c, 0.0, 1.0);
@@ -49,6 +50,8 @@ void main() {
   vec3 a = uHasA > 0.5 ? lut(uLutA, c) : c;
   vec3 b = uHasB > 0.5 ? lut(uLutB, c) : c;
   c = mix(a, b, uLutMix);
+
+  c *= uTint;
 
   if (uNightProc > 0.001) {
     float nl = luma(c);

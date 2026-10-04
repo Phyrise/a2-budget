@@ -2,7 +2,8 @@
  * Passe principale : la peinture du stade, en 2.5D.
  * Parallaxe par profondeur, vent (masque G), eau à deux phases (masque R),
  * croissance par dissolution organique (masque B), brume en nappes modulée par
- * la profondeur, rayons procéduraux + poussières, mousse lumineuse, clair de lune.
+ * la profondeur, rayons procéduraux + poussières, mousse lumineuse, clair de lune,
+ * lumière portée de la lanterne.
  */
 import { FRAMING, HASH, LUMA, PRECISION } from './common';
 
@@ -40,6 +41,8 @@ uniform float uSparkle;
 uniform float uMoss;
 uniform float uMoon;
 uniform float uDetail;      // 0 = palier bas (moins d'échantillons)
+uniform vec4  uLantern;     // lanterne : x, y, rayon (hauteur d'image), intensité
+uniform vec3  uLanternColor;
 
 // Biais de LOD négatif : la peinture reste nette en réduction (mipmaps trilinéaires).
 vec3 sampleColor(sampler2D t, vec2 p) { return texture2D(t, p, -0.6).rgb; }
@@ -161,6 +164,15 @@ void main() {
   if (uMoon > 0.01) {
     float beam = exp(-pow((ang - 0.18) / 0.32, 2.0)) * exp(-r * 1.1);
     col += vec3(0.42, 0.55, 0.78) * beam * uMoon * (0.25 + fogA) * 0.5;
+  }
+
+  // Lanterne : lumière chaude portée sur la mousse et les racines alentour.
+  if (uLantern.w > 0.001) {
+    vec2 lv = (suv - uLantern.xy) * iso * vec2(1.0, 1.6);
+    float lf = exp(-dot(lv, lv) / (uLantern.z * uLantern.z)) * uLantern.w;
+    // Lumière orangée : le vert de la mousse ne doit pas virer au jaune acide.
+    vec3 lc = uLanternColor * vec3(1.0, 0.78, 0.6);
+    col += col * lc * lf * 0.75 + lc * lf * (0.035 + fogA * 0.06);
   }
 
   gl_FragColor = vec4(col, 1.0);

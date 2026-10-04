@@ -1,5 +1,5 @@
 /**
- * Dessin d'une image : passe peinture → sprites → effets peints → fougères
+ * Dessin d'une image : passe peinture → sprites → effets peints → saisons → fougères
  * (dans la cible hors écran), puis étalonnage vers l'écran, puis couches
  * émissives (lumières, halos, kodama luisants, particules) non étalonnées :
  * une source de lumière reste lumineuse la nuit.
@@ -15,6 +15,7 @@ export interface FrameInputs {
   drawRain: boolean;
   drawBurst: boolean;
   drawMotes: boolean;
+  drawSeason: boolean;
 }
 
 function draw(renderer: Renderer, mesh: Mesh, target: Pipeline['target'] | null) {
@@ -44,6 +45,7 @@ export function drawFrame(renderer: Renderer, pipe: Pipeline, f: FrameInputs) {
     draw(renderer, pipe.sprite, target);
   }
   if (pipe.sceneFx.commit()) draw(renderer, pipe.sceneFx.mesh, target);
+  if (f.drawSeason) draw(renderer, pipe.season, target);
   if (f.hasForeground) draw(renderer, pipe.fg, target);
 
   pipe.post.program.uniforms.uScene!.value = target.texture;

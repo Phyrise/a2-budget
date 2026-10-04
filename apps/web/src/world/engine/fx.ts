@@ -77,6 +77,11 @@ export class FxSystem {
     });
   }
 
+  /** Pile ou face (aléa déterministe du moteur). */
+  coin(): boolean {
+    return this.rand() < 0.5;
+  }
+
   busy(): boolean {
     return this.needles.length > 0 || this.drips.length > 0;
   }

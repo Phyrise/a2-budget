@@ -10,6 +10,8 @@ import { FOREGROUND_FRAG, SPRITE_FRAG, SPRITE_VERT } from './glsl/layers';
 import { POINTS_FRAG, POINTS_VERT } from './glsl/points';
 import { POST_FRAG } from './glsl/post';
 import { SCENE_FRAG } from './glsl/scene';
+import { SEASON_FRAG, SEASON_VERT } from './glsl/season';
+import { SEASON, restPoints } from './seasons';
 import { rng } from './noise';
 
 type U = { value: unknown };
@@ -42,6 +44,7 @@ export class Pipeline {
   readonly motes: Mesh;
   readonly burst: Mesh;
   readonly rain: Mesh;
+  readonly season: Mesh;
   target: RenderTarget;
 
   constructor(
@@ -66,6 +69,7 @@ export class Pipeline {
         uFog: u(0.5), uFogLift: u(0.3), uFogLayers: u(3), uFogColor: u([0.6, 0.66, 0.64]), uFogGlow: u(0),
         uRays: u(0.4), uRayW: u([1, 0, 0, 0]), uRayAng: u([0, 0, 0, 0]), uRayWidth: u([0.08, 0.08, 0.08, 0.08]),
         uLight: u([0.6, 0.02]), uRayColor: u([1, 0.94, 0.8]), uSparkle: u(0), uMoss: u(0), uMoon: u(0), uDetail: u(1),
+        uLantern: u([0.5, 0.6, 0.1, 0]), uLanternColor: u([1, 0.8, 0.5]),
       },
     });
     this.scene = new Mesh(gl, { geometry: tri, program: sceneProgram, frustumCulled: false });
@@ -77,7 +81,7 @@ export class Pipeline {
       uniforms: {
         uScene: u(blank), uLutA: u(blank), uLutB: u(blank), uHasA: u(0), uHasB: u(0), uLutMix: u(0),
         uNightProc: u(0), uExposure: u(0), uSaturation: u(1), uWarmth: u(0), uVignette: u(0.4),
-        uGrain: u(0.025), uSeed: u(0), uRes: u([1, 1]),
+        uGrain: u(0.025), uSeed: u(0), uRes: u([1, 1]), uTint: u([1, 1, 1]),
       },
     });
     this.post = new Mesh(gl, { geometry: tri, program: postProgram, frustumCulled: false });
@@ -131,6 +135,22 @@ export class Pipeline {
     this.motes = new Mesh(gl, { geometry: pointsGeometry(gl, MOTES, 91), program: pointsProgram(0), mode: gl.POINTS, frustumCulled: false });
     this.burst = new Mesh(gl, { geometry: pointsGeometry(gl, BURST, 17), program: pointsProgram(1), mode: gl.POINTS, frustumCulled: false });
     this.rain = new Mesh(gl, { geometry: pointsGeometry(gl, RAIN, 5), program: pointsProgram(2), mode: gl.POINTS, frustumCulled: false });
+
+    // Saisons : dans la scène (avant étalonnage), alpha prémultiplié.
+    const seasonProgram = new Program(gl, {
+      ...common,
+      transparent: true,
+      vertex: SEASON_VERT,
+      fragment: SEASON_FRAG,
+      uniforms: {
+        ...f,
+        uTime: u(0), uCount: u(0), uSeason: u(1), uSizeK: u(1), uAspect: u(aspect), uGust: u(0),
+        uWhirl: u([0, 0, 0, 0.16]), uWhirlK: u(0), uAvoid: u(Array.from({ length: 6 }, () => [0, 0, 0, 0])),
+        uRest: u(0), uRestPts: u(restPoints()), uRestCount: u(0), uFogColor: u([0.6, 0.66, 0.64]), uFog: u(0.5),
+      },
+    });
+    seasonProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    this.season = new Mesh(gl, { geometry: pointsGeometry(gl, SEASON, 333), program: seasonProgram, mode: gl.POINTS, frustumCulled: false });
 
     this.target = this.makeTarget(2, 2);
   }

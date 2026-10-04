@@ -98,7 +98,7 @@ void main() {
 /**
  * Lot instancié de quads additifs. aRect.z > 0 : case de l'atlas peint ;
  * sinon mode procédural -aRect.z : 0 = orbe douce, 1 = trait (traînée, goutte),
- * 2 = rayon (coin lumineux partant du haut).
+ * 2 = rayon (coin lumineux partant du haut), 3 = lanterne de papier.
  */
 export const BILLBOARD_VERT = /* glsl */ `
 ${PRECISION}
@@ -148,6 +148,17 @@ void main() {
     vec2 d = (vQuad - 0.5) * 2.0;
     float a = exp(-d.x * d.x * 9.0) * smoothstep(1.0, 0.2, abs(d.y));
     rgb = vec3(a);
+  } else if (vMode > 2.5) {
+    // Lanterne de papier : corps ovale net, côtes, chapeau et pied (vides), cœur chaud.
+    vec2 d = (vQuad - 0.5) * 2.0;
+    float r = length(d * vec2(1.0, 1.1));
+    float body = 1.0 - smoothstep(0.86, 0.96, r);
+    float ribs = 0.72 + 0.28 * pow(abs(cos(d.y * 13.0)), 0.6);
+    float caps = smoothstep(0.84, 0.76, abs(d.y + 0.01));
+    float ring = exp(-pow((abs(d.y) - 0.8) / 0.035, 2.0)) * step(abs(d.x), 0.42) * 0.55;
+    float core = exp(-dot(d - vec2(0.0, -0.12), d - vec2(0.0, -0.12)) * 2.6);
+    float a = body * ribs * caps * (0.35 + 0.85 * core) * (1.0 - smoothstep(0.6, 0.95, r) * 0.45) + ring;
+    rgb = vec3(a) * mix(vec3(1.0, 0.86, 0.66), vec3(1.0, 0.95, 0.82), core);
   } else {
     vec2 d = vec2((vQuad.x - 0.5) * 2.0, vQuad.y);
     float spread = mix(0.25, 1.0, vQuad.y);

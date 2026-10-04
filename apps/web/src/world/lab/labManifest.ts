@@ -1,8 +1,8 @@
 /**
  * Labo (dev seulement) : variantes du manifest pour tester le moteur.
- * - `stub`  : le manifest courant tel quel (replis : profondeur synthétique…) ;
- * - `labo`  : + profondeur et masques approximatifs (stade 6), effets peints
- *   découpés dans la planche 14, kodama découpés, source de lumière réaliste ;
+ * - `stub`  : le manifest réel tel quel (défaut du labo, libellé « réel ») ;
+ * - `labo`  : ancienne variante d'avant les assets réels (profondeur et masques
+ *   approximatifs du stade 6, effets et kodama découpés à la main) ;
  * - LUT de test générées à la volée (bande 1089×33, pixel x = r + 33·b, y = g).
  */
 import { manifest } from '../manifest';

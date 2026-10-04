@@ -11,6 +11,8 @@ export type Rect = readonly [number, number, number, number];
 export const GLOW: Rect = [0, 0, 0, 0];
 export const STREAK: Rect = [0, 0, -1, 0];
 export const WEDGE: Rect = [0, 0, -2, 0];
+/** Lanterne de papier lumineuse (côtes horizontales, cœur chaud). */
+export const LANTERN: Rect = [0, 0, -3, 0];
 
 export interface BillboardWriter {
   push(

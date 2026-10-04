@@ -1,0 +1,281 @@
+/* Petits rituels : barre d'entrée (Maison) et éléments partagés. */
+@import './circle/circle.css';
+@import './lantern/lantern.css';
+@import './carnet/carnet.css';
+
+.rituals__invite,
+.rituals__intention {
+  margin: -2px 0 12px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.rituals__invite {
+  color: var(--amber-300);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16px;
+}
+
+.rituals__intention {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.rituals__intention svg {
+  flex: none;
+  color: var(--amber-400);
+  transform: translateY(2px);
+}
+
+.rituals__intention em {
+  font-family: var(--font-display);
+  color: var(--ivory-100);
+}
+
+.rituals__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ritual-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 136px;
+  padding: 14px 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(147, 173, 124, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.78), rgba(19, 33, 26, 0.78));
+  box-shadow: 0 1px 0 rgba(236, 230, 211, 0.04) inset;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color var(--dur-base) var(--ease-soft),
+    transform var(--dur-fast) var(--ease-soft),
+    background-color var(--dur-base) var(--ease-soft);
+}
+
+.ritual-card:hover {
+  border-color: var(--line-strong);
+}
+
+.ritual-card:active {
+  transform: scale(0.98);
+}
+
+.ritual-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ritual-card__glyph {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: auto;
+  border-radius: 14px;
+  background: rgba(147, 173, 124, 0.1);
+  color: var(--moss-300);
+}
+
+.ritual-card__title {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  font-size: 15.5px;
+  font-weight: 520;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ivory-50);
+  hyphens: manual;
+}
+
+.ritual-card__sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+/* Cercle mis en avant (vendredi → lundi, pas encore tenu). */
+.ritual-card.is-highlight {
+  border-color: rgba(221, 179, 106, 0.42);
+  background:
+    radial-gradient(120% 90% at 20% 0%, rgba(221, 179, 106, 0.2), transparent 65%),
+    linear-gradient(180deg, rgba(38, 44, 30, 0.9), rgba(24, 33, 25, 0.9));
+  animation: ritual-breathe 5.5s var(--ease-soft) infinite;
+}
+
+.ritual-card.is-highlight .ritual-card__glyph {
+  background: rgba(221, 179, 106, 0.16);
+  color: var(--amber-300);
+}
+
+.ritual-card.is-highlight .ritual-card__sub {
+  color: var(--amber-300);
+}
+
+.ritual-card.is-held .ritual-card__sub {
+  color: var(--moss-300);
+}
+
+/* Lanterne allumée : la carte garde un peu de sa lumière. */
+.ritual-card.is-live,
+.ritual-card.is-bloom {
+  border-color: rgba(236, 208, 154, 0.32);
+}
+
+.ritual-card.is-live .ritual-card__glyph,
+.ritual-card.is-bloom .ritual-card__glyph {
+  background: radial-gradient(circle at 50% 60%, rgba(236, 208, 154, 0.38), rgba(221, 179, 106, 0.08) 70%);
+  color: var(--amber-300);
+}
+
+.ritual-card.is-live .ritual-card__glyph {
+  animation: ritual-flicker 3.2s ease-in-out infinite;
+}
+
+.ritual-card.is-live .ritual-card__sub {
+  color: var(--amber-300);
+}
+
+@keyframes ritual-breathe {
+  0%,
+  100% {
+    box-shadow: 0 1px 0 rgba(236, 230, 211, 0.05) inset, 0 0 0 rgba(221, 179, 106, 0);
+  }
+  50% {
+    box-shadow: 0 1px 0 rgba(236, 230, 211, 0.05) inset, 0 0 28px rgba(221, 179, 106, 0.16);
+  }
+}
+
+@keyframes ritual-flicker {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.18);
+  }
+  70% {
+    filter: brightness(0.94);
+  }
+}
+
+/* Pastilles de suggestion (merci, intention, tâche liée). */
+.ritual-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip.ritual-chip {
+  max-width: 100%;
+  min-height: 38px;
+  padding: 8px 14px;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.chip.ritual-chip.is-selected {
+  border-color: rgba(221, 179, 106, 0.6);
+  background: rgba(221, 179, 106, 0.16);
+  color: var(--ivory-50);
+}
+
+.chip.ritual-chip--quiet {
+  background: transparent;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ritual-textarea {
+  min-height: 72px;
+  padding: 12px 14px;
+  resize: vertical;
+  font: inherit;
+  line-height: 1.45;
+}
+
+/* Bulle d'un compagnon. */
+.ritual-bubble {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 12px 16px 12px 12px;
+  border: 1px solid rgba(236, 230, 211, 0.12);
+  border-radius: 20px 20px 20px 6px;
+  background: rgba(15, 26, 21, 0.86);
+  color: var(--ivory-100);
+  font-size: 15px;
+  line-height: 1.4;
+  animation: ritual-pop 420ms var(--ease-out) both 200ms;
+}
+
+.ritual-bubble__text {
+  flex: 1;
+}
+
+.ritual-bubble__who {
+  display: block;
+  margin-bottom: 2px;
+  font: 600 11.5px/1.2 var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fog-400);
+}
+
+@keyframes ritual-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@media (max-width: 359px) {
+  .rituals__row {
+    grid-template-columns: 1fr;
+  }
+
+  .ritual-card {
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ritual-card__glyph {
+    margin: 0;
+  }
+
+  .ritual-card__title {
+    margin: 0;
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ritual-card.is-highlight,
+  .ritual-card.is-live .ritual-card__glyph,
+  .ritual-bubble {
+    animation: none;
+  }
+}

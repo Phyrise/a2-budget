@@ -1,0 +1,220 @@
+/* Carnet de la forêt. */
+
+.carnet-section + .carnet-section {
+  margin-top: 30px;
+}
+
+.carnet-section__title {
+  margin-bottom: 12px;
+  font-size: 21px;
+  font-weight: 520;
+  color: var(--ivory-50);
+}
+
+.carnet-section__lead {
+  margin: -4px 0 14px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.carnet-section__lead strong {
+  font-family: var(--font-display);
+  font-weight: 520;
+  font-style: italic;
+  color: var(--amber-300);
+}
+
+/* Créatures. */
+.carnet-creatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carnet-creature {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(147, 173, 124, 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.7), rgba(19, 33, 26, 0.7));
+}
+
+.carnet-creature__art {
+  display: grid;
+  place-items: center;
+  height: 112px;
+  border-radius: 14px;
+  background: radial-gradient(closest-side, rgba(233, 240, 230, 0.1), transparent);
+  overflow: hidden;
+}
+
+.carnet-creature__art img {
+  max-width: 100%;
+  max-height: 108px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+}
+
+.carnet-creature__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.carnet-creature__name {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  font-size: 16px;
+  font-weight: 520;
+  line-height: 1.2;
+  color: var(--ivory-50);
+}
+
+.carnet-creature__legend {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.carnet-creature.is-unmet {
+  background: linear-gradient(180deg, rgba(19, 33, 26, 0.6), rgba(15, 26, 21, 0.6));
+  border-style: dashed;
+}
+
+.carnet-creature.is-unmet .carnet-creature__art img {
+  filter: blur(7px) grayscale(0.85) brightness(0.32);
+  opacity: 0.85;
+  transform: scale(0.92);
+}
+
+.carnet-creature.is-unmet .carnet-creature__name {
+  color: var(--fog-300);
+  font-style: italic;
+  font-size: 14.5px;
+}
+
+.carnet-creature.is-unmet .carnet-creature__legend {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Stades du cèdre : une frise de vignettes. */
+.carnet-stages {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carnet-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.carnet-stage__img {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ink-950);
+}
+
+.carnet-stage__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+  transform: scale(1.25);
+}
+
+.carnet-stage__name {
+  width: 100%;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.carnet-stage.is-current .carnet-stage__img {
+  border-color: rgba(221, 179, 106, 0.75);
+  box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.16), 0 0 18px rgba(236, 208, 154, 0.25);
+}
+
+.carnet-stage.is-current .carnet-stage__name {
+  color: var(--amber-300);
+  font-weight: 600;
+}
+
+.carnet-stage.is-future .carnet-stage__img img {
+  filter: blur(4px) grayscale(0.7) brightness(0.35);
+}
+
+.carnet-stage.is-future .carnet-stage__img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(185, 198, 189, 0.08), rgba(7, 13, 10, 0.4));
+}
+
+.carnet-stage.is-future .carnet-stage__name {
+  font-style: italic;
+}
+
+/* Souvenirs : des phrases, jamais des scores. */
+.carnet-memories {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carnet-memory {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ivory-100);
+}
+
+.carnet-memory:last-child {
+  border-bottom: 0;
+}
+
+.carnet-memory__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: rgba(221, 179, 106, 0.12);
+  color: var(--amber-300);
+}
+
+@media (min-width: 520px) {
+  .carnet-stage__name {
+    font-size: 11.5px;
+  }
+}

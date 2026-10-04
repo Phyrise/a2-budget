@@ -1,0 +1,368 @@
+/* Calendrier commun — bandeau, saisie rapide, grille, jour choisi. */
+
+/* ------------------------------------------------------------------ */
+/* Bandeau                                                             */
+/* ------------------------------------------------------------------ */
+
+.cal-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.cal-bar__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-bar__eyebrow {
+  color: var(--ivory-200);
+  opacity: 0.88;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+
+.cal-bar__label {
+  margin-top: 4px;
+  font-size: clamp(27px, 8vw, 34px);
+  line-height: 1.05;
+  font-weight: 500;
+  color: var(--ivory-50);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+}
+
+.cal-bar__month,
+.cal-bar__year {
+  white-space: nowrap;
+}
+
+.cal-bar__year {
+  font-weight: 380;
+  color: var(--ivory-200);
+  opacity: 0.78;
+}
+
+.cal-bar__nav {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.cal-bar__today {
+  min-height: 30px;
+  margin: 0 0 2px;
+  padding: 0 12px 0 9px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Zone tactile de 44 px autour de la petite pastille. */
+.cal-bar__today::after {
+  content: '';
+  position: absolute;
+  inset: -7px -4px;
+}
+
+.cal-bar__today {
+  position: relative;
+}
+
+/* ------------------------------------------------------------------ */
+/* Saisie rapide                                                       */
+/* ------------------------------------------------------------------ */
+
+.cal-quick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 5px 5px 5px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: #0a130f;
+  transition:
+    border-color var(--dur-fast) var(--ease-soft),
+    box-shadow var(--dur-fast) var(--ease-soft);
+}
+
+.cal-quick:focus-within {
+  border-color: rgba(221, 179, 106, 0.7);
+  box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.14);
+}
+
+.cal-quick__icon {
+  flex: none;
+  color: var(--amber-400);
+}
+
+.cal-quick__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.cal-quick__input::placeholder {
+  color: var(--fog-500);
+}
+
+.cal-quick__input:focus {
+  outline: none;
+}
+
+.cal-quick__submit {
+  flex: none;
+  min-height: 44px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Grille mensuelle                                                    */
+/* ------------------------------------------------------------------ */
+
+.cal-month {
+  margin-top: 16px;
+  padding: 10px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.5));
+  box-shadow: 0 1px 0 rgba(236, 230, 211, 0.04) inset;
+}
+
+.cal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-grid__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.cal-grid__weekday {
+  padding: 2px 0 6px;
+  color: var(--fog-500);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.cal-grid__cell {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.cal-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  width: 100%;
+  max-width: 54px;
+  min-height: 48px;
+  padding: 7px 0 5px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: none;
+  color: var(--ivory-100);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft),
+    color var(--dur-fast) var(--ease-soft);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-day__num {
+  font-size: 15.5px;
+  font-weight: 520;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-day__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 7px;
+}
+
+.cal-day__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--kind);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--kind) 45%, transparent);
+}
+
+.cal-day__more {
+  color: var(--fog-400);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cal-day:hover {
+  background: rgba(147, 173, 124, 0.09);
+}
+
+.cal-day:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.cal-day.is-outside {
+  color: var(--fog-500);
+  opacity: 0.55;
+}
+
+.cal-day.is-outside .cal-day__dot {
+  box-shadow: none;
+}
+
+/* Aujourd'hui : cercle d'ambre autour du chiffre. */
+.cal-day.is-today .cal-day__num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -4px 0 -2px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--amber-400);
+  color: var(--amber-300);
+  font-weight: 650;
+}
+
+/* Jour choisi : une petite lanterne s'allume. */
+.cal-day.is-selected {
+  border-color: rgba(236, 208, 154, 0.35);
+  background: linear-gradient(180deg, rgba(221, 179, 106, 0.2), rgba(221, 179, 106, 0.08));
+  color: var(--ivory-50);
+}
+
+.cal-day.is-selected.is-today .cal-day__num {
+  background: var(--amber-400);
+  box-shadow: none;
+  color: var(--on-accent);
+}
+
+.cal-day.has-birthday:not(.is-selected) {
+  background: radial-gradient(circle at 50% 90%, rgba(235, 163, 180, 0.13), transparent 70%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Jour choisi / mois                                                  */
+/* ------------------------------------------------------------------ */
+
+.cal-day-panel {
+  margin-top: 26px;
+}
+
+.cal-day-panel .section-title {
+  font-size: 20px;
+}
+
+.cal-day-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 12px 10px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+}
+
+.cal-day-empty__art {
+  flex: none;
+  width: 34px;
+  height: 40px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 8px rgba(233, 240, 230, 0.25));
+}
+
+.cal-day-empty__text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.cal-day-empty__add {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* État vide général                                                   */
+/* ------------------------------------------------------------------ */
+
+.cal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 12px 8px;
+  text-align: center;
+}
+
+.cal-empty__art {
+  width: 132px;
+  height: auto;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+}
+
+.cal-empty__title {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 80, 'WONK' 0;
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ivory-50);
+}
+
+.cal-empty__text {
+  max-width: 320px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.cal-empty__action {
+  margin-top: 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-empty__art {
+    animation: cal-sip 6s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+}
+
+@keyframes cal-sip {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-2deg) translateY(-1px);
+  }
+}
+
+/* Ordinateur : la grille respire un peu plus. */
+.app--desktop .cal-day {
+  min-height: 52px;
+}

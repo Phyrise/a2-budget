@@ -1,0 +1,188 @@
+/* Calendrier — lignes d'événements et « À venir ». */
+
+.cal-kind-badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--badge, 40px);
+  height: var(--badge, 40px);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--kind) 15%, #0e1914);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--kind) 30%, transparent);
+  color: var(--kind);
+}
+
+.cal-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cal-event {
+  position: relative;
+  border-radius: var(--radius-md);
+}
+
+.cal-event__open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 10px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.55));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft),
+    transform var(--dur-fast) var(--ease-soft);
+}
+
+.cal-event__open:hover {
+  border-color: var(--line-strong);
+  background: linear-gradient(180deg, rgba(34, 55, 44, 0.7), rgba(26, 44, 35, 0.6));
+}
+
+.cal-event__open:active {
+  transform: scale(0.992);
+}
+
+.cal-event__open:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.cal-event__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cal-event__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  color: var(--ivory-50);
+  font-size: 16px;
+  font-weight: 560;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cal-event__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.cal-event__time {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-event__time.is-allday {
+  color: var(--fog-400);
+}
+
+.cal-event__sep {
+  flex: none;
+  color: var(--fog-500);
+}
+
+.cal-event__place {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cal-event__yearly {
+  flex: none;
+  color: var(--fog-400);
+}
+
+.cal-event__who {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 38px;
+}
+
+/* Anniversaires : une lueur rose et l'âge en petite étiquette. */
+.cal-event--birthday .cal-event__open {
+  border-color: rgba(235, 163, 180, 0.28);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(235, 163, 180, 0.16), transparent 60%),
+    linear-gradient(180deg, rgba(34, 44, 40, 0.7), rgba(24, 33, 29, 0.6));
+}
+
+.cal-event__age {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(235, 163, 180, 0.16);
+  color: #f3c3cf;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Nouvel événement : une lueur ambrée qui s'éteint. */
+.cal-event.is-new .cal-event__open {
+  animation: cal-new 1.8s var(--ease-out);
+}
+
+@keyframes cal-new {
+  0% {
+    border-color: rgba(236, 208, 154, 0.9);
+    box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.25);
+  }
+  100% {
+    border-color: var(--line);
+    box-shadow: 0 0 0 0 rgba(221, 179, 106, 0);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* À venir / mois                                                      */
+/* ------------------------------------------------------------------ */
+
+.cal-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cal-upcoming__when {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 2px 8px;
+  font: inherit;
+}
+
+.cal-upcoming__heading {
+  color: var(--ivory-100);
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.cal-upcoming__date {
+  color: var(--text-faint);
+  font-size: 13.5px;
+}

@@ -52,9 +52,11 @@ function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName;
   out.push({
     icon: 'users',
     text:
-      circles > 0
+      circles > 1
         ? `${capitalizeFirst(countWords(circles, 'cercle tenu', 'cercles tenus'))} ensemble, et autant de mercis échangés.`
-        : `Le premier cercle sera le plus doux.`,
+        : circles === 1
+          ? `Un premier cercle tenu ensemble — le début d’une habitude douce.`
+          : `Le premier cercle sera le plus doux.`,
   });
   out.push({
     icon: 'sun',

@@ -1,0 +1,316 @@
+/* Courses — univers Kiki la petite sorcière (ciel, terre cuite, crème).
+   Accents locaux à .courses : tokens.css n'est pas touché. */
+
+.courses,
+.kiki-flight {
+  --kiki-sky: #9cc8e4;
+  --kiki-sky-soft: rgba(156, 200, 228, 0.16);
+  --kiki-sky-line: rgba(156, 200, 228, 0.26);
+  --kiki-terracotta: #dd8f6c;
+  --kiki-terracotta-soft: rgba(221, 143, 108, 0.14);
+  --kiki-cream: #f3e7cc;
+  --kiki-cream-soft: rgba(243, 231, 204, 0.08);
+  --kiki-glow: drop-shadow(0 0 9px rgba(243, 231, 204, 0.28));
+}
+
+/* ------------------------------------------------------------------ */
+/* Panier en osier et Jiji                                             */
+/* ------------------------------------------------------------------ */
+
+.basket-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.basket-head__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.basket-head .section-head {
+  min-height: 0;
+  margin-bottom: 2px;
+}
+
+.basket-head__line {
+  color: var(--text-muted);
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.basket-stage {
+  position: relative;
+  flex: none;
+  width: 148px;
+  height: 108px;
+}
+
+.basket-stage__sky {
+  position: absolute;
+  inset: 14px 0 0;
+  border: 1px solid var(--kiki-sky-line);
+  border-radius: 22px;
+  background:
+    radial-gradient(90% 70% at 28% 18%, rgba(243, 231, 204, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(156, 200, 228, 0.24), rgba(156, 200, 228, 0.06) 70%, rgba(221, 143, 108, 0.08));
+}
+
+.basket-stage img {
+  position: absolute;
+  bottom: 4px;
+  max-width: none;
+  user-select: none;
+}
+
+.basket-stage__basket {
+  left: 4px;
+  height: 86px;
+  transform-origin: 50% 100%;
+}
+
+.basket-stage__basket.is-bumped {
+  animation: basket-bump 560ms var(--ease-out);
+}
+
+.basket-stage__jiji {
+  right: -4px;
+  height: 64px;
+  filter: var(--kiki-glow);
+  animation: jiji-in 360ms var(--ease-out);
+}
+
+.basket-stage__jiji--sleeping {
+  height: 46px;
+}
+
+.basket-stage__jiji--teacup {
+  height: 62px;
+}
+
+@keyframes basket-bump {
+  0% {
+    transform: none;
+  }
+  30% {
+    transform: scale(1.07, 0.93);
+  }
+  60% {
+    transform: scale(0.97, 1.04) translateY(-2px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes jiji-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Liste vide, tout pris, bonjour                                      */
+/* ------------------------------------------------------------------ */
+
+.kiki-empty {
+  margin-top: 18px;
+  padding: 4px 10px 10px;
+  text-align: center;
+}
+
+.kiki-empty__art {
+  position: relative;
+  width: 230px;
+  height: 196px;
+  margin: 0 auto 10px;
+}
+
+.kiki-empty__art img {
+  position: absolute;
+  bottom: 0;
+  max-width: none;
+}
+
+.kiki-empty__glow {
+  position: absolute;
+  inset: 18px 22px 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(156, 200, 228, 0.26), rgba(243, 231, 204, 0.08) 60%, transparent);
+}
+
+.kiki-empty__kiki {
+  left: 58px;
+  height: 188px;
+  animation: kiki-float 5.5s ease-in-out infinite;
+}
+
+.kiki-empty__jiji {
+  right: 2px;
+  height: 52px;
+  filter: var(--kiki-glow);
+}
+
+.kiki-empty__eyebrow {
+  color: var(--kiki-sky);
+}
+
+.kiki-empty__title {
+  margin-top: 6px;
+  font-size: 25px;
+  line-height: 1.2;
+  color: var(--kiki-cream);
+}
+
+.kiki-empty__text {
+  max-width: 30ch;
+  margin: 8px auto 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@keyframes kiki-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.kiki-done {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  padding: 10px 14px 10px 6px;
+  border-radius: 22px;
+  background: linear-gradient(110deg, var(--kiki-sky-soft), var(--kiki-cream-soft));
+}
+
+.kiki-done__kiki {
+  flex: none;
+  height: 104px;
+  margin-top: -16px;
+}
+
+.kiki-done__title {
+  font-size: 20px;
+  color: var(--kiki-cream);
+}
+
+.kiki-done__text {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+.kiki-hello {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 10px 4px 10px 10px;
+  border: 1px solid var(--kiki-sky-line);
+  border-radius: 20px;
+  background: linear-gradient(115deg, rgba(156, 200, 228, 0.15), rgba(243, 231, 204, 0.06) 70%);
+  animation: hello-in 420ms var(--ease-out);
+}
+
+.kiki-hello__kiki {
+  flex: none;
+  height: 82px;
+  margin: -24px 0 -4px;
+  transform-origin: 50% 100%;
+  animation: kiki-wave 1.6s ease-in-out 300ms 2;
+}
+
+.kiki-hello__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.kiki-hello__title {
+  font-size: 19px;
+  color: var(--kiki-cream);
+}
+
+.kiki-hello__line {
+  margin-top: 2px;
+  color: var(--ivory-200);
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+
+.kiki-hello__close {
+  flex: none;
+  align-self: flex-start;
+  color: var(--fog-400);
+}
+
+@keyframes hello-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes kiki-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-4deg);
+  }
+  60% {
+    transform: rotate(3deg);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Mouvement réduit : fondus simples                                   */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep-fx {
+    display: none;
+  }
+
+  .item-row.is-landed .item-row__content {
+    animation: item-fade 260ms ease-out;
+  }
+
+  .basket-stage__basket.is-bumped,
+  .kiki-empty__kiki,
+  .kiki-hello__kiki {
+    animation: none;
+  }
+
+  .basket-stage__jiji,
+  .kiki-hello {
+    animation: item-fade 260ms ease-out;
+  }
+}
+
+@keyframes item-fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

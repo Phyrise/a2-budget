@@ -81,13 +81,18 @@ export function WeeklyGoalCard() {
   if (!forest || goal === null) return null;
 
   const paused = forest.paused;
-  const fresh = goal.creditsThisWeek === 0 && today.getDay() === 1;
+  const weekday = (today.getDay() + 6) % 7; // 0 = lundi
+  const fresh = goal.creditsThisWeek === 0 && weekday === 0;
+  // Début de semaine : « se repose » n'est qu'un « pas encore ».
+  const early = goal.level === 'resting' && weekday <= 1;
   const title = paused ? 'La forêt dort' : LEVEL_TITLES[goal.level];
   const body = paused
     ? 'La semaine attendra : rien ne se perd pendant la pause.'
     : fresh
       ? 'Une nouvelle semaine commence : chaque geste y posera sa lumière.'
-      : LEVEL_BODIES[goal.level];
+      : early
+        ? 'La semaine commence à peine : chaque geste y pose déjà sa lumière.'
+        : LEVEL_BODIES[goal.level];
   // Tendance masquée quand elle redirait le niveau (« se repose · elle se repose »).
   const showTrend = !paused && !fresh && !(goal.level === 'resting' && goal.trend === 'resting');
   const days = Math.max(1, Math.ceil(goal.target / DAILY_CREDIT_CAP));

@@ -15,7 +15,8 @@ test('la page de production se charge sur Maison', async ({ page }) => {
   await expect(page.locator('.app-world')).toHaveAttribute('aria-hidden', 'true');
 
   const modules = nav(page);
-  await expect(modules.getByRole('button')).toHaveCount(3);
+  await expect(modules.getByRole('button')).toHaveCount(4);
+  await expect(modules.getByRole('button', { name: 'Calendrier', exact: true })).toBeVisible();
   await expect(modules.getByRole('button', { name: 'Maison', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('heading', { level: 1, name: /Aujourd’hui/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Historique de la maison', exact: true })).toBeVisible();
@@ -82,6 +83,39 @@ test.describe('Clavier virtuel (écran tactile)', () => {
     await nav(page).getByRole('button', { name: 'Maison', exact: true }).click();
     await expect(nav(page).getByRole('button', { name: 'Maison', exact: true })).toHaveAttribute('aria-current', 'page');
   });
+});
+
+test('4ᵉ onglet Calendrier : ?module=calendar, bandeau de la forêt, historique des événements passés', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto(`${APP}?module=calendar`);
+  await expect(nav(page).getByRole('button', { name: 'Calendrier', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#calendar-title')).toBeVisible();
+  await expect(page.locator('.app')).toHaveClass(/app--calendar/);
+  await expect(page.locator('.app-world__banner[data-universe="calendar"]')).toHaveClass(/is-shown/);
+  await page.getByRole('button', { name: 'Événements passés', exact: true }).click();
+  await expect(sheet(page, 'Événements passés').getByText('Aucun événement passé')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  // Chaque univers a son bandeau peint et son accent.
+  await goTo(page, 'Budget');
+  await expect(page.locator('.app-world__banner[data-universe="budget"]')).toHaveClass(/is-shown/);
+  await expect(page.locator('.app-world__banner[data-universe="calendar"]')).not.toHaveClass(/is-shown/);
+  await goTo(page, 'Courses');
+  await expect(page.locator('.app-world__banner[data-universe="courses"]')).toHaveClass(/is-shown/);
+  const ui = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), UI_KEY);
+  expect(ui.module).toBe('courses');
+  expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+});
+
+test('pilule à quatre entrées lisible à 320 px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await openApp(page);
+  const fit = await page.evaluate(() => {
+    const el = document.querySelector('.app-nav')!.getBoundingClientRect();
+    const clipped = [...document.querySelectorAll('.app-nav__label')].filter((l) => l.scrollWidth > l.clientWidth + 0.5);
+    return el.left >= 0 && el.right <= window.innerWidth && clipped.length === 0;
+  });
+  expect(fit).toBe(true);
 });
 
 test('?module= ouvre le module demandé ; le dernier module est mémorisé', async ({ page }) => {

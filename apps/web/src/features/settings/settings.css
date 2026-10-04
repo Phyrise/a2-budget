@@ -269,3 +269,13 @@
   font-size: 13.5px;
   line-height: 1.55;
 }
+
+/* Mode développeur (À propos) : discret, aligné à gauche dans la carte. */
+.settings-about__dev {
+  width: 100%;
+  max-width: 420px;
+  margin: 18px auto 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  text-align: left;
+}

@@ -1,0 +1,251 @@
+/* Mode développeur : panneau des valeurs cachées (sobre, lisible, tabulaire). */
+
+.dev-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 24px;
+}
+
+.dev-section {
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(19, 33, 26, 0.7);
+}
+
+.dev-section__title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 520;
+  color: var(--ivory-100);
+}
+
+.dev-section__lead {
+  margin: -2px 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.dev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 14px;
+  margin: 0 0 10px;
+}
+
+.dev-grid:last-child {
+  margin-bottom: 0;
+}
+
+.dev-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dev-row__label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-faint);
+}
+
+.dev-grid--code .dev-row__label {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.dev-row__value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ivory-50);
+}
+
+.dev-row__hint {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.dev-bar {
+  position: relative;
+  height: 8px;
+  margin: 2px 0 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(185, 198, 189, 0.12);
+  overflow: hidden;
+}
+
+.dev-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--moss-400), var(--amber-400));
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.dev-thresholds {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.dev-threshold {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.dev-threshold.is-past {
+  color: var(--moss-300);
+}
+
+.dev-threshold.is-current {
+  border-color: rgba(221, 179, 106, 0.55);
+  background: rgba(221, 179, 106, 0.1);
+  color: var(--amber-300);
+}
+
+.dev-threshold__stage {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.dev-threshold__value {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.dev-unlocks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dev-unlock {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  grid-template-areas: 'stage name state' 'stage id state';
+  align-items: center;
+  column-gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  color: var(--text-faint);
+}
+
+.dev-unlock.is-unlocked {
+  background: rgba(147, 173, 124, 0.08);
+  color: var(--ivory-100);
+}
+
+.dev-unlock__stage {
+  grid-area: stage;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dev-unlock__name {
+  grid-area: name;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dev-unlock__id {
+  grid-area: id;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.dev-unlock__state {
+  grid-area: state;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dev-unlock.is-unlocked .dev-unlock__state {
+  color: var(--moss-300);
+}
+
+.dev-choices {
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+}
+
+.dev-choices__legend {
+  margin-bottom: 6px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.dev-choices__list,
+.dev-sounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dev-choice {
+  min-height: 36px;
+  min-width: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: rgba(7, 13, 10, 0.35);
+  color: var(--ivory-200);
+  font-size: 13.5px;
+  font-weight: 600;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    border-color var(--dur-fast) var(--ease-soft);
+}
+
+.dev-choice:hover {
+  border-color: rgba(221, 179, 106, 0.4);
+}
+
+.dev-choice.is-on {
+  border-color: rgba(221, 179, 106, 0.7);
+  background: rgba(221, 179, 106, 0.16);
+  color: var(--amber-300);
+}
+
+.dev-sound {
+  min-height: 40px;
+}
+
+.dev-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dev-actions--top {
+  margin-top: 0;
+}

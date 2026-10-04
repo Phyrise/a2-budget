@@ -13,7 +13,15 @@
  * - `growth`   la forêt grandit → accord grave (koto) + bruissement ;
  * - `guardian` le gardien apparaît → nappe éthérée (≤ 3 s) ;
  * - `circle`   cercle de la semaine enregistré → deux notes qui se répondent ;
- * - `lantern`  lanterne terminée → floraison lumineuse.
+ * - `lantern`  lanterne terminée → floraison lumineuse ;
+ *
+ * Univers des modules (V3.2) :
+ * - `coins`    un montant du budget change (salaire, compléments, dépense)
+ *              → pièces d'or qui tintent (Sans-Visage) ;
+ * - `konpeito` une dépense ajoutée → petit tintement de kompeitō (Noiraudes) ;
+ * - `broom`    un article coché → coup de balai de Kiki (souffle filtré) ;
+ * - `shopBell` le panier vidé → clochette de la boulangerie d'Osono ;
+ * - `woodNote` un événement ajouté au calendrier → note de bois douce.
  */
 export type SoundCue =
   | 'done'
@@ -24,7 +32,12 @@ export type SoundCue =
   | 'growth'
   | 'guardian'
   | 'circle'
-  | 'lantern';
+  | 'lantern'
+  | 'coins'
+  | 'konpeito'
+  | 'broom'
+  | 'shopBell'
+  | 'woodNote';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -50,4 +63,9 @@ export const ALL_CUES: readonly SoundCue[] = [
   'guardian',
   'circle',
   'lantern',
+  'coins',
+  'konpeito',
+  'broom',
+  'shopBell',
+  'woodNote',
 ];

@@ -3,6 +3,7 @@
  * Partagée par tous les écrans qui affichent la forêt.
  */
 import {
+  CREATURES,
   GROWTH_THRESHOLDS,
   localDateKey,
   vitalityState,
@@ -39,4 +40,42 @@ export function toWorldState(app: AppState, now: Date): WorldState {
     lights,
     season: seasonOf(now),
   };
+}
+
+/**
+ * Aperçu du mode développeur : surcharge NON PERSISTANTE de ce que montre la
+ * forêt (jamais écrite dans les données). Chaque champ absent garde la
+ * valeur réelle. `lantern` (0..1) allume la lanterne de la scène.
+ */
+export interface WorldPreview {
+  stage?: number;
+  mood?: Mood;
+  season?: Season;
+  paused?: boolean;
+  lantern?: number;
+}
+
+/** Vrai si l'aperçu change quelque chose (bandeau « Aperçu » visible). */
+export function isPreviewActive(preview: WorldPreview | null): boolean {
+  if (preview === null) return false;
+  return (Object.keys(preview) as Array<keyof WorldPreview>).some((k) => preview[k] !== undefined);
+}
+
+/**
+ * Applique un aperçu à l'état réel. Un stade forcé montre les créatures de
+ * ce stade (et seulement elles), à mi-chemin du stade suivant. Pure.
+ */
+export function applyPreview(state: WorldState, preview: WorldPreview | null): WorldState {
+  if (!isPreviewActive(preview) || preview === null) return state;
+  const next: WorldState = { ...state };
+  if (preview.stage !== undefined) {
+    const stage = Math.min(7, Math.max(1, Math.round(preview.stage)));
+    next.stage = stage;
+    next.growthProgress = stage === state.stage ? state.growthProgress : stage >= 7 ? 1 : 0.5;
+    next.creatures = CREATURES.filter((c) => c.stage <= stage).map((c) => c.id);
+  }
+  if (preview.mood !== undefined) next.mood = preview.mood;
+  if (preview.season !== undefined) next.season = preview.season;
+  if (preview.paused !== undefined) next.paused = preview.paused;
+  return next;
 }

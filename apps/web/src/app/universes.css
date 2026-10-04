@@ -1,0 +1,156 @@
+/*
+ * Univers des modules (V3.2) : accent de couleur par module, peintures
+ * (bandeau mobile, fond portrait sur ordinateur) en fondu enchaîné, et les
+ * petits éléments du mode développeur (bouton DEV, bandeau « Aperçu »).
+ */
+
+/* Accent par module : pilule active (teinte, icône, filet) et en-tête. */
+.app {
+  --module-accent: var(--amber-400);
+  --module-accent-2: rgba(221, 179, 106, 0.55);
+  --module-tint: rgba(236, 230, 211, 0.1);
+}
+
+/* Le Voyage de Chihiro : indigo du crépuscule, or des pépites, vermillon des ponts. */
+.app--budget {
+  --module-accent: #efc96f;
+  --module-accent-2: #e06a4b;
+  --module-tint: rgba(92, 98, 196, 0.42);
+}
+
+/* Kiki : ciel de Koriko, toits de terre cuite. */
+.app--courses {
+  --module-accent: #eb9b6c;
+  --module-accent-2: #8fc2ec;
+  --module-tint: rgba(104, 160, 214, 0.36);
+}
+
+/* Calendrier : la forêt en fête, mousse et lanterne. */
+.app--calendar {
+  --module-accent: var(--moss-300);
+  --module-accent-2: rgba(221, 179, 106, 0.6);
+  --module-tint: rgba(147, 173, 124, 0.26);
+}
+
+.brand__sq {
+  color: var(--module-accent);
+  transition: color var(--dur-slow) var(--ease-soft);
+}
+
+.app-header.is-solid {
+  box-shadow:
+    0 1px 0 var(--line),
+    0 1px 0 color-mix(in srgb, var(--module-accent-2) 28%, transparent);
+}
+
+/* Peintures : bandeau (mobile) et fond portrait (ordinateur), fondus. */
+.app-world__banner,
+.app-world__backdrop {
+  transition: opacity 520ms var(--ease-soft);
+}
+
+.app-world__backdrop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(100% - 480px);
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: 760ms;
+}
+
+.app-world__backdrop.is-shown {
+  opacity: 1;
+}
+
+@starting-style {
+  .app-world__banner.is-shown,
+  .app-world__backdrop.is-shown {
+    opacity: 0;
+  }
+}
+
+/* Mode développeur : bouton discret de l'en-tête. */
+.dev-chip {
+  position: relative;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(236, 208, 154, 0.32);
+  border-radius: var(--radius-pill);
+  background: rgba(7, 13, 10, 0.55);
+  color: var(--amber-300);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.dev-chip::after {
+  content: '';
+  position: absolute;
+  inset: -7px -3px;
+}
+
+.dev-chip:hover {
+  border-color: rgba(236, 208, 154, 0.6);
+}
+
+/* Bandeau « Aperçu » : visible tant qu'une surcharge change la forêt. */
+.preview-banner {
+  position: fixed;
+  top: calc(var(--header-h) + 2px);
+  left: 50%;
+  z-index: 35;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+  width: max-content;
+  max-width: calc(100vw - 28px);
+  padding: 6px 6px 6px 14px;
+  border: 1px dashed rgba(236, 208, 154, 0.55);
+  border-radius: 20px;
+  background: rgba(13, 23, 18, 0.94);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  color: var(--amber-300);
+  font-size: 13px;
+  font-weight: 600;
+  transform: translateX(-50%);
+}
+
+.preview-banner__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--amber-400);
+  box-shadow: 0 0 10px var(--amber-400);
+}
+
+.preview-banner__reset {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(236, 208, 154, 0.14);
+  color: var(--ivory-50);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.preview-banner__reset:hover {
+  background: rgba(236, 208, 154, 0.24);
+}
+
+@media (min-width: 1024px) {
+  .preview-banner {
+    left: auto;
+    right: 24px;
+    max-width: 432px;
+    transform: none;
+  }
+}

@@ -67,7 +67,9 @@ function handOffFocus(taskId: string) {
   const candidates = [...rows.slice(i + 1), ...rows.slice(0, i).reverse()];
   const next = candidates.find((r) => !r.classList.contains('is-leaving'));
   const target = next?.querySelector<HTMLElement>('button.check') ?? document.getElementById('maison-title');
-  target?.focus();
+  // Sans défilement : la case suivante prend la place de la ligne retirée,
+  // et un clic à la souris ne doit pas faire sauter la page.
+  target?.focus({ preventScroll: true });
 }
 
 export function useMaisonActions(names: Names, snapshot: Snapshot) {

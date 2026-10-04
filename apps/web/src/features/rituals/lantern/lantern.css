@@ -107,10 +107,13 @@ dialog.lantern-sheet[data-state='closing'] .sheet__panel {
 
 .lantern-who {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 2px;
   min-width: 0;
+  padding: 4px 0 2px;
   white-space: nowrap;
+  line-height: 1.1;
 }
 
 .lantern-who > span:last-child {

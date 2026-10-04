@@ -24,7 +24,7 @@ const APP = `http://localhost:${port}/a2-budget/`;
 async function seed(page, { circles = false, lanterns = false } = {}) {
   await page.goto(`${APP}?module=maison`);
   const result = await page.evaluate(
-    async ({ entry, circles, lanterns }) => {
+    async ({ entry, circles, lanterns, motion }) => {
       const core = await import(/* @vite-ignore */ `/a2-budget/@fs${entry}`);
       const now = new Date();
       const day = (n) => {
@@ -89,10 +89,11 @@ async function seed(page, { circles = false, lanterns = false } = {}) {
       const v = core.validateAppState(s);
       if (!v.ok) return { ok: false, reason: v.reason };
       localStorage.setItem('a2-budget:state:v1', JSON.stringify(s));
-      localStorage.setItem('a2-budget:ui:v1', JSON.stringify({ module: 'maison', forestMotion: 'still', guardianSeen: false, offlineAnnounced: true }));
+      localStorage.setItem('a2-budget:ui:v1', JSON.stringify({ module: 'maison', forestMotion: motion, guardianSeen: false, offlineAnnounced: true }));
       return { ok: true, stage: s.forest.growthStage, creatures: s.forest.unlockedCreatureIds };
     },
-    { entry: coreEntry, circles, lanterns },
+    // « still » par défaut : SwiftShader peine sur la scène animée (MOTION=full pour la voir).
+    { entry: coreEntry, circles, lanterns, motion: process.env.MOTION ?? 'still' },
   );
   if (!result.ok) throw new Error(`État invalide : ${result.reason}`);
   await page.reload();
@@ -121,7 +122,8 @@ for (const vp of [
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(`${vp.tag} console ${m.text()}`);
   });
-  await page.clock.install();
+  const noClock = Boolean(process.env.NOCLOCK); // horloge réelle (la scène animée et l'horloge simulée s'entendent mal)
+  if (!noClock) await page.clock.install();
   const seeded = await seed(page, { circles: true, lanterns: true });
   console.log(vp.tag, 'stade', seeded.stage, seeded.creatures.join(','));
 
@@ -132,7 +134,8 @@ for (const vp of [
   await shot(page, `${vp.tag}-01-barre`);
   await bar.screenshot({ path: join(outDir, `${vp.tag}-01b-barre-seule.png`) });
 
-  // Cercle : trois étapes, clôture, relecture.
+  // Cercle : trois étapes, clôture, relecture (SKIP_CIRCLE=1 pour passer).
+  if (!process.env.SKIP_CIRCLE) {
   await bar.getByRole('button', { name: 'Cercle de la semaine' }).click();
   const circle = page.getByRole('dialog', { name: 'Cercle de la semaine' });
   await circle.waitFor();
@@ -164,6 +167,8 @@ for (const vp of [
   await circle.getByRole('button', { name: 'Fermer', exact: true }).last().click();
   await circle.waitFor({ state: 'hidden' });
 
+  }
+
   // Lanterne : préparation, en cours, fin.
   await bar.scrollIntoViewIfNeeded();
   await bar.getByRole('button', { name: /lanterne/i }).click();
@@ -174,8 +179,13 @@ for (const vp of [
   await lanternDialog.getByRole('button', { name: 'Allumer la lanterne' }).click();
   const running = page.getByRole('dialog', { name: 'Lanterne allumée', exact: true });
   await running.waitFor();
-  await page.clock.fastForward('03:00');
+  if (noClock) await page.waitForTimeout(4000);
+  else await page.clock.fastForward('03:00');
   await shot(page, `${vp.tag}-09-lanterne-en-cours`);
+  if (noClock) {
+    await context.close();
+    continue;
+  }
   await page.clock.fastForward('07:10');
   const done = page.getByRole('dialog', { name: 'Lanterne', exact: true });
   await done.waitFor();

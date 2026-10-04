@@ -6,12 +6,13 @@
  */
 import type { WorldMotion } from '../world/types';
 
-export type ModuleId = 'budget' | 'maison' | 'courses';
+export type ModuleId = 'budget' | 'maison' | 'courses' | 'calendar';
 
 export const MODULES: ReadonlyArray<{ id: ModuleId; label: string }> = [
   { id: 'budget', label: 'Budget' },
   { id: 'maison', label: 'Maison' },
   { id: 'courses', label: 'Courses' },
+  { id: 'calendar', label: 'Calendrier' },
 ];
 
 export interface UiPrefs {
@@ -27,6 +28,11 @@ export interface UiPrefs {
   upcomingOpen: boolean;
   /** L'explication de la lanterne a déjà été lue. */
   lanternIntroSeen: boolean;
+  /**
+   * Mode développeur (Réglages › À propos) : révèle les valeurs cachées de
+   * la forêt et permet des aperçus non persistants, pendant la création.
+   */
+  devMode: boolean;
 }
 
 const KEY = 'a2-budget:ui:v1';
@@ -38,10 +44,11 @@ export const DEFAULT_PREFS: UiPrefs = {
   offlineAnnounced: false,
   upcomingOpen: false,
   lanternIntroSeen: false,
+  devMode: false,
 };
 
 export function isModuleId(value: unknown): value is ModuleId {
-  return value === 'budget' || value === 'maison' || value === 'courses';
+  return value === 'budget' || value === 'maison' || value === 'courses' || value === 'calendar';
 }
 
 function isMotion(value: unknown): value is WorldMotion {
@@ -60,6 +67,7 @@ export function readPrefs(): UiPrefs {
       offlineAnnounced: value.offlineAnnounced === true,
       upcomingOpen: value.upcomingOpen === true,
       lanternIntroSeen: value.lanternIntroSeen === true,
+      devMode: value.devMode === true,
     };
   } catch {
     return { ...DEFAULT_PREFS };

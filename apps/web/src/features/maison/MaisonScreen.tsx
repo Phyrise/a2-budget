@@ -36,6 +36,7 @@ import { TaskActions } from './TaskActions';
 import { DoneRow, SkippedList, TaskRow } from './TaskRow';
 import { TaskSheet, type TaskSheetState } from './TaskSheet';
 import { UpcomingList } from './UpcomingList';
+import { WeeklyGoalCard } from './WeeklyGoalCard';
 import { moodPhrase } from './taskText';
 import { useInView } from './useCompanionVoice';
 import { useMaisonActions } from './useMaisonActions';
@@ -243,9 +244,10 @@ export function MaisonScreen() {
           onEdit={(task) => setSheet({ mode: 'edit', task })}
         />
 
-        {/* La semaine en douceur (partage), puis les rituels qui en prennent soin.
+        {/* La semaine en douceur (objectif, partage), puis les rituels qui en prennent soin.
             La pause se règle dans l'en-tête (lune) et les Réglages. */}
         <div className="sheet-section">
+          <WeeklyGoalCard />
           <BalanceCard names={names} />
         </div>
 

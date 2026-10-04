@@ -3,8 +3,15 @@
  *
  * - Un seul monde (WorldStage) fixe en fond, plein bord ; sa présentation
  *   suit le module et la largeur : Maison mobile = hero vivant (54svh),
- *   Budget / Courses = bandeau peint fixe (24svh), ≥ 1024 px = forêt en fond
- *   et carnet de 480 px à droite.
+ *   Budget / Courses / Calendrier = bandeau peint de leur univers (24svh),
+ *   ≥ 1024 px = monde en fond et carnet de 480 px à droite — forêt vivante
+ *   pour Maison et Calendrier, peinture portrait de l'univers pour Budget
+ *   (Chihiro) et Courses (Kiki), en fondu enchaîné (WorldBackdrop).
+ * - Chaque module pose son accent de couleur (--module-accent) sur
+ *   .app--<module> : pilule active et en-tête.
+ * - Mode développeur (Réglages › À propos) : bouton « DEV » dans l'en-tête,
+ *   panneau des valeurs cachées, aperçus non persistants de la forêt
+ *   (bandeau « Aperçu »), tout effacé en quittant le mode.
  * - Le contenu défile par-dessus : fenêtre sur la forêt (--world-h) puis la
  *   feuille encre. La scène se fige quand elle est recouverte ou masquée.
  * - En-tête (marque + Historique / lune de pause sur Maison / Réglages),
@@ -15,37 +22,35 @@
 import '../styles/base.css';
 import '../styles/ui.css';
 import '../styles/shell.css';
+import './nav.css';
+import './universes.css';
+import './desktop.css';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { BudgetScreen } from '../features/budget/BudgetScreen';
+import { CalendarScreen } from '../features/calendar/CalendarScreen';
 import { CoursesScreen } from '../features/courses/CoursesScreen';
+import { DevPanel } from '../features/dev/DevPanel';
 import { HistorySheetContent } from '../features/history/HistorySheetContent';
 import { MaisonScreen } from '../features/maison/MaisonScreen';
 import { SettingsSheetContent } from '../features/settings/SettingsSheetContent';
-import { Icon, IconButton, Sheet, ToastProvider, cx, type IconName } from '../ui';
-import { manifest } from '../world/manifest';
-import { WorldProvider, WorldStage, useWorld } from '../world/WorldContext';
-import { MODULES, type ModuleId } from './prefs';
-import { SaveIndicator } from './SaveIndicator';
+import { Sheet, ToastProvider, cx } from '../ui';
+import { WorldProvider, useWorld } from '../world/WorldContext';
+import { CalendarHistory } from './CalendarHistory';
+import { Header } from './Header';
+import { ModuleNav } from './ModuleNav';
+import { HISTORY_TITLES, WORLD_RATIO, showsLivingForest } from './modules';
+import type { ModuleId } from './prefs';
+import { PreviewBanner } from './PreviewBanner';
 import { ShellProvider, useMediaQuery, useShell } from './ShellContext';
 import { useSoundEvents } from './sound';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useKeyboardOpen } from './useKeyboardOpen';
-import { usePauseToggle } from './usePauseToggle';
-
-const NAV_ICONS: Record<ModuleId, IconName> = { budget: 'budget', maison: 'home', courses: 'basket' };
-
-/** Part de la hauteur d'écran occupée par la fenêtre sur la forêt (mobile). */
-const WORLD_RATIO: Record<ModuleId, number> = { maison: 0.54, budget: 0.24, courses: 0.24 };
-
-const HISTORY_TITLES: Record<ModuleId, string> = {
-  budget: 'Historique du budget',
-  maison: 'Historique de la maison',
-  courses: 'Historique des courses',
-};
+import { WorldBackdrop } from './WorldBackdrop';
 
 function Screen({ module }: { module: ModuleId }) {
   if (module === 'budget') return <BudgetScreen />;
   if (module === 'courses') return <CoursesScreen />;
+  if (module === 'calendar') return <CalendarScreen />;
   return <MaisonScreen />;
 }
 
@@ -87,76 +92,9 @@ function usePageVisible(): boolean {
   return visible;
 }
 
-/** Lune (mettre en pause) / soleil (réveiller), à côté des Réglages sur Maison. */
-function PauseButton() {
-  const { paused, toggle } = usePauseToggle();
-  return (
-    <IconButton
-      icon={paused ? 'sun' : 'moon'}
-      label={paused ? 'Réveiller la forêt' : 'Mettre la maison en pause'}
-      variant="glass"
-      className={cx('pause-toggle', paused && 'is-paused')}
-      onClick={toggle}
-    />
-  );
-}
-
-function Header({ solid }: { solid: boolean }) {
-  const { module, openSheet } = useShell();
-  return (
-    <header className={cx('app-header', solid && 'is-solid')}>
-      <a className="skip-link" href="#contenu">
-        Aller au contenu
-      </a>
-      <p className="brand" aria-label="A² Home">
-        <span className="brand__a" aria-hidden="true">
-          A<span className="brand__sq">2</span>
-        </span>
-        <span className="brand__home" aria-hidden="true">
-          Home
-        </span>
-      </p>
-      <div className="app-header__end">
-        <SaveIndicator />
-        <IconButton icon="history" label={HISTORY_TITLES[module]} variant="glass" onClick={() => openSheet('history')} />
-        {module === 'maison' && <PauseButton />}
-        <IconButton icon="settings" label="Réglages" variant="glass" onClick={() => openSheet('settings')} />
-      </div>
-    </header>
-  );
-}
-
-function ModuleNav() {
-  const { module, setModule } = useShell();
-  return (
-    <nav className="app-nav" aria-label="Modules de la maison">
-      {MODULES.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          className={cx('app-nav__item', m.id === module && 'is-active')}
-          aria-current={m.id === module ? 'page' : undefined}
-          onClick={() => {
-            if (m.id !== module) {
-              setModule(m.id);
-              return;
-            }
-            // Module déjà affiché : retour en douceur vers la forêt.
-            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
-          }}
-        >
-          <Icon name={NAV_ICONS[m.id]} size={22} />
-          <span className="app-nav__label">{m.label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
-
 function Shell() {
   const { module, sheet, closeSheet, prefs, isDesktop, foregroundSheet } = useShell();
-  const { setPresentation } = useWorld();
+  const { setPresentation, setPreview } = useWorld();
   const { solid, covered } = useScrollState(module, isDesktop);
   const visible = usePageVisible();
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -166,13 +104,20 @@ function Shell() {
   useSoundEvents();
 
   // Présentation du monde selon module, largeur, recouvrement et préférence.
+  // La forêt ne s'anime que là où elle se voit : Maison, et Calendrier sur
+  // ordinateur ; sous une peinture d'univers, elle se fige.
   const variant = isDesktop ? 'backdrop' : module === 'maison' ? 'hero' : 'banner';
   const live =
-    module === 'maison' && visible && !covered && sheet === null && !(foregroundSheet && !isDesktop);
+    showsLivingForest(module, isDesktop) && visible && !covered && sheet === null && !(foregroundSheet && !isDesktop);
   const motion = reducedMotion ? 'still' : prefs.forestMotion;
   useEffect(() => {
     setPresentation({ variant, live, motion });
   }, [setPresentation, variant, live, motion]);
+
+  // Quitter le mode développeur efface tout aperçu (la vraie forêt revient).
+  useEffect(() => {
+    if (!prefs.devMode) setPreview(null);
+  }, [prefs.devMode, setPreview]);
 
   // Changement de module : retour en haut, puis focus du titre de l'écran.
   useLayoutEffect(() => {
@@ -188,24 +133,10 @@ function Shell() {
       className={cx('app', `app--${module}`, isDesktop && 'app--desktop', keyboardOpen && 'app--keyboard')}
       style={{ '--world-ratio': WORLD_RATIO[module] } as CSSProperties}
     >
-      <div className="app-world" aria-hidden="true">
-        {manifest.placeholder && <img className="app-world__placeholder" src={manifest.placeholder} alt="" />}
-        <WorldStage className="app-world__stage" />
-        {(['budget', 'courses'] as const).map((key) =>
-          manifest.banners[key] ? (
-            <img
-              key={key}
-              className={cx('app-world__banner', !isDesktop && module === key && 'is-shown')}
-              src={manifest.banners[key]}
-              alt=""
-              decoding="async"
-            />
-          ) : null,
-        )}
-        <div className="app-world__shade" />
-      </div>
+      <WorldBackdrop module={module} isDesktop={isDesktop} />
 
       <Header solid={solid} />
+      <PreviewBanner />
 
       <main id="contenu" className="app-main" tabIndex={-1}>
         <div key={module} className="module-view">
@@ -219,11 +150,12 @@ function Shell() {
       <UpdatePrompt />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
-        <HistorySheetContent />
+        {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}
       </Sheet>
       <Sheet open={sheet === 'settings'} onClose={closeSheet} title="Réglages" size="full">
         <SettingsSheetContent />
       </Sheet>
+      {prefs.devMode && <DevPanel open={sheet === 'dev'} onClose={closeSheet} />}
     </div>
   );
 }

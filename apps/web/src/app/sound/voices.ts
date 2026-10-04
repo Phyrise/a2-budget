@@ -8,6 +8,7 @@
  * douces, aigus brefs : jamais criards.
  */
 import type { SoundCue, SoundVoice } from './cues';
+import { broom, coins, konpeito, shopBell, woodNote } from './moduleVoices';
 import { bell, breath, pluck, tone, type Bus } from './synth';
 
 const N = {
@@ -149,6 +150,21 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
         bell(bus, t + i * 0.065, f, { peak: 0.085 - i * 0.008, decay: 0.9, bright: 0.4, wet: 0.55 }),
       );
       breath(bus, t, { sweep: [[0, 1800], [0.9, 3000]], q: 0.7, shape: [[0.35, 0.04], [1.0, 0]], wet: 0.7 });
+      return;
+    case 'coins':
+      coins(bus, t, gentle);
+      return;
+    case 'konpeito':
+      konpeito(bus, t, gentle);
+      return;
+    case 'broom':
+      broom(bus, t);
+      return;
+    case 'shopBell':
+      shopBell(bus, t, gentle);
+      return;
+    case 'woodNote':
+      woodNote(bus, t);
       return;
   }
 }

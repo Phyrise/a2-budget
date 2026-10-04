@@ -1,7 +1,7 @@
 /**
  * Ligne de réglage « Petits sons » : interrupteur + bouton « Écouter », qui
  * fait entendre, à chaque appui, un exemple différent (tâche d'AL, d'AC,
- * corvée à deux, créature, forêt qui grandit…). Le gardien garde son secret.
+ * corvée à deux, créature, forêt qui grandit, pièces d'or, coup de balai…). Le gardien garde son secret.
  */
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
@@ -27,6 +27,10 @@ const SAMPLES: readonly Sample[] = [
   { cue: 'skip', label: () => `«${NBSP}Pas aujourd’hui${NBSP}»` },
   { cue: 'circle', label: () => 'Le cercle de la semaine' },
   { cue: 'lantern', label: () => 'Une lanterne terminée' },
+  { cue: 'coins', label: () => 'Des pièces d’or dans le budget' },
+  { cue: 'broom', label: () => 'Un coup de balai vers le panier' },
+  { cue: 'shopBell', label: () => 'Le panier vidé, la clochette de la boulangerie' },
+  { cue: 'woodNote', label: () => 'Un événement ajouté au calendrier' },
 ];
 
 function NoteIcon() {

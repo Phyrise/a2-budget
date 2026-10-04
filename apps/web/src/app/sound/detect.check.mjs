@@ -118,6 +118,54 @@ test('remplacement en bloc (import, remise à zéro) : silence', () => {
   assert.equal(isWholesaleChange(s0, step(s0, { household: { people: [] }, budget: { ...s0.budget } })), false);
 });
 
+test('budget : pièces quand un montant change, kompeitō à l’ajout d’une dépense', () => {
+  const month = (o = {}) => ({
+    monthKey: '2026-10', salaryACents: 200000, salaryBCents: 300000, bonusACents: 0, bonusBCents: 0,
+    reserveTargetCents: 0, expenses: [{ id: 'e1', label: 'Loyer', amountCents: 90000 }], ...o,
+  });
+  const withMonth = (s, m, extra = []) => step(s, { budget: { ...s.budget, months: [m, ...extra] } });
+  const b0 = withMonth(s0, month());
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, month({ salaryACents: 210000 })))), ['coins'], 'salaire');
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, month({ bonusBCents: 15000 })))), ['coins'], 'compléments');
+  const dearer = month({ expenses: [{ id: 'e1', label: 'Loyer', amountCents: 95000 }] });
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, dearer))), ['coins'], 'montant d’une dépense');
+  const renamed = month({ expenses: [{ id: 'e1', label: 'Le loyer', amountCents: 90000 }] });
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, renamed))), [], 'renommer : rien');
+  const more = month({ expenses: [...month().expenses, { id: 'e2', label: 'Internet', amountCents: 3000 }] });
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, more))), ['konpeito'], 'dépense ajoutée');
+  const fewer = month({ expenses: [] });
+  assert.deepEqual(cues(detectSoundEvents(b0, withMonth(b0, fewer))), [], 'dépense retirée : rien');
+  // Changer de mois (ou en créer un) ne sonne pas.
+  const other = step(b0, { budget: { ...b0.budget, selectedMonth: '2026-11', months: [month(), month({ monthKey: '2026-11' })] } });
+  assert.deepEqual(cues(detectSoundEvents(b0, other)), []);
+  const created = withMonth(b0, b0.budget.months[0], [month({ monthKey: '2026-11' })]);
+  assert.deepEqual(cues(detectSoundEvents(b0, created)), [], 'mois créé à côté');
+});
+
+test('courses : balai quand on coche, clochette quand le panier est vidé', () => {
+  const item = (id, done = false) => ({ id, label: id, done, ...(done ? { doneAt: '2026-10-04T10:00:00.000Z' } : {}) });
+  const g0 = step(s0, { groceries: { items: [item('pain'), item('lait', true)] } });
+  const checked = step(g0, { groceries: { items: [item('pain', true), item('lait', true)] } });
+  assert.deepEqual(cues(detectSoundEvents(g0, checked)), ['broom']);
+  assert.deepEqual(cues(detectSoundEvents(checked, g0)), [], 'décocher : rien');
+  const cleared = step(g0, { groceries: { items: [item('pain')], history: [{ id: 'lait', label: 'lait', boughtAt: 'x' }] } });
+  assert.deepEqual(cues(detectSoundEvents(g0, cleared)), ['shopBell']);
+  const swiped = step(g0, { groceries: { ...g0.groceries, items: [item('pain')] } });
+  assert.deepEqual(cues(detectSoundEvents(g0, swiped)), [], 'retirer un article : rien');
+  const added = step(g0, { groceries: { items: [...g0.groceries.items, item('œufs')] } });
+  assert.deepEqual(cues(detectSoundEvents(g0, added)), [], 'ajouter : rien');
+});
+
+test('calendrier : note de bois à l’ajout, rien au retrait ni pour un bloc', () => {
+  const ev = (id) => ({ id, title: id, date: '2026-10-10', allDay: true, kind: 'repas', who: 'both', createdAt: 'x' });
+  const c1 = step(s0, { calendar: { events: [ev('e1')] } });
+  assert.deepEqual(cues(detectSoundEvents(s0, c1)), ['woodNote'], 'premier événement');
+  assert.deepEqual(cues(detectSoundEvents(c1, step(c1, { calendar: { events: [ev('e1'), ev('e2')] } }))), ['woodNote']);
+  assert.deepEqual(cues(detectSoundEvents(c1, step(c1, { calendar: { events: [] } }))), []);
+  const bulk = step(s0, { calendar: { events: ['a', 'b', 'c', 'd'].map(ev) } });
+  assert.deepEqual(detectSoundEvents(s0, bulk), [], 'quatre événements d’un coup');
+});
+
 test('anti-rafale : ≥ 120 ms, regroupement, pas de retard accumulé', () => {
   const gate = createSoundGate();
   const a = gate.admit([{ cue: 'done', who: 'a', delayMs: 0 }], 1000);

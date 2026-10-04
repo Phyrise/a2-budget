@@ -245,9 +245,22 @@ export function SettingsSheetContent() {
         </div>
         <p className="settings-about__name display">A² Home</p>
         <p className="settings-about__text">
-          Notre quotidien à deux&nbsp;: budget, maison et courses. Vos données restent sur cet appareil — aucun compte, aucune
-          connexion.
+          Notre quotidien à deux&nbsp;: budget, maison, courses et calendrier. Vos données restent sur cet appareil — aucun
+          compte, aucune connexion.
         </p>
+        <div className="settings-about__dev">
+          <Switch
+            id="dev-mode"
+            checked={prefs.devMode}
+            onChange={(devMode) => updatePrefs({ devMode })}
+            label="Mode développeur"
+            description={
+              prefs.devMode
+                ? 'Pour régler l’app pendant sa création. Le bouton « DEV » de l’en-tête révèle les valeurs cachées de la forêt.'
+                : 'Pour régler l’app pendant sa création : révèle les valeurs cachées de la forêt.'
+            }
+          />
+        </div>
       </section>
 
       <ConfirmDialog

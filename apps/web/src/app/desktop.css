@@ -1,0 +1,117 @@
+/*
+ * Ordinateur : monde en fond (forêt vivante ou peinture de l'univers du
+ * module), carnet de 480 px à droite. Déplacé de styles/shell.css (V3.2).
+ */
+
+/* ------------------------------------------------------------------ */
+/* Ordinateur : forêt en fond, carnet de 480 px à droite               */
+/* ------------------------------------------------------------------ */
+
+.app--desktop {
+  --world-h: auto;
+}
+
+.app--desktop .app-world {
+  height: auto;
+  bottom: 0;
+}
+
+.app--desktop .app-world__shade {
+  background:
+    linear-gradient(to bottom, rgba(7, 13, 10, 0.55) 0, rgba(7, 13, 10, 0) 160px),
+    linear-gradient(to right, rgba(7, 13, 10, 0) 55%, rgba(7, 13, 10, 0.5) calc(100% - 480px));
+}
+
+.app--desktop .app-main {
+  width: 480px;
+  min-height: 100vh;
+  margin-left: auto;
+  background: var(--sheet-bg);
+  background-color: var(--surface);
+  box-shadow:
+    -1px 0 0 rgba(236, 230, 211, 0.07),
+    -40px 0 80px rgba(0, 0, 0, 0.45);
+}
+
+.app--desktop .world-window {
+  height: auto;
+  min-height: 0;
+  padding: calc(var(--safe-top) + 84px) 32px 6px;
+}
+
+.app--desktop .world-window::before {
+  display: none;
+}
+
+.app--desktop .screen-sheet {
+  min-height: 0;
+  padding: 22px 32px calc(var(--nav-height) + 56px);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.app--desktop .screen-sheet::before {
+  display: none;
+}
+
+.app--desktop .app-header {
+  padding-left: 40px;
+  padding-right: 24px;
+}
+
+.app--desktop .app-header.is-solid {
+  background: transparent;
+  box-shadow: none;
+}
+
+.app--desktop .app-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  background: rgba(13, 23, 18, 0.97);
+  box-shadow: 0 1px 0 var(--line);
+  opacity: 0;
+  transition: opacity 260ms var(--ease-soft);
+  z-index: -1;
+}
+
+.app--desktop .app-header.is-solid::before {
+  opacity: 1;
+}
+
+.app--desktop .brand {
+  font-size: 26px;
+}
+
+.app--desktop .app-dock {
+  left: auto;
+  width: 480px;
+}
+
+.app--desktop .app-dock::before {
+  background: linear-gradient(to top, rgba(15, 26, 21, 0.96), rgba(15, 26, 21, 0));
+}
+
+.app--desktop ~ .toast-region,
+.app--desktop .toast-region {
+  left: auto;
+  width: 480px;
+}
+
+@media (min-width: 1024px) {
+  .toast-region {
+    left: auto;
+    width: 480px;
+  }
+
+  .update-prompt {
+    left: auto;
+    right: 20px;
+    width: 440px;
+    transform: none;
+  }
+}

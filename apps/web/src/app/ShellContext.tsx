@@ -6,7 +6,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { moduleFromUrl, readPrefs, syncModuleInUrl, writePrefs, type ModuleId, type UiPrefs } from './prefs';
 
-export type ShellSheet = 'history' | 'settings' | null;
+export type ShellSheet = 'history' | 'settings' | 'dev' | null;
 
 interface ShellContextValue {
   module: ModuleId;

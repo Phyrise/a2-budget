@@ -134,7 +134,7 @@ export function SettingsSheetContent() {
 
   return (
     <div className="settings">
-      <Section id="people" icon="users" title="Vous deux" description="Prénoms et salaires habituels, repris à chaque nouveau mois.">
+      <Section id="people" icon="users" title="Vous deux" description="Vos prénoms et votre salaire mensuel habituel.">
         <div className="settings-people">
           <PersonSettingsCard person="A" settings={settings.personA} />
           <PersonSettingsCard person="B" settings={settings.personB} />

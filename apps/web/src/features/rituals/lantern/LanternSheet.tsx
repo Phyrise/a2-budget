@@ -7,11 +7,12 @@
  */
 import { actionableTasksToday } from '@a2/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useShell } from '../../../app/ShellContext';
 import { useApp } from '../../../state/store';
 import { Sheet } from '../../../ui';
 import { useWorld } from '../../../world/WorldContext';
 import type { Names } from '../ritualText';
-import { LanternIntro, lanternIntroDue, markLanternIntroRead } from './LanternIntro';
+import { LanternIntro, lanternIntroDue } from './LanternIntro';
 import { LanternSetup } from './LanternSetup';
 import { LanternDone, LanternRunning } from './LanternSession';
 import { lantern, useLantern } from './lanternStore';
@@ -59,13 +60,12 @@ export function LanternSheet({ open, onClose, names }: { open: boolean; onClose:
 
   // Première fois : trois gestes illustrés avant la préparation.
   const sessionsCount = appState?.focus?.sessions?.length ?? 0;
+  const { prefs, updatePrefs } = useShell();
   const [forcedIntro, setForcedIntro] = useState(false);
-  const [, bump] = useState(0);
-  const showIntro = s.phase === 'idle' && (forcedIntro || lanternIntroDue(sessionsCount));
+  const showIntro = s.phase === 'idle' && (forcedIntro || lanternIntroDue(prefs.lanternIntroSeen, sessionsCount));
   const continueFromIntro = () => {
-    markLanternIntroRead();
+    if (!prefs.lanternIntroSeen) updatePrefs({ lanternIntroSeen: true });
     setForcedIntro(false);
-    bump((n) => n + 1);
   };
 
   const close = () => {

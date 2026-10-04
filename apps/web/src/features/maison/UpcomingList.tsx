@@ -9,14 +9,13 @@
  */
 import { nextAssignee, parseLocalDateKey, type ChoreCompletion, type HouseholdTask, type TaskAssignee, type UpcomingOccurrence } from '@a2/core';
 import { useMemo, useState } from 'react';
+import { useShell } from '../../app/ShellContext';
 import { Companion, Disclosure, Icon, NBSP, dayMonth, fr, plural, weekdayName } from '../../ui';
 import './upcoming.css';
 
 /** Tâches montrées par jour avant « +N autres ». */
 const PER_DAY = 3;
 
-/** Ouvert / replié, gardé le temps de la session (changement de module compris). */
-let rememberedOpen = false;
 
 interface Item {
   task: HouseholdTask;
@@ -102,7 +101,9 @@ export function UpcomingList({
   /** Toucher une tâche à venir : ouvrir son édition. */
   onEdit: (task: HouseholdTask) => void;
 }) {
-  const [open, setOpen] = useState(rememberedOpen);
+  // Ouvert / replié : préférence d'interface, gardée d'une visite à l'autre.
+  const { prefs, updatePrefs } = useShell();
+  const open = prefs.upcomingOpen;
   const groups = useMemo(() => {
     const seen = new Map<string, number>();
     const out: Group[] = [];
@@ -120,10 +121,7 @@ export function UpcomingList({
   }, [upcoming, completions, pendingToday]);
 
   if (groups.length === 0) return null;
-  const toggle = (next: boolean) => {
-    rememberedOpen = next;
-    setOpen(next);
-  };
+  const toggle = (next: boolean) => updatePrefs({ upcomingOpen: next });
 
   return (
     <div className="sheet-section upcoming-section">

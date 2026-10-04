@@ -23,6 +23,10 @@ export interface UiPrefs {
   guardianSeen: boolean;
   /** « Disponible hors ligne » déjà annoncé. */
   offlineAnnounced: boolean;
+  /** « À venir » (Maison) déplié. */
+  upcomingOpen: boolean;
+  /** L'explication de la lanterne a déjà été lue. */
+  lanternIntroSeen: boolean;
 }
 
 const KEY = 'a2-budget:ui:v1';
@@ -32,6 +36,8 @@ export const DEFAULT_PREFS: UiPrefs = {
   forestMotion: 'full',
   guardianSeen: false,
   offlineAnnounced: false,
+  upcomingOpen: false,
+  lanternIntroSeen: false,
 };
 
 export function isModuleId(value: unknown): value is ModuleId {
@@ -52,6 +58,8 @@ export function readPrefs(): UiPrefs {
       forestMotion: isMotion(value.forestMotion) ? value.forestMotion : DEFAULT_PREFS.forestMotion,
       guardianSeen: value.guardianSeen === true,
       offlineAnnounced: value.offlineAnnounced === true,
+      upcomingOpen: value.upcomingOpen === true,
+      lanternIntroSeen: value.lanternIntroSeen === true,
     };
   } catch {
     return { ...DEFAULT_PREFS };

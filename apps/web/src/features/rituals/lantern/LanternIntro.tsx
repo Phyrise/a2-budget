@@ -2,22 +2,16 @@
  * Première ouverture de la lanterne : ce que c'est, en trois gestes
  * illustrés (choisir une durée → la lanterne s'allume dans la forêt → à la
  * fin, cocher la tâche). Montrée tant qu'aucune lanterne n'a été allumée
- * (focus.sessions vide) et pas encore lue pendant la session ; « Comment ça
+ * (focus.sessions vide) et pas encore lue (préférence d'interface) ; « Comment ça
  * marche ? » la rouvre depuis la préparation.
  */
 import { Button } from '../../../ui';
 import { NB } from '../ritualText';
 import './lantern-intro.css';
 
-/** Lue pendant la session (la feuille peut se rouvrir sans la remontrer). */
-let introRead = false;
-
-export function lanternIntroDue(sessionsCount: number): boolean {
-  return !introRead && sessionsCount === 0;
-}
-
-export function markLanternIntroRead(): void {
-  introRead = true;
+/** À montrer tant qu'elle n'a pas été lue (préférence `lanternIntroSeen`) et qu'aucune lanterne n'a été allumée. */
+export function lanternIntroDue(seen: boolean, sessionsCount: number): boolean {
+  return !seen && sessionsCount === 0;
 }
 
 function StepArt({ step }: { step: 1 | 2 | 3 }) {

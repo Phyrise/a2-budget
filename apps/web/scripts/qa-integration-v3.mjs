@@ -139,7 +139,7 @@ await step('d', async (page) => {
   const setup = page.getByRole('dialog', { name: 'Allumer une lanterne' });
   await setup.waitFor();
   await shot(page, 'd1-lanterne-preparer', 900);
-  await setup.getByRole('button', { name: 'Allumer la lanterne' }).click();
+  await setup.getByRole('button', { name: /^Lancer \d+ minutes?/ }).click();
   const running = page.getByRole('dialog', { name: 'Lanterne allumée', exact: true });
   await running.waitFor();
   await shot(page, 'd2-lanterne-en-cours', 6000);
@@ -170,7 +170,7 @@ await step(
     await page.getByRole('checkbox', { name: 'Nettoyer la salle de bain', exact: true }).click();
     await shot(page, 'f1-bureau-corvee', 700);
     await page.locator('section.rituals').getByRole('button', { name: /lanterne/i }).click();
-    await page.getByRole('dialog', { name: 'Allumer une lanterne' }).getByRole('button', { name: 'Allumer la lanterne' }).click();
+    await page.getByRole('dialog', { name: 'Allumer une lanterne' }).getByRole('button', { name: /^Lancer \d+ minutes?/ }).click();
     await shot(page, 'f2-bureau-lanterne', 5000);
   },
   DESKTOP,

@@ -112,13 +112,22 @@
 }
 
 .suggestions__chip {
-  min-height: 38px;
+  gap: 7px;
+  min-height: 44px;
+  padding-left: 6px;
   color: var(--ivory-100);
 }
 
-.suggestions__chip .icon {
-  color: var(--amber-400);
-  margin-left: -3px;
+.suggestions__icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.suggestions__plus {
+  color: var(--kiki-sky);
+  margin-right: -2px;
 }
 
 /* Rayons */
@@ -133,6 +142,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 40px;
   margin-bottom: 2px;
   font-size: 12px;
   font-weight: 650;
@@ -146,6 +156,15 @@
   flex: 1;
   height: 1px;
   background: var(--line);
+}
+
+.aisle__icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin: -4px -2px -4px -4px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
 .aisle__count {
@@ -233,8 +252,8 @@
   flex: none;
   padding: 1px 8px;
   border-radius: 8px;
-  background: rgba(231, 200, 126, 0.12);
-  color: var(--amber-300);
+  background: var(--kiki-terracotta-soft);
+  color: #eeac8c;
   font-size: 13px;
   font-weight: 600;
 }
@@ -269,7 +288,7 @@
 
 /* Panier */
 .basket {
-  margin-top: 34px;
+  margin-top: 30px;
   padding-top: 6px;
 }
 

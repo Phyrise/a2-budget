@@ -1,0 +1,56 @@
+/**
+ * En-tête de « Dans le panier » : le panier en osier (vide, à moitié, plein)
+ * et Jiji à côté, dans une petite fenêtre de ciel. Décoratif (aria-hidden) :
+ * le titre et la phrase portent l'information.
+ */
+import { coursesTheme } from '../../themes/manifest';
+import type { BasketFill, JijiPose } from '../../themes/types';
+import { cx, plural } from '../../ui';
+
+/** Phrase douce sous le titre, selon l'avancée des courses. */
+function basketLine(done: number, total: number): string {
+  if (done === 0) return 'Jiji garde la place au chaud.';
+  if (done === total) return 'Tout est dans le panier !';
+  const left = total - done;
+  return `Plus que ${plural(left, 'article')} à trouver.`;
+}
+
+export function BasketStage({
+  fill,
+  pose,
+  done,
+  total,
+  bump,
+}: {
+  fill: BasketFill;
+  pose: JijiPose;
+  done: number;
+  total: number;
+  /** Change à chaque article déposé : le panier sautille. */
+  bump: number;
+}) {
+  return (
+    <div className="basket-head">
+      <div className={cx('basket-stage', `basket-stage--${fill}`)} data-fill={fill} data-pose={pose} aria-hidden="true">
+        <span className="basket-stage__sky" />
+        <img
+          key={`b-${bump}`}
+          className={cx('basket-stage__basket', bump > 0 && 'is-bumped')}
+          src={coursesTheme.basket[fill]}
+          alt=""
+          draggable={false}
+        />
+        <img key={pose} className={cx('basket-stage__jiji', `basket-stage__jiji--${pose}`)} src={coursesTheme.jiji[pose]} alt="" draggable={false} />
+      </div>
+      <div className="basket-head__text">
+        <div className="section-head">
+          <h2 id="basket-title" className="section-title" tabIndex={-1}>
+            Dans le panier
+          </h2>
+          <span className="section-head__meta">{done}</span>
+        </div>
+        <p className="basket-head__line">{basketLine(done, total)}</p>
+      </div>
+    </div>
+  );
+}

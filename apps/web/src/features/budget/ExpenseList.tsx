@@ -1,11 +1,14 @@
 /**
  * Dépenses communes du mois, éditables en place : renommer, montant,
  * retirer (annulable), ajouter. Une saisie invalide ne touche jamais l'état.
+ * Univers Chihiro (écran Budget) : chaque dépense porte un kompeitō de
+ * couleur stable (d'après son libellé) ; liste vide = Noiraude cachée.
  */
 import type { MonthRecord } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, EmptyState, IconButton, InlineTextField, TextField, euro, fr, useToast } from '../../ui';
+import { AmountInput, Button, IconButton, InlineTextField, TextField, cx, euro, fr, useToast } from '../../ui';
+import { Konpeito, SusuwatariEmpty } from './chihiro/Susuwatari';
 
 export function ExpenseEditorList({
   idPrefix,
@@ -13,17 +16,21 @@ export function ExpenseEditorList({
   onRename,
   onAmount,
   onRemove,
+  konpeito = false,
 }: {
   idPrefix: string;
   expenses: MonthRecord['expenses'];
   onRename: (id: string, label: string) => void;
   onAmount: (id: string, cents: number) => void;
   onRemove: (id: string) => void;
+  /** Pastille kompeitō devant chaque libellé (écran Budget uniquement). */
+  konpeito?: boolean;
 }) {
   return (
-    <ul className="expense-list">
+    <ul className={cx('expense-list', konpeito && 'expense-list--konpeito')}>
       {expenses.map((e) => (
         <li key={e.id} className="expense-row">
+          {konpeito && <Konpeito label={e.label} />}
           <InlineTextField
             id={`${idPrefix}-${e.id}-label`}
             label={`Libellé de la dépense ${e.label}`}
@@ -150,9 +157,9 @@ export function ExpenseList({ month, totalCents }: { month: MonthRecord; totalCe
         <span className="section-head__meta amount">{euro(totalCents)}</span>
       </div>
       {month.expenses.length === 0 ? (
-        <EmptyState art="leaf" compact title="Aucune dépense ce mois-ci">
-          Ajoutez le loyer, les courses, les abonnements…
-        </EmptyState>
+        <SusuwatariEmpty title="Aucune dépense ce mois-ci">
+          {fr('Les Noiraudes attendent leurs kompeitō : ajoutez le loyer, les courses, les abonnements…')}
+        </SusuwatariEmpty>
       ) : (
         <ExpenseEditorList
           idPrefix={`m-${key}`}
@@ -160,6 +167,7 @@ export function ExpenseList({ month, totalCents }: { month: MonthRecord; totalCe
           onRename={(id, label) => renameExpense(key, id, label)}
           onAmount={(id, cents) => setExpenseAmount(key, id, cents)}
           onRemove={remove}
+          konpeito
         />
       )}
       {adding ? (

@@ -5,18 +5,22 @@
  * dépenses, reste. Tous les chiffres viennent de @a2/core
  * (computeMonthSummary et son détail breakdownA/B) : aucun calcul ici.
  */
+import type { MonthRecord, MonthSummary } from '@a2/core';
 import { currentMonthKey, hasSharedRates, monthKeyToLabel, sharedRates } from '@a2/core';
+import { useRef } from 'react';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, euroMinus, percent, shiftMonthKey, useToast } from '../../ui';
+import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, percent, shiftMonthKey, useToast } from '../../ui';
+import { SusuwatariRunner } from './chihiro/Susuwatari';
+import { useMonthEdits } from './chihiro/useMonthEdits';
 import { ExpenseList } from './ExpenseList';
+import { Ledger } from './Ledger';
 import { BreakdownLine, PersonCard } from './PersonCard';
 import './budget.css';
+import './chihiro/chihiro.css';
 
 export function BudgetScreen() {
-  const { state, currentMonth, currentSummary, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, restoreMonthRates, today } =
-    useApp();
-  const toast = useToast();
+  const { currentMonth, currentSummary } = useApp();
 
   if (currentMonth === null || currentSummary === null) {
     return (
@@ -31,10 +35,17 @@ export function BudgetScreen() {
     );
   }
 
+  return <BudgetMonth currentMonth={currentMonth} s={currentSummary} />;
+}
+
+function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthSummary }) {
+  const { state, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, restoreMonthRates, today } = useApp();
+  const toast = useToast();
+  const sheetRef = useRef<HTMLElement>(null);
+  const { bowing, run, endRun } = useMonthEdits(currentMonth);
+
   const key = currentMonth.monthKey;
   const isCurrent = key === currentMonthKey(today);
-  const s = currentSummary;
-  const deficit = s.remainingCents < 0;
   const reserve = currentMonth.reserveTargetCents;
   const label = monthKeyToLabel(key);
   const split = label.lastIndexOf(' ');
@@ -72,7 +83,10 @@ export function BudgetScreen() {
         <div className="month-bar">
           <div className="month-bar__titles">
             {isCurrent ? (
-              <p className="eyebrow month-bar__eyebrow">Le foyer</p>
+              <p className="eyebrow month-bar__eyebrow">
+                <span className="month-bar__lantern" aria-hidden="true" />
+                La maison de bains
+              </p>
             ) : (
               <button type="button" className="chip chip--glass month-bar__today" onClick={selectCurrentMonth}>
                 <Icon name="undo" size={15} strokeWidth={1.9} />
@@ -97,7 +111,7 @@ export function BudgetScreen() {
         </div>
       </div>
 
-      <section className="screen-sheet budget" aria-labelledby="budget-title">
+      <section ref={sheetRef} className="screen-sheet budget" aria-labelledby="budget-title">
         <ShellNotices />
 
         <div className="sheet-section">
@@ -109,32 +123,7 @@ export function BudgetScreen() {
             <PersonCard key={`${key}-b`} person="B" month={currentMonth} contributionCents={s.contributionBCents} />
           </div>
 
-          <div className={cx('ledger', deficit && 'ledger--deficit')} aria-label="Équilibre du mois">
-            <div className="ledger__row ledger__row--total">
-              <span className="ledger__label">À verser ensemble</span>
-              <strong className="amount ledger__value" data-testid="household-total">
-                {euro(s.householdContributionCents)}
-              </strong>
-            </div>
-            <div className="ledger__row">
-              <span className="ledger__label">Dépenses communes</span>
-              <span className="amount ledger__value ledger__value--minus" data-testid="expenses-total">
-                {euroMinus(s.expensesTotalCents)}
-              </span>
-            </div>
-            <div className="ledger__rule" aria-hidden="true" />
-            <div className="ledger__row ledger__row--rest">
-              <span className="ledger__label">{deficit ? 'Déficit' : 'Reste'}</span>
-              <strong className="amount ledger__value ledger__rest" data-testid="remaining">
-                {deficit ? euroMinus(-s.remainingCents) : euro(s.remainingCents)}
-              </strong>
-            </div>
-            {deficit && (
-              <p className="ledger__note" role="note">
-                Les dépenses dépassent ce que vous versez ensemble. Ajustez un salaire, un taux ou une dépense.
-              </p>
-            )}
-          </div>
+          <Ledger summary={s} reserveTargetCents={reserve} bowing={bowing} />
 
           <Disclosure summary="Détail du calcul" className="breakdown">
             <div className="breakdown__body">
@@ -196,6 +185,7 @@ export function BudgetScreen() {
         )}
 
         <ExpenseList month={currentMonth} totalCents={s.expensesTotalCents} />
+        <SusuwatariRunner run={run} areaRef={sheetRef} onDone={endRun} />
       </section>
     </>
   );

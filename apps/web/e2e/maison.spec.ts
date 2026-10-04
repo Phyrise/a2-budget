@@ -16,6 +16,14 @@ async function createTask(page: Page, title: string, who: 'a' | 'b' | 'both' | '
 
 const todayRow = (page: Page, title: string) => page.locator('.task-list:not(.task-list--done) .task-row').filter({ hasText: title });
 
+/** Ouvre la feuille d'édition par le menu ⋯ de la ligne (V3). */
+async function editViaMenu(page: Page, title: string) {
+  await page.getByRole('button', { name: `Options : ${title}`, exact: true }).click();
+  const menu = sheet(page, title);
+  await menu.getByRole('button', { name: /^Modifier/ }).click();
+  await expect(menu).toBeHidden();
+}
+
 test.describe('Maison — parcours', () => {
   test('créer, cocher, annuler, recocher, recharger', async ({ page }) => {
     await openApp(page);
@@ -46,7 +54,7 @@ test.describe('Maison — parcours', () => {
     const done = page.getByRole('button', { name: /Fait aujourd’hui/ });
     await expect(done).toContainText('1');
     await expect.poll(async () => (await persisted(page)).chores.completions.length).toBe(1);
-    await expect(page.locator('.week-line')).toContainText('1');
+    await expect(page.locator('.balance__title')).toHaveText('La semaine se met en route, doucement.');
 
     // Annuler depuis « Fait aujourd’hui ».
     await done.click();
@@ -77,7 +85,7 @@ test.describe('Maison — parcours', () => {
     await expect(todayRow(page, 'Sortir les poubelles')).toBeVisible();
 
     // Édition : titre et récurrence hebdomadaire sur un autre jour.
-    await page.getByRole('button', { name: 'Modifier Sortir les poubelles' }).click();
+    await editViaMenu(page, 'Sortir les poubelles');
     dialog = sheet(page, 'Modifier la tâche');
     await expect(dialog).toBeVisible();
     await dialog.locator('#task-title').fill('Sortir le verre');
@@ -98,7 +106,7 @@ test.describe('Maison — parcours', () => {
     // Suppression confirmée depuis la feuille d'édition (via « À venir » → tâche du jour recréée).
     dialog = await createTask(page, 'Appeler le plombier', 'unassigned', 'none');
     await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
-    await page.getByRole('button', { name: 'Modifier Appeler le plombier' }).click();
+    await editViaMenu(page, 'Appeler le plombier');
     dialog = sheet(page, 'Modifier la tâche');
     await dialog.getByRole('button', { name: 'Supprimer', exact: true }).click();
     const confirm = page.getByRole('alertdialog', { name: /Supprimer cette tâche/ });

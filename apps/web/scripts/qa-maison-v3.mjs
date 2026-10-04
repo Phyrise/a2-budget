@@ -120,11 +120,20 @@ await scenario('bubble', fixtures.carried, async (page) => {
   await page.waitForTimeout(700);
   await shot(page, 'bubble-perch');
   await page.waitForTimeout(3500);
-  await scrollSheet(page, 900);
+  // Compagnons hors de vue : la bulle flotte au-dessus de la navigation.
+  await page.getByRole('button', { name: 'Mettre la maison en pause' }).scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
-  await page.getByRole('checkbox', { name: 'Sortir les poubelles', exact: true }).click();
+  await page.getByRole('button', { name: 'Mettre la maison en pause' }).click();
   await page.waitForTimeout(700);
   await shot(page, 'bubble-floating');
+});
+
+await scenario('perch-scrolled', fixtures.carried, async (page) => {
+  await scrollSheet(page, 330);
+  await page.waitForTimeout(300);
+  await page.getByRole('checkbox', { name: 'Vider le lave-vaisselle', exact: true }).click();
+  await page.waitForTimeout(700);
+  await shot(page, 'perch-scrolled');
 });
 
 await scenario('chore', fixtures.carried, async (page) => {
@@ -148,6 +157,7 @@ for (const mode of ['carried', 'balanced', 'quiet']) {
     await page.locator('.balance').scrollIntoViewIfNeeded();
     await page.waitForTimeout(1900);
     await shot(page, `balance-${mode}`, '.balance');
+    await shot(page, `balance-art-${mode}`, '.balance__visual');
   });
 }
 
@@ -174,14 +184,16 @@ const plates = [
   ['bubble-floating', 'chore-celebrate'],
   ['skip-toast', 'sheet-new'],
   ['balance-carried', 'balance-balanced', 'balance-quiet'],
+  ['perch-scrolled', 'sheet-new-bottom'],
+  ['balance-art-carried', 'balance-art-balanced', 'balance-art-quiet'],
 ];
-const page = await browser.newPage({ viewport: { width: 800, height: 900 } });
+const page = await browser.newPage({ viewport: { width: 720, height: 800 } });
 for (const [i, group] of plates.entries()) {
   const present = group.filter((n) => shots.includes(n));
   if (present.length === 0) continue;
   const imgs = present.map((n) => `<figure><img src="${pathToFileURL(join(outDir, `${n}.png`)).href}"><figcaption>${n}</figcaption></figure>`).join('');
-  const html = `<html><body style="margin:0;background:#222;display:flex;gap:8px;padding:8px;align-items:flex-start;font:12px sans-serif;color:#ccc">${imgs}
-  <style>figure{margin:0;flex:1}img{width:100%;display:block}</style></body></html>`;
+  const html = `<html><body style="margin:0;background:#222;display:flex;flex-direction:${group[0].startsWith("balance-art") ? "column" : "row"};gap:8px;padding:8px;align-items:stretch;font:12px sans-serif;color:#ccc">${imgs}
+  <style>figure{margin:0;flex:1;min-width:0}img{width:100%;display:block}</style></body></html>`;
   const file = join(outDir, `plate-${i + 1}.html`);
   writeFileSync(file, html);
   await page.goto(pathToFileURL(file).href);

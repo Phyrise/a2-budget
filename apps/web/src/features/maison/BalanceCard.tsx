@@ -69,7 +69,7 @@ export function BalanceCard({ names }: { names: Names }) {
   const completions = appState?.chores.completions ?? [];
 
   const balance = useMemo(() => weeklyBalance(tasks, completions, today), [tasks, completions, today]);
-  const suggestions = useMemo(() => rebalanceSuggestions(tasks, completions, today, 3, names), [tasks, completions, today, names]);
+  const suggestions = useMemo(() => rebalanceSuggestions(tasks, completions, today, 2, names), [tasks, completions, today, names]);
   const week = useMemo(() => completionsOfWeek(completions, today), [completions, today]);
   const detail = useMemo(() => weekDetail(tasks, week), [tasks, week]);
   const text = verdictText(balance.verdict, balance.total, names);

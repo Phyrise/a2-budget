@@ -172,18 +172,16 @@ button.task-row__body:hover .task-row__more {
   align-items: flex-end;
 }
 
+/* À gauche des compagnons, à hauteur de leurs têtes : la bulle ne couvre ni
+   la phrase de la forêt ni le titre de la feuille. */
 .perch .cbubble-region--perch {
-  right: 6px;
-  bottom: calc(100% + 4px);
-  width: min(272px, calc(100vw - 48px));
+  right: calc(100% - 2px);
+  bottom: 6px;
+  width: min(250px, calc(100vw - 150px));
 }
 
-.perch .cbubble-region--perch.is-a .cbubble {
-  margin-right: 50px;
-}
-
-.perch .cbubble-region--perch.is-b .cbubble {
-  margin-right: 4px;
+.perch .cbubble-region--perch.is-b {
+  right: calc(100% - 6px);
 }
 
 /* ---------------------------------------------------------------- */
@@ -211,6 +209,10 @@ button.task-row__body:hover .task-row__more {
   margin-bottom: 2px;
   color: var(--fog-400);
   transition: color var(--dur-fast) var(--ease-soft);
+}
+
+.effort-art path {
+  vector-effect: non-scaling-stroke;
 }
 
 .effort-art__moss {

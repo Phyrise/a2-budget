@@ -66,8 +66,8 @@
 
 .bbranch {
   fill: none;
-  stroke: #8f6a4f;
-  stroke-width: 3.2;
+  stroke: #87654b;
+  stroke-width: 2.6;
   stroke-linecap: round;
 }
 
@@ -115,12 +115,22 @@
   stroke-linecap: round;
 }
 
-.bstone__glint {
-  fill: rgba(236, 230, 211, 0.35);
+.bstone__tufts {
+  fill: none;
+  stroke: rgba(147, 173, 124, 0.9);
+  stroke-width: 1.2;
+  stroke-linecap: round;
 }
 
-.balance-art.is-quiet .bstone {
-  opacity: 0.62;
+/* Semaine calme : pierres plus petites, traits apaisés (opaques : la
+   branche ne transparaît pas). */
+.balance-art.is-quiet .bstone__body {
+  stroke-opacity: 0.45;
+}
+
+.balance-art.is-quiet .bstone__moss,
+.balance-art.is-quiet .bstone__tufts {
+  opacity: 0.6;
 }
 
 .balance__legend {

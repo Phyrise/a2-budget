@@ -68,7 +68,7 @@ function build(mode: Mode): AppState {
       continue;
     }
     done(byTitle('Arroser les plantes'), at(day, 8, 20), mode === 'carried' && i % 2 === 0 ? 'b' : undefined);
-    done(byTitle('Vider le lave-vaisselle'), at(day, 21, 10), mode === 'carried' ? 'b' : i % 2 === 0 ? 'a' : 'b');
+    done(byTitle('Vider le lave-vaisselle'), at(day, 21, 10), 'b');
     if (mode === 'carried' || i % 2 === 1) done(byTitle('Plier le linge'), at(day, 19, 30), mode === 'balanced' ? 'a' : undefined);
     if (mode === 'balanced' && i === 2) done(byTitle('Passer l’aspirateur'), at(day, 11));
   }

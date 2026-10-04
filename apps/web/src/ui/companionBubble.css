@@ -6,8 +6,8 @@
 
 .cbubble-region--perch {
   position: absolute;
-  right: 112px;
-  bottom: calc(100% - 4px);
+  right: 100%;
+  bottom: 6px;
   z-index: 3;
   width: min(250px, calc(100vw - 150px));
   display: flex;

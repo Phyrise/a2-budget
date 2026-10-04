@@ -58,7 +58,7 @@ export function useInView(ref: RefObject<HTMLElement | null>): boolean {
   useEffect(() => {
     const el = ref.current;
     if (el === null || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(([entry]) => setInView(entry?.isIntersecting ?? true), { threshold: 0.6 });
+    const io = new IntersectionObserver(([entry]) => setInView(entry?.isIntersecting ?? true), { threshold: 0.6, rootMargin: '-72px 0px -96px 0px' });
     io.observe(el);
     return () => io.disconnect();
   }, [ref]);

@@ -23,9 +23,9 @@ export function EffortArt({ effort, size = 32, className }: { effort: TaskEffort
   return (
     <svg
       className={className ? `effort-art ${className}` : 'effort-art'}
-      width={size}
+      width={Math.round(size * 1.3)}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="3 9.5 26 20"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.6}

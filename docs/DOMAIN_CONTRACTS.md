@@ -1,4 +1,4 @@
-# A² Home — Contrats du domaine Maison / Forêt (V2)
+# A² Home — Contrats du domaine Maison / Forêt (V2, extensions V3)
 
 Ce document est la référence du **domaine Maison / Forêt** (A² Home), séparé
 du budget. En cas de divergence avec le code, **ce document fait foi** ; toute
@@ -10,8 +10,11 @@ budget existant, **profondément identique** (réserve comprise).
 
 Implémentation : `packages/core/src/home/**` (fichiers `types.ts`, `dates.ts`,
 `tasks.ts`, `choreActions.ts`, `forest.ts`, `groceries.ts`, `appState.ts`,
-`fixtures/v1.ts`). Tests : `*.test.ts` du même dossier. Store :
-`apps/web/src/state/store.tsx` (§9).
+`fixtures/v1.ts` ; V3 : `occurrences.ts`, `taskEdit.ts`, `upcoming.ts`,
+`skips.ts`, `balance.ts`, `rituals.ts`, `focus.ts`, `careValidation.ts`,
+`validationHelpers.ts`). Tests : `*.test.ts` du même dossier (V3 :
+`care.*.test.ts`). Store : `apps/web/src/state/store.tsx` (§9) et
+`careActions.ts` (§11.8).
 
 ---
 
@@ -379,10 +382,14 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 
 | Action | Effet | Retour |
 |---|---|---|
-| `createHomeTask({ title, assignee, recurrence, weeklyDay?, monthlyDay? })` | crée la tâche ; jour par défaut = aujourd'hui | `HouseholdTask \| null` (null : saisie invalide) |
-| `updateHomeTask(id, patch)` | `updateTask` ; passer en weekly/monthly sans jour connu → aujourd'hui | `boolean` (false : inconnue / incohérente) |
+| `createHomeTask({ title, assignee, recurrence, weeklyDay?, monthlyDay?, effort?, rotation?, flexible? })` | crée la tâche ; jour par défaut = aujourd'hui | `HouseholdTask \| null` (null : saisie invalide) |
+| `updateHomeTask(id, patch)` | `updateTask` (patch V3 : `effort`, `rotation`, `flexible`) ; passer en weekly/monthly sans jour connu → aujourd'hui | `boolean` (false : inconnue / incohérente) |
 | `deleteHomeTask(id)` | `deleteTask` (faits conservés) | `boolean` |
-| `toggleHomeTask(task)` | `toggleTaskToday` | `{ completed, completionId }` (pour `useWorld().pulse({ id: completionId })`) |
+| `toggleHomeTask(task, opts?: { doneBy? })` | `toggleTaskToday` (doneBy défaut : à qui c'était le tour) | `{ completed, completionId, doneBy }` (pour `useWorld().pulse({ id: completionId })`) |
+| `skipToday(task, by?)` / `unskipToday(task)` | « pas aujourd'hui » (§11.4) | `boolean` |
+| `applySuggestion(s)` | rotate → `rotation: true` ; reassign → `assignee: s.to` | `boolean` |
+| `saveCircle({ gratitude, burdens, intentions, weekStart? })` | cercle de la semaine (remplace la même semaine, garde son id) | `Circle \| null` |
+| `addFocusSession({ minutes, who, label?, taskId?, startedAt? })` | mémorise une lanterne | `FocusSession \| null` |
 | `toggleHomePause()` | pause / réveil de la forêt | — |
 | `addGrocery(label, addedBy?)` | `addGroceryItem` (quantité, rayon, anti-doublon) | `{ added, item }` |
 | `toggleGrocery(id)` | `toggleGroceryItem` | — |
@@ -393,8 +400,11 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 | `renamePerson('A' \| 'B', name)` | nom nettoyé ; `household.people` suit | `boolean` (false : vide) |
 
 Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
-`actionableTasksToday`, `upcomingOccurrences(tasks, completions, today, 7)`,
-`weeklyDistribution`, `groupGroceryItems(items)`,
+`actionableTasksToday(tasks, today, completions, chores.skips)`,
+`upcomingOccurrences(tasks, completions, today, 7, { skips })`,
+`weeklyDistribution`, `nextAssignee`, `weeklyBalance`,
+`rebalanceSuggestions(tasks, completions, today, 3, names)`,
+`gratitudeSuggestions`, `circleForWeek`, `groupGroceryItems(items)`,
 `grocerySuggestions(items, 6, { history, now: today })`,
 `recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel`.
 
@@ -463,3 +473,142 @@ plus tôt l'emporte (« jus d'orange » → boissons), à égalité le plus long
 - `groupGroceryItems(items)` → `{ toBuy: [{ category, label, items }], basket }`
   (rayons dans l'ordre d'affichage, rayons vides omis ; panier du plus
   récemment coché au plus ancien).
+
+---
+
+## 11. V3 « Prendre soin ensemble » (rétrocompatible)
+
+`schemaVersion` reste **2**. Tous les champs V3 sont **optionnels** : un
+JSON V2 existant se recharge à l'identique (aucun champ inventé ; `null`
+pour un bloc optionnel = absent) ; un champ présent est validé strictement
+(raisons stables ci-dessous, `careValidation.ts`). Principes : jamais de
+punition ni de dette visible, jamais de compétition (V3_BRIEF §1).
+
+### 11.1 Champs de tâche
+
+| Champ | Règle | Raison d'échec |
+|---|---|---|
+| `effort?: 1 \| 2 \| 3` | petit geste · tâche · corvée ; absent = 1 pour l'équilibre ; **sans effet sur les crédits** | `task-invalid-effort` |
+| `rotation?: boolean` | tour à tour ; `true` exige `assignee` 'a'/'b' (= qui commence) | `task-invalid-rotation`, `task-rotation-requires-person` |
+| `flexible?: boolean` | hebdomadaire souple ; `true` exige `recurrence: 'weekly'` (`weeklyDay` reste requis : jour suggéré) | `task-invalid-flexible`, `task-flexible-requires-weekly` |
+
+`createTask` / `updateTask` ne stockent `rotation` / `flexible` que s'ils
+valent `true`. Dans `updateTask`, une valeur **explicite** incohérente lève
+une RangeError ; une valeur **héritée** devenue sans objet (assignee passé à
+« ensemble », récurrence quittant weekly) est retirée en silence.
+
+### 11.2 Hebdomadaire souple
+
+- `isDueOn` : vrai **chaque jour** de la semaine ISO.
+- Occurrence = **lundi** de la semaine : `occurrenceDateFor(task, date)`,
+  `creditKeyFor(task, n'importe quel jour)` → `taskId|lundi`.
+- `isActionableToday` / `findOccurrenceCompletion` : faite si un fait de la
+  tâche est daté **dans** la semaine (lun → dim), y compris un fait
+  enregistré quand la tâche était à jour fixe.
+- `toggleTaskToday` : coche l'occurrence de la semaine ; décocher un autre
+  jour de la même semaine retire ce fait (tombstone de sa clé d'origine).
+- `upcomingOccurrences` : une entrée par **semaine suivante**, datée du lundi.
+- Tâches non souples : comportement V2 inchangé.
+
+### 11.3 Tour à tour et « qui l'a vraiment fait »
+
+- `ChoreCompletion.doneBy?: 'a' | 'b' | 'both'` ; qui a fait =
+  `whoDid(c) = doneBy ?? assignee`. `doneBy` n'est stocké que s'il diffère
+  de `assignee`.
+- `nextAssignee(task, completions)` : tour à tour → l'opposé de la personne
+  ('a'/'b') du plus récent fait de la tâche (par `completedAt`, faits
+  « ensemble » ignorés), sinon `task.assignee` ; autres tâches →
+  `task.assignee`.
+- `addCompletion(…, id, doneBy?)` : `assignee` du fait = `nextAssignee`
+  (identique à V2 hors tour à tour). `toggleTaskToday(state, id, now,
+  completionId, { doneBy? })` renvoie aussi `doneBy` (absent si rien n'a
+  changé, forme V2 conservée).
+- `weeklyDistribution` et les lumières du monde (`worldState.ts`) comptent
+  `doneBy ?? assignee`. Le crédit de la forêt ne dépend **jamais** de doneBy.
+
+### 11.4 « Pas aujourd'hui » (`chores.skips?`)
+
+`ChoreSkip = { id, taskId, dueDate, at (ISO), by?: 'a' | 'b' }`.
+`dueDate` = `skipDateFor(task, date)` : date du jour (récurrentes),
+**lundi** pour une souple (« pas cette semaine » — libellé UI conseillé),
+**date du jour** pour une ponctuelle (elle revient demain).
+
+- `skipOccurrence(skips, skip)` / `unskipOccurrence(skips, taskId, dueDate)` :
+  purs, idempotents sur `(taskId, dueDate)`, même référence si rien ne
+  change ; au plus `SKIPS_MAX` = 500 (les plus anciens oubliés).
+- `isActionableToday(task, today, completions, skips?)` et
+  `actionableTasksToday(…, skips?)` : paramètre optionnel (sans lui,
+  comportement V2).
+- `toggleTaskToday` : occurrence passée et non faite → aucun changement
+  (passer par `unskipToday` d'abord). Une occurrence faite ne peut pas être
+  passée (`skipToday` → false).
+- Aucun crédit, aucune pénalité : `advanceDay` est **inchangé** (passer
+  équivaut pour la forêt à ne rien faire, sans trace d'échec).
+- Validation : `skips-not-array`, `skip-not-object`, `skip-invalid-id`,
+  `duplicate-skip-id`, `skip-invalid-task-id`, `skip-invalid-due-date`,
+  `skip-invalid-at`, `duplicate-skip-occurrence`, `skip-invalid-by`.
+
+### 11.5 Équilibre de la semaine
+
+`weeklyBalance(tasks, completions, now)` → `{ a, b, total, verdict }` :
+somme des efforts (défaut 1 ; tâche supprimée → 1) des faits de la semaine
+ISO (par `completedAt`) selon `doneBy ?? assignee` ; « ensemble » = moitié
+chacun ; « non attribuée » ignorée. Verdict : `quiet` si total < 3
+(`BALANCE_QUIET_BELOW`), `balanced` si `|a − b| / total ≤ 0,25`
+(`BALANCE_TOLERANCE`), sinon `a-carried` / `b-carried`.
+
+> ⚠️ **Jamais de classement.** `a`, `b`, `total` sont des intermédiaires :
+> l'UI n'affiche que le verdict (phrase bienveillante, visuel qualitatif) et
+> les suggestions. Pas de score comparé, pas de « gagnant ».
+
+`rebalanceSuggestions(tasks, completions, now, max = 3, names?)` →
+`[{ taskId, kind: 'rotate' | 'reassign', to?, reason }]` : vide sauf
+verdict `*-carried`. Candidates : tâches **récurrentes** attribuées à la
+personne qui a porté, pas déjà en tour à tour, triées par effort puis
+fréquence de la semaine. Effort ≥ 2 → `rotate` ; effort 1 → `reassign`
+vers l'autre. `reason` : phrase française bienveillante (espaces
+insécables), personnalisée si `names = { a, b }` est fourni.
+
+### 11.6 Cercle de la semaine (`rituals?: { circles }`)
+
+`Circle = { id, weekStart (lundi), heldAt (ISO), gratitude: { from, to, text }[],
+burdens: { who, text }[], intentions: string[] }`.
+
+- `saveCircle(rituals, circle)` : remplace le cercle de la même semaine,
+  sinon ajoute ; tri par semaine ; au plus `CIRCLES_MAX` = 260. Textes
+  nettoyés (espaces réduits, ≤ 280 car.), entrées vides retirées. RangeError
+  si `weekStart` n'est pas un lundi, `heldAt` pas ISO, personne inconnue.
+- `circleForWeek(rituals, Date | 'YYYY-MM-DD')` → cercle de cette semaine ou
+  null.
+- `gratitudeSuggestions(tasks, completions, now, from, max = 5)` : phrases
+  tirées des faits de la semaine de l'autre (« Merci d'avoir sorti les
+  poubelles 3 fois cette semaine ») ou faits ensemble (« … avec moi »).
+  Participe passé de l'infinitif initial (`pastParticiplePhrase` : -er, -ir,
+  irréguliers courants) ; sinon « Merci pour « Titre » cette semaine ».
+  Ordre : effort × fréquence, puis le plus récent.
+- Validation : `rituals-not-object`, `rituals-circles-not-array`,
+  `circle-not-object`, `circle-invalid-id`, `circle-invalid-week-start`,
+  `circle-invalid-held-at`, `circle-invalid-lists`,
+  `circle-invalid-gratitude`, `circle-invalid-burden`,
+  `circle-invalid-intention`, `duplicate-circle-id`, `duplicate-circle-week`.
+
+### 11.7 Lanternes (`focus?: { sessions }`)
+
+`FocusSession = { id, startedAt (ISO), minutes (entier 1..120), who: 'a' |
+'b' | 'both', label?, taskId? }`. `addFocusSession(focus, session)` :
+idempotent sur `id`, libellé nettoyé (vide → omis, ≤ 80 car.), garde les
+`FOCUS_SESSIONS_MAX` = 500 plus récentes ; RangeError si invalide. Une
+lanterne ne coche rien et ne donne aucun crédit (l'UI propose ensuite de
+cocher la tâche). Validation : `focus-not-object`,
+`focus-sessions-not-array`, `focus-too-many-sessions`,
+`focus-session-not-object`, `focus-invalid-id`, `duplicate-focus-id`,
+`focus-invalid-started-at`, `focus-invalid-minutes`, `focus-invalid-who`,
+`focus-invalid-label`, `focus-invalid-task-id`.
+
+### 11.8 Store (`careActions.ts`, exposé par `useApp()`)
+
+`skipToday`, `unskipToday`, `applySuggestion`, `saveCircle`,
+`addFocusSession` (tableau §9) suivent la même sémantique que les autres
+actions : transition pure via `transact`, ids et horloge capturés hors de
+l'updater (StrictMode), résultat synchrone, écriture sérialisée. L'objet
+d'actions est mémoïsé (le contexte ne se recalcule pas à chaque rendu).

@@ -2,6 +2,7 @@
 @import './circle/circle.css';
 @import './circle/circle-read.css';
 @import './lantern/lantern.css';
+@import './lantern/lantern-window.css';
 @import './carnet/carnet.css';
 
 .rituals__invite,

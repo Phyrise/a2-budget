@@ -40,29 +40,33 @@ export function LanternRunning({ names, onHide }: { names: Names; onHide: () => 
   const paused = s.phase === 'paused';
 
   return (
-    <div className="lantern-stage">
-      <div className="lantern-stage__ring">
-        <LanternRing progress={progressOf(s, now)} who={config.who} burning={!paused} />
+    <div className="lantern-stage lantern-stage--running">
+      <div className="lantern-stage__top">
+        <div className="lantern-stage__ring">
+          <LanternRing progress={progressOf(s, now)} who={config.who} burning={!paused} />
+        </div>
+        <p className="lantern-stage__time display num" aria-hidden="true">
+          {clock(remaining)}
+        </p>
+        <p className="visually-hidden" aria-live="polite">
+          {paused ? 'Lanterne en pause, ' : ''}
+          {remainingWords(minuteLeft * 60000)}
+        </p>
+        <p className="lantern-stage__label">
+          <Companion who={config.who} size={22} />
+          <span>
+            {paused ? 'En pause' : whoLabel(config.who, names)}
+            {config.label ? (
+              <>
+                {' · '}
+                <em>{config.label}</em>
+              </>
+            ) : null}
+          </span>
+        </p>
       </div>
-      <p className="lantern-stage__time display num" aria-hidden="true">
-        {clock(remaining)}
-      </p>
-      <p className="visually-hidden" aria-live="polite">
-        {paused ? 'Lanterne en pause, ' : ''}
-        {remainingWords(minuteLeft * 60000)}
-      </p>
-      <p className="lantern-stage__label">
-        <Companion who={config.who} size={22} />
-        <span>
-          {paused ? 'En pause' : whoLabel(config.who, names)}
-          {config.label ? (
-            <>
-              {' · '}
-              <em>{config.label}</em>
-            </>
-          ) : null}
-        </span>
-      </p>
+      {/* Fenêtre laissée libre : la lanterne de la forêt brûle là, au pied du cèdre. */}
+      <div className="lantern-stage__window" aria-hidden="true" />
 
       <div className="lantern-card lantern-controls">
         <div className="lantern-controls__row">

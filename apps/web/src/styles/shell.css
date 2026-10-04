@@ -83,7 +83,10 @@
 }
 
 .module-view {
-  animation: module-in 240ms var(--ease-out) both;
+  /* backwards, pas both : une transformation laissée en place (même nulle)
+     ferait de .module-view le repère des éléments position: fixed (bulle
+     flottante des compagnons). */
+  animation: module-in 240ms var(--ease-out) backwards;
 }
 
 .module-view > .world-window {

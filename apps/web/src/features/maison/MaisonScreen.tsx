@@ -237,16 +237,20 @@ export function MaisonScreen() {
 
         <UpcomingList upcoming={upcoming} completions={completions} pendingToday={actionableIds} />
 
+        {/* La semaine en douceur (équilibre), puis les rituels qui en prennent soin. */}
+        <div className="sheet-section">
+          <BalanceCard names={names} />
+        </div>
+
         <RitualsBar />
 
-        <div className="sheet-section maison__footer">
-          <BalanceCard names={names} />
-          {!paused && (
+        {!paused && (
+          <div className="sheet-section maison__footer">
             <Button variant="ghost" icon="moon" onClick={actions.togglePause} className="maison__pause">
               Mettre la maison en pause
             </Button>
-          )}
-        </div>
+          </div>
+        )}
         <div className="perch" ref={perchRef}>
           <span className="perch__figures" aria-hidden="true">
             <Companion who="a" size={60} mood={perchedMood('a')} reactKey={perchedKey('a')} perched />

@@ -52,13 +52,21 @@ export function useCompanionVoice(names: { a: string; b: string }) {
   return { bubble, say, hush };
 }
 
-/** Vrai tant que l'élément est (au moins en partie) visible à l'écran. */
+/**
+ * Vrai tant que l'élément est entièrement visible sous l'en-tête fixe (sinon
+ * la bulle posée à côté des compagnons passerait sous l'en-tête : on bascule
+ * alors sur la bulle flottante).
+ */
 export function useInView(ref: RefObject<HTMLElement | null>): boolean {
   const [inView, setInView] = useState(true);
   useEffect(() => {
     const el = ref.current;
     if (el === null || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver(([entry]) => setInView(entry?.isIntersecting ?? true), { threshold: 0.6, rootMargin: '-72px 0px -96px 0px' });
+    const header = Math.round(document.querySelector('.app-header')?.getBoundingClientRect().bottom ?? 72);
+    const io = new IntersectionObserver(([entry]) => setInView(entry ? entry.intersectionRatio >= 0.98 : true), {
+      threshold: [0, 0.98, 1],
+      rootMargin: `-${Math.max(56, header + 6)}px 0px -96px 0px`,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [ref]);

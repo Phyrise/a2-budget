@@ -1,0 +1,263 @@
+/* Maison V3 — « Prendre soin ensemble » : lignes enrichies, pas aujourd'hui,
+   effort, tour à tour, bulles des compagnons. (Équilibre : balance.css) */
+@import './balance.css';
+
+/* ---------------------------------------------------------------- */
+/* Lignes de tâche                                                   */
+/* ---------------------------------------------------------------- */
+
+.task-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.task-row__dot {
+  opacity: 0.6;
+}
+
+.task-row__turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--fog-300);
+}
+
+.task-row__turn .icon {
+  color: var(--moss-300);
+}
+
+.chore-badge,
+.help-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  margin-left: 2px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.chore-badge {
+  background: rgba(221, 179, 106, 0.09);
+  color: #d8bf92;
+}
+
+.help-badge {
+  padding-left: 8px;
+  background: rgba(231, 200, 126, 0.1);
+  color: var(--who-both);
+}
+
+.task-row__more {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 40px;
+  margin-left: -2px;
+  color: var(--text-faint);
+  transition: color var(--dur-fast) var(--ease-soft);
+}
+
+button.task-row__body:hover .task-row__more {
+  color: var(--ivory-100);
+}
+
+/* Corvée : la case se remplit d'un halo plus chaud et plus long. */
+@media (prefers-reduced-motion: no-preference) {
+  .task-row.is-chore .check.is-celebrating::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(236, 208, 154, 0.55), rgba(236, 208, 154, 0) 70%);
+    animation: chore-glow 1200ms var(--ease-out) forwards;
+    pointer-events: none;
+  }
+}
+
+@keyframes chore-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.1);
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Pas aujourd'hui (repliées, annulables)                            */
+/* ---------------------------------------------------------------- */
+
+.skipped {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+
+.skipped__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding-left: 14px;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+.skipped__icon {
+  flex: none;
+  color: var(--who-a);
+  opacity: 0.7;
+}
+
+.skipped__text {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+  min-width: 0;
+}
+
+.skipped__title {
+  color: var(--fog-400);
+  overflow-wrap: anywhere;
+}
+
+.skipped__when {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13.5px;
+}
+
+.skipped__restore {
+  flex: none;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--moss-300);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.skipped__restore:hover {
+  color: var(--ivory-50);
+}
+
+.upcoming__hint {
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Compagnons perchés + bulle                                         */
+/* ---------------------------------------------------------------- */
+
+.perch__figures {
+  display: flex;
+  align-items: flex-end;
+}
+
+.perch .cbubble-region--perch {
+  right: 6px;
+  bottom: calc(100% + 4px);
+  width: min(272px, calc(100vw - 48px));
+}
+
+.perch .cbubble-region--perch.is-a .cbubble {
+  margin-right: 50px;
+}
+
+.perch .cbubble-region--perch.is-b .cbubble {
+  margin-right: 4px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Feuille d'une tâche : effort, tour à tour, souple                 */
+/* ---------------------------------------------------------------- */
+
+.task-form__group {
+  display: grid;
+  gap: 10px;
+}
+
+.task-form__effort .segmented__label {
+  min-height: 92px;
+  padding: 8px 4px 10px;
+}
+
+.effort-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.effort-option .effort-art {
+  margin-bottom: 2px;
+  color: var(--fog-400);
+  transition: color var(--dur-fast) var(--ease-soft);
+}
+
+.effort-art__moss {
+  color: var(--moss-300);
+  stroke: var(--moss-300);
+}
+
+.segmented__input:checked + .segmented__label .effort-art {
+  color: var(--ivory-100);
+}
+
+.effort-option__label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.effort-option__hint {
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--text-faint);
+}
+
+.segmented__input:checked + .segmented__label .effort-option__hint {
+  color: var(--fog-300);
+}
+
+.task-form__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 4px 0;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.task-form__note .icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--moss-300);
+}
+
+/* Feuille d'actions d'une tâche */
+.task-actions .sheet__body {
+  padding-bottom: calc(18px + var(--safe-bottom));
+}
+
+.task-actions .sheet__title {
+  font-size: 22px;
+}

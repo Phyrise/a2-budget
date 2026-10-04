@@ -1,0 +1,104 @@
+/* Feuille d'actions — grands boutons calmes, séparés par un filet. */
+
+.action-list + .action-list {
+  margin-top: 14px;
+}
+
+.action-list__label {
+  margin: 0 0 6px 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.action-list__items {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(236, 230, 211, 0.03);
+}
+
+.action-item {
+  --ai-tone: var(--moss-300);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 16px 10px 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--ivory-50);
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease-soft);
+}
+
+.action-item:first-child {
+  border-top: 0;
+}
+
+.action-item:hover {
+  background: rgba(236, 230, 211, 0.05);
+}
+
+.action-item:active {
+  background: rgba(236, 230, 211, 0.08);
+}
+
+.action-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -3px;
+  border-radius: var(--radius-lg);
+}
+
+.action-item--a {
+  --ai-tone: var(--who-a);
+}
+
+.action-item--b {
+  --ai-tone: var(--who-b);
+}
+
+.action-item--both {
+  --ai-tone: var(--who-both);
+}
+
+.action-item--soft {
+  --ai-tone: var(--fog-300);
+}
+
+.action-item__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ai-tone) 12%, transparent);
+  color: var(--ai-tone);
+}
+
+.action-item__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.action-item__label {
+  font-size: 16px;
+  font-weight: 560;
+  line-height: 1.25;
+}
+
+.action-item__hint {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}

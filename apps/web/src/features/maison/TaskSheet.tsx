@@ -1,11 +1,22 @@
 /**
- * Feuille d'ajout / d'édition d'une tâche Maison : quoi, qui, quand (jour
- * de semaine ou du mois choisi, pas imposé à aujourd'hui), suppression.
+ * Feuille d'ajout / d'édition d'une tâche Maison : quoi, qui (et « tour à
+ * tour »), quel effort (petit geste · tâche · corvée), quand (jour de
+ * semaine ou du mois choisi, ou « dans la semaine » pour une hebdomadaire
+ * souple), suppression.
  */
-import { isoWeekday, type HouseholdTask, type TaskAssignee, type TaskRecurrence } from '@a2/core';
+import {
+  isoWeekday,
+  nextAssignee,
+  type HouseholdTask,
+  type TaskAssignee,
+  type TaskEffort,
+  type TaskRecurrence,
+} from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Companion, ConfirmDialog, Segmented, Sheet, TextField, WEEKDAYS, fr, useToast } from '../../ui';
+import { Button, Companion, ConfirmDialog, Icon, Segmented, Sheet, TextField, WEEKDAYS, fr, useToast } from '../../ui';
+import { Switch } from '../../ui/Switch';
+import { EFFORTS, EffortArt } from './EffortArt';
 
 export type TaskSheetState = { mode: 'create' } | { mode: 'edit'; task: HouseholdTask } | null;
 
@@ -18,6 +29,34 @@ const RECURRENCES: ReadonlyArray<{ value: TaskRecurrence; label: string }> = [
 
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
+type EffortValue = `${TaskEffort}`;
+
+const EFFORT_OPTIONS = EFFORTS.map((e) => ({
+  value: String(e.value) as EffortValue,
+  ariaLabel: `${e.label} (${e.hint})`,
+  label: (
+    <span className="effort-option">
+      <EffortArt effort={e.value} size={38} />
+      <span className="effort-option__label">{e.label}</span>
+      <span className="effort-option__hint">{e.hint}</span>
+    </span>
+  ),
+}));
+
+const WEEK_MODES = [
+  { value: 'fixed' as const, label: 'Un jour précis' },
+  { value: 'flexible' as const, label: 'Dans la semaine' },
+];
+
+function WhoOption({ who, name, size }: { who: TaskAssignee; name: string; size: number }) {
+  return (
+    <span className="who-option">
+      <Companion who={who} size={size} />
+      <span>{name}</span>
+    </span>
+  );
+}
+
 export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: () => void }) {
   const { createHomeTask, updateHomeTask, deleteHomeTask, appState, today } = useApp();
   const toast = useToast();
@@ -29,6 +68,9 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   const [recurrence, setRecurrence] = useState<TaskRecurrence>('weekly');
   const [weeklyDay, setWeeklyDay] = useState(1);
   const [monthlyDay, setMonthlyDay] = useState(1);
+  const [effort, setEffort] = useState<TaskEffort>(1);
+  const [rotation, setRotation] = useState(false);
+  const [flexible, setFlexible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -36,20 +78,15 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   useEffect(() => {
     if (state === null) return;
     const now = new Date();
-    if (state.mode === 'edit') {
-      const t = state.task;
-      setTitle(t.title);
-      setAssignee(t.assignee);
-      setRecurrence(t.recurrence);
-      setWeeklyDay(t.weeklyDay ?? isoWeekday(now));
-      setMonthlyDay(t.monthlyDay ?? now.getDate());
-    } else {
-      setTitle('');
-      setAssignee('both');
-      setRecurrence('weekly');
-      setWeeklyDay(isoWeekday(now));
-      setMonthlyDay(now.getDate());
-    }
+    const t = state.mode === 'edit' ? state.task : null;
+    setTitle(t?.title ?? '');
+    setAssignee(t?.assignee ?? 'both');
+    setRecurrence(t?.recurrence ?? 'weekly');
+    setWeeklyDay(t?.weeklyDay ?? isoWeekday(now));
+    setMonthlyDay(t?.monthlyDay ?? now.getDate());
+    setEffort(t?.effort ?? 1);
+    setRotation(t?.rotation === true);
+    setFlexible(t?.flexible === true);
     setError(null);
   }, [state]);
 
@@ -58,6 +95,25 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
     b: appState?.budget.settings.personB.name ?? 'AC',
   };
 
+  const personChosen = assignee === 'a' || assignee === 'b';
+  // Valeurs V3 toujours cohérentes : « tour à tour » seulement avec une
+  // personne, « souple » seulement en hebdomadaire (false = retiré).
+  const care = {
+    effort,
+    rotation: personChosen && rotation,
+    flexible: recurrence === 'weekly' && flexible,
+  };
+
+  const completions = appState?.chores.completions ?? [];
+  const nextTurn =
+    editing?.rotation === true && personChosen && rotation && completions.some((c) => c.taskId === editing.id)
+      ? nextAssignee({ ...editing, assignee }, completions)
+      : null;
+  const rotationText =
+    nextTurn === 'a' || nextTurn === 'b'
+      ? fr(`On alterne à chaque fois. Prochain tour : ${names[nextTurn]}.`)
+      : `On alterne à chaque fois, en commençant par ${assignee === 'b' ? names.b : names.a}`;
+
   const submit = () => {
     const clean = title.replace(/\s+/g, ' ').trim();
     if (clean === '') {
@@ -65,29 +121,23 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
       titleRef.current?.focus();
       return;
     }
+    const fields = {
+      title: clean,
+      assignee,
+      recurrence,
+      weeklyDay: recurrence === 'weekly' ? weeklyDay : undefined,
+      monthlyDay: recurrence === 'monthly' ? monthlyDay : undefined,
+      ...care,
+    };
     if (editing) {
-      const ok = updateHomeTask(editing.id, {
-        title: clean,
-        assignee,
-        recurrence,
-        weeklyDay: recurrence === 'weekly' ? weeklyDay : undefined,
-        monthlyDay: recurrence === 'monthly' ? monthlyDay : undefined,
-      });
-      if (!ok) {
+      if (!updateHomeTask(editing.id, fields)) {
         setError('Impossible d’enregistrer cette tâche.');
         return;
       }
       onClose();
       return;
     }
-    const created = createHomeTask({
-      title: clean,
-      assignee,
-      recurrence,
-      weeklyDay: recurrence === 'weekly' ? weeklyDay : undefined,
-      monthlyDay: recurrence === 'monthly' ? monthlyDay : undefined,
-    });
-    if (created === null) {
+    if (createHomeTask(fields) === null) {
       setError('Impossible d’ajouter cette tâche.');
       return;
     }
@@ -95,52 +145,16 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
     const dueToday =
       recurrence === 'none' ||
       recurrence === 'daily' ||
-      (recurrence === 'weekly' && weeklyDay === isoWeekday(today)) ||
+      (recurrence === 'weekly' && (care.flexible || weeklyDay === isoWeekday(today))) ||
       (recurrence === 'monthly' && monthlyDay === today.getDate());
     toast.show({ message: dueToday ? 'Tâche ajoutée à aujourd’hui' : fr('Tâche ajoutée à « À venir »'), icon: 'leaf' });
   };
 
   const assigneeOptions = [
-    {
-      value: 'a' as const,
-      ariaLabel: names.a,
-      label: (
-        <span className="who-option">
-          <Companion who="a" size={26} />
-          <span>{names.a}</span>
-        </span>
-      ),
-    },
-    {
-      value: 'b' as const,
-      ariaLabel: names.b,
-      label: (
-        <span className="who-option">
-          <Companion who="b" size={26} />
-          <span>{names.b}</span>
-        </span>
-      ),
-    },
-    {
-      value: 'both' as const,
-      ariaLabel: 'Ensemble',
-      label: (
-        <span className="who-option">
-          <Companion who="both" size={22} />
-          <span>Ensemble</span>
-        </span>
-      ),
-    },
-    {
-      value: 'unassigned' as const,
-      ariaLabel: 'Libre',
-      label: (
-        <span className="who-option">
-          <Companion who="unassigned" size={24} />
-          <span>Libre</span>
-        </span>
-      ),
-    },
+    { value: 'a' as const, ariaLabel: names.a, label: <WhoOption who="a" name={names.a} size={26} /> },
+    { value: 'b' as const, ariaLabel: names.b, label: <WhoOption who="b" name={names.b} size={26} /> },
+    { value: 'both' as const, ariaLabel: 'Ensemble', label: <WhoOption who="both" name="Ensemble" size={22} /> },
+    { value: 'unassigned' as const, ariaLabel: 'Libre', label: <WhoOption who="unassigned" name="Libre" size={24} /> },
   ];
 
   return (
@@ -187,40 +201,84 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
             error={error}
             autoCapitalize="sentences"
           />
-          <Segmented name="task-who" legend="Qui&#8239;?" options={assigneeOptions} value={assignee} onChange={setAssignee} columns={4} className="task-form__who" />
-          <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={2} />
-          {recurrence === 'weekly' && (
-            <Segmented
-              name="task-weekday"
-              legend="Quel jour&#8239;?"
-              options={WEEKDAYS.map((d) => ({ value: String(d.iso), label: d.short, ariaLabel: d.long }))}
-              value={String(weeklyDay)}
-              onChange={(value) => setWeeklyDay(Number(value))}
-              columns={7}
-              size="sm"
-              className="task-form__days"
-            />
-          )}
-          {recurrence === 'monthly' && (
-            <div className="field">
-              <label className="field__label" htmlFor="task-monthday">
-                Quel jour du mois&#8239;?
-              </label>
-              <select id="task-monthday" className="select" value={monthlyDay} onChange={(event) => setMonthlyDay(Number(event.target.value))}>
-                {MONTH_DAYS.map((d) => (
-                  <option key={d} value={d}>
-                    {d === 1 ? 'Le 1er' : `Le ${d}`}
-                  </option>
-                ))}
-              </select>
-              {monthlyDay > 28 && <p className="field__hint">Les mois plus courts, ce sera le dernier jour.</p>}
-            </div>
-          )}
+          <div className="task-form__group">
+            <Segmented name="task-who" legend="Qui&#8239;?" options={assigneeOptions} value={assignee} onChange={setAssignee} columns={4} className="task-form__who" />
+            {personChosen && (
+              <Switch
+                id="task-rotation"
+                checked={rotation}
+                onChange={setRotation}
+                label="Tour à tour"
+                description={rotationText}
+                icon={<Icon name="repeat" size={19} />}
+                className="task-form__rotation"
+              />
+            )}
+          </div>
+          <Segmented
+            name="task-effort"
+            legend="Quel effort&#8239;?"
+            options={EFFORT_OPTIONS}
+            value={String(effort) as EffortValue}
+            onChange={(value) => setEffort(Number(value) as TaskEffort)}
+            columns={3}
+            className="task-form__effort"
+          />
+          <div className="task-form__group">
+            <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={2} />
+            {recurrence === 'weekly' && (
+              <Segmented
+                name="task-weekmode"
+                legend="Un jour précis ou dans la semaine"
+                legendVisible={false}
+                options={WEEK_MODES}
+                value={flexible ? 'flexible' : 'fixed'}
+                onChange={(value) => setFlexible(value === 'flexible')}
+                columns={2}
+                size="sm"
+                className="task-form__weekmode"
+              />
+            )}
+            {recurrence === 'weekly' && flexible && (
+              <p className="task-form__note">
+                <Icon name="leaf" size={16} />
+                <span>N’importe quel jour de la semaine, une fois. Pas de jour imposé, pas de retard.</span>
+              </p>
+            )}
+            {recurrence === 'weekly' && !flexible && (
+              <Segmented
+                name="task-weekday"
+                legend="Quel jour&#8239;?"
+                legendVisible={false}
+                options={WEEKDAYS.map((d) => ({ value: String(d.iso), label: d.short, ariaLabel: d.long }))}
+                value={String(weeklyDay)}
+                onChange={(value) => setWeeklyDay(Number(value))}
+                columns={7}
+                size="sm"
+                className="task-form__days"
+              />
+            )}
+            {recurrence === 'monthly' && (
+              <div className="field">
+                <label className="field__label" htmlFor="task-monthday">
+                  Quel jour du mois&#8239;?
+                </label>
+                <select id="task-monthday" className="select" value={monthlyDay} onChange={(event) => setMonthlyDay(Number(event.target.value))}>
+                  {MONTH_DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {d === 1 ? 'Le 1er' : `Le ${d}`}
+                    </option>
+                  ))}
+                </select>
+                {monthlyDay > 28 && <p className="field__hint">Les mois plus courts, ce sera le dernier jour.</p>}
+              </div>
+            )}
+          </div>
         </form>
       </Sheet>
       <ConfirmDialog
         open={confirmDelete}
-        title={'Supprimer cette tâche ?'}
+        title={fr('Supprimer cette tâche ?')}
         confirmLabel="Supprimer"
         tone="danger"
         onCancel={() => setConfirmDelete(false)}

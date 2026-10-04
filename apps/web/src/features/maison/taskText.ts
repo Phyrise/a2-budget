@@ -3,13 +3,14 @@ import type { HouseholdTask, TaskAssignee } from '@a2/core';
 import type { Mood } from '../../world/types';
 import { WEEKDAYS, timeOfDay } from '../../ui';
 
-export function recurrenceLabel(task: Pick<HouseholdTask, 'recurrence' | 'weeklyDay' | 'monthlyDay'>): string {
+export function recurrenceLabel(task: Pick<HouseholdTask, 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'flexible'>): string {
   switch (task.recurrence) {
     case 'none':
       return 'Une fois';
     case 'daily':
       return 'Chaque jour';
     case 'weekly': {
+      if (task.flexible === true) return 'Cette semaine';
       const day = WEEKDAYS.find((d) => d.iso === task.weeklyDay);
       return day ? `Chaque ${day.long}` : 'Chaque semaine';
     }
@@ -23,6 +24,16 @@ export function assigneeName(assignee: TaskAssignee, names: { a: string; b: stri
   if (assignee === 'b') return names.b;
   if (assignee === 'both') return 'Ensemble';
   return 'Libre';
+}
+
+/** « d’AL », « de Jiji » : élision devant une voyelle ou un h. */
+export function ofName(name: string): string {
+  return /^[aeiouyhàâäéèêëîïôöûüœæ]/iu.test(name) ? `d’${name}` : `de ${name}`;
+}
+
+/** « Tour d’AL » (tâche en tour à tour). */
+export function turnLabel(name: string): string {
+  return `Tour ${ofName(name)}`;
 }
 
 const WHEN: Record<ReturnType<typeof timeOfDay>, string> = {

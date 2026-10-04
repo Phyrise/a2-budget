@@ -1,0 +1,258 @@
+/* Équilibre de la semaine — deux pierres sur une branche. */
+
+.balance {
+  padding: 18px 18px 8px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(147, 173, 124, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
+}
+
+.balance__eyebrow {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.balance__visual {
+  position: relative;
+  margin: 2px -6px 0;
+}
+
+.balance-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.balance-branch {
+  transform-box: view-box;
+  transform-origin: 160px 88px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .balance-branch {
+    transition: transform 1600ms cubic-bezier(0.34, 1.3, 0.5, 1);
+  }
+}
+
+.bground {
+  stroke: rgba(185, 198, 189, 0.16);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.brock {
+  fill: #18241d;
+  stroke: rgba(185, 198, 189, 0.45);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.brock__moss {
+  fill: rgba(107, 138, 90, 0.55);
+}
+
+.bfern {
+  fill: none;
+  stroke: rgba(147, 173, 124, 0.6);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+}
+
+.bbranch {
+  fill: none;
+  stroke: #8f6a4f;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.bbranch--thin {
+  stroke-width: 1.6;
+  stroke: #7d5d45;
+}
+
+.bneedles {
+  fill: none;
+  stroke: rgba(147, 173, 124, 0.85);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.bstone__shadow {
+  fill: rgba(0, 0, 0, 0.35);
+}
+
+.bstone__body {
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.bstone--a .bstone__body {
+  fill: url(#bstone-a);
+  stroke: rgba(198, 211, 230, 0.75);
+}
+
+.bstone--b .bstone__body {
+  fill: url(#bstone-b);
+  stroke: rgba(235, 161, 90, 0.75);
+}
+
+.bstone__moss {
+  fill: rgba(107, 138, 90, 0.78);
+  stroke: rgba(147, 173, 124, 0.9);
+  stroke-width: 0.8;
+}
+
+.bstone__line {
+  fill: none;
+  stroke: rgba(236, 230, 211, 0.22);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.bstone__glint {
+  fill: rgba(236, 230, 211, 0.35);
+}
+
+.balance-art.is-quiet .bstone {
+  opacity: 0.62;
+}
+
+.balance__legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -2px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.balance__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.balance__who--a {
+  color: var(--who-a);
+}
+
+.balance__who--b {
+  color: var(--who-b);
+}
+
+.balance__title {
+  margin-top: 14px;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 450;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--ivory-50);
+  text-wrap: balance;
+}
+
+.balance__body {
+  margin-top: 4px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Suggestions applicables en un geste */
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.suggestion {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: start;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(7, 13, 10, 0.32);
+}
+
+.suggestion__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(147, 173, 124, 0.12);
+  color: var(--moss-300);
+}
+
+.suggestion__text {
+  align-self: center;
+  font-size: 14.5px;
+  line-height: 1.42;
+  color: var(--ivory-100);
+  text-wrap: pretty;
+}
+
+.suggestion__apply {
+  grid-column: 2;
+  justify-self: start;
+  margin-left: -10px;
+  color: var(--moss-300);
+}
+
+/* Détail (repliable) : les gestes, sans total */
+.balance__detail {
+  margin: 10px -6px 0;
+}
+
+.balance__detail .disclosure__toggle {
+  min-height: 48px;
+  padding-left: 6px;
+  font-size: 14.5px;
+  color: var(--text-muted);
+}
+
+.week-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 6px 14px;
+}
+
+.week-detail__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ivory-200);
+}
+
+.week-detail__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 6px 0 0;
+}
+
+.week-detail__item {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(236, 230, 211, 0.05);
+  font-size: 13px;
+  color: var(--fog-300);
+}
+
+.week-detail__count {
+  color: var(--text-faint);
+}

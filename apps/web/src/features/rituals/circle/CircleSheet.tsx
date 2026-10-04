@@ -16,7 +16,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../../../state/store';
 import { Button, Sheet, cx } from '../../../ui';
-import { ritualWeek, type Names, type Person } from '../ritualText';
+import { ritualWeek, typo, type Names, type Person } from '../ritualText';
 import { CircleClosing, CircleReadback } from './CircleRead';
 import { StepAdjust, StepBurdens, StepThanks, type CircleDraft } from './CircleSteps';
 
@@ -66,11 +66,12 @@ export function CircleSheet({
     const { ref, weekStart } = ritualWeek(today);
     const tasks = appState?.chores.tasks ?? [];
     const completions = appState?.chores.completions ?? [];
+    const thanks = (p: Person) => gratitudeSuggestions(tasks, completions, ref, p, 4).map(typo);
     setPrepared({
       weekStart,
-      gratitude: { a: gratitudeSuggestions(tasks, completions, ref, 'a', 4), b: gratitudeSuggestions(tasks, completions, ref, 'b', 4) },
+      gratitude: { a: thanks('a'), b: thanks('b') },
       verdict: weeklyBalance(tasks, completions, ref).verdict,
-      suggestions: rebalanceSuggestions(tasks, completions, ref, 3, names),
+      suggestions: rebalanceSuggestions(tasks, completions, ref, 3, names).map((s) => ({ ...s, reason: typo(s.reason) })),
     });
     setApplied([]);
     return weekStart;

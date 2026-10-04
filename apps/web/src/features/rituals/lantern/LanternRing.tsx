@@ -96,7 +96,7 @@ export function LanternRing({
       />
 
       {/* Anneau : piste et progression. */}
-      <circle cx={CX} cy={120} r={R} fill="none" stroke="rgba(236,230,211,0.10)" strokeWidth="3" />
+      <circle cx={CX} cy={120} r={R} fill="none" stroke="rgba(236,230,211,0.2)" strokeWidth="3" />
       <circle
         className="lantern-ring__progress"
         cx={CX}

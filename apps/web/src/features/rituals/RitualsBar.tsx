@@ -19,7 +19,7 @@ import { LanternSheet } from './lantern/LanternSheet';
 import { remainingMs, useLantern } from './lantern/lanternStore';
 import { useLanternController } from './lantern/useLanternController';
 import { RitualGlyph } from './RitualGlyph';
-import { NB, isCircleWindow, ritualWeek, type Names } from './ritualText';
+import { NB, isCircleWindow, ritualWeek, typo, type Names } from './ritualText';
 import './rituals.css';
 
 type Open = 'circle' | 'lantern' | 'carnet' | null;
@@ -38,7 +38,7 @@ function LanternStatus() {
   }
   if (s.phase === 'paused') return <>En pause</>;
   if (s.phase === 'done') return <>Elle a fleuri</>;
-  return <>5 à 25{NB}minutes</>;
+  return <>5 à 25{NB}min</>;
 }
 
 export function RitualsBar() {
@@ -104,7 +104,7 @@ export function RitualsBar() {
       )}
       {!highlight && held === null && lastIntention && (
         <p className="rituals__intention">
-          <Icon name="sparkle" size={15} /> Votre intention{NB}: <em>{lastIntention}</em>
+          <Icon name="sparkle" size={15} /> Votre intention{NB}: <em>{typo(lastIntention)}</em>
         </p>
       )}
       <div className="rituals__row">

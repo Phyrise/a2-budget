@@ -66,11 +66,11 @@ export function LanternSetup({
         onChange={setWho}
         options={(['a', 'b', 'both'] as const).map((w) => ({
           value: w,
-          ariaLabel: w === 'both' ? 'Ensemble' : names[w],
+          ariaLabel: w === 'both' ? 'À deux' : names[w],
           label: (
             <span className="lantern-who">
               <Companion who={w} size={22} />
-              <span>{w === 'both' ? 'Ensemble' : names[w]}</span>
+              <span>{w === 'both' ? 'À deux' : names[w]}</span>
             </span>
           ),
         }))}

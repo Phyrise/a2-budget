@@ -13,6 +13,11 @@ export interface Names {
   b: string;
 }
 
+/** Apostrophe typographique (’) et espace insécable avant « ? ! : ; ». */
+export function typo(text: string): string {
+  return text.replace(/'/g, '’').replace(/ ([?!:;])/g, `${NB}$1`);
+}
+
 export function other(p: Person): Person {
   return p === 'a' ? 'b' : 'a';
 }

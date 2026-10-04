@@ -3,7 +3,7 @@
  */
 import type { Circle } from '@a2/core';
 import { Companion, Icon, cx } from '../../../ui';
-import { NB, weekLabel, type Names } from '../ritualText';
+import { NB, typo, weekLabel, type Names } from '../ritualText';
 import { circleClosingLine } from '../voices';
 
 function heldOn(circle: Circle): string {
@@ -24,7 +24,7 @@ export function CircleWords({ circle, names }: { circle: Circle; names: Names })
               <li key={i} className={cx('circle-quote', `circle-quote--${g.from}`)}>
                 <Companion who={g.from} size={30} />
                 <blockquote>
-                  <p>«{NB}{g.text}{NB}»</p>
+                  <p>«{NB}{typo(g.text)}{NB}»</p>
                   <footer>
                     {names[g.from]} à {names[g.to]}
                   </footer>
@@ -42,7 +42,7 @@ export function CircleWords({ circle, names }: { circle: Circle; names: Names })
               <li key={i} className={cx('circle-quote', 'circle-quote--soft', `circle-quote--${b.who}`)}>
                 <Companion who={b.who} size={30} mood="sleepy" />
                 <blockquote>
-                  <p>{b.text}</p>
+                  <p>{typo(b.text)}</p>
                   <footer>{names[b.who]}</footer>
                 </blockquote>
               </li>
@@ -55,7 +55,7 @@ export function CircleWords({ circle, names }: { circle: Circle; names: Names })
           <h3 className="eyebrow">Notre intention</h3>
           {circle.intentions.map((t, i) => (
             <p key={i} className="circle-intention display">
-              <Icon name="sparkle" size={18} /> {t}
+              <Icon name="sparkle" size={18} /> {typo(t)}
             </p>
           ))}
         </section>
@@ -93,7 +93,7 @@ export function CircleReadback({
                 <button type="button" className="circle-past__item" onClick={() => onSelect(c)}>
                   <span className="circle-past__when">{weekLabel(c.weekStart, today)}</span>
                   <span className="circle-past__what">
-                    {c.intentions[0] ?? c.gratitude[0]?.text ?? 'Un moment à deux'}
+                    {typo(c.intentions[0] ?? c.gratitude[0]?.text ?? "Un moment à deux")}
                   </span>
                   <Icon name="chevron-right" size={18} />
                 </button>

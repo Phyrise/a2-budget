@@ -46,7 +46,7 @@ export const CREATURE_ENTRIES: Record<string, Omit<CreatureEntry, 'id'>> = {
 export const STAGE_NAMES: Record<number, string> = {
   1: 'La pousse',
   2: 'Le jeune cèdre',
-  3: 'Les premières branches',
+  3: 'Premières branches',
   4: 'La ramure',
   5: 'Le grand cèdre',
   6: 'L’ancien',

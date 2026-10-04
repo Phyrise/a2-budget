@@ -103,8 +103,9 @@ dialog.lantern-sheet[data-state='closing'] .sheet__panel {
 .lantern-who {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .lantern-who > span:last-child {
@@ -139,6 +140,9 @@ dialog.lantern-sheet[data-state='closing'] .sheet__panel {
   display: grid;
   place-items: center;
   margin-bottom: -6px;
+  border-radius: 50%;
+  /* Un voile sombre sous l'anneau : lisible sur n'importe quelle peinture. */
+  background: radial-gradient(closest-side, rgba(7, 13, 10, 0.5), rgba(7, 13, 10, 0.28) 78%, transparent);
 }
 
 .lantern-stage__time {
@@ -197,6 +201,8 @@ dialog.lantern-sheet[data-state='closing'] .sheet__panel {
   min-height: 44px;
   margin: -6px auto -8px;
   padding: 0 8px;
+  border: 0;
+  background: none;
   color: var(--text-faint);
   font-size: 13.5px;
   text-decoration: underline;

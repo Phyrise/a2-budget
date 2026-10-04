@@ -224,6 +224,16 @@
 }
 
 /* Relecture et clôture. */
+.circle-read {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.circle-past {
+  margin-top: 10px;
+}
+
 .circle-read__meta {
   display: inline-flex;
   align-items: center;
@@ -324,7 +334,9 @@
   width: 100%;
   min-height: 52px;
   padding: 8px 2px;
+  border: 0;
   border-bottom: 1px solid var(--line);
+  background: none;
   color: var(--text);
   text-align: left;
 }
@@ -351,6 +363,8 @@
   align-self: center;
   min-height: 44px;
   padding: 0 12px;
+  border: 0;
+  background: none;
   color: var(--text-muted);
   font-size: 14px;
   text-decoration: underline;

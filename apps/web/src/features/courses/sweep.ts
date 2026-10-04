@@ -51,7 +51,7 @@ function arcFrames(d: Point, from: { scale: number; opacity: number }, to: { sca
     const y = 2 * u * t * c.y + t * t * d.y;
     const k = t * t;
     const scale = from.scale + (to.scale - from.scale) * k;
-    const opacity = from.opacity + (to.opacity - from.opacity) * Math.max(0, (t - 0.55) / 0.45);
+    const opacity = from.opacity + (to.opacity - from.opacity) * Math.max(0, (t - 0.7) / 0.3);
     frames.push({ offset: t, transform: `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) scale(${scale.toFixed(3)})`, opacity });
   }
   return frames;
@@ -101,9 +101,9 @@ export function sweepToBasket(row: HTMLElement, content: HTMLElement, reduced: b
   const to = basketTarget();
   const d = { x: to.x - from.x, y: to.y - from.y };
   return run([
-    content.animate(arcFrames(d, { scale: 1, opacity: 1 }, { scale: 0.32, opacity: 0 }), {
-      duration: 440,
-      delay: 170,
+    content.animate(arcFrames(d, { scale: 1, opacity: 1 }, { scale: 0.4, opacity: 0 }), {
+      duration: 470,
+      delay: 120,
       easing: 'cubic-bezier(0.45, 0, 0.55, 1)',
       fill: 'forwards',
     }),

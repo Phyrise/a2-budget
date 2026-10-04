@@ -23,6 +23,7 @@ import { AllInBasket, CoursesEmpty, KikiFlight, KikiGreeting } from './KikiScene
 import { FLIGHT_MS, JIJI_BAG_MS, basketFill, coursesSounds, jijiPose, markGreeted, prefersReducedMotion, shouldGreet } from './kiki';
 import { useIdSet } from './useIdSet';
 import './courses.css';
+import './courses-sweep.css';
 import './courses-kiki.css';
 
 export function CoursesScreen() {
@@ -37,7 +38,7 @@ export function CoursesScreen() {
   const [landed, setLanded] = useState<string | null>(null);
   const [bump, setBump] = useState(0);
   const [bagUntil, setBagUntil] = useState(0);
-  const [flight, setFlight] = useState<{ top: number; reduced: boolean } | null>(null);
+  const [flight, setFlight] = useState<{ reduced: boolean } | null>(null);
   const [greeting, setGreeting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -69,12 +70,13 @@ export function CoursesScreen() {
     return () => window.clearTimeout(t);
   }, [bagUntil]);
 
-  // Première ouverture du jour : Kiki salue (une fois, s'il y a une liste).
+  // Première ouverture du jour : Kiki salue, à l'arrivée sur l'écran et
+  // seulement s'il y a une liste (jamais au milieu d'un ajout).
   const greetChecked = useRef(false);
   useEffect(() => {
-    if (greetChecked.current || appState === null || total === 0) return;
+    if (greetChecked.current || appState === null) return;
     greetChecked.current = true;
-    if (shouldGreet(today)) {
+    if (total > 0 && shouldGreet(today)) {
       setGreeting(true);
       markGreeted(today);
     }
@@ -167,13 +169,11 @@ export function CoursesScreen() {
   }, []);
 
   const clearBasket = () => {
-    const stage = document.querySelector('.basket-stage')?.getBoundingClientRect();
     const n = clearDoneGroceries();
     if (n <= 0) return;
     const reduced = prefersReducedMotion();
     const message = `${plural(n, 'article')} rangé${n > 1 ? 's' : ''} dans l’historique`;
-    const top = Math.min(Math.max(stage ? stage.top - 40 : window.innerHeight * 0.4, 70), window.innerHeight - 220);
-    setFlight({ top, reduced });
+    setFlight({ reduced });
     coursesSounds.flight(reduced);
     if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
     flightTimer.current = window.setTimeout(
@@ -238,7 +238,7 @@ export function CoursesScreen() {
           </Button>
         </form>
 
-        {greeting && total > 0 && <KikiGreeting toBuy={toBuyCount} onClose={() => setGreeting(false)} />}
+        {greeting && total > 0 && <KikiGreeting toBuy={toBuyCount} now={today} onClose={() => setGreeting(false)} />}
 
         {suggestions.length > 0 && (
           <div className="suggestions">
@@ -312,7 +312,7 @@ export function CoursesScreen() {
         )}
       </section>
 
-      {flight && <KikiFlight top={flight.top} reduced={flight.reduced} />}
+      {flight && <KikiFlight reduced={flight.reduced} />}
       <ItemSheet item={editing} onClose={() => setEditing(null)} onRemove={remove} />
     </>
   );

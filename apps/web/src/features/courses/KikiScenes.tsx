@@ -6,7 +6,7 @@
  */
 import { createPortal } from 'react-dom';
 import { coursesTheme } from '../../themes/manifest';
-import { IconButton, plural } from '../../ui';
+import { IconButton, plural, timeOfDay } from '../../ui';
 
 /** Liste vide : Kiki relit sa liste, Jiji fait la sieste. */
 export function CoursesEmpty() {
@@ -41,7 +41,9 @@ export function AllInBasket() {
 }
 
 /** Salut de Kiki à la première ouverture du jour. */
-export function KikiGreeting({ toBuy, onClose }: { toBuy: number; onClose: () => void }) {
+export function KikiGreeting({ toBuy, now, onClose }: { toBuy: number; now: Date; onClose: () => void }) {
+  const moment = timeOfDay(now);
+  const hello = moment === 'soir' || moment === 'nuit' ? 'Bonsoir' : 'Bonjour';
   const line =
     toBuy > 0
       ? `${plural(toBuy, 'article')} sur la liste. Je file quand vous voulez !`
@@ -50,7 +52,7 @@ export function KikiGreeting({ toBuy, onClose }: { toBuy: number; onClose: () =>
     <aside className="kiki-hello" aria-label="Bonjour de Kiki">
       <img className="kiki-hello__kiki" src={coursesTheme.kiki.wave} alt="" aria-hidden="true" draggable={false} />
       <div className="kiki-hello__text">
-        <p className="kiki-hello__title display">Bonjour&nbsp;!</p>
+        <p className="kiki-hello__title display">{hello}&nbsp;!</p>
         <p className="kiki-hello__line">{line}</p>
       </div>
       <IconButton icon="close" label="Fermer le bonjour de Kiki" variant="ghost" className="kiki-hello__close" onClick={onClose} />
@@ -59,12 +61,12 @@ export function KikiGreeting({ toBuy, onClose }: { toBuy: number; onClose: () =>
 }
 
 /**
- * Envol de Kiki (« Vider le panier ») : elle traverse l'écran avec son sac
- * de provisions, à la hauteur du panier. Calque fixe hors de la feuille.
+ * Envol de Kiki (« Vider le panier ») : elle traverse le haut de l'écran,
+ * sous l'en-tête, avec son sac de provisions. Calque fixe hors de la feuille.
  */
-export function KikiFlight({ top, reduced }: { top: number; reduced: boolean }) {
+export function KikiFlight({ reduced }: { reduced: boolean }) {
   return createPortal(
-    <div className={reduced ? 'kiki-flight kiki-flight--still' : 'kiki-flight'} style={{ top: `${Math.round(top)}px` }} aria-hidden="true">
+    <div className={reduced ? 'kiki-flight kiki-flight--still' : 'kiki-flight'} aria-hidden="true">
       <span className="kiki-flight__path">
         <img className="kiki-flight__trail" src={coursesTheme.sparkles} alt="" draggable={false} />
         <img className="kiki-flight__kiki" src={coursesTheme.kiki.flying} alt="" draggable={false} />

@@ -9,7 +9,7 @@ import { useApp } from '../../../state/store';
 import { Icon, Sheet, cx, type IconName } from '../../../ui';
 import { manifest } from '../../../world/manifest';
 import type { GrowthStage } from '../../../world/types';
-import { NB, capitalizeFirst, countWords, durationWords, numberWords } from '../ritualText';
+import { NB, capitalizeFirst, countWords, durationWords, numberWords, typo } from '../ritualText';
 import { CREATURE_ENTRIES, KODAMA, STAGE_NAMES } from './carnetData';
 
 function CreatureCard({ name, legend, sprite, met }: { name: string; legend: string; sprite: string | undefined; met: boolean }) {
@@ -63,6 +63,16 @@ function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName;
         ? `${capitalizeFirst(countWords(sessions.length, 'lanterne allumée', 'lanternes allumées', true))}${NB}: ${durationWords(minutes)} de calme.`
         : `La première lanterne attend son moment — cinq minutes suffisent.`,
   });
+  // Le dernier merci échangé : un mot à relire, pas un chiffre.
+  const all = app.rituals?.circles ?? [];
+  const lastThanks = [...all].reverse().find((c) => c.gratitude.length > 0)?.gratitude[0];
+  if (lastThanks) {
+    const names = { a: app.budget.settings.personA.name, b: app.budget.settings.personB.name };
+    out.push({
+      icon: 'feather',
+      text: `Le dernier merci, de ${names[lastThanks.from]} à ${names[lastThanks.to]}${NB}: «${NB}${typo(lastThanks.text)}${NB}»`,
+    });
+  }
   return out;
 }
 

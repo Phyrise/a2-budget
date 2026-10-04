@@ -1,5 +1,6 @@
 /* Petits rituels : barre d'entrée (Maison) et éléments partagés. */
 @import './circle/circle.css';
+@import './circle/circle-read.css';
 @import './lantern/lantern.css';
 @import './carnet/carnet.css';
 

@@ -40,6 +40,8 @@
 
   .lantern-stage--running .lantern-stage__label {
     margin-bottom: 0;
+    color: var(--ivory-100);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
   }
 
   .lantern-stage__window {

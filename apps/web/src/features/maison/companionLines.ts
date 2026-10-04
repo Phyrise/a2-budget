@@ -5,7 +5,9 @@
  * - Calcifer (AC) : grognon, dramatique, se plaint pour la forme, attachant.
  *
  * Règles d'écriture : courtes (≤ 90 caractères), en français, sans emoji,
- * jamais culpabilisantes ni compétitives, et **sans accord de genre** pour
+ * jamais culpabilisantes ni compétitives (aucune pique sur les habitudes
+ * d'un humain, rien à « rendre » ni de merci réclamé : le compagnon se moque
+ * de lui-même), et **sans accord de genre** pour
  * les humains (on ne sait pas qui est qui). Variables : `{humain}` = l'humain
  * du compagnon qui parle, `{autre}` = l'autre personne. La typographie
  * (espaces insécables) est appliquée au moment de l'affichage (fr()).
@@ -28,7 +30,7 @@ const JIJI: Lines = {
     'Je t’applaudirais bien, mais j’ai des pattes.',
     'Voilà qui est réglé. On peut retourner à la sieste ?',
     'Sobre, net, sans fanfare. J’approuve.',
-    'Encore un geste. Tu deviens presque raisonnable, {humain}.',
+    'Encore un geste, {humain}. La forêt t’en sait gré. Moi, je bâille d’admiration.',
   ],
   chore: [
     'Une corvée, rien que ça. Je retire mes sarcasmes. Pour une heure.',
@@ -43,7 +45,7 @@ const JIJI: Lines = {
     'Je vais faire semblant de ne pas être fier. Échec total.',
   ],
   allDone: [
-    'Tout est fait. Je n’ai plus aucune raison de te juger.',
+    'Tout est fait. Je vais pouvoir ne rien faire, la conscience tranquille.',
     'Plus rien à faire. Le programme idéal, si tu veux mon avis.',
     'La liste est vide. La forêt aussi est soulagée.',
     'Journée bouclée. On peut regarder par la fenêtre, l’âme en paix.',
@@ -77,7 +79,7 @@ const JIJI: Lines = {
   ],
   claim: [
     '{autre} s’en occupe. Je retire au moins la moitié de mes remarques.',
-    'Merci, {autre}. Mon humain te doit un thé. Ou deux.',
+    'Merci, {autre}. Voilà qui mérite un thé. Ou deux.',
     'Quelqu’un se dévoue. C’est noble. Je l’écris quelque part.',
     'Merci, {autre}. Prendre sans qu’on demande, c’est élégant.',
     'Pris en charge. La maison respire, moi aussi.',
@@ -99,15 +101,15 @@ const JIJI: Lines = {
     'Ce n’est pas abandonner, c’est choisir. Nuance.',
   ],
   help: [
-    '{autre} a fait ta tâche. À ta place, je dirais merci. Je le dis, d’ailleurs.',
-    'Tiens, {autre} l’a fait à ta place. Quelle élégance.',
-    'Un petit cadeau de {autre}. Un merci serait de bon goût.',
-    '{autre} t’a rendu service. Je propose un câlin, pour une fois.',
-    'C’était ton tour. {autre} l’a pris. Voilà ce qu’on appelle s’aimer.',
-    'Fait par {autre}. Tu as de la chance, j’espère que tu le sais.',
-    '{autre} a pris le relais. Pense à rendre la pareille, un jour.',
-    'Une aide en douce. Le genre de chose qu’on n’oublie pas.',
+    'Merci, {autre}. La maison a remarqué, et moi aussi.',
+    'Tiens, c’est {autre} qui l’a fait, en douce. Quelle élégance.',
+    'Un petit cadeau de {autre}. La forêt brille un peu plus.',
+    '{autre} a pris le relais. Voilà ce qu’on appelle une équipe.',
+    'C’était prévu pour toi, et {autre} l’a fait. Ça, c’est s’aimer.',
+    'Fait par {autre}, avec une discrétion presque féline. J’approuve.',
+    'Une aide en douce. C’est ainsi que les maisons tiennent debout.',
     'Merci, {autre}. Mon humain est touché. Moi aussi, un peu.',
+    '{autre} a fait ça pour la maison. Je propose un câlin général.',
   ],
 };
 
@@ -118,7 +120,7 @@ const CALCIFER: Lines = {
     'Une lumière de plus ! Et personne n’a brûlé.',
     'Je crépite. C’est ma façon de dire bravo.',
     'Fait ? Déjà ? Bon, d’accord, je suis impressionné.',
-    'Ah ! Enfin quelqu’un qui travaille ici, à part moi.',
+    'Ah ! Coché ! Et moi qui comptais faire semblant d’aider.',
     'Ça mérite une bûche. Une petite. Ne t’emballe pas.',
     'Coché ! Je brûle de fierté. Littéralement.',
     'Tu vois ? Pas besoin de me supplier, ça avance tout seul.',
@@ -154,7 +156,7 @@ const CALCIFER: Lines = {
     'Déjà ? Attends au moins que je me rallume.',
     'Premier geste de la journée ! Ça mérite une flamme. Petite. Je me réveille.',
     'Le soleil n’est pas levé et toi, tu t’actives. Je suis outré. Et fier.',
-    'Bon matin ! Tu vois, quand tu veux, tu es efficace.',
+    'Bon matin ! Moi, avant ma bûche, je ne suis bon à rien.',
     'Tu as commencé sans moi ! Bon. Je te rattrape. Plus tard.',
     'Matin productif. Je vais en parler toute la journée.',
   ],
@@ -177,7 +179,7 @@ const CALCIFER: Lines = {
     'Merci, {autre}. Je crépite de reconnaissance.',
     'Voilà ! Personne n’a eu à négocier. J’adore.',
     'Pris en charge ! Je retire tout ce que j’ai dit. Enfin, presque.',
-    '{autre} s’en charge. Je n’en attendais pas moins. Si, un peu moins.',
+    '{autre} s’en charge ! Je crépite d’admiration. Discrètement. Enfin, j’essaie.',
     'Merci ! La maison te dit merci. Et le feu aussi.',
   ],
   skip: [
@@ -193,15 +195,15 @@ const CALCIFER: Lines = {
     'On fera ça un autre jour. Les jours, ce n’est pas ce qui manque.',
   ],
   help: [
-    '{autre} a fait ta tâche ! Dis merci, ou c’est moi qui le dirai, et fort.',
+    'Merci, {autre} ! Je chaufferai un peu plus fort ce soir, rien que pour toi.',
     'Quelqu’un t’aime, ici. Indice : c’est {autre}.',
-    'Merci, {autre} ! Je chaufferai un peu plus fort pour toi ce soir.',
-    '{autre} t’a donné un coup de main. C’est ça, une équipe.',
-    'C’était ton tour, mais {autre} l’a fait. Je suis ému. Pas toi ? Si, avoue.',
-    'Un merci s’impose. Un gros. Avec des étincelles.',
+    '{autre} a donné un coup de main. C’est ça, une équipe.',
     '{autre} l’a fait sans rien dire. Moi, je le dis : merci !',
     'Tu vois ? Dans cette maison, on se serre les coudes. Et les bûches.',
     'Coup de main de {autre} ! Je note. Pour le carnet.',
+    'Merci, {autre} ! Toute la maison respire, moi le premier.',
+    'Une aide surprise ! Je crépite d’émotion. C’est de la fumée, rien de plus.',
+    'Bravo, {autre} ! Une bûche d’honneur, et des étincelles pour la maison.',
   ],
 };
 

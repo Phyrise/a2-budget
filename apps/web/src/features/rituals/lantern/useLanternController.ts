@@ -58,6 +58,11 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
   const onFinishedRef = useRef(onFinished);
   onFinishedRef.current = onFinished;
   const active = s.phase === 'running' || s.phase === 'paused';
+  // La forêt montre-t-elle une lanterne ? + minuteur d'extinction, gardé hors
+  // des effets pour survivre au passage « done » → « idle » (reset immédiat
+  // après un arrêt avant 1 min, « Fermer » ou « Rallumer » pendant la floraison).
+  const litRef = useRef(false);
+  const offTimerRef = useRef<number | null>(null);
 
   // Horloge : la fin se décide sur Date.now(), y compris au retour d'arrière-plan.
   useEffect(() => {
@@ -71,7 +76,10 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
   useEffect(() => {
     if (!active || s.config === null) return;
     const who = s.config.who;
-    const push = () => focus(progressOf(getLantern()), who);
+    const push = () => {
+      litRef.current = true;
+      focus(progressOf(getLantern()), who);
+    };
     push();
     if (s.phase === 'paused') return;
     const timer = window.setInterval(push, 1000);
@@ -85,6 +93,7 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
     lantern.markCelebrated();
     const config = s.config;
     if (s.completed) {
+      litRef.current = true;
       focus(1, config.who);
       if (s.sound !== 'off') ambience.chime();
     }
@@ -101,11 +110,27 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
     if (s.completed) onFinishedRef.current();
   }, [s, focus, addFocusSession]);
 
-  // Après la floraison, la lanterne de la forêt s'éteint en douceur.
+  // Après la floraison (ou un arrêt), la lanterne de la forêt s'éteint en
+  // douceur — quelle que soit la phase suivante. Une nouvelle session annule
+  // l'extinction prévue.
   useEffect(() => {
-    if (s.phase !== 'done') return;
-    const timer = window.setTimeout(() => focus(null), s.completed ? BLOOM_MS : 400);
-    return () => window.clearTimeout(timer);
+    const clear = () => {
+      if (offTimerRef.current !== null) window.clearTimeout(offTimerRef.current);
+      offTimerRef.current = null;
+    };
+    const extinguish = () => {
+      offTimerRef.current = null;
+      litRef.current = false;
+      focus(null);
+    };
+    if (s.phase === 'running' || s.phase === 'paused') {
+      clear();
+    } else if (s.phase === 'done') {
+      clear();
+      offTimerRef.current = window.setTimeout(extinguish, s.completed ? BLOOM_MS : 400);
+    } else if (offTimerRef.current === null && litRef.current) {
+      extinguish();
+    }
   }, [s.phase, s.completed, focus]);
 
   // Ambiance : seulement pendant que la lanterne brûle et que la page est visible.
@@ -122,6 +147,9 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
   // l'état survit et tout reprend au retour.
   useEffect(
     () => () => {
+      if (offTimerRef.current !== null) window.clearTimeout(offTimerRef.current);
+      offTimerRef.current = null;
+      litRef.current = false;
       focus(null);
       ambience.stop(0.4);
     },

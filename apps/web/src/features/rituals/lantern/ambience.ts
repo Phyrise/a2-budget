@@ -24,6 +24,19 @@ const FADE_OUT = 1.4;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let current: Layer | null = null;
+/** Mise en veille différée (sleep) : annulée par play / chime / unlock. */
+let sleepTimer: number | null = null;
+
+function cancelSleep() {
+  if (sleepTimer !== null) window.clearTimeout(sleepTimer);
+  sleepTimer = null;
+}
+
+/** Réveille le contexte quel que soit l'état observé (une veille peut être en cours). */
+function wake(c: AudioContext) {
+  cancelSleep();
+  if (c.state !== 'closed') void c.resume().catch(() => undefined);
+}
 const buffers = new Map<string, AudioBuffer>();
 
 function audioContextCtor(): typeof AudioContext | null {
@@ -200,12 +213,12 @@ export const ambience = {
   /** À appeler dans un geste (clic) : crée / réveille le contexte audio. */
   unlock() {
     const c = ensure();
-    if (c && c.state === 'suspended') void c.resume().catch(() => undefined);
+    if (c) wake(c);
   },
   play(kind: Kind) {
     const c = ensure();
     if (!c || !master) return;
-    if (c.state === 'suspended') void c.resume().catch(() => undefined);
+    wake(c);
     if (current?.kind === kind) return;
     if (current) fadeOut(current);
     const gain = c.createGain();
@@ -224,13 +237,19 @@ export const ambience = {
   sleep() {
     this.stop(0.25);
     const c = ctx;
-    if (c && c.state === 'running') window.setTimeout(() => void c.suspend().catch(() => undefined), 400);
+    if (!c || c.state !== 'running') return;
+    cancelSleep();
+    sleepTimer = window.setTimeout(() => {
+      sleepTimer = null;
+      // Revenu entre-temps (volet de notifications…) : on ne coupe pas.
+      if (current === null) void c.suspend().catch(() => undefined);
+    }, 400);
   },
   /** Carillon doux (fin de la lanterne). */
   chime() {
     const c = ensure();
     if (!c || !master) return;
-    if (c.state === 'suspended') void c.resume().catch(() => undefined);
+    wake(c);
     const notes = [659.25, 987.77];
     notes.forEach((f, n) => {
       const t0 = c.currentTime + 0.05 + n * 0.32;

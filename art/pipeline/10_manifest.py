@@ -114,8 +114,9 @@ def season_sets(base_depth: dict[int, str]) -> tuple[str, str]:
  *   donc émis au build sous assets/season-*-<hash>.<ext> : MOTIF À EXCLURE DU
  *   PRÉCACHE (globIgnores: 'assets/season-*') et à servir par le cache à
  *   l'exécution (la saison en cours, puis la suivante ~14 jours avant).
- * - seasons.<s>.stages[n].color : peinture de saison, WebP q84 1024×1536,
- *   recalée sur le stade de base n (art/pipeline/seasons/s01_align.py).
+ * - seasons.<s>.stages[n].color : peinture de saison, WebP 1024×1536 (qualité
+ *   84 → 76 pour tenir ≈ 0,32 Mo), recalée sur le stade de base n
+ *   (art/pipeline/seasons/s01_align.py, dérive résiduelle ≤ 1,2 px).
  * - seasons.<s>.stages[n].depth : profondeur du stade de base (même import, même
  *   URL) quand la dérive résiduelle ≤ 2 px et que la silhouette ne change pas ;
  *   sinon season-<s>-depth-<n> (même format et même échelle que la base).

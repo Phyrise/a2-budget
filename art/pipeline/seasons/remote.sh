@@ -69,7 +69,7 @@ manifest() {
   # ~/$REMOTE/manifest-root (A2ART_ROOT) + placements résolus de la base.
   local root="$REMOTE/manifest-root"
   ssh "$HOST" "rm -rf ~/$root && mkdir -p ~/$root/out/assets ~/$root/out/work && cp ~/a2art/out/work/placements.resolved.json ~/$root/out/work/"
-  tar -C "$WORLD" -cf - . | ssh "$HOST" "tar -C ~/$root/out/assets -xf -"
+  COPYFILE_DISABLE=1 tar -C "$WORLD" -cf - . | ssh "$HOST" "tar -C ~/$root/out/assets -xf -"
   ssh "$HOST" "cd ~/$REMOTE/pipeline/base && A2ART_ROOT=~/$root $PY -u 10_manifest.py" < /dev/null
   scp -q "$HOST:$root/out/manifest.ts" "$REPO/apps/web/src/world/manifest.ts"
   python3 "$PIPE/universes/gen_manifest.py"

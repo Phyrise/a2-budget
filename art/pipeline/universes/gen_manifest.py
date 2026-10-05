@@ -27,7 +27,8 @@ imports: list[str] = []
 
 
 def ident(path: str) -> str:
-    parts = re.split(r"[/\-.]", path.removesuffix(".webp"))
+    # seasons/season-budget-autumn-landscape.webp → seasonBudgetAutumnLandscape
+    parts = re.split(r"[/\-.]", path.removeprefix("seasons/").removesuffix(".webp"))
     return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:])
 
 

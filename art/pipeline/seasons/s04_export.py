@@ -1,7 +1,11 @@
 """Exports livrés des saisons + décision profondeur + contrôle des masques.
 
 Forêt (~/a2art/out/assets/seasons/<saison>/, récupérée par remote.sh pull) :
-  season-<saison>-stage-<n>.webp   couleur WebP q84 1024×1536 (recalée, s01) ;
+  season-<saison>-stage-<n>.webp   couleur WebP 1024×1536 (recalée, s01), qualité
+                                   84 par défaut, abaissée par pas de 2 (plancher
+                                   76) jusqu'à tenir COLOR_BUDGET (≈ 0,3 Mo) : les
+                                   peintures de saison (neige, feuilles, fleurs)
+                                   sont plus détaillées que la base (≈ 0,45 Mo à q84) ;
   season-<saison>-depth-<n>.webp   profondeur de saison (WebP sans perte ou PNG,
                                    le plus léger), SEULEMENT si la profondeur
                                    de base ne convient pas — sinon le manifest
@@ -41,6 +45,19 @@ FRAMES = {
     ("courses", "landscape"): [("bandeau", MOBILE, (50, 8)), ("desktop", DESKTOP, (50, 20))],
     ("courses", "portrait"): [("téléphone", PHONE, (62, 50)), ("bandeau", MOBILE, (50, 22))],
 }
+
+
+COLOR_BUDGET = 320 * 1024
+QUALITIES = (84, 82, 80, 78, 76)
+
+
+def color_webp(im: Image.Image) -> tuple[bytes, int]:
+    """Qualité la plus haute qui tient le budget (plancher : la dernière)."""
+    for q in QUALITIES:
+        data = webp_bytes(im, quality=q)
+        if len(data) <= COLOR_BUDGET:
+            break
+    return data, q
 
 
 def webp_bytes(im: Image.Image, **kw) -> bytes:
@@ -95,12 +112,13 @@ def forest(report: dict) -> None:
         for n in range(1, 8):
             name = f"{season}-stage-{n}"
             rgb = load_aligned(season, n)
-            data = webp_bytes(Image.fromarray(to_u8(rgb)), quality=84)
+            data, q = color_webp(Image.fromarray(to_u8(rgb)))
             (d / f"season-{name}.webp").write_bytes(data)
             a, z = align[name], depth[name]
             reuse = a["drift_px"] <= MAX_DRIFT_PX and z["depth_mae"] <= MAX_DEPTH_MAE and z["depth_changed"] <= MAX_DEPTH_CHANGED
             r = {
                 "color_bytes": len(data),
+                "quality": q,
                 "drift_px": a["drift_px"],
                 "depth_mae": z["depth_mae"],
                 "depth_changed": z["depth_changed"],
@@ -113,7 +131,7 @@ def forest(report: dict) -> None:
                 r["depth_file"] = save_depth(season, n)
             report["forest"][name] = r
             print(name, r, flush=True)
-            tiles.append(label(tile(rgb, 200), f"{n} {len(data) // 1024}K depth={r['depth']}"))
+            tiles.append(label(tile(rgb, 200), f"{n} q{q} {len(data) // 1024}K depth={r['depth']}"))
         tiles.append(label(tile(load_aligned(season, "night"), 200), "nuit (cible LUT)"))
         grid(tiles, 8).save(QA / f"s04-stages-{season}.jpg", quality=84)
 

@@ -3,7 +3,22 @@
  * Ne pas éditer à la main : modifier le pipeline (art/pipeline/README.md) puis
  * régénérer (`art/pipeline/remote.sh all`).
  *
- * Poids total : 4.29 Mo (73 fichiers) — stages 2174 Ko · sprites 597 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · masks 190 Ko · foreground 164 Ko · luts 54 Ko · placeholder 1 Ko.
+ * Poids total : 4.28 Mo (74 fichiers) — stages 2174 Ko · sprites 597 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · foreground 164 Ko · masks 146 Ko · luts 54 Ko · masks-light 34 Ko · placeholder 1 Ko.
+ *
+ * Saisons (hors précache) : spring 2413 Ko (0/7 profondeurs propres) · autumn 2302 Ko (0/7 profondeurs propres) · winter 2204 Ko (0/7 profondeurs propres).
+ * - Fichiers sous assets/seasons/<saison>/, nom de fichier « season-<saison>-… »,
+ *   donc émis au build sous assets/season-*-<hash>.<ext> : MOTIF À EXCLURE DU
+ *   PRÉCACHE (globIgnores: 'assets/season-*') et à servir par le cache à
+ *   l'exécution (la saison en cours, puis la suivante ~14 jours avant).
+ * - seasons.<s>.stages[n].color : peinture de saison, WebP q84 1024×1536,
+ *   recalée sur le stade de base n (art/pipeline/seasons/s01_align.py).
+ * - seasons.<s>.stages[n].depth : profondeur du stade de base (même import, même
+ *   URL) quand la dérive résiduelle ≤ 2 px et que la silhouette ne change pas ;
+ *   sinon season-<s>-depth-<n> (même format et même échelle que la base).
+ * - seasons.<s>.nightLut : LUT nuit de la saison (maîtresse de saison → nuit
+ *   de saison, même format que luts) ; null = luts.night.
+ * - masks, masksLight, foreground, placements : ceux de la base pour toutes
+ *   les saisons (cadrage identique).
  *
  * Formats :
  * - stages[n].color : peinture du stade, WebP 1024×1536 (recalée sur le stade 6).
@@ -103,6 +118,30 @@ import fxHalos2 from './assets/fx/halos-2.webp';
 import bannerBudget from './assets/banners/budget.webp';
 import bannerCourses from './assets/banners/courses.webp';
 import placeholder from './assets/placeholder.webp';
+import seasonSpringStage1 from './assets/seasons/spring/season-spring-stage-1.webp';
+import seasonSpringStage2 from './assets/seasons/spring/season-spring-stage-2.webp';
+import seasonSpringStage3 from './assets/seasons/spring/season-spring-stage-3.webp';
+import seasonSpringStage4 from './assets/seasons/spring/season-spring-stage-4.webp';
+import seasonSpringStage5 from './assets/seasons/spring/season-spring-stage-5.webp';
+import seasonSpringStage6 from './assets/seasons/spring/season-spring-stage-6.webp';
+import seasonSpringStage7 from './assets/seasons/spring/season-spring-stage-7.webp';
+import seasonSpringLutNight from './assets/seasons/spring/season-spring-lut-night.png';
+import seasonAutumnStage1 from './assets/seasons/autumn/season-autumn-stage-1.webp';
+import seasonAutumnStage2 from './assets/seasons/autumn/season-autumn-stage-2.webp';
+import seasonAutumnStage3 from './assets/seasons/autumn/season-autumn-stage-3.webp';
+import seasonAutumnStage4 from './assets/seasons/autumn/season-autumn-stage-4.webp';
+import seasonAutumnStage5 from './assets/seasons/autumn/season-autumn-stage-5.webp';
+import seasonAutumnStage6 from './assets/seasons/autumn/season-autumn-stage-6.webp';
+import seasonAutumnStage7 from './assets/seasons/autumn/season-autumn-stage-7.webp';
+import seasonAutumnLutNight from './assets/seasons/autumn/season-autumn-lut-night.png';
+import seasonWinterStage1 from './assets/seasons/winter/season-winter-stage-1.webp';
+import seasonWinterStage2 from './assets/seasons/winter/season-winter-stage-2.webp';
+import seasonWinterStage3 from './assets/seasons/winter/season-winter-stage-3.webp';
+import seasonWinterStage4 from './assets/seasons/winter/season-winter-stage-4.webp';
+import seasonWinterStage5 from './assets/seasons/winter/season-winter-stage-5.webp';
+import seasonWinterStage6 from './assets/seasons/winter/season-winter-stage-6.webp';
+import seasonWinterStage7 from './assets/seasons/winter/season-winter-stage-7.webp';
+import seasonWinterLutNight from './assets/seasons/winter/season-winter-lut-night.png';
 
 export const manifest: WorldManifest = {
   size: { w: 1024, h: 1536 },
@@ -185,4 +224,42 @@ export const manifest: WorldManifest = {
   },
   banners: { budget: bannerBudget, courses: bannerCourses },
   placeholder,
+  seasons: {
+    spring: {
+      stages: {
+        1: { color: seasonSpringStage1, depth: depth1 },
+        2: { color: seasonSpringStage2, depth: depth2 },
+        3: { color: seasonSpringStage3, depth: depth3 },
+        4: { color: seasonSpringStage4, depth: depth4 },
+        5: { color: seasonSpringStage5, depth: depth5 },
+        6: { color: seasonSpringStage6, depth: depth6 },
+        7: { color: seasonSpringStage7, depth: depth7 },
+      },
+      nightLut: seasonSpringLutNight,
+    },
+    autumn: {
+      stages: {
+        1: { color: seasonAutumnStage1, depth: depth1 },
+        2: { color: seasonAutumnStage2, depth: depth2 },
+        3: { color: seasonAutumnStage3, depth: depth3 },
+        4: { color: seasonAutumnStage4, depth: depth4 },
+        5: { color: seasonAutumnStage5, depth: depth5 },
+        6: { color: seasonAutumnStage6, depth: depth6 },
+        7: { color: seasonAutumnStage7, depth: depth7 },
+      },
+      nightLut: seasonAutumnLutNight,
+    },
+    winter: {
+      stages: {
+        1: { color: seasonWinterStage1, depth: depth1 },
+        2: { color: seasonWinterStage2, depth: depth2 },
+        3: { color: seasonWinterStage3, depth: depth3 },
+        4: { color: seasonWinterStage4, depth: depth4 },
+        5: { color: seasonWinterStage5, depth: depth5 },
+        6: { color: seasonWinterStage6, depth: depth6 },
+        7: { color: seasonWinterStage7, depth: depth7 },
+      },
+      nightLut: seasonWinterLutNight,
+    },
+  },
 };

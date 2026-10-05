@@ -75,24 +75,55 @@ self.addEventListener('fetch', (event) => {
 // x-a2-cached-at) puis suivie d'une purge douce (app/seasonCache.ts) : saison
 // courante jamais purgée, autres saisons retirées 90 jours après leur mise en
 // cache, une seule version par image d'un build à l'autre.
+//
+// La réponse réseau part tout de suite vers la page (affichage progressif) ;
+// la mise en cache suit en parallèle (waitUntil). Deux demandes simultanées
+// de la même peinture (image fixe de la forêt + moteur) partagent un seul
+// téléchargement, jusqu'à la fin de sa mise en cache.
+interface SeasonFetch {
+  response: Promise<Response>;
+  stored: Promise<void>;
+}
+const inflight = new Map<string, SeasonFetch>();
+
+async function store(cache: Cache, request: Request, response: Response): Promise<void> {
+  const headers = new Headers(response.headers);
+  headers.set(CACHED_AT_HEADER, String(Date.now()));
+  const body = await response.blob();
+  await cache.put(request, new Response(body, { status: response.status, statusText: response.statusText, headers }));
+  await purgeSeasonCache(caches, new Date(), request.url);
+}
+
+function fetchSeason(request: Request): SeasonFetch {
+  const url = request.url;
+  const running = inflight.get(url);
+  if (running) return running;
+  const response = fetch(request);
+  const stored = response
+    .then(async (res) => {
+      if (!res.ok || res.type !== 'basic') return;
+      await store(await caches.open(SEASONS_CACHE), request, res.clone());
+    })
+    .catch(() => undefined)
+    .finally(() => {
+      if (inflight.get(url) === entry) inflight.delete(url);
+    });
+  const entry: SeasonFetch = { response, stored };
+  inflight.set(url, entry);
+  return entry;
+}
+
 async function seasonFirst(request: Request, event: FetchEvent): Promise<Response> {
-  const cache = await caches.open(SEASONS_CACHE);
-  const hit = await cache.match(request);
+  const hit = await (await caches.open(SEASONS_CACHE)).match(request);
   if (hit) return hit;
-  const response = await fetch(request);
-  if (response.ok && response.type === 'basic') {
-    const headers = new Headers(response.headers);
-    headers.set(CACHED_AT_HEADER, String(Date.now()));
-    const body = await response.clone().blob();
-    const stored = new Response(body, { status: response.status, statusText: response.statusText, headers });
-    event.waitUntil(
-      cache
-        .put(request, stored)
-        .then(() => purgeSeasonCache(caches, new Date(), request.url))
-        .catch(() => undefined),
-    );
+  const f = fetchSeason(request);
+  try {
+    event.waitUntil(f.stored);
+  } catch {
+    /* événement déjà clos : la mise en cache continue tant que le worker vit */
   }
-  return response;
+  // Chaque page reçoit sa copie ; l'original n'est jamais lu (la mise en cache lit sa propre copie).
+  return (await f.response).clone();
 }
 
 self.addEventListener('fetch', (event) => {

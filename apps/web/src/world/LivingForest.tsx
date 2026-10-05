@@ -75,6 +75,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   const [canvasShown, setCanvasShown] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
+  // Peinture de saison indisponible pour l'image fixe : repli sur la base du stade (précachée).
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const signalReady = () => {
     if (readyRef.current) return;
@@ -212,6 +214,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   const imgStyle = (extra: CSSProperties): CSSProperties =>
     box ? { ...box, ...extra } : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', ...extra };
   const showImages = !canvasShown || mode !== 'webgl';
+  const seasonSrc = stageImage(manifest, stage, paintSeason(manifest, state.season)).color;
+  const paintSrc = failedSrc === seasonSrc ? manifest.stages[stage].color : seasonSrc;
 
   return (
     <div className={`living-forest living-forest--${variant} ${className}`.trim()} aria-hidden="true">
@@ -226,10 +230,13 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
           />
         ) : null}
         <img
-          src={stageImage(manifest, stage, paintSeason(manifest, state.season)).color}
+          src={paintSrc}
           alt=""
           draggable={false}
           decoding="async"
+          onError={() => {
+            if (paintSrc === seasonSrc && seasonSrc !== manifest.stages[stage].color) setFailedSrc(seasonSrc);
+          }}
           onLoad={() => {
             setImgLoaded(true);
             signalReady();

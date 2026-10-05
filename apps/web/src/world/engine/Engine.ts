@@ -10,8 +10,8 @@ import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
-import { retargetGrade, type LutSlot } from './grade';
-import { changePainting, GROW_SECONDS, type FadeMode } from './growth';
+import { loadSlotLut, retargetGrade, type LutSlot } from './grade';
+import { changePainting, GROW_SECONDS, settlePainting, type FadeMode } from './growth';
 import { bindEngineEvents } from './input';
 import { Lantern } from './lantern';
 import { DayLights } from './lights';
@@ -90,6 +90,8 @@ export class WorldEngine {
   private ready = false;
   /** Peinture en cours de chargement (« saison:stade », growth.ts). */
   loadingKey: string | null = null;
+  /** Nouvel essai d'une peinture de saison indisponible (growth.ts). */
+  retry = { timer: 0, delay: 0 };
   readonly cleanups: (() => void)[] = [];
 
   constructor(
@@ -129,10 +131,13 @@ export class WorldEngine {
     const [st] = await Promise.all([
       this.res.loadStage(stage, season),
       this.res.loadForeground(),
-      this.res.loadLut(this.lutB.url),
+      loadSlotLut(this, this.lutB),
     ]);
     if (this.destroyed) throw new Error('destroyed');
     this.stage = st;
+    // Repli sur la base (peinture de saison indisponible) : étalonnage de la base, nouvel essai plus tard.
+    if (st.season !== season) retargetGrade(this, true, true);
+    settlePainting(this, st.season === season);
     this.lights.sync(state.lights, now(), false);
     this.ready = true;
     this.requestFrame(true);
@@ -142,9 +147,7 @@ export class WorldEngine {
     });
   }
 
-  get isDestroyed() {
-    return this.destroyed;
-  }
+  get isDestroyed() { return this.destroyed; }
 
   async syncCreatures() {
     const m = this.cfg.manifest;
@@ -157,14 +160,13 @@ export class WorldEngine {
 
   destroy() {
     this.destroyed = true;
+    window.clearTimeout(this.retry.timer);
     cancelAnimationFrame(this.raf);
     this.cleanups.forEach((f) => f());
     if (!this.lost) this.res.dispose();
   }
 
-  get isLost() {
-    return this.lost;
-  }
+  get isLost() { return this.lost; }
 
   /** Perte du contexte WebGL : arrêt net, la vue recrée un moteur. */
   markLost() {

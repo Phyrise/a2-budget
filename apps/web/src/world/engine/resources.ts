@@ -119,15 +119,33 @@ export class Resources {
     this.bytes.delete(t);
   }
 
-  /** Charge un stade d'une saison (couleur + profondeur réelle ou synthétique). */
+  /**
+   * Charge un stade d'une saison (couleur + profondeur réelle ou synthétique).
+   * Peinture de saison indisponible (hors ligne avant sa mise en cache, ancien
+   * hash retiré par un déploiement) : repli sur la base (été, précachée), la
+   * StageTextures porte alors `season: 'summer'` et le moteur réessaie plus tard.
+   */
   async loadStage(stage: GrowthStage, season: Season = 'summer'): Promise<StageTextures> {
     const img = stageImage(this.manifest, stage, season);
-    const colorImg = await decodeImage(img.color, { kind: 'color', maxWidth: 1280 });
+    const base = stageImage(this.manifest, stage, 'summer');
+    let colorImg: Decoded;
+    let painted = season;
+    try {
+      colorImg = await decodeImage(img.color, { kind: 'color', maxWidth: 1280 });
+    } catch (err) {
+      if (img.color === base.color || this.disposed) throw err;
+      colorImg = await decodeImage(base.color, { kind: 'color', maxWidth: 1280 });
+      painted = 'summer';
+    }
+    return this.stageFrom(stage, painted, colorImg, painted === season ? img.depth : base.depth);
+  }
+
+  private async stageFrom(stage: GrowthStage, season: Season, colorImg: Decoded, depthUrl: string | null): Promise<StageTextures> {
     let depth: Texture | null = null;
     let realDepth = false;
-    if (img.depth) {
+    if (depthUrl) {
       try {
-        depth = this.texture(await decodeImage(img.depth, { kind: 'data', maxWidth: 512 }), { mips: true });
+        depth = this.texture(await decodeImage(depthUrl, { kind: 'data', maxWidth: 512 }), { mips: true });
         realDepth = true;
       } catch {
         depth = null;

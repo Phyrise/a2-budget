@@ -6,7 +6,7 @@ import { drawFrame } from './draw';
 import type { WorldEngine } from './Engine';
 import { approachParams, cloneParams, kodamaCount } from './moods';
 import { BURST, MOTES, RAIN } from './pipeline';
-import { approachLook, nightLutUrl, seasonLook } from './paint';
+import { approachLook, seasonLook } from './paint';
 import { avoidList, particleSeason } from './seasons';
 
 const TIER_PARTICLES = [1, 0.7, 0.4];
@@ -153,7 +153,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   if (lutA) pu.uLutA!.value = lutA;
   if (lutB) pu.uLutB!.value = lutB;
   pu.uLutMix!.value = e.lutMix(n);
-  pu.uNightProc!.value = e.res.lut(nightLutUrl(m, painted)) || e.res.lut(m.luts.night) ? 0 : night;
+  // Nuit procédurale tant que la LUT cible (nuit de saison ou de base) n'est pas en mémoire.
+  pu.uNightProc!.value = night > 0 && !lutB ? night : 0;
   const proc = e.res.hasAnyLut ? 0 : 1;
   pu.uExposure!.value = mood.exposure * proc + g.fogGlow * 0.06;
   pu.uSaturation!.value = 1 + (mood.saturation - 1) * proc;

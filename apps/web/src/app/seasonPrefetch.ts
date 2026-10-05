@@ -79,9 +79,9 @@ async function prefetchAll(urls: string[], signal: AbortSignal): Promise<void> {
     if (signal.aborted || saveDataOn() || !navigator.onLine) return;
     if (await cache.match(url)) continue;
     try {
-      // Le service worker répond (et met en cache) une fois l'image entière reçue.
+      // Corps lu jusqu'au bout (puis jeté) : le service worker le met en cache en parallèle.
       const res = await fetch(url, { signal, priority: 'low', credentials: 'same-origin' });
-      await res.body?.cancel();
+      await res.blob();
     } catch {
       if (signal.aborted) return;
     }

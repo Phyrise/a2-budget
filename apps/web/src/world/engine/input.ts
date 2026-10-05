@@ -1,9 +1,11 @@
 /**
  * Entrées du moteur : parallaxe au doigt / à la souris, tap pour passer le
- * gardien, reprise du rendu (clavier, onglet visible), perte de contexte.
+ * gardien, reprise du rendu (clavier, onglet visible), perte de contexte,
+ * retour du réseau (peinture de saison restée sur la base).
  */
 import type { WorldEngine } from './Engine';
 import { now } from './Engine';
+import { retryPainting } from './growth';
 
 export function bindEngineEvents(engine: WorldEngine) {
   let touchStart: { x: number; y: number } | null = null;
@@ -45,6 +47,8 @@ export function bindEngineEvents(engine: WorldEngine) {
   on<PointerEvent>(window, 'pointercancel', (e) => onPointer(e, 'up'));
   on(window, 'keydown', () => engine.requestFrame(true));
   on(document, 'visibilitychange', () => (document.hidden ? engine.halt() : engine.requestFrame(true)));
+  // Retour du réseau : nouvel essai immédiat d'une peinture de saison restée sur la base.
+  on(window, 'online', () => retryPainting(engine, true));
   const lost = (e: Event) => {
     e.preventDefault();
     engine.markLost();

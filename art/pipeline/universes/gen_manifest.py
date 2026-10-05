@@ -1,6 +1,10 @@
 """Écrit apps/web/src/themes/manifest.ts depuis report.json (Python standard,
 s'exécute en local après `remote.sh pull`). Vérifie que chaque fichier attendu
-par le contrat (types.ts) existe dans apps/web/src/themes/assets."""
+par le contrat (types.ts) existe dans apps/web/src/themes/assets.
+
+Bandeaux de saison (facultatifs) : assets/seasons/season-<budget|courses>-
+<autumn|winter>-<landscape|portrait>.webp, produits par art/pipeline/seasons/
+(remote.sh pull). Une saison n'est déclarée que si ses deux cadres existent."""
 from __future__ import annotations
 
 import json
@@ -13,6 +17,7 @@ THEMES = REPO / "apps/web/src/themes"
 ASSETS = THEMES / "assets"
 REPORT = json.loads((HERE / "report.json").read_text())
 
+SEASONS = ["autumn", "winter"]
 KONPEITO = ["pink", "yellow", "yellow-2", "green", "green-2", "blue", "blue-2",
             "white", "purple", "purple-2"]
 CATEGORIES = ["fruits-legumes", "frais", "boulangerie", "epicerie", "boissons",
@@ -22,7 +27,8 @@ imports: list[str] = []
 
 
 def ident(path: str) -> str:
-    parts = re.split(r"[/\-.]", path.removesuffix(".webp"))
+    # seasons/season-budget-autumn-landscape.webp → seasonBudgetAutumnLandscape
+    parts = re.split(r"[/\-.]", path.removeprefix("seasons/").removesuffix(".webp"))
     return parts[0] + "".join(p[:1].upper() + p[1:] for p in parts[1:])
 
 
@@ -56,6 +62,18 @@ def size(prefix: str) -> str:
     return f"{fmt(ws)}×{fmt(hs)} px, {kb:.0f} Ko"
 
 
+def season_banners(theme: str) -> tuple[str | None, list[str]]:
+    """Objet `seasons` d'un thème (None si aucun bandeau de saison) + notes."""
+    found, notes = {}, []
+    for season in SEASONS:
+        files = {f: f"seasons/season-{theme}-{season}-{f}.webp" for f in ("landscape", "portrait")}
+        if all((ASSETS / p).exists() for p in files.values()):
+            found[season] = obj({f: ref(p) for f, p in files.items()}, 4)
+            kb = sum((ASSETS / p).stat().st_size for p in files.values()) / 1024
+            notes.append(f"{theme} {season} {kb:.0f} Ko")
+    return (obj(found, 2) if found else None), notes
+
+
 def main() -> None:
     b = "budget/"
     budget = {
@@ -78,6 +96,9 @@ def main() -> None:
             "coins": "[" + ", ".join(ref(f"{b}gold-coin-{i}.webp") for i in range(1, 4)) + "]",
             "konpeito": obj({k: ref(f"{b}konpeito-{k}.webp") for k in KONPEITO}, 4)}, 2),
     }
+    season_b, notes_b = season_banners("budget")
+    if season_b:
+        budget = {"banners": budget.pop("banners"), "seasons": season_b, **budget}
     c = "courses/"
     courses = {
         "banners": obj({"landscape": ref(c + "banner-landscape.webp"),
@@ -94,6 +115,18 @@ def main() -> None:
         "sparkles": ref(c + "sparkles.webp"),
         "categories": obj({k: ref(f"{c}category-{k}.webp") for k in CATEGORIES}, 2),
     }
+    season_c, notes_c = season_banners("courses")
+    if season_c:
+        courses = {"banners": courses.pop("banners"), "seasons": season_c, **courses}
+    notes = notes_b + notes_c
+    season_doc = "" if not notes else f""" *
+ * Bandeaux de saison (hors précache) : {' · '.join(notes)}.
+ * - Fichiers assets/seasons/season-<thème>-<saison>-<cadre>.webp, émis au build
+ *   sous assets/season-*-<hash>.webp : MOTIF À EXCLURE DU PRÉCACHE
+ *   (globIgnores: 'assets/season-*'), servis par le cache à l'exécution.
+ * - Mêmes formats et mêmes cadrages recommandés que banners (WebP opaque
+ *   qualité 82, paysage 1536×1024, portrait 1024×1536).
+"""
     total = sum(v["bytes"] for v in REPORT.values()) / 1024 / 1024
     per = {u: sum(v["bytes"] for k, v in REPORT.items() if k.startswith(u)) / 1024
            for u in ("budget/", "courses/")}
@@ -126,7 +159,7 @@ def main() -> None:
  * - Petits objets sur toile carrée, contenu centré : pépites / pièces /
  *   kompeitō 96×96 (contenu ≤ 84) ; icônes de rayons 128×128 (contenu ≤ 116).
  * - Clés de `categories` = GROCERY_CATEGORIES de @a2/core (home/groceries.ts).
- */
+{season_doc} */
 import type {{ BudgetTheme, CoursesTheme }} from './types';
 """
 

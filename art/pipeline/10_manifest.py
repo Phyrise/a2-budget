@@ -6,6 +6,12 @@ Sortie  : out/manifest.ts (copié dans le dépôt par `remote.sh pull`).
 
 Chaque asset est importé via Vite (URL hachée au build). Le fichier généré
 documente les formats (profondeur, masques, LUT, effets) pour le moteur.
+
+Saisons (facultatif) : si out/assets/seasons/<saison>/ existe (produit par
+art/pipeline/seasons/), `seasons` est rempli depuis les fichiers présents :
+season-<s>-stage-<n>.webp (obligatoire), season-<s>-depth-<n>.(webp|png)
+(sinon profondeur du stade de base, même import), season-<s>-lut-night.png
+(sinon null). Leur poids est compté à part (hors précache).
 """
 from __future__ import annotations
 
@@ -17,6 +23,7 @@ FX_COUNTS = {"fog": 3, "rays": 3, "drips": 6, "needles": 4, "motes": 6, "halos":
 POSES = ["idle", "happy", "proud", "sleepy", "curious"]
 CREATURES = ["moss-ling", "seed-spirit", "leaf-sprite", "ember-wisp", "mushroom-pip", "water-drip"]
 LUTS = ["quiet", "peaceful", "lively", "flourishing", "night"]
+SEASONS = ["spring", "autumn", "winter"]
 
 imports: list[tuple[str, str]] = []
 sizes: dict[str, int] = {}
@@ -77,14 +84,60 @@ def point(p: dict) -> str:
     return "{ " + out + " }"
 
 
+def season_sets(base_depth: dict[int, str]) -> tuple[str, str]:
+    """Bloc `seasons` du manifest et note d'en-tête (vides sans saisons)."""
+    blocks, notes = [], []
+    for name in SEASONS:
+        d = f"seasons/{name}"
+        if not (ASSETS / d).is_dir():
+            continue
+        lines, own = [], 0
+        for s in sorted(STAGE_SOURCES):
+            c = asset(f"{d}/season-{name}-stage-{s}.webp")
+            cands = [f"{d}/season-{name}-depth-{s}.{e}" for e in ("webp", "png")]
+            hit = [x for x in cands if (ASSETS / x).exists()]
+            depth = asset(hit[0]) if hit else base_depth[s]
+            own += bool(hit)
+            lines.append(f"        {s}: {{ color: {c}, depth: {depth} }},")
+        lut = f"{d}/season-{name}-lut-night.png"
+        night = asset(lut) if (ASSETS / lut).exists() else "null"
+        kb = sum(b for rel, b in sizes.items() if rel.startswith(d + "/")) / 1024
+        notes.append(f"{name} {kb:.0f} Ko ({own}/7 profondeurs propres)")
+        blocks.append(f"    {name}: {{\n      stages: {{\n" + "\n".join(lines)
+                      + f"\n      }},\n      nightLut: {night},\n    }},")
+    if not blocks:
+        return "", ""
+    body = "  seasons: {\n" + "\n".join(blocks) + "\n  },\n"
+    note = f""" *
+ * Saisons (hors précache) : {' · '.join(notes)}.
+ * - Fichiers sous assets/seasons/<saison>/, nom de fichier « season-<saison>-… »,
+ *   donc émis au build sous assets/season-*-<hash>.<ext> : MOTIF À EXCLURE DU
+ *   PRÉCACHE (globIgnores: 'assets/season-*') et à servir par le cache à
+ *   l'exécution (la saison en cours, puis la suivante ~14 jours avant).
+ * - seasons.<s>.stages[n].color : peinture de saison, WebP 1024×1536 (qualité
+ *   84 → 76 pour tenir ≈ 0,32 Mo), recalée sur le stade de base n
+ *   (art/pipeline/seasons/s01_align.py, dérive résiduelle ≤ 1,2 px).
+ * - seasons.<s>.stages[n].depth : profondeur du stade de base (même import, même
+ *   URL) quand la dérive résiduelle ≤ 2 px et que la silhouette ne change pas ;
+ *   sinon season-<s>-depth-<n> (même format et même échelle que la base).
+ * - seasons.<s>.nightLut : LUT nuit de la saison (maîtresse de saison → nuit
+ *   de saison, même format que luts) ; null = luts.night.
+ * - masks, masksLight, foreground, placements : ceux de la base pour toutes
+ *   les saisons (cadrage identique).
+"""
+    return body, note
+
+
 def main() -> None:
     pl = read_json(WORK / "placements.resolved.json")
     raw = read_json(PIPE / "placements.json")
 
     stages = []
+    base_depth: dict[int, str] = {}
     for s in sorted(STAGE_SOURCES):
         c = asset(f"stages/stage-{s}.webp")
         d = first(f"depth/stage-{s}.webp", f"depth/stage-{s}.png")
+        base_depth[s] = d
         stages.append(f"    {s}: {{ color: {c}, depth: {d} }},")
 
     masks = asset("masks.png")
@@ -112,9 +165,14 @@ def main() -> None:
     courses = asset("banners/courses.webp")
     placeholder = asset("placeholder.webp")
 
-    total = sum(sizes.values())
+    seasons, season_note = season_sets(base_depth)
+
+    total = sum(b for rel, b in sizes.items() if not rel.startswith("seasons/"))
+    count = sum(1 for rel in sizes if not rel.startswith("seasons/"))
     by_group: dict[str, int] = {}
     for rel, b in sizes.items():
+        if rel.startswith("seasons/"):
+            continue
         g = rel.split("/")[0] if "/" in rel else rel.rsplit(".", 1)[0]
         by_group[g] = by_group.get(g, 0) + b
     breakdown = " · ".join(f"{g} {b / 1024:.0f} Ko" for g, b in sorted(by_group.items(), key=lambda kv: -kv[1]))
@@ -129,8 +187,8 @@ def main() -> None:
  * Ne pas éditer à la main : modifier le pipeline (art/pipeline/README.md) puis
  * régénérer (`art/pipeline/remote.sh all`).
  *
- * Poids total : {total / 1024 / 1024:.2f} Mo ({len(sizes)} fichiers) — {breakdown}.
- *
+ * Poids total : {total / 1024 / 1024:.2f} Mo ({count} fichiers) — {breakdown}.
+{season_note} *
  * Formats :
  * - stages[n].color : peinture du stade, WebP 1024×1536 (recalée sur le stade 6).
  * - stages[n].depth : profondeur 512×768 en niveaux de gris (R = G = B), sans
@@ -196,7 +254,7 @@ export const manifest: WorldManifest = {{
   }},
   banners: {{ budget: {budget}, courses: {courses} }},
   {prop('placeholder', placeholder)},
-}};
+{seasons}}};
 '''
     (OUT / "manifest.ts").write_text(head + imp + "\n" + body)
     print(f"manifest.ts : {len(imports)} imports, {total / 1024 / 1024:.2f} Mo — {breakdown}")

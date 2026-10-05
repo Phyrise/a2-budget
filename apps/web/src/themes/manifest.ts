@@ -27,6 +27,13 @@
  * - Petits objets sur toile carrée, contenu centré : pépites / pièces /
  *   kompeitō 96×96 (contenu ≤ 84) ; icônes de rayons 128×128 (contenu ≤ 116).
  * - Clés de `categories` = GROCERY_CATEGORIES de @a2/core (home/groceries.ts).
+ *
+ * Bandeaux de saison (hors précache) : budget autumn 616 Ko · budget winter 683 Ko · courses autumn 704 Ko · courses winter 793 Ko.
+ * - Fichiers assets/seasons/season-<thème>-<saison>-<cadre>.webp, émis au build
+ *   sous assets/season-*-<hash>.webp : MOTIF À EXCLURE DU PRÉCACHE
+ *   (globIgnores: 'assets/season-*'), servis par le cache à l'exécution.
+ * - Mêmes formats et mêmes cadrages recommandés que banners (WebP opaque
+ *   qualité 82, paysage 1536×1024, portrait 1024×1536).
  */
 import type { BudgetTheme, CoursesTheme } from './types';
 import budgetBannerLandscape from './assets/budget/banner-landscape.webp';
@@ -65,6 +72,10 @@ import budgetKonpeitoBlue2 from './assets/budget/konpeito-blue-2.webp';
 import budgetKonpeitoWhite from './assets/budget/konpeito-white.webp';
 import budgetKonpeitoPurple from './assets/budget/konpeito-purple.webp';
 import budgetKonpeitoPurple2 from './assets/budget/konpeito-purple-2.webp';
+import seasonBudgetAutumnLandscape from './assets/seasons/season-budget-autumn-landscape.webp';
+import seasonBudgetAutumnPortrait from './assets/seasons/season-budget-autumn-portrait.webp';
+import seasonBudgetWinterLandscape from './assets/seasons/season-budget-winter-landscape.webp';
+import seasonBudgetWinterPortrait from './assets/seasons/season-budget-winter-portrait.webp';
 import coursesBannerLandscape from './assets/courses/banner-landscape.webp';
 import coursesBannerPortrait from './assets/courses/banner-portrait.webp';
 import coursesKikiFlying from './assets/courses/kiki-flying.webp';
@@ -93,11 +104,25 @@ import coursesCategorySurgeles from './assets/courses/category-surgeles.webp';
 import coursesCategoryHygiene from './assets/courses/category-hygiene.webp';
 import coursesCategoryMaison from './assets/courses/category-maison.webp';
 import coursesCategoryAutre from './assets/courses/category-autre.webp';
+import seasonCoursesAutumnLandscape from './assets/seasons/season-courses-autumn-landscape.webp';
+import seasonCoursesAutumnPortrait from './assets/seasons/season-courses-autumn-portrait.webp';
+import seasonCoursesWinterLandscape from './assets/seasons/season-courses-winter-landscape.webp';
+import seasonCoursesWinterPortrait from './assets/seasons/season-courses-winter-portrait.webp';
 
 export const budgetTheme: BudgetTheme = {
   banners: {
     landscape: budgetBannerLandscape,
     portrait: budgetBannerPortrait,
+  },
+  seasons: {
+    autumn: {
+      landscape: seasonBudgetAutumnLandscape,
+      portrait: seasonBudgetAutumnPortrait,
+    },
+    winter: {
+      landscape: seasonBudgetWinterLandscape,
+      portrait: seasonBudgetWinterPortrait,
+    },
   },
   scene: budgetSceneBridge,
   noFace: {
@@ -140,6 +165,16 @@ export const coursesTheme: CoursesTheme = {
   banners: {
     landscape: coursesBannerLandscape,
     portrait: coursesBannerPortrait,
+  },
+  seasons: {
+    autumn: {
+      landscape: seasonCoursesAutumnLandscape,
+      portrait: seasonCoursesAutumnPortrait,
+    },
+    winter: {
+      landscape: seasonCoursesWinterLandscape,
+      portrait: seasonCoursesWinterPortrait,
+    },
   },
   kiki: {
     flying: coursesKikiFlying,

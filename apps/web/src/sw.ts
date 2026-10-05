@@ -18,6 +18,7 @@ import {
   createHandlerBoundToURL,
   precacheAndRoute,
 } from 'workbox-precaching';
+import { CACHED_AT_HEADER, SEASONS_CACHE, isSeasonAsset, purgeSeasonCache } from './app/seasonCache';
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
@@ -65,6 +66,43 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET' || !PORTRAIT_RE.test(new URL(request.url).pathname)) return;
   event.respondWith(portraitFirst(request).catch(() => fetch(request)));
+});
+
+// Peintures de saison (forêt printemps / automne / hiver, LUT nuit de saison,
+// bandeaux automne / hiver) : hors précache (assets/season-*), cache d'abord
+// dans un cache dédié, rempli à la demande et par le préchargement discret de
+// la page (app/seasonPrefetch.ts). Chaque mise en cache est datée (en-tête
+// x-a2-cached-at) puis suivie d'une purge douce (app/seasonCache.ts) : saison
+// courante jamais purgée, autres saisons retirées 90 jours après leur mise en
+// cache, une seule version par image d'un build à l'autre.
+async function seasonFirst(request: Request, event: FetchEvent): Promise<Response> {
+  const cache = await caches.open(SEASONS_CACHE);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok && response.type === 'basic') {
+    const headers = new Headers(response.headers);
+    headers.set(CACHED_AT_HEADER, String(Date.now()));
+    const body = await response.clone().blob();
+    const stored = new Response(body, { status: response.status, statusText: response.statusText, headers });
+    event.waitUntil(
+      cache
+        .put(request, stored)
+        .then(() => purgeSeasonCache(caches, new Date(), request.url))
+        .catch(() => undefined),
+    );
+  }
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET' || !isSeasonAsset(new URL(request.url).pathname)) return;
+  event.respondWith(seasonFirst(request, event).catch(() => fetch(request)));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(purgeSeasonCache(caches, new Date()).catch(() => 0));
 });
 
 // Mise à jour volontaire : workbox-window (updateServiceWorker(true)) envoie

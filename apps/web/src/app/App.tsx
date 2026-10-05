@@ -17,7 +17,8 @@
  * - En-tête (marque + Historique / lune de pause sur Maison / Réglages),
  *   pilule de navigation (effacée seulement pendant que le clavier est
  *   ouvert), feuilles globales, indicateur d'enregistrement, mise à jour PWA,
- *   petits sons de la forêt (useSoundEvents, monté une fois).
+ *   petits sons de la forêt (useSoundEvents, monté une fois), préchargement
+ *   discret des peintures de saison (useSeasonPrefetch, monté une fois).
  */
 import '../styles/base.css';
 import '../styles/ui.css';
@@ -45,6 +46,8 @@ import { ShellProvider, useMediaQuery, useShell } from './ShellContext';
 import { useSoundEvents } from './sound';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useKeyboardOpen } from './useKeyboardOpen';
+import { useSeasonPrefetch } from './seasonPrefetch';
+import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
 
 function Screen({ module }: { module: ModuleId }) {
@@ -94,7 +97,8 @@ function usePageVisible(): boolean {
 
 function Shell() {
   const { module, sheet, closeSheet, prefs, isDesktop, foregroundSheet } = useShell();
-  const { setPresentation, setPreview } = useWorld();
+  const { setPresentation, setPreview, realState } = useWorld();
+  const { today } = useApp();
   const { solid, covered } = useScrollState(module, isDesktop);
   const visible = usePageVisible();
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
@@ -102,6 +106,9 @@ function Shell() {
   const keyboardOpen = useKeyboardOpen();
   // Petits sons de la forêt (tâche faite, créature, croissance…), montés une fois.
   useSoundEvents();
+  // Peintures de saison hors précache : préchargement discret (saison en
+  // cours, puis la suivante ~14 jours avant), d'après la VRAIE forêt.
+  useSeasonPrefetch(realState?.stage ?? null, today, isDesktop);
 
   // Présentation du monde selon module, largeur, recouvrement et préférence.
   // La forêt ne s'anime que là où elle se voit : Maison, et Calendrier sur

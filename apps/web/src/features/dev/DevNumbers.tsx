@@ -11,7 +11,7 @@ import { CONSTANTS, VITALITY_LABELS, num, pct, type DevData } from './devData';
 const GOAL_LEVELS = { resting: 'se repose', good: 'va bien', flourishing: 's’épanouit' } as const;
 const TRENDS = { rising: 'la lumière monte (montrée)', steady: 'stable (jamais montrée)', resting: 'en baisse (jamais montrée)' } as const;
 const VERDICTS = { quiet: 'calme', balanced: 'équilibré', 'a-carried': 'A a porté', 'b-carried': 'B a porté' } as const;
-function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
+export function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return (
     <div className="dev-row">
       <dt className="dev-row__label">{label}</dt>
@@ -23,7 +23,7 @@ function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: R
   );
 }
 
-function Bar({ ratio, label }: { ratio: number; label: string }) {
+export function Bar({ ratio, label }: { ratio: number; label: string }) {
   const clamped = Math.min(1, Math.max(0, ratio));
   return (
     <div className="dev-bar" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamped * 100)}>

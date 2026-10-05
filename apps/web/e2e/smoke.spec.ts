@@ -136,3 +136,73 @@ test('?module= ouvre le module demandé ; le dernier module est mémorisé', asy
   await expect(nav(page).getByRole('button', { name: 'Courses', exact: true })).toHaveAttribute('aria-current', 'page');
   await expect(page.locator('#grocery-input')).toBeVisible();
 });
+
+/**
+ * Non-régression V4 : cocher un article de Courses ne « zoome » plus le
+ * bandeau du haut. Kiki entre en balayant depuis la droite ; sur téléphone,
+ * ce débordement élargissait la page un instant (fenêtre de mise en page
+ * 446 px au lieu de 390) : monde fixe, en-tête et bandeau s'agrandissaient
+ * puis revenaient. On échantillonne chaque image pendant 700 ms.
+ */
+test.describe('Courses sur téléphone : cocher sans zoom', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: PHONE });
+
+  test('le bandeau ne change ni de taille ni de transformation quand on coche', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openApp(page, 'courses');
+    const input = page.locator('#grocery-input');
+    for (const label of ['Courgettes', 'Lait', 'Baguette']) {
+      await input.fill(label);
+      await input.press('Enter');
+      await expect(input).toHaveValue('');
+    }
+    await input.blur();
+    const banner = page.locator('.app-world__banner[data-universe="courses"]');
+    await expect(banner).toHaveClass(/is-shown/);
+    await page.waitForTimeout(800);
+
+    const probe = () =>
+      page.evaluate(() => {
+        const w = window as unknown as { __zoom: { snap: () => string; seen: Set<string>; stop: boolean } };
+        const snap = () => {
+          const img = document.querySelector<HTMLElement>('.app-world__banner[data-universe="courses"]')!;
+          const world = document.querySelector<HTMLElement>('.app-world')!;
+          const r = img.getBoundingClientRect();
+          const cs = getComputedStyle(img);
+          return JSON.stringify([
+            window.innerWidth,
+            document.documentElement.scrollWidth,
+            Math.round(world.getBoundingClientRect().width),
+            Math.round(r.left),
+            Math.round(r.top),
+            Math.round(r.width),
+            Math.round(r.height),
+            cs.transform,
+            cs.scale,
+          ]);
+        };
+        w.__zoom = { snap, seen: new Set([snap()]), stop: false };
+        const loop = () => {
+          w.__zoom.seen.add(snap());
+          if (!w.__zoom.stop) requestAnimationFrame(loop);
+        };
+        new ResizeObserver(() => w.__zoom.seen.add(snap())).observe(document.querySelector('.app-world')!);
+        requestAnimationFrame(loop);
+      });
+    const seen = () =>
+      page.evaluate(() => {
+        const w = window as unknown as { __zoom: { seen: Set<string>; stop: boolean } };
+        w.__zoom.stop = true;
+        return [...w.__zoom.seen];
+      });
+
+    await probe();
+    await page.getByRole('checkbox', { name: 'Courgettes', exact: true }).click();
+    await page.waitForTimeout(700);
+    const states = await seen();
+    expect(states, `états du bandeau : ${states.join(' | ')}`).toHaveLength(1);
+    expect(JSON.parse(states[0]!)[0]).toBe(PHONE.width);
+    await expect(page.locator('.item-list--basket .item-row')).toHaveCount(1);
+    expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+  });
+});

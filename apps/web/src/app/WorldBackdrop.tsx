@@ -37,6 +37,8 @@ function useVisited(module: ModuleId): ReadonlySet<ModuleId> {
  * de saison se pose sur la base : la base sert d'image d'attente et la
  * variante arrive en fondu ; déjà en cache (décodée) au montage, elle
  * s'affiche sans fondu. Un retour à la base (fin d'aperçu) la remontre.
+ * `data-universe` ne marque qu'une image à la fois : la peinture en vigueur
+ * (la base tant que la variante n'est pas prête, puis la variante).
  */
 function UniversePainting({ id, image, season, shown, desktop }: { id: ModuleId; image: UniverseImage; season: Season; shown: boolean; desktop: boolean }) {
   const target = imageForSeason(image, season);
@@ -72,7 +74,7 @@ function UniversePainting({ id, image, season, shown, desktop }: { id: ModuleId;
           style={style}
           alt=""
           decoding="async"
-          data-universe={id}
+          data-universe={ready ? undefined : id}
           data-season="base"
         />
       )}
@@ -86,7 +88,7 @@ function UniversePainting({ id, image, season, shown, desktop }: { id: ModuleId;
           alt=""
           decoding="async"
           onLoad={() => setLoaded(target)}
-          data-universe={id}
+          data-universe={ready ? id : undefined}
           data-season={season}
         />
       )}

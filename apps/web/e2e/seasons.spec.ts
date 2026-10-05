@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, goTo, openApp, trackErrors } from './helpers';
+import { PHONE, STORAGE_KEY, goTo, openApp, sheet, trackErrors } from './helpers';
 
 /**
  * Saisons (contre le build de production, `pnpm preview`, service worker
@@ -73,16 +73,22 @@ test('précache : aucune peinture de saison', async ({ page }) => {
   expect(urls.filter((u) => /\/assets\/season-/.test(u))).toEqual([]);
 });
 
-test('hiver simulé : forêt et bandeaux d’hiver (téléphone)', async ({ page }) => {
-  const errors = trackErrors(page);
+test('hiver simulé : la forêt charge sa peinture d’hiver', async ({ page }) => {
   await page.clock.setFixedTime(WINTER);
   await saveData(page);
   const requested = seasonRequests(page);
   await openApp(page, 'maison');
-
-  // La forêt (stade 1 d'une forêt neuve) charge sa peinture d'hiver.
+  // Stade 1 d'une forêt neuve : image fixe puis moteur, peinture d'hiver.
   await expect.poll(() => requested.some((u) => /\/season-winter-stage-1-/.test(u)), { timeout: 20_000 }).toBe(true);
-  expect(requested.filter((u) => /\/season-(?:spring|autumn)-/.test(u))).toEqual([]);
+  await expect(page.locator('.living-forest img[src*="/season-winter-stage-1-"]')).toHaveCount(1);
+  expect(requested.filter((u) => /\/season-(?:\w+-)?(?:spring|autumn)-/.test(u))).toEqual([]);
+});
+
+test('hiver simulé : bandeaux d’hiver (téléphone)', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.clock.setFixedTime(WINTER);
+  await saveData(page);
+  await openApp(page, 'maison');
 
   await goTo(page, 'Budget');
   const budget = painting(page, 'banner', 'budget', 'winter');
@@ -95,8 +101,9 @@ test('hiver simulé : forêt et bandeaux d’hiver (téléphone)', async ({ page
   const courses = painting(page, 'banner', 'courses', 'winter');
   await expect(courses).toHaveAttribute('src', /\/season-courses-winter-landscape-/);
   await expect(courses).toHaveClass(/is-ready/);
-  // La base a laissé la place (image d'attente retirée après le fondu).
-  await expect(painting(page, 'banner', 'courses', 'base')).toHaveCount(0);
+  // Une seule peinture en vigueur ; la base (image d'attente) quitte le DOM après le fondu.
+  await expect(page.locator('img.app-world__banner[data-universe="courses"]')).toHaveCount(1);
+  await expect(page.locator('img.app-world__img--courses[data-season="base"]')).toHaveCount(0);
   expect(errors, errors.join(' | ')).toEqual([]);
 });
 
@@ -122,6 +129,37 @@ test('été simulé : la base seule, aucune peinture de saison', async ({ page }
   await goTo(page, 'Maison');
   await page.waitForTimeout(1500);
   expect(requested).toEqual([]);
+});
+
+test('mode développeur : l’aperçu de saison change les peintures, sans écrire ; saisons et cache dans le panneau', async ({ page }) => {
+  await page.clock.setFixedTime(SUMMER);
+  await saveData(page);
+  await openApp(page, 'budget');
+  await expect(painting(page, 'banner', 'budget', 'base')).toHaveClass(/is-shown/);
+  await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  await sheet(page, 'Réglages').getByRole('switch', { name: 'Mode développeur' }).click();
+  await page.keyboard.press('Escape');
+  const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+
+  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  const dev = sheet(page, 'Mode développeur');
+  const row = (label: string) => dev.locator('.dev-row', { has: page.getByText(label, { exact: true }) });
+  await expect(row('Saison réelle')).toContainText('Été (base)');
+  await expect(row('Saison affichée')).toContainText('Été (base)');
+  await expect(row('Cache des saisons')).toContainText(/\d+ \/ 32/);
+  await dev.locator('fieldset', { hasText: 'Saison' }).getByRole('button', { name: 'Hiver' }).click();
+  await expect(row('Saison affichée')).toContainText('Hiver');
+  await expect(row('Saison affichée')).toContainText('aperçu');
+  await expect(row('Saison réelle')).toContainText('Été (base)');
+  await page.keyboard.press('Escape');
+
+  // Le bandeau Budget passe à l'hiver ; les données ne bougent pas.
+  await expect(painting(page, 'banner', 'budget', 'winter')).toHaveClass(/is-ready/);
+  await expect(page.locator('.preview-banner')).toBeVisible();
+  expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(before);
+  await page.getByRole('button', { name: 'Revenir à la vraie forêt' }).click();
+  await expect(painting(page, 'banner', 'budget', 'base')).toHaveClass(/is-shown/);
+  await expect(page.locator('img.app-world__banner[data-universe="budget"]')).toHaveCount(1);
 });
 
 test('hors ligne après visite : la peinture de saison courante vient du cache', async ({ page, context }) => {

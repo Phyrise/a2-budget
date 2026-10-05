@@ -1,4 +1,4 @@
-# A² Home — Contrats du domaine Maison / Forêt (V2, extensions V3 et V3.2)
+# A² Home — Contrats du domaine Maison / Forêt (V2, extensions V3, V3.2 et V4)
 
 Ce document est la référence du **domaine Maison / Forêt** (A² Home), séparé
 du budget. En cas de divergence avec le code, **ce document fait foi** ; toute
@@ -13,9 +13,12 @@ Implémentation : `packages/core/src/home/**` (fichiers `types.ts`, `dates.ts`,
 `fixtures/v1.ts` ; V3 : `occurrences.ts`, `taskEdit.ts`, `upcoming.ts`,
 `skips.ts`, `balance.ts`, `rituals.ts`, `focus.ts`, `careValidation.ts`,
 `validationHelpers.ts` ; V3.2 : `calendarTypes.ts`, `calendar.ts`,
-`calendarOccurrences.ts`, `forestProgress.ts`). Tests : `*.test.ts` du même
+`calendarOccurrences.ts`, `forestProgress.ts` ; V4 : `groceryMemory.ts`,
+`taskCalendar.ts`, `lanterns.ts`). Tests : `*.test.ts` du même
 dossier (V3 : `care.*.test.ts`). Store : `apps/web/src/state/store.tsx` (§9),
-`careActions.ts` (§11.8) et `calendarActions.ts` (§12.5).
+`careActions.ts` (§11.8), `calendarActions.ts` (§12.5) et `budgetActions.ts`
+(V4, §14.4). Le budget V4 (euros entiers, paiements du mois, solde du compte
+commun) est décrit dans `CONTRACTS.md` §2ter.
 
 ---
 
@@ -411,11 +414,13 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 | `toggleGrocery(id)` | `toggleGroceryItem` | — |
 | `removeGrocery(id)` | `removeGroceryItem` | `{ item, index } \| null` (pour annuler) |
 | `restoreGrocery(removed)` | `restoreGroceryItem` (annulation) | — |
-| `updateGrocery(id, patch)` | `updateGroceryItem` | — |
+| `updateGrocery(id, patch)` | `updateGroceryItem` ; V4 : un rayon choisi est mémorisé (`categoryMemory`), `category: null` l'oublie (§14.1) | — |
 | `clearDoneGroceries()` | vide le panier vers l'historique | nombre d'articles archivés |
 | `renamePerson('A' \| 'B', name)` | nom nettoyé ; `household.people` suit | `boolean` (false : vide) |
 | `addCalendarEvent(draft)` / `updateCalendarEvent(id, patch)` | `addEvent` / `updateEvent` (§12) | `{ ok: true, event } \| { ok: false, reason }` |
 | `removeCalendarEvent(id)` / `restoreCalendarEvent(removed)` | `removeEvent` / `restoreEvent` | `{ event, index } \| null` / `boolean` |
+| `selectLantern(id)` | V4 : lanterne de pierre posée dans la forêt (§14.3) | `boolean` (false : inconnue / verrouillée) |
+| `setTransferPaid` / `setExpensePaid` / `recordBalanceCorrection` / `removeBalanceCorrection` | V4 budget (CONTRACTS §4) | `boolean` |
 
 Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `actionableTasksToday(tasks, today, completions, chores.skips)`,
@@ -426,7 +431,10 @@ Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `grocerySuggestions(items, 6, { history, now: today })`,
 `recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel` ; V3.2 :
 `eventsOn`, `eventsBetween`, `nextEvents` (§12.3), `forestProgress(forest,
-today)`, `weeklyCareGoal(forest, today)` (§13).
+today)`, `weeklyCareGoal(forest, today)` (§13) ; V4 :
+`taskOccurrencesBetween(tasks, completions, chores.skips, from, to)` (§14.2),
+`activeLantern(focus)`, `unlockedLanterns(focus)`, `nextLantern(focus)`
+(§14.3).
 
 Import : le résumé (`ImportSummary`) mentionne aussi `taskCount`,
 `completionCount` et `groceryCount`.
@@ -470,8 +478,9 @@ plus tôt l'emporte (« jus d'orange » → boissons), à égalité le plus long
 
 ### 10.3 Opérations
 
-- `addGroceryItem(items, raw, { id, now, addedBy?, category? })` → `{ items,
-  item, added }`. Saisie vide → inchangé (`item: null`). Article identique
+- `addGroceryItem(items, raw, { id, now, addedBy?, category?, memory? })` →
+  `{ items, item, added }`. Rayon : `category`, sinon la mémoire des rayons
+  (V4, §14.1), sinon les mots-clés. Saisie vide → inchangé (`item: null`). Article identique
   (`groceryKey` : accents, casse, pluriel s/x ignorés) **non coché** déjà
   présent → pas de doublon (`added: false`, `item` = l'existant ; une
   quantité différente remplace l'ancienne). Sinon ajout en fin de liste avec
@@ -479,9 +488,9 @@ plus tôt l'emporte (« jus d'orange » → boissons), à égalité le plus long
 - `toggleGroceryItem(items, id, now)` : `done` s'inverse ; `doneAt` = now ou
   null.
 - `removeGroceryItem(items, id)` / `restoreGroceryItem(items, item, index)`.
-- `updateGroceryItem(items, id, { label?, quantity?, category? })` : libellé
-  re-normalisé (quantité incluse extraite, rayon recalculé sauf rayon
-  explicite) ; `quantity: null | ''` retire ; `category: null` = rayon
+- `updateGroceryItem(items, id, { label?, quantity?, category? }, memory?)` : libellé
+  re-normalisé (quantité incluse extraite, rayon recalculé — mémoire puis
+  mots-clés — sauf rayon explicite) ; `quantity: null | ''` retire ; `category: null` = rayon
   automatique. Champs invalides ignorés, jamais d'exception.
 - `clearDoneGroceries(state, now)` : articles cochés → tête de l'historique
   (`boughtAt` = `doneAt`, sinon `now`), dédoublonnés par id, bornés.
@@ -628,7 +637,9 @@ cocher la tâche). Validation : `focus-not-object`,
 `focus-sessions-not-array`, `focus-too-many-sessions`,
 `focus-session-not-object`, `focus-invalid-id`, `duplicate-focus-id`,
 `focus-invalid-started-at`, `focus-invalid-minutes`, `focus-invalid-who`,
-`focus-invalid-label`, `focus-invalid-task-id`.
+`focus-invalid-label`, `focus-invalid-task-id` ; V4 :
+`focus-invalid-selected-lantern` (§14.3). `addFocusSession` conserve
+`selectedLantern`.
 
 ### 11.8 Store (`careActions.ts`, exposé par `useApp()`)
 
@@ -777,4 +788,91 @@ une phrase douce, jamais un reproche.
   semaine précédente, du lundi au **même jour de semaine**, pour une
   comparaison juste en cours de semaine) : plus → `rising`, moins ou rien
   des deux côtés → `resting`, autant → `steady`.
+
+---
+
+## 14. V4 — Rayons mémorisés, tâches au calendrier, lanternes de pierre
+
+Tous les champs sont **optionnels** (`schemaVersion` reste `2`) : absents,
+ils ne sont jamais inventés ; `null` est toléré et omis ; présents, ils sont
+validés strictement (sauf les cas « ignorés » indiqués) et recopiés tels
+quels — un JSON se recharge à l'identique.
+
+### 14.1 Mémoire des rayons (`groceries.categoryMemory?`)
+
+`categoryMemory: Record<groceryKey(libellé), GroceryCategory>` : si l'on
+change le rayon d'un article, les prochains ajouts du même libellé (accents,
+casse, pluriels simples ignorés) vont dans ce rayon.
+
+- `rememberGroceryCategory(memory, label, category)` : l'entrée devient la
+  plus récente ; au plus `GROCERY_MEMORY_MAX` = 500 entrées (les plus
+  anciennes oubliées). Identique, libellé vide ou rayon inconnu → même
+  référence.
+- `forgetGroceryCategory(memory, label)` : retour au rayon automatique.
+- `rememberedCategory(memory, label)` : lecture (clés héritées d'`Object`
+  jamais lues).
+- Priorité à l'ajout : rayon explicite > mémoire > mots-clés.
+- Store : `updateGrocery(id, { category })` mémorise pour le libellé
+  (après renommage éventuel) ; `category: null` oublie. `addGrocery` et
+  les renommages consultent la mémoire. Signatures du store inchangées.
+- Validation : `grocery-memory-not-object`, `grocery-memory-invalid-key`,
+  `grocery-memory-invalid-category` ; au-delà de 500 entrées, les plus
+  anciennes sont oubliées (jamais illisible).
+
+### 14.2 Tâches au calendrier (`taskCalendar.ts`)
+
+`taskOccurrencesBetween(tasks, completions, skips, from, to)` →
+`{ task, date, dueDate, done, skipped }[]`, bornes incluses
+« YYYY-MM-DD », tri par date puis ordre de la liste des tâches (stable).
+
+- Montrées : hebdomadaires **à jour fixe** (`weeklyDay`), mensuelles
+  (`monthlyDay`, ajusté au dernier jour des mois courts), ponctuelles à leur
+  date (`createdAt`, `dueDate = "once"`). Jamais les quotidiennes ni les
+  hebdomadaires souples. Pas d'occurrence récurrente avant `createdAt`.
+- `done` : fait Maison de l'occurrence (`findOccurrenceCompletion`, donc
+  synchronisé avec Maison ; une hebdomadaire repassée en jour fixe garde le
+  fait daté du lundi) — l'UI affiche la tâche **barrée**, jamais retirée.
+  `skipped` : « pas aujourd'hui » (`isSkipped`).
+- Cocher depuis le Calendrier : `toggleHomeTask(task)` (occurrence du jour,
+  ou l'unique occurrence d'une ponctuelle quelle que soit sa date) ; les
+  autres jours restent en lecture.
+- Intervalle invalide ou inversé → `[]` ; fenêtre bornée à
+  `TASK_CALENDAR_MAX_DAYS` = 400 jours ; pas de saut au changement d'heure.
+
+### 14.3 Lanternes de pierre (`lanterns.ts`, `focus.selectedLantern?`)
+
+Lancer un minuteur allume la lanterne de pierre (tōrō) posée dans la forêt.
+Chaque session terminée (`focus.sessions.length`) rapproche d'un nouveau
+modèle, collectionné dans le Carnet ; on choisit celui qui est posé.
+
+| id | débloquée après (sessions terminées) |
+|---|---|
+| `kasuga-moss` (base) | 0 |
+| `yukimi` | 3 |
+| `oribe` | 8 |
+| `kotoji` | 15 |
+| `tachi-carved` | 25 |
+| `ancient-shrine` | 40 |
+| `spirit-light` | 60 |
+
+- Seuils **réglables** dans `LANTERNS` sans migration : seul le choix est
+  stocké, et un choix devenu verrouillé est ignoré. Un déblocage ne se perd
+  jamais (les sessions ne sont jamais retirées ; au-delà de 500, le compte
+  reste au maximum).
+- `unlockedLanterns(focus | sessions)`, `isLanternUnlocked`, `nextLantern`
+  (null quand la collection est complète), `activeLantern(focus)` (choix
+  débloqué, sinon `DEFAULT_LANTERN_ID` = `kasuga-moss`),
+  `selectLantern(focus, id)` → `{ focus, changed }` (inconnue, verrouillée
+  ou déjà choisie → même référence).
+- Validation : `selectedLantern` non chaîne → `focus-invalid-selected-lantern` ;
+  inconnue ou verrouillée → **ignorée** (omise), le reste se charge.
+- Jamais de score affiché : la progression se montre par les lanternes.
+
+### 14.4 Store V4 (`budgetActions.ts`, exposé par `useApp()`)
+
+`setTransferPaid`, `setExpensePaid`, `recordBalanceCorrection`,
+`removeBalanceCorrection` (budget, `CONTRACTS.md` §4) et `selectLantern(id)`
+suivent la sémantique commune : transition pure via `transact`, ids et
+horloge capturés hors de l'updater, résultat synchrone (`boolean`),
+écriture sérialisée, objet d'actions mémoïsé.
 

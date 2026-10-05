@@ -1,4 +1,4 @@
-# A² Budget — Contrats (V1, revenus V3.1)
+# A² Budget — Contrats (V1, revenus V3.1, solde et euros entiers V4)
 
 Ce document est la référence des agents. En cas de divergence avec le code,
 **ce document fait foi** ; toute modification de contrat est coordonnée avec le
@@ -36,8 +36,9 @@ commentaires. Points clés :
 - `PersistedState = { schemaVersion: 1, settings, months, selectedMonth }`
   (forme du budget V1 ; dans l'état applicatif, `schemaVersion` reste `2`).
 - `SharedRates = { baseRateBps, variableRateBps }` : taux communs du couple.
-- `MonthSummary.remainingCents` peut être **négatif** (déficit affiché, jamais
-  masqué). `leisureCents = max(0, remainingCents − reserveTargetCents)`.
+- `MonthSummary.remainingCents` (net du mois : versements − dépenses) peut
+  être **négatif** (déficit, jamais masqué). V4 : il n'est plus affiché comme
+  « reste » ; il alimente le report automatique du solde (§2ter). `leisureCents = max(0, remainingCents − reserveTargetCents)`.
   `reserveCovered` est vrai par convention si `reserveTargetCents = 0`.
   `reserveShortfallCents = max(0, reserveTargetCents − remainingCents)`.
 
@@ -68,6 +69,95 @@ commentaires. Points clés :
   `validatePersistedState`/`validateAppState`, donc au chargement
   (`migrateState`, V1 et V2) et à l'import ; `computeMonthSummary` normalise
   aussi à la volée un mois brut.
+
+## 2ter. V4 — Euros entiers, paiements du mois, solde du compte commun
+
+Rétrocompatible : `schemaVersion` reste `2`, champs **optionnels** (absents
+→ jamais inventés ; `null` toléré et omis ; présents → validation stricte),
+un JSON existant se recharge à l'identique.
+
+### Euros entiers (`euros.ts`)
+
+Plus aucun centime ni en saisie ni à l'affichage. Stockage et calculs
+restent en **centimes exacts** ; les montants saisis sont des euros entiers
+(stockés en multiples de 100).
+
+- `roundToEuroCents(cents)` : arrondi à l'euro, demi-euro en s'éloignant de
+  zéro (0,50 € → 1 € ; −0,50 € → −1 €) ; jamais `-0`.
+- `formatEuros(cents)` : « 1 235 € » (`Intl` fr-FR, 0 décimale : fine
+  insécable U+202F pour les milliers, insécable U+00A0 avant « € ») ;
+  négatifs signés ; jamais « −0 € ».
+- `parseEurosInput(raw)` → `{ ok: true, cents } | { ok: false, reason:
+  'empty' | 'invalid' | 'not-integer' | 'out-of-range' }`. Accepte « 1234 »,
+  « 1 234 » (groupes de trois, espaces normales / insécables / fines), « € »
+  avant ou après, et une partie décimale **nulle** (« 1 234,00 »). Rejette
+  sans tronquer : centimes non nuls (`not-integer`), signe, lettres, groupes
+  mal formés (`invalid`), > 1 milliard € (`out-of-range`). « 0 » valide.
+- `eurosToCents(euros)` : entier (négatif permis) → centimes ; RangeError sinon.
+- `splitRounded(values)` : arrondi cohérent (plus forts restes, ordre de la
+  liste en cas d'égalité) : chaque valeur à moins d'un euro de l'exacte et
+  Σ arrondies = `roundToEuroCents(Σ exactes)`.
+- `roundEurosConsistent(aCents, bCents)` → `{ aCents, bCents, totalCents }`
+  avec A + B affichés = total affiché (ex. 10,50 € + 10,50 € → 11 € + 10 € =
+  21 €). À utiliser pour la carte « À verser ».
+- `parseAmountInput` / `formatCents` (décimales) restent exportées pour
+  compatibilité.
+
+### Paiements du mois (`payments.ts`, `MonthRecord.paid?`)
+
+`paid?: { transferA?: boolean; transferB?: boolean; expenses?: Record<expenseId, boolean> }`.
+
+- Cases à cocher remises à zéro chaque mois : `createMonthRecord` ne copie
+  jamais `paid` (un nouveau mois naît sans rien de coché).
+- `setTransferPaid(month, 'A' | 'B', paid)`, `setExpensePaid(month,
+  expenseId, paid)` : pures ; représentation minimale (seul `true` est
+  écrit ; `paid` disparaît quand rien n'est coché) ; sans changement ou
+  dépense inconnue du mois → même référence.
+- `isTransferPaid`, `isExpensePaid` (clés héritées jamais lues), `paidTotals(month,
+  { aCents, bCents })` → `{ transfersCents, expensesCents }`.
+- Nettoyage : `prunePaidExpenses(month)` retire les cases des dépenses
+  disparues ; appliqué par `applySettingsToMonth` et par le store
+  (`removeExpense`).
+- Validation (`validateMonthRecord`) : `paid` non objet, drapeau non
+  booléen, `expenses` non objet → `month-invalid-paid` (`budget-month-invalid-paid`
+  dans l'état V2) ; une case de dépense inconnue est **nettoyée** (jamais
+  illisible) ; les autres valeurs (y compris `false`) sont recopiées.
+
+### Solde du compte commun (`accountBalance.ts`, `budget.balance?`)
+
+Remplace le « reste ». `budget.balance?: { corrections: BalanceCorrection[] }`,
+`BalanceCorrection = { id, monthKey, balanceCents, recordedAt (ISO), note? }`
+où `balanceCents` est le solde **au début** du mois `monthKey` (négatif
+permis, |v| ≤ `MAX_AMOUNT_CENTS`).
+
+Fonctions pures ; `source` = `appState.budget` (`{ months, balance? }`) :
+
+```
+monthNetCents(m)                 = computeMonthSummary(m).remainingCents
+openingBalance(src, K)           = C.balanceCents + Σ net(M), C.monthKey ≤ M < K
+                                   (C = dernière correction ≤ K ; sans correction :
+                                    0 au premier mois connu, Σ net(M) pour M < K)
+currentBalanceEstimate(src, K)   = openingBalance + virements cochés − dépenses cochées
+endOfMonthProjection(src, K)     = openingBalance + net(K)
+openingFromCurrentBalance(src, K, réel) = réel − (virements cochés − dépenses cochées)
+```
+
+- Un mois absent de la liste compte pour 0 ; mois inconnu → ouverture.
+- `recordBalanceCorrection(src, K, balanceCents, { id, recordedAt, note? })`
+  : une correction par mois (la dernière remplace, id conservé), triées par
+  mois, au plus `BALANCE_CORRECTIONS_MAX` = 600 ; note nettoyée (≤ 200, vide
+  omise). **Aucun mois n'est réécrit** : le passé reste tel qu'il a été
+  estimé. RangeError si mois, montant ou horodatage invalides.
+- `removeBalanceCorrection(src, K)` (annuler), `balanceCorrectionFor(src, K)`.
+- Validation (`validateBudgetBalance`, raisons préfixées `budget-` dans
+  l'état V2) : `balance-not-object`, `balance-corrections-not-array`,
+  `balance-too-many-corrections`, `balance-correction-not-object`,
+  `balance-invalid-id`, `duplicate-balance-id`, `balance-invalid-month`,
+  `duplicate-balance-month`, `balance-invalid-amount`,
+  `balance-invalid-recorded-at`, `balance-invalid-note`.
+- « Effacer l'historique » (store) pose, si des mois antérieurs sont
+  effacés et qu'aucune correction n'existe pour le mois conservé, une
+  correction égale à son ouverture : le solde estimé ne change pas.
 
 ## 3. API publique de `@a2/core`
 
@@ -102,6 +192,31 @@ export function monthIncomeCents(month: MonthRecordInput, person: 'A' | 'B'): nu
 // Montants
 export function parseAmountInput(raw: string): ParseAmountResult;
 export function formatCents(cents: number): string;   // « 1 234,56 € » (Intl fr-FR EUR)
+
+// V4 — euros entiers, paiements, solde du compte commun (§2ter)
+export function roundToEuroCents(cents: number): number;
+export function formatEuros(cents: number): string;    // « 1 235 € »
+export function parseEurosInput(raw: string): ParseEurosResult;
+export function eurosToCents(euros: number): number;
+export function splitRounded(values: readonly number[]): number[];
+export function roundEurosConsistent(a: number, b: number): { aCents; bCents; totalCents };
+export function setTransferPaid<T extends MonthRecord>(m: T, p: 'A' | 'B', paid: boolean): T;
+export function setExpensePaid<T extends MonthRecord>(m: T, expenseId: string, paid: boolean): T;
+export function isTransferPaid(m, p: 'A' | 'B'): boolean;
+export function isExpensePaid(m, expenseId: string): boolean;
+export function prunePaidExpenses<T extends MonthRecord>(m: T): T;
+export function paidTotals(m, { aCents, bCents }): { transfersCents; expensesCents };
+export function monthNetCents(m: MonthRecordInput): number;
+export function openingBalance(src: BalanceSource, monthKey: string): number;
+export function currentBalanceEstimate(src: BalanceSource, monthKey: string): number;
+export function endOfMonthProjection(src: BalanceSource, monthKey: string): number;
+export function openingFromCurrentBalance(src: BalanceSource, monthKey: string, currentCents: number): number;
+export function recordBalanceCorrection<T extends BalanceSource>(
+  src: T, monthKey: string, balanceCents: number,
+  meta: { id: string; recordedAt: string; note?: string },
+): T;
+export function removeBalanceCorrection<T extends BalanceSource>(src: T, monthKey: string): T;
+export function balanceCorrectionFor(src: BalanceSource, monthKey: string): BalanceCorrection | undefined;
 
 // Mois
 export function currentMonthKey(now?: Date): string;  // « YYYY-MM », fuseau local
@@ -174,6 +289,16 @@ Sémantique :
 - `apps/web/src/state/store.tsx` : `AppProvider` + `useApp()`. Charge avant de
   sauvegarder (garde-fou StrictMode). Sauvegarde à chaque modification valide.
   `saveStatus: 'idle' | 'saving' | 'saved' | 'error'`.
+  - V4 (`budgetActions.ts`) : `setTransferPaid(monthKey, 'A' | 'B', paid)`,
+    `setExpensePaid(monthKey, expenseId, paid)`,
+    `recordBalanceCorrection(monthKey, euros, note?, { asOf?: 'opening' | 'now' })`
+    (euros entiers, négatif permis ; `'opening'` par défaut = solde au début
+    du mois, `'now'` = solde constaté maintenant, converti via
+    `openingFromCurrentBalance`), `removeBalanceCorrection(monthKey)` ;
+    toutes renvoient `boolean` (false : rien n'a changé / saisie invalide).
+    Lecture avec les fonctions pures sur `appState.budget`. Le store garde
+    `budget.balance` à chaque modification du budget (`mutate`,
+    `prepareApp`).
   - Revenus (V3.1) : `setSalary(monthKey, person, cents)`,
     `setBonus(monthKey, person, cents)` (compléments ; invalide ignoré),
     `setSharedRates(base, variable)` (réglages, les deux personnes ; nouveaux
@@ -241,7 +366,10 @@ pnpm preview                     # serveur de preview du build (port 4173)
 
 ## 8. Résultats de référence (réserve nulle, dépenses 1845 €, taux 40 % / 20 %)
 
-| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total | Reste |
+« Net » = versements − dépenses (`remainingCents`), ajouté au solde du compte
+commun à la fin du mois (V4, §2ter).
+
+| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total | Net |
 |---|---|---|---|---|---|---|
 | 2200 € | 3000 € | 0 € | 880 € | 1200 € | 2080 € | 235 € |
 | 2200 € | 3000 € | 500 € | 880 € | 1300 € | 2180 € | 335 € |

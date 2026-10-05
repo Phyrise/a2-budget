@@ -1,8 +1,9 @@
-# A² Budget — Spécification produit (V1)
+# A² Budget — Spécification produit (V1, révisée V4)
 
 Application de budget commun pour un couple. Objectif : comprendre en quelques
-secondes combien chacun doit verser sur le compte commun et combien il reste
-après les dépenses prévues.
+secondes combien chacun doit verser sur le compte commun et **où en est le
+solde du compte commun** (V4 : le « reste » disparaît au profit du solde
+estimé, voir « Solde du compte commun »).
 
 - Interface en **français** ; code et identifiants en **anglais**.
 - V1 100 % locale : PWA React/TypeScript/Vite servie sur GitHub Pages
@@ -24,16 +25,24 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 ### 1. Ce mois
 
 - Mois affiché + sélection d'un autre mois + retour simple au mois courant.
-- Par personne : un champ **salaire** facile à ajuster et un champ
-  facultatif de **compléments** (heures sup, astreintes, gardes — souvent
-  payés le mois suivant).
+- Par personne : un **salaire** facile à ajuster et des **compléments**
+  facultatifs (heures sup, astreintes, gardes — souvent payés le mois
+  suivant). V4 : **euros entiers** uniquement ; salaire par curseur 0–5 000 €
+  (pas de 10 €) avec −/+ de 1 € (appui long qui accélère) et toucher sur le
+  montant pour saisir ; compléments par curseur 0–3 000 € de la même façon ;
+  dépenses avec −/+ (et saisie au toucher), sans curseur.
 - Carte principale « À verser sur le compte commun » : contribution A,
   contribution B, total. Ces informations essentielles doivent apparaître dans
   le premier écran à 390 × 844 px.
 - Sous la carte : détail du calcul repliable (ex. « B : 40 % × 3 000 € de
   salaire + 20 % × 675 € de compléments »), liste compacte des dépenses modifiables (ajouter, renommer,
-  retirer), total des dépenses, « Reste après dépenses », puis « Disponible
-  pour les loisirs » si une réserve est configurée.
+  retirer), total des dépenses, puis le **solde du compte commun** (en ce
+  moment, fin de mois prévue) à la place de « Reste après dépenses ».
+- V4 — **Cases à cocher des paiements du mois** : virement d'AL fait,
+  virement d'AC fait, chaque dépense payée (loyer, électricité…). Remises à
+  zéro chaque mois. Cocher fait réagir le Sans-Visage, qui « mange »
+  l'argent (il mâche les pépites, s'arrondit un peu) — toujours doux, jamais
+  effrayant.
 - Le salaire d'un nouveau mois est prérempli avec le salaire habituel de
   chacun, les compléments à 0. Ce sont des prévisions, jamais présentées
   comme des transactions bancaires constatées.
@@ -41,7 +50,7 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 ### 2. Historique
 
 - Liste chronologique inverse des **seuls mois existants** : revenus,
-  contributions, dépenses, reste.
+  contributions, dépenses, report du mois (versements − dépenses).
 - Appuyer sur un mois ouvre ce mois dans la vue « Ce mois », avec sa date
   clairement visible.
 - Aucun historique fictif, aucun graphique en V1. Un état vide propre suffit.
@@ -98,11 +107,31 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
   leisureCents               = max(0, remainingCents − reserveTargetCents)
   ```
 
-- Ne **jamais** masquer un reste négatif : afficher le déficit.
-- La réserve est une somme que l'on souhaite mettre de côté **ce mois**, pas un
-  solde bancaire existant. Aucun report automatique entre mois. Si le reste ne
-  couvre pas la réserve, l'indiquer clairement (part non couverte) sans laisser
-  croire qu'elle est constituée.
+- Ne **jamais** masquer un net négatif : un mois déficitaire fait baisser le
+  solde, affiché tel quel.
+- La réserve (V1) est une somme que l'on souhaite mettre de côté **ce mois**,
+  pas un solde bancaire existant. Elle reste dans les données mais n'est plus
+  affichée.
+
+## Solde du compte commun (V4, remplace le « reste »)
+
+- **Report automatique** : chaque mois, le net (versements − dépenses,
+  `remainingCents`) s'ajoute au solde estimé du compte commun.
+- **« Recaler sur le compte »** : quand on regarde le vrai solde, on le
+  saisit ; c'est une correction (solde au début du mois) qui **remplace le
+  report à partir de ce mois**, sans réécrire les mois passés. Une correction
+  par mois (la dernière remplace). Le montant peut être négatif.
+
+  ```
+  ouverture(K)   = dernière correction ≤ K, puis + net des mois connus jusqu'à K exclu
+                   (sans correction : 0 au premier mois connu)
+  en ce moment   = ouverture(K) + virements cochés − dépenses cochées
+  fin de mois    = ouverture(K) + tous les versements − toutes les dépenses
+  ```
+
+- Un mois jamais ouvert compte pour 0. « Effacer l'historique » pose une
+  correction sur le mois conservé pour garder le solde reporté.
+- Détail : `docs/CONTRACTS.md` §2ter.
 
 ## Valeurs initiales
 
@@ -114,7 +143,7 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 ## Résultats attendus (réserve nulle, dépenses 1845 €)
 
-| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total commun | Reste |
+| Salaire A | Salaire B | Compl. B | Contrib. A | Contrib. B | Total commun | Net du mois |
 |---|---|---|---|---|---|---|
 | 2200 € | 3000 € | 0 € | 880 € | 1200 € | 2080 € | 235 € |
 | 2200 € | 3000 € | 500 € | 880 € | 1300 € | 2180 € | 335 € |
@@ -126,6 +155,12 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 ## Saisie des montants
 
+- **V4 : euros entiers.** Plus aucun centime ni en saisie ni à l'affichage
+  (`formatEuros`, `parseEurosInput`). Les calculs internes restent exacts au
+  centime ; l'affichage arrondit à l'euro (demi-euro vers le haut) avec des
+  totaux cohérents (`roundEurosConsistent` : A + B affichés = total affiché).
+  Les règles ci-dessous (V1, décimales) ne s'appliquent plus qu'à
+  `parseAmountInput`, conservée pour compatibilité.
 - Clavier décimal mobile ; formatage fr-FR/EUR hors édition.
 - Accepter virgule ou point décimal, espaces français usuels lors d'un collage.
 - Conversion déterministe en centimes ; **rejeter** une entrée ambiguë ou plus
@@ -204,7 +239,9 @@ Navigation par état React, sans routeur. Navigation inférieure fixe :
 
 Ouvrir l'app sur mobile, saisir A = 2200 € de salaire, B = 3000 € de
 salaire + 675 € de compléments, lire
-A = 880 €, B = 1335 €, total = 2215 €, dépenses = 1845 €, reste = 370 €,
+A = 880 €, B = 1335 €, total = 2215 €, dépenses = 1845 €, fin de mois prévue
+= solde d'ouverture + 370 €, cocher un virement et voir le solde « en ce
+moment » bouger,
 modifier une dépense, fermer/rouvrir sans perte, puis utiliser l'application
 hors ligne une fois son cache prêt. Les sauvegardes JSON et l'historique
 fonctionnent aussi.

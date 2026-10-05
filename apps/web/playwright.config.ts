@@ -14,6 +14,11 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
+  // Un seul worker : toutes les suites partagent un même `vite preview`, la
+  // forêt WebGL et l'installation du service worker (précache ~7 Mo). À 4
+  // workers, des attentes temporelles (contrôleur du worker, coup de balai)
+  // échouent au hasard sous la charge ; en série la suite est déterministe.
+  workers: 1,
   retries: 0,
   reporter: [['list']],
   use: {

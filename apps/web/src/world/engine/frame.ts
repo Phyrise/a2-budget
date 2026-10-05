@@ -6,7 +6,8 @@ import { drawFrame } from './draw';
 import type { WorldEngine } from './Engine';
 import { approachParams, cloneParams, kodamaCount } from './moods';
 import { BURST, MOTES, RAIN } from './pipeline';
-import { avoidList } from './seasons';
+import { approachLook, nightLutUrl, seasonLook } from './paint';
+import { avoidList, particleSeason } from './seasons';
 
 const TIER_PARTICLES = [1, 0.7, 0.4];
 const TIER_FOG_LAYERS = [3, 2, 1];
@@ -44,6 +45,10 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   }
   const mood = e.mood;
   const night = e.night;
+  // Regard de la saison peinte : suit le fondu de peinture (≈ 2,6 s), immédiat en image fixe.
+  const painted = e.paintedSeason;
+  approachLook(e.look, seasonLook(painted), dt, animate ? 0.9 : 0.2, !animate && !stillLive);
+  const look = e.look;
 
   // --- Croissance.
   let grow = 1;
@@ -100,7 +105,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   fr.uPar.value = [px * f.vw, py * f.vw * aspect];
 
   // --- Passe peinture.
-  const fogDay = mix3([0.5, 0.58, 0.57], [0.7, 0.73, 0.68], mood.fogLift);
+  const fogBase = mix3([0.5, 0.58, 0.57], [0.7, 0.73, 0.68], mood.fogLift);
+  const fogDay: [number, number, number] = [fogBase[0] * look.fogTint[0], fogBase[1] * look.fogTint[1], fogBase[2] * look.fogTint[2]];
   const fogColor = mix3(fogDay, [0.13, 0.19, 0.27], night);
   const mirror = m.lightSource.x > 0.5 ? 1 : -1;
   const baseAng = [-0.36, -0.16, 0.03, -0.56];
@@ -112,9 +118,10 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   sc.uDepth!.value = e.stage.depth;
   sc.uPrev!.value = e.prev?.color ?? e.stage.color;
   sc.uGrow!.value = e.prev ? grow : 1;
+  sc.uFadeMode!.value = e.fadeMode;
   if (e.res.masks) sc.uMasks!.value = e.res.masks;
   sc.uTime!.value = t;
-  sc.uWind!.value = (0.9 * mood.wind + e.gust * 1.4) * Math.max(motionK, animate ? 0 : 0.5) * g.windScale;
+  sc.uWind!.value = (0.9 * mood.wind + e.gust * 1.4) * Math.max(motionK, animate ? 0 : 0.5) * g.windScale * look.wind;
   sc.uWater!.value = 1;
   sc.uFog!.value = mood.fog * (e.fx.hasFog ? 0.7 : 1) * (1 - night * 0.25);
   sc.uFogLift!.value = mood.fogLift;
@@ -127,8 +134,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   sc.uRayWidth!.value = [0.075, 0.05, 0.06, 0.045];
   sc.uLight!.value = [m.lightSource.x, m.lightSource.y];
   sc.uRayColor!.value = mix3([1, 0.94, 0.8], [1, 0.84, 0.58], mood.gold * 0.6);
-  sc.uSparkle!.value = mood.sparkle * (1 - night * 0.7);
-  sc.uMoss!.value = mood.moss * day + s.growthProgress * 0.12 * day;
+  sc.uSparkle!.value = mood.sparkle * (1 - night * 0.7) * look.sparkle;
+  sc.uMoss!.value = (mood.moss * day + s.growthProgress * 0.12 * day) * look.moss;
   sc.uMoon!.value = night * 0.9;
   sc.uDetail!.value = tier < 2 ? 1 : 0;
   const lamp = e.lantern.sceneLight(n, t, animate);
@@ -137,14 +144,16 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
 
   // --- Étalonnage.
   const pu = e.pipe.post.program.uniforms;
-  const lutA = e.res.lut(e.lutA);
-  const lutB = e.res.lut(e.lutB);
+  const lutA = e.res.lut(e.lutA.url);
+  const lutB = e.res.lut(e.lutB.url);
+  pu.uAmtA!.value = e.lutA.amount;
+  pu.uAmtB!.value = e.lutB.amount;
   pu.uHasA!.value = lutA ? 1 : 0;
   pu.uHasB!.value = lutB ? 1 : 0;
   if (lutA) pu.uLutA!.value = lutA;
   if (lutB) pu.uLutB!.value = lutB;
   pu.uLutMix!.value = e.lutMix(n);
-  pu.uNightProc!.value = e.res.lut('night') ? 0 : night;
+  pu.uNightProc!.value = e.res.lut(nightLutUrl(m, painted)) || e.res.lut(m.luts.night) ? 0 : night;
   const proc = e.res.hasAnyLut ? 0 : 1;
   pu.uExposure!.value = mood.exposure * proc + g.fogGlow * 0.06;
   pu.uSaturation!.value = 1 + (mood.saturation - 1) * proc;
@@ -153,14 +162,17 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   pu.uGrain!.value = tier < 2 ? 0.022 : 0;
   pu.uSeed!.value = animate ? (t * 7.31) % 1 : 0;
   pu.uRes!.value = [e.pipe.target.width, e.pipe.target.height];
-  const sf = e.seasons.frame(s.season, n, animate, night);
+  // Particules de la saison peinte (pas de feuilles d'automne sur la peinture d'été en cours de chargement).
+  const ps = particleSeason(m, s.season, painted);
+  const sf = e.seasons.frame(ps, n, animate, night, painted !== 'summer', mood.rain);
   pu.uTint!.value = sf.tint;
 
   // --- Fougères du premier plan.
   const fg = e.pipe.fg.program.uniforms;
   if (e.res.foreground) fg.uFg!.value = e.res.foreground;
   fg.uTime!.value = t;
-  fg.uSway!.value = motionK * (0.75 + e.gust * 1.6) * g.windScale;
+  fg.uSway!.value = motionK * (0.75 + e.gust * 1.6) * g.windScale * look.fgSway;
+  fg.uFgSeason!.value = look.fg;
   fg.uFogColor!.value = fogColor;
   fg.uFogMix!.value = mood.fog * 0.07 + night * 0.05;
 
@@ -190,7 +202,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   mu.uGold!.value = mood.gold;
   mu.uSizeK!.value = sizeK;
   mu.uIntensity!.value = 1 + 0.6 * sf.fireflies;
-  const rainCount = mood.rain * day * RAIN * tierK;
+  const rainCount = mood.rain * look.rain * day * RAIN * tierK;
   const ru = e.pipe.rain.program.uniforms;
   ru.uTime!.value = t;
   ru.uCount!.value = rainCount;

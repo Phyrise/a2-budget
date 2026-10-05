@@ -29,6 +29,7 @@ uniform vec3 uRestPts[8];   // feuilles posées : x, y, profondeur
 uniform float uRestCount;
 uniform vec3 uFogColor;
 uniform float uFog;
+uniform float uVivid;       // 1 = peinture de saison : teintes vives de la peinture
 varying vec4 vCol;
 varying float vAngle;
 varying float vFlip;
@@ -36,10 +37,15 @@ varying float vShape;
 varying float vSoft;
 
 vec3 leafColor(float k) {
-  // Rouille, ambre, mousse, brun-rouge : teintes sourdes, fondues dans la peinture.
+  // Rouille, ambre, mousse, brun-rouge : teintes sourdes, fondues dans la forêt verte.
   vec3 c = mix(vec3(0.44, 0.21, 0.1), vec3(0.6, 0.4, 0.16), smoothstep(0.0, 0.4, k));
   c = mix(c, vec3(0.36, 0.39, 0.17), smoothstep(0.55, 0.75, k));
-  return mix(c, vec3(0.38, 0.15, 0.09), smoothstep(0.85, 1.0, k));
+  c = mix(c, vec3(0.38, 0.15, 0.09), smoothstep(0.85, 1.0, k));
+  // Peinture d'automne : vermillon, orangé, or, rouge profond (érables de la peinture), sans vert.
+  vec3 v = mix(vec3(0.74, 0.2, 0.07), vec3(0.93, 0.44, 0.11), smoothstep(0.0, 0.45, k));
+  v = mix(v, vec3(0.96, 0.66, 0.2), smoothstep(0.55, 0.78, k));
+  v = mix(v, vec3(0.56, 0.1, 0.05), smoothstep(0.86, 1.0, k));
+  return mix(c, v, uVivid);
 }
 
 void main() {
@@ -88,7 +94,7 @@ void main() {
     speed = mix(0.045, 0.075, aSeed.w) * mix(0.7, 1.25, depth);
     sway = 0.035 + 0.03 * aSeed.y;
     size = mix(18.0, 26.0, aSeed.w) * mix(0.55, 1.5, depth);
-    col = leafColor(aSeed.x) * 0.85;
+    col = leafColor(aSeed.x) * mix(0.85, 0.95, uVivid);
     alpha = 0.95;
   } else {
     depth = mix(0.2, 1.1, aSeed.z);
@@ -96,6 +102,8 @@ void main() {
     sway = 0.03 + 0.025 * aSeed.y;
     size = mix(14.0, 20.0, aSeed.w) * mix(0.55, 1.5, depth);
     col = mix(vec3(0.97, 0.7, 0.78), vec3(1.0, 0.86, 0.88), aSeed.x);
+    // Peinture de printemps : rose des rhododendrons, quelques pétales presque blancs.
+    col = mix(col, mix(vec3(0.95, 0.6, 0.74), vec3(1.0, 0.9, 0.93), aSeed.x * aSeed.x), uVivid);
     alpha = 0.95;
   }
 

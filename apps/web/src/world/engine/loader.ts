@@ -43,6 +43,15 @@ export function imageSize(img: Decoded): { w: number; h: number } {
 }
 
 export async function decodeImage(url: string, opts: DecodeOptions): Promise<Decoded> {
+  try {
+    return await decodeUncached(url, opts);
+  } finally {
+    // Peintures (≈ 0,3 Mo chacune, une par saison et par stade) : pas gardées en mémoire après décodage.
+    if (opts.kind === 'color') cache.delete(url);
+  }
+}
+
+async function decodeUncached(url: string, opts: DecodeOptions): Promise<Decoded> {
   if (typeof createImageBitmap === 'function') {
     try {
       const blob = await fetchBlob(url);
@@ -65,6 +74,29 @@ export async function decodeImage(url: string, opts: DecodeOptions): Promise<Dec
     }
   }
   return loadImgElement(url);
+}
+
+const prefetched = new Set<string>();
+
+/**
+ * Préchargement discret d'une image (peinture du stade suivant) : au repos
+ * (requestIdleCallback), basse priorité, jamais en Save-Data. Le corps est lu
+ * puis jeté : seul le cache HTTP / le cache d'exécution du service worker le
+ * garde, rien en mémoire ici.
+ */
+export function prefetchIdle(url: string) {
+  if (!url || prefetched.has(url) || typeof fetch !== 'function') return;
+  const nav = typeof navigator !== 'undefined' ? (navigator as Navigator & { connection?: { saveData?: boolean } }) : null;
+  if (nav?.connection?.saveData) return;
+  prefetched.add(url);
+  const run = () => {
+    fetch(url, { priority: 'low' } as RequestInit)
+      .then((r) => (r.ok ? r.blob() : null))
+      .catch(() => prefetched.delete(url));
+  };
+  const w = globalThis as typeof globalThis & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+  if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(run, { timeout: 8000 });
+  else setTimeout(run, 2500);
 }
 
 /** Libère une image décodée (ImageBitmap) une fois envoyée au GPU. */

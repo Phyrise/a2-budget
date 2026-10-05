@@ -15,6 +15,10 @@ export interface EngineStats {
   dpr: number;
   /** Images rendues depuis la création (mesure du débit réel). */
   frames: number;
+  /** Peinture affichée (« saison:stade »), vide avant la première. */
+  paint: string;
+  /** Fondu ou chargement de peinture en cours. */
+  fading: boolean;
 }
 
 export const DPR_CAPS = [1.5, 1.25, 1] as const;

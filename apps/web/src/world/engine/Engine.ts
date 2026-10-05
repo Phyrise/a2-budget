@@ -7,14 +7,16 @@
  * Lanterne allumée : jamais de gel (≥ 30 fps, 20 sur appareil lent).
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
-import type { GrowthStage, LutName, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
+import type { GrowthStage, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
-import { changeStage, GROW_SECONDS } from './growth';
+import { retargetGrade, type LutSlot } from './grade';
+import { changePainting, GROW_SECONDS, type FadeMode } from './growth';
 import { bindEngineEvents } from './input';
 import { Lantern } from './lantern';
 import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
+import { cloneLook, paintSeason, seasonLook, type SeasonLook } from './paint';
 import { Pipeline } from './pipeline';
 import { DPR_CAPS, QualityMeter, type EngineStats, type QualitySetting } from './quality';
 import { Resources, type StageTextures } from './resources';
@@ -60,11 +62,15 @@ export class WorldEngine {
   growStart = -1;
   /** Durée de la dissolution en cours (courte en mode immobile). */
   growDur = GROW_SECONDS;
+  /** Forme de la dissolution en cours (croissance ou saison). */
+  fadeMode: FadeMode = 0;
+  /** Regard de saison (brume, vent, mousse, fougères), interpolé pendant le fondu. */
+  look: SeasonLook = cloneLook(seasonLook('summer'));
   mood: MoodParams = cloneParams(MOODS.peaceful);
   target: MoodParams = cloneParams(MOODS.peaceful);
   night = 0;
-  lutA: LutName = 'peaceful';
-  lutB: LutName = 'peaceful';
+  lutA: LutSlot = { url: null, amount: 1 };
+  lutB: LutSlot = { url: null, amount: 1 };
   lutStart = -10;
   /** Parallaxe (fraction de largeur de vue). */
   pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -82,8 +88,8 @@ export class WorldEngine {
   private lost = false;
   private firstFrame = false;
   private ready = false;
-  /** Stade en cours de chargement (growth.ts). */
-  loadingStage: GrowthStage | null = null;
+  /** Peinture en cours de chargement (« saison:stade », growth.ts). */
+  loadingKey: string | null = null;
   readonly cleanups: (() => void)[] = [];
 
   constructor(
@@ -115,14 +121,15 @@ export class WorldEngine {
   async init(state: WorldState): Promise<void> {
     this.state = state;
     const stage = clampStage(state.stage);
-    this.applyMoodTarget(true);
+    const season = this.wantedSeason;
+    retargetGrade(this, true);
+    this.look = cloneLook(seasonLook(season));
     await this.res.loadMasks();
     if (this.destroyed) throw new Error('destroyed');
     const [st] = await Promise.all([
-      this.res.loadStage(stage),
+      this.res.loadStage(stage, season),
       this.res.loadForeground(),
-      this.res.loadLut(this.lutB),
-      state.paused ? this.res.loadLut('night') : Promise.resolve(null),
+      this.res.loadLut(this.lutB.url),
     ]);
     if (this.destroyed) throw new Error('destroyed');
     this.stage = st;
@@ -178,33 +185,24 @@ export class WorldEngine {
     this.state = s;
     if (!this.ready) return;
     const animate = this.animated;
-    if (!old || old.mood !== s.mood || old.paused !== s.paused) this.applyMoodTarget(false);
+    if (!old || old.mood !== s.mood || old.paused !== s.paused) retargetGrade(this, false);
     this.lights.sync(s.lights, now(), animate || this.cfg.motion === 'still');
-    if (clampStage(s.stage) !== this.stage?.stage) void changeStage(this, clampStage(s.stage));
+    const stage = clampStage(s.stage);
+    const season = this.wantedSeason;
+    if (stage !== this.stage?.stage || season !== this.stage.season) void changePainting(this, stage, season);
+    else this.loadingKey = null; // retour à la peinture affichée : chargement en cours abandonné
     if (old?.creatures.join() !== s.creatures.join()) void this.syncCreatures().then(() => this.requestFrame(true));
-    if (old && old.season !== s.season) this.requestFrame(true);
     this.requestFrame(true);
   }
 
-  private applyMoodTarget(initial: boolean) {
-    const s = this.state;
-    if (!s) return;
-    this.target = cloneParams(MOODS[s.mood]);
-    const name: LutName = s.paused ? 'night' : s.mood;
-    if (initial) {
-      this.mood = cloneParams(this.target);
-      this.night = s.paused ? 1 : 0;
-      this.lutA = this.lutB = name;
-      this.lutStart = -10;
-      return;
-    }
-    if (name !== this.lutB) {
-      const k = this.lutMix(now());
-      if (k > 0.5) this.lutA = this.lutB;
-      this.lutB = name;
-      this.lutStart = now();
-      void this.res.loadLut(name).then(() => this.requestFrame(true));
-    }
+  /** Saison à peindre pour l'état courant (été = base). */
+  get wantedSeason(): Season {
+    return paintSeason(this.cfg.manifest, this.state?.season ?? 'summer');
+  }
+
+  /** Saison de la peinture affichée (celle qui règle étalonnage et regard). */
+  get paintedSeason(): Season {
+    return this.stage?.season ?? this.wantedSeason;
   }
 
   lutMix(n: number): number {
@@ -385,6 +383,7 @@ export class WorldEngine {
     return {
       fps: m.fps, frameMs: m.frameMs, tier: this.tier, targetFps: this.targetFps(n, this.isBusy(n)),
       memoryMB: this.res.memoryMB, dpr: this.dpr, frames: m.frames,
+      paint: this.stage ? `${this.stage.season}:${this.stage.stage}` : '', fading: this.growStart >= 0 || this.loadingKey !== null,
     };
   }
 }

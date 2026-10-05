@@ -1,7 +1,7 @@
 /**
  * Étalonnage final : étalonnage procédural léger (humeur), LUT 3D 33³ en bande
  * 1089×33 (pixel x = r + 33·b, y = g) avec interpolation trilinéaire manuelle
- * entre tranches b, fondu entre LUT courante et cible, nuit de repli
+ * entre tranches b, intensité par LUT, fondu entre LUT courante et cible, nuit de repli
  * (assombrissement bleu) si la LUT nuit est absente, vignette et grain fin.
  */
 import { HASH, LUMA, PRECISION } from './common';
@@ -16,6 +16,8 @@ uniform sampler2D uLutA;
 uniform sampler2D uLutB;
 uniform float uHasA;
 uniform float uHasB;
+uniform float uAmtA;        // intensité de la LUT A (atténuée hors été pour les humeurs)
+uniform float uAmtB;
 uniform float uLutMix;
 uniform float uNightProc;
 uniform float uExposure;
@@ -47,8 +49,8 @@ void main() {
   c = mix(vec3(l), c, uSaturation);
   c += vec3(0.6, 0.15, -0.55) * uWarmth * (0.35 + 0.65 * l);
 
-  vec3 a = uHasA > 0.5 ? lut(uLutA, c) : c;
-  vec3 b = uHasB > 0.5 ? lut(uLutB, c) : c;
+  vec3 a = uHasA > 0.5 ? mix(c, lut(uLutA, c), uAmtA) : c;
+  vec3 b = uHasB > 0.5 ? mix(c, lut(uLutB, c), uAmtB) : c;
   c = mix(a, b, uLutMix);
 
   c *= uTint;

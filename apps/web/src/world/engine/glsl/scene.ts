@@ -24,6 +24,7 @@ uniform float uTime;
 uniform float uAspect;      // largeur / hauteur de l'image
 uniform float uTexel;       // 1 / largeur image (px)
 uniform float uGrow;        // 0..1 dissolution vers le nouveau stade (1 = terminé)
+uniform float uFadeMode;    // 0 = croissance (depuis les racines), 1 = saison (voile bruité, du haut vers le sol)
 uniform float uWind;        // amplitude du vent en px image
 uniform float uWater;       // 0..1 intensité de l'eau
 uniform float uFog;
@@ -95,15 +96,16 @@ void main() {
   }
 
   // --- Croissance : dissolution organique depuis les racines / le cèdre.
+  // Saison : voile bruité plus doux, de la canopée vers le sol, sans liseré.
   if (uGrow < 0.999) {
     vec3 prev = sampleColor(uPrev, cuv);
     float n = texture2D(uNoise, suv * iso * 1.7).a * 0.62 + texture2D(uNoise, suv * iso * 6.0).b * 0.38;
     float dist = length((suv - vec2(0.5, 0.86)) * iso);
-    float field = dist * 0.85 - m.b * 0.22 + n * 0.42;
-    float soft = 0.07;
+    float field = mix(dist * 0.85 - m.b * 0.22 + n * 0.42, n * 0.72 + suv.y * 0.42 + 0.02, uFadeMode);
+    float soft = mix(0.07, 0.16, uFadeMode);
     float front = uGrow * (1.2 + soft) - soft;
     float reveal = 1.0 - smoothstep(front, front + soft, field);
-    float edge = smoothstep(soft, 0.0, abs(field - front - soft * 0.5)) * (1.0 - uGrow);
+    float edge = smoothstep(soft, 0.0, abs(field - front - soft * 0.5)) * (1.0 - uGrow) * (1.0 - uFadeMode);
     col = mix(prev, col, reveal);
     col += vec3(0.55, 0.62, 0.34) * edge * 0.35;
   }

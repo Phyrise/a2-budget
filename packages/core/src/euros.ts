@@ -26,7 +26,7 @@ const euroFormatter = new Intl.NumberFormat('fr-FR', {
 export function roundToEuroCents(cents: number): number {
   if (!Number.isFinite(cents)) throw new RangeError('cents must be finite');
   const magnitude = Math.floor((Math.abs(Math.round(cents)) + 50) / 100) * 100;
-  return cents < 0 ? -magnitude : magnitude;
+  return cents < 0 && magnitude > 0 ? -magnitude : magnitude;
 }
 
 /**

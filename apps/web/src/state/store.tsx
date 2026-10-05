@@ -32,6 +32,12 @@ import {
   restoreGroceryItem,
   updateGroceryItem,
   clearDoneGroceries as coreClearDoneGroceries,
+  rememberGroceryCategory,
+  forgetGroceryCategory,
+  prunePaidExpenses,
+  openingBalance,
+  recordBalanceCorrection as coreRecordBalanceCorrection,
+  balanceCorrectionFor,
   type AppState,
   type GroceryAuthor,
   type GroceryItem,
@@ -51,10 +57,12 @@ import { LocalStorageAdapter, type StorageAdapter } from './storage';
 import { buildExportJson, parseImportJson, type ImportSummary } from './exportImport';
 import { useCareActions, type CareActions } from './careActions';
 import { useCalendarActions, type CalendarActions } from './calendarActions';
+import { useBudgetActions, type BudgetActions } from './budgetActions';
 import { newId } from './ids';
 
 export type { CareActions, CircleInput, FocusInput } from './careActions';
 export type { CalendarActions, CalendarActionResult, RemovedCalendarEvent } from './calendarActions';
+export type { BudgetActions } from './budgetActions';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -125,7 +133,7 @@ export interface RemovedGrocery {
   index: number;
 }
 
-export interface AppContextValue extends CareActions, CalendarActions {
+export interface AppContextValue extends CareActions, CalendarActions, BudgetActions {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
@@ -177,7 +185,11 @@ export interface AppContextValue extends CareActions, CalendarActions {
   removeGrocery: (id: string) => RemovedGrocery | null;
   /** Annule un retrait (remet l'article à sa place). */
   restoreGrocery: (removed: RemovedGrocery) => void;
-  /** Renomme / change la quantité / change le rayon (null = rayon automatique). */
+  /**
+   * Renomme / change la quantité / change le rayon (null = rayon automatique).
+   * V4 : un rayon choisi est mémorisé pour ce libellé (prochains ajouts du
+   * même article) ; null l'oublie.
+   */
   updateGrocery: (id: string, patch: GroceryItemPatch) => void;
   /** « Vider le panier » : archive les articles cochés dans l'historique. Retourne leur nombre. */
   clearDoneGroceries: () => number;
@@ -198,7 +210,10 @@ export interface AppContextValue extends CareActions, CalendarActions {
   // Sélection de mois
   selectMonth: (monthKey: string) => void;
   selectCurrentMonth: () => void;
-  /** Efface l'historique : supprime tous les mois sauf le mois sélectionné. */
+  /**
+   * Efface l'historique : supprime tous les mois sauf le mois sélectionné.
+   * V4 : le solde reporté est gardé (correction posée sur le mois conservé).
+   */
   clearHistory: () => void;
 
   // Édition du mois
@@ -274,7 +289,8 @@ function mapMonth(
 
 function prepareApp(app: AppState): AppState {
   const budget = coreEnsureMonth({ schemaVersion: 1, ...app.budget }, app.budget.selectedMonth);
-  return { ...app, budget: { settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth }, forest: advanceDay(app.forest, localDateKey(new Date())) };
+  // `...app.budget` garde le solde du compte commun (V4, budget.balance).
+  return { ...app, budget: { ...app.budget, settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth }, forest: advanceDay(app.forest, localDateKey(new Date())) };
 }
 
 export function AppProvider({
@@ -404,7 +420,8 @@ export function AppProvider({
       const budget = fn({ schemaVersion: 1, ...prev.budget });
       return {
         ...prev,
-        budget: { settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth },
+        // `...prev.budget` garde le solde du compte commun (V4, budget.balance).
+        budget: { ...prev.budget, settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth },
         household: { people: [budget.settings.personA, budget.settings.personB].map(person => ({ id: person.id, name: person.name })) },
       };
     });
@@ -441,13 +458,22 @@ export function AppProvider({
 
   const clearHistory = useCallback(() => {
     // Supprime tous les mois sauf le mois sélectionné (conservé pour ne pas
-    // perdre le mois en cours d'édition).
-    mutate((s) => {
-      const keep = s.selectedMonth;
-      const months = s.months.filter((m) => m.monthKey === keep);
-      return { ...s, months };
-    });
-  }, [mutate]);
+    // perdre le mois en cours d'édition). V4 : le report des mois effacés est
+    // gardé en posant une correction (solde d'ouverture) sur le mois conservé.
+    const id = newId();
+    const recordedAt = new Date().toISOString();
+    transact((s) => {
+      const keep = s.budget.selectedMonth;
+      const months = s.budget.months.filter((m) => m.monthKey === keep);
+      if (months.length === s.budget.months.length) return { state: s, result: undefined };
+      let budget: AppState['budget'] = { ...s.budget, months };
+      const hadEarlier = s.budget.months.some((m) => m.monthKey < keep);
+      if (hadEarlier && balanceCorrectionFor(s.budget, keep) === undefined) {
+        budget = coreRecordBalanceCorrection(budget, keep, openingBalance(s.budget, keep), { id, recordedAt });
+      }
+      return { state: { ...s, budget }, result: undefined };
+    }, undefined);
+  }, [transact]);
 
   // --- Édition du mois ----------------------------------------------------
 
@@ -543,10 +569,10 @@ export function AppProvider({
   const removeExpense = useCallback(
     (monthKey: string, expenseId: string) => {
       mutate((s) =>
-        mapMonth(s, monthKey, (m) => ({
-          ...m,
-          expenses: m.expenses.filter((e) => e.id !== expenseId),
-        })),
+        mapMonth(s, monthKey, (m) =>
+          // V4 : la case « payée » de la dépense retirée disparaît aussi.
+          prunePaidExpenses({ ...m, expenses: m.expenses.filter((e) => e.id !== expenseId) }),
+        ),
       );
     },
     [mutate],
@@ -769,6 +795,7 @@ export function AppProvider({
   // --- V3 « Prendre soin ensemble » (passages, suggestions, cercle, lanternes)
   const care = useCareActions(transact);
   const calendar = useCalendarActions(transact);
+  const budgetV4 = useBudgetActions(transact);
 
   // --- Courses ------------------------------------------------------------
 
@@ -778,7 +805,8 @@ export function AppProvider({
       const id = newId();
       return transact<AddGroceryResult>(
         (s) => {
-          const r = addGroceryItem(s.groceries.items, label, { id, now, addedBy });
+          const memory = s.groceries.categoryMemory;
+          const r = addGroceryItem(s.groceries.items, label, { id, now, addedBy, ...(memory ? { memory } : {}) });
           return {
             state: r.items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items: r.items } },
             result: { added: r.added, item: r.item },
@@ -834,11 +862,21 @@ export function AppProvider({
   const updateGrocery = useCallback(
     (id: string, patch: GroceryItemPatch) => {
       transact((s) => {
-        const items = updateGroceryItem(s.groceries.items, id, patch);
-        return {
-          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
-          result: undefined,
-        };
+        const before = s.groceries.categoryMemory;
+        const items = updateGroceryItem(s.groceries.items, id, patch, before);
+        // V4 — mémoire des rayons : un rayon choisi est retenu pour ce
+        // libellé ; « rayon automatique » (null) l'oublie.
+        const item = items.find((x) => x.id === id);
+        let memory = before;
+        if (item !== undefined && patch.category === null) {
+          memory = forgetGroceryCategory(before, item.label);
+        } else if (item !== undefined && patch.category !== undefined && item.category === patch.category) {
+          memory = rememberGroceryCategory(before, item.label, patch.category);
+        }
+        if (items === s.groceries.items && memory === before) return { state: s, result: undefined };
+        const groceries = { ...s.groceries, items };
+        if (memory !== undefined) groceries.categoryMemory = memory;
+        return { state: { ...s, groceries }, result: undefined };
       }, undefined);
     },
     [transact],
@@ -895,6 +933,7 @@ export function AppProvider({
       toggleHomePause,
       ...care,
       ...calendar,
+      ...budgetV4,
       addGrocery,
       toggleGrocery,
       removeGrocery,
@@ -941,6 +980,7 @@ export function AppProvider({
       toggleHomePause,
       care,
       calendar,
+      budgetV4,
       addGrocery,
       toggleGrocery,
       removeGrocery,

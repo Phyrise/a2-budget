@@ -176,3 +176,17 @@
     top: calc(var(--safe-top) + 74px);
   }
 }
+
+/*
+ * Variante de saison d'une peinture d'univers (WorldBackdrop) : posée sur la
+ * base (image d'attente), invisible tant qu'elle n'est pas chargée, puis en
+ * fondu ; sans fondu si elle était déjà prête au montage.
+ */
+.app-world__banner.app-world__season:not(.is-ready),
+.app-world__backdrop.app-world__season:not(.is-ready) {
+  opacity: 0;
+}
+
+.app-world__season.is-instant {
+  transition: none;
+}

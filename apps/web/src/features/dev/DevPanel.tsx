@@ -6,7 +6,8 @@
  * forêt (stade, avancée, vitalité, crédits, séries, objectif et partage de
  * la semaine), les constantes du domaine et les déblocages, propose des
  * aperçus NON PERSISTANTS de la forêt et l'écoute de chaque son, et copie
- * un instantané JSON pour régler les constantes ensemble. Rien n'est écrit
+ * un instantané JSON pour régler les constantes ensemble, et montre la
+ * saison réelle / affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  */
 import { useMemo } from 'react';
@@ -17,6 +18,7 @@ import { useWorld } from '../../world/WorldContext';
 import { copyText, devData, devSnapshot } from './devData';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
+import { DevSeasons } from './DevSeasons';
 import './dev.css';
 
 /** Le temps que la feuille se ferme avant de montrer la forêt. */
@@ -59,6 +61,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           </div>
           <DevNumbers data={data} />
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
+          <DevSeasons />
         </div>
       )}
     </Sheet>

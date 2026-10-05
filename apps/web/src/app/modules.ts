@@ -8,10 +8,13 @@
  * Cadrages (object-position) : notes d'art/pipeline/universes/banners.py,
  * rendues dans qa/banner-crops.png — bandeau mobile 390×200 et fond
  * « téléphone » (portrait plein cadre), réutilisé pour la colonne du monde
- * sur ordinateur.
+ * sur ordinateur. En automne et en hiver, Budget et Courses prennent leur
+ * variante de saison (themes/manifest.ts `seasons`, même cadrage).
  */
 import type { IconName } from '../ui';
 import { budgetTheme, coursesTheme } from '../themes/manifest';
+import type { ThemeBanners } from '../themes/types';
+import type { Season } from '../world/types';
 import { manifest } from '../world/manifest';
 import type { ModuleId } from './prefs';
 
@@ -33,9 +36,28 @@ export const HISTORY_TITLES: Record<ModuleId, string> = {
 };
 
 export interface UniverseImage {
+  /** Peinture de base (toute l'année, et image d'attente des variantes). */
   src: string;
-  /** object-position CSS. */
+  /** object-position CSS (mêmes cadrages pour les variantes de saison). */
   position: string;
+  /** Variantes de saison (automne, hiver), chargées à la demande. */
+  seasons?: Partial<Record<Season, string>>;
+}
+
+type Frame = keyof ThemeBanners;
+
+function themed(theme: typeof budgetTheme | typeof coursesTheme, frame: Frame, position: string): UniverseImage {
+  const seasons: Partial<Record<Season, string>> = {};
+  for (const s of ['autumn', 'winter'] as const) {
+    const v = theme.seasons?.[s]?.[frame];
+    if (v) seasons[s] = v;
+  }
+  return { src: theme.banners[frame], position, seasons };
+}
+
+/** Peinture à afficher pour une saison : la variante si elle existe, sinon la base. */
+export function imageForSeason(image: UniverseImage, season: Season): string {
+  return image.seasons?.[season] ?? image.src;
 }
 
 export interface Universe {
@@ -51,12 +73,12 @@ export interface Universe {
 export const UNIVERSES: Record<ModuleId, Universe> = {
   maison: { banner: null, backdrop: null },
   budget: {
-    banner: { src: budgetTheme.banners.landscape, position: '50% 10%' },
-    backdrop: { src: budgetTheme.banners.portrait, position: '60% 50%' },
+    banner: themed(budgetTheme, 'landscape', '50% 10%'),
+    backdrop: themed(budgetTheme, 'portrait', '60% 50%'),
   },
   courses: {
-    banner: { src: coursesTheme.banners.landscape, position: '50% 8%' },
-    backdrop: { src: coursesTheme.banners.portrait, position: '62% 50%' },
+    banner: themed(coursesTheme, 'landscape', '50% 8%'),
+    backdrop: themed(coursesTheme, 'portrait', '62% 50%'),
   },
   // Le vieux cèdre à la corde sacrée : un air de fête, pour les événements.
   calendar: {

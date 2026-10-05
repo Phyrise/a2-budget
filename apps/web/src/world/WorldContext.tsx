@@ -7,7 +7,9 @@
  * - Les écrans déclenchent les retours visuels via `pulse` / `playGuardian`.
  * - Mode développeur : `setPreview` surcharge ce que montre la forêt (stade,
  *   humeur, saison, pause, lanterne) sans jamais toucher aux données ; la
- *   coquille l'efface en quittant le mode.
+ *   coquille l'efface en quittant le mode. La saison de l'aperçu change aussi
+ *   les peintures (forêt de saison, bandeaux des univers) ; `realState` garde
+ *   la vraie saison (préchargement des saisons, panneau DEV).
  */
 import {
   createContext,
@@ -34,7 +36,10 @@ export interface WorldPresentation {
 }
 
 interface WorldContextValue {
+  /** Ce que montre la forêt (état réel + aperçu éventuel). */
   state: WorldState | null;
+  /** État réel, sans aperçu (saison réelle, stade réel : préchargement, DEV). */
+  realState: WorldState | null;
   presentation: WorldPresentation;
   setPresentation: (p: WorldPresentation) => void;
   pulse: (opts: PulseOptions) => void;
@@ -83,8 +88,8 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   }, [previewLantern]);
 
   const value = useMemo(
-    () => ({ state, presentation, setPresentation, pulse, playGuardian, focus, preview, setPreview, previewActive, handleRef }),
-    [state, presentation, setPresentation, pulse, playGuardian, focus, preview, previewActive],
+    () => ({ state, realState, presentation, setPresentation, pulse, playGuardian, focus, preview, setPreview, previewActive, handleRef }),
+    [state, realState, presentation, setPresentation, pulse, playGuardian, focus, preview, previewActive],
   );
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;
 }

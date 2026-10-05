@@ -65,7 +65,12 @@ void main() {
 }
 `;
 
-/** Cadre de fougères : parallaxe plus forte, balancement doux depuis les bords. */
+/**
+ * Cadre de fougères : parallaxe plus forte, balancement doux depuis les bords.
+ * La couche est celle de la base (verte) : uFgSeason l'accorde à la peinture
+ * de saison — x : roux d'automne (par plaques, quelques frondes restent
+ * vertes), y : givre et neige posée sur le haut des frondes, z : vert tendre.
+ */
 export const FOREGROUND_FRAG = /* glsl */ `
 ${PRECISION}
 ${FRAMING}
@@ -77,6 +82,28 @@ uniform float uTexel;
 uniform float uFgDepth;
 uniform vec3 uFogColor;
 uniform float uFogMix;
+uniform vec3 uFgSeason;
+
+vec3 seasonal(vec3 c, vec2 p, float a, vec2 above) {
+  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  if (uFgSeason.x > 0.001) {
+    float pt = 0.5 + 0.5 * sin(p.x * 11.0 + sin(p.y * 9.0) * 2.2) * sin(p.y * 7.0 + p.x * 3.0);
+    vec3 rust = mix(vec3(0.2, 0.06, 0.02), vec3(0.95, 0.46, 0.13), smoothstep(0.01, 0.32, l));
+    c = mix(c, rust, uFgSeason.x * mix(0.55, 1.0, smoothstep(0.25, 0.6, pt)));
+  }
+  if (uFgSeason.y > 0.001) {
+    vec3 frost = vec3(l * 1.2 + 0.035) * vec3(0.86, 0.94, 1.08);
+    c = mix(c, frost, uFgSeason.y * 0.72);
+    // Neige posée : coussinet sur le haut des frondes (vide au-dessus), irrégulier, ombré dessous.
+    float cap = smoothstep(0.25, 0.85, a - mix(above.x, above.y, 0.6));
+    float lumps = 0.55 + 0.45 * sin(p.x * 150.0 + sin(p.y * 95.0 + p.x * 40.0) * 2.5);
+    vec3 snow = mix(vec3(0.6, 0.66, 0.76), vec3(0.88, 0.92, 0.97), smoothstep(0.0, 0.6, a - above.x));
+    c = mix(c, snow, uFgSeason.y * cap * lumps * 0.8);
+  }
+  if (uFgSeason.z > 0.001) c = mix(c, c * vec3(1.06, 1.16, 0.9) + vec3(0.012, 0.025, 0.0), uFgSeason.z);
+  return c;
+}
+
 void main() {
   vec2 uv = uCenter + (vUv - 0.5) * uView;
   vec2 f = uv - parallaxOf(uFgDepth);
@@ -88,7 +115,12 @@ void main() {
     sin(t * 0.55 + f.y * 4.0) * 0.65 + sin(t * 1.27 + f.x * 7.0 + f.y * 3.0) * 0.3,
     sin(t * 0.42 + f.x * 3.0) * 0.35
   );
-  vec4 tx = texture2D(uFg, f + sway * w * uSway * uTexel * 7.0);
+  vec2 sp = f + sway * w * uSway * uTexel * 7.0;
+  vec4 tx = texture2D(uFg, sp);
+  if (uFgSeason.x + uFgSeason.y + uFgSeason.z > 0.001 && tx.a > 0.002) {
+    vec2 above = vec2(texture2D(uFg, sp - vec2(0.0, uTexel * 4.0)).a, texture2D(uFg, sp - vec2(0.0, uTexel * 11.0)).a);
+    tx.rgb = seasonal(tx.rgb / tx.a, sp, tx.a, above) * tx.a;
+  }
   tx *= smoothstep(0.0, 0.03, min(f.x, 1.0 - f.x));
   vec3 rgb = mix(tx.rgb, uFogColor * tx.a, uFogMix);
   gl_FragColor = vec4(rgb, tx.a);

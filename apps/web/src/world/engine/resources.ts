@@ -4,11 +4,12 @@
  * profondeur et masques réduits, gardien chargé à la demande puis libéré.
  */
 import { Texture, type OGLRenderingContext } from 'ogl';
-import type { GrowthStage, LutName, WorldManifest } from '../types';
+import type { GrowthStage, Season, WorldManifest } from '../types';
 import { buildFxAtlas, type FxAtlasMap } from './atlas';
 import { synthesizeMaps, type DataMap } from './fallbackMaps';
 import { decodeImage, imageSize, opaqueBounds, releaseImage, spriteCell, type Decoded } from './loader';
 import { makeNoiseData } from './noise';
+import { stageImage } from './paint';
 import type { SpriteAsset } from './spirits';
 
 type TexImage = Decoded | Uint8Array;
@@ -47,6 +48,8 @@ function composeMasks(rgb: Decoded, light: Decoded | null): DataMap {
 
 export interface StageTextures {
   stage: GrowthStage;
+  /** Saison peinte (été = base). */
+  season: Season;
   color: Texture;
   depth: Texture;
   /** Profondeur réelle (true) ou synthétique (false). */
@@ -59,8 +62,9 @@ export class Resources {
   realMasks = false;
   foreground: Texture | null = null;
   atlas: { tex: Texture; map: FxAtlasMap } | null = null;
-  private luts = new Map<LutName, Texture | null>();
-  private lutLoads = new Map<LutName, Promise<Texture | null>>();
+  /** LUT par URL (humeurs de base, nuit de base, nuits de saison). */
+  private luts = new Map<string, Texture | null>();
+  private lutLoads = new Map<string, Promise<Texture | null>>();
   private bytes = new Map<Texture, number>();
   private disposed = false;
 
@@ -115,9 +119,9 @@ export class Resources {
     this.bytes.delete(t);
   }
 
-  /** Charge un stade (couleur + profondeur réelle ou synthétique). */
-  async loadStage(stage: GrowthStage): Promise<StageTextures> {
-    const img = this.manifest.stages[stage];
+  /** Charge un stade d'une saison (couleur + profondeur réelle ou synthétique). */
+  async loadStage(stage: GrowthStage, season: Season = 'summer'): Promise<StageTextures> {
+    const img = stageImage(this.manifest, stage, season);
     const colorImg = await decodeImage(img.color, { kind: 'color', maxWidth: 1280 });
     let depth: Texture | null = null;
     let realDepth = false;
@@ -142,7 +146,7 @@ export class Resources {
     if (!depth) depth = this.dataTexture({ data: new Uint8Array([128, 128, 128, 255]), width: 1, height: 1 });
     if (this.disposed) throw new Error('disposed');
     const color = this.texture(colorImg, { mips: true });
-    return { stage, color, depth, realDepth };
+    return { stage, season, color, depth, realDepth };
   }
 
   async loadMasks(): Promise<void> {
@@ -173,23 +177,25 @@ export class Resources {
     return Object.values(this.manifest.luts).some((u) => !!u);
   }
 
-  lut(name: LutName): Texture | null {
-    return this.luts.get(name) ?? null;
+  lut(url: string | null): Texture | null {
+    return url ? (this.luts.get(url) ?? null) : null;
   }
 
-  loadLut(name: LutName): Promise<Texture | null> {
-    const url = this.manifest.luts[name];
+  loadLut(url: string | null): Promise<Texture | null> {
     if (!url) return Promise.resolve(null);
-    let p = this.lutLoads.get(name);
+    let p = this.lutLoads.get(url);
     if (!p) {
       p = decodeImage(url, { kind: 'data' })
         .then((img) => {
           const t = this.texture(img);
-          this.luts.set(name, t);
+          this.luts.set(url, t);
           return t;
         })
-        .catch(() => null);
-      this.lutLoads.set(name, p);
+        .catch(() => {
+          this.lutLoads.delete(url);
+          return null;
+        });
+      this.lutLoads.set(url, p);
     }
     return p;
   }

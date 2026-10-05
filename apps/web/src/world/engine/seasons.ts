@@ -6,11 +6,15 @@
  *
  * En mouvement « immobile » (et en bandeau) : rien ne tombe ; l'automne et le
  * printemps montrent quelques feuilles / pétales posés au sol.
+ *
+ * Avec une peinture de saison (manifest.seasons) : feuilles aux teintes vives
+ * de la peinture d'automne, neige plus dense (plus encore par temps calme,
+ * elle remplace la pluie), pas de teinte d'étalonnage (la peinture suffit).
  */
-import type { ScenePoint, Season } from '../types';
+import type { ScenePoint, Season, WorldManifest } from '../types';
 
 /** Nombre de points du lot saisonnier. */
-export const SEASON = 96;
+export const SEASON = 150;
 
 const WHIRL_SECONDS = 2.8;
 
@@ -19,7 +23,7 @@ const SEASON_CFG: Record<Season, { count: number; code: number; tint: [number, n
   spring: { count: 30, code: 0, tint: [1.01, 0.995, 1.0] },
   summer: { count: 0, code: -1, tint: [1.0, 1.0, 0.99] },
   autumn: { count: 26, code: 1, tint: [1.035, 1.0, 0.94] },
-  winter: { count: 90, code: 2, tint: [0.95, 0.985, 1.05] },
+  winter: { count: 120, code: 2, tint: [0.95, 0.985, 1.05] },
 };
 
 /**
@@ -45,6 +49,18 @@ export interface SeasonFrame {
   tint: [number, number, number];
   /** Lucioles du soir (été) 0..1. */
   fireflies: number;
+  /** 1 = peinture de saison affichée (teintes vives accordées à la peinture). */
+  vivid: number;
+}
+
+/**
+ * Saison des particules : celle de la peinture affichée ; pendant le
+ * chargement d'une peinture de saison, rien de saisonnier (pas de feuilles
+ * d'automne sur la forêt d'été) ; sans variante peinte, la saison demandée.
+ */
+export function particleSeason(m: WorldManifest, wanted: Season, painted: Season): Season {
+  if (painted !== 'summer') return painted;
+  return wanted !== 'summer' && m.seasons?.[wanted] ? 'summer' : wanted;
 }
 
 export class SeasonFx {
@@ -73,10 +89,12 @@ export class SeasonFx {
     return this.hourCache.hour;
   }
 
-  frame(season: Season, now: number, animate: boolean, night: number): SeasonFrame {
+  /** `painted` : peinture de saison affichée ; `rain` : pluie de l'humeur (l'hiver, plus de neige). */
+  frame(season: Season, now: number, animate: boolean, night: number, painted = false, rain = 0): SeasonFrame {
     const cfg = SEASON_CFG[season] ?? SEASON_CFG.autumn;
     const rest = !animate;
     let count = cfg.count;
+    if (season === 'winter') count = Math.min(SEASON, count * (1 + 0.3 * rain));
     if (rest) count = cfg.code === 0 || cfg.code === 1 ? REST_POINTS.length : 0;
     let fireflies = 0;
     let tint = cfg.tint;
@@ -86,8 +104,8 @@ export class SeasonFx {
       const dusk = Math.min(1, Math.min(1, Math.max(0, h - 18.5)) + Math.min(1, Math.max(0, 5.5 - h))) * (1 - night);
       if (animate) fireflies = Math.max(dusk, 0.25) * (1 - night);
       tint = [1 - 0.08 * dusk, 1 - 0.1 * dusk, 0.99 - 0.1 * dusk];
-    }
-    return { code: cfg.code, count, rest, tint, fireflies };
+    } else if (painted) tint = [1, 1, 1];
+    return { code: cfg.code, count, rest, tint, fireflies, vivid: painted ? 1 : 0 };
   }
 
   /** Uniformes du lot saisonnier (hors temps / taille, posés par frame.ts). */
@@ -97,6 +115,7 @@ export class SeasonFx {
     u.uRest!.value = f.rest ? 1 : 0;
     u.uRestCount!.value = f.rest ? f.count : 0;
     u.uGust!.value = gust;
+    u.uVivid!.value = f.vivid;
     u.uAvoid!.value = avoid;
     const w = this.whirl;
     const k = (now - w.start) / WHIRL_SECONDS;

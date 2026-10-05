@@ -2,7 +2,7 @@
  * <LivingForest> — la scène forêt vivante (contrat LivingForestProps /
  * LivingForestHandle de world/types.ts).
  *
- * Chargement sans saut : placeholder flou → peinture du stade (<img>, fondu)
+ * Chargement sans saut : placeholder flou → peinture du stade et de la saison (<img>, fondu)
  * → canvas WebGL quand la première image est prête (fondu enchaîné). Les
  * <img> reprennent exactement le cadrage du moteur (engine/framing.ts).
  * Le moteur (OGL + shaders) est importé paresseusement. Sans WebGL, ou après
@@ -14,6 +14,7 @@ import type { EngineStats, QualitySetting, WorldEngine } from './engine';
 import { manifest as defaultManifest } from './manifest';
 import type { GrowthStage, LivingForestHandle, LivingForestProps, Who, WorldManifest, WorldMotion } from './types';
 import { ForestMist } from './engine/ForestMist';
+import { paintSeason, stageImage } from './engine/paint';
 
 /** Poignée étendue (labo de dev uniquement). */
 export interface LivingForestDebugHandle extends LivingForestHandle {
@@ -225,7 +226,7 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
           />
         ) : null}
         <img
-          src={manifest.stages[stage].color}
+          src={stageImage(manifest, stage, paintSeason(manifest, state.season)).color}
           alt=""
           draggable={false}
           decoding="async"

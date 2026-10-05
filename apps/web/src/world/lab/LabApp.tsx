@@ -1,7 +1,7 @@
 /**
  * Labo du monde (dev seulement, servi par le serveur de dev : /a2-budget/world-lab.html).
  * Contrôles : stade, humeur, pause, lumières ±, pulse (fort), gardien,
- * saison (soir d'été), lanterne (progression, floraison), mouvement,
+ * saison (vraies peintures de saison du manifest, fondu au changement ; soir d'été), lanterne (progression, floraison), mouvement,
  * variante, qualité, données, LUT de test ; fps et temps par image.
  * Paramètres d'URL identiques aux clés de LabSettings (captures Playwright),
  * `ui=0` masque le panneau ; window.__lab pilote la scène.
@@ -161,7 +161,7 @@ export function LabApp() {
         <div style={{ position: 'fixed', right: 8, bottom: 8, left: 8, maxWidth: 560, marginLeft: 'auto', background: 'rgba(10,16,13,0.92)', border: '1px solid #2a3a31', borderRadius: 14, padding: 10, display: 'grid', gap: 8, zIndex: 10 }}>
           <div style={{ ...row, justifyContent: 'space-between', font: '12px ui-monospace, monospace', opacity: 0.85 }}>
             <span>
-              {stats ? `${stats.fps.toFixed(0)} fps · ${stats.frameMs.toFixed(1)} ms · cible ${stats.targetFps} · palier ${stats.tier} · dpr ${stats.dpr} · ${stats.memoryMB.toFixed(1)} Mo` : 'chargement…'}
+              {stats ? `${stats.fps.toFixed(0)} fps · ${stats.frameMs.toFixed(1)} ms · cible ${stats.targetFps} · palier ${stats.tier} · dpr ${stats.dpr} · ${stats.memoryMB.toFixed(1)} Mo · ${stats.paint}${stats.fading ? ' (fondu)' : ''}` : 'chargement…'}
             </span>
           </div>
           <div style={row}>

@@ -1,8 +1,11 @@
 /**
  * Chargement secondaire, non bloquant (après la première image) : kodama,
- * créatures, atlas des effets peints, LUT de nuit.
+ * créatures, atlas des effets peints, LUT de nuit (de la saison peinte),
+ * préchargement au repos de la peinture du stade suivant.
  */
 import type { WorldEngine } from './Engine';
+import { prefetchNext } from './growth';
+import { nightLutUrl } from './paint';
 
 export async function loadSecondary(e: WorldEngine): Promise<void> {
   const m = e.cfg.manifest;
@@ -24,6 +27,7 @@ export async function loadSecondary(e: WorldEngine): Promise<void> {
     const mote = e.res.atlas.map.motes[0];
     if (mote) e.pipe.motes.program.uniforms.uSprite!.value = mote.rect;
   }
-  void e.res.loadLut('night');
+  void e.res.loadLut(nightLutUrl(m, e.paintedSeason));
+  prefetchNext(e);
   e.requestFrame(true);
 }

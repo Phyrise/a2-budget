@@ -65,7 +65,7 @@ export class Pipeline {
       uniforms: {
         ...f,
         uColor: u(blank), uPrev: u(blank), uDepth: u(blank), uMasks: u(blank), uNoise: u(noise),
-        uTime: u(0), uAspect: u(aspect), uTexel: u(texel), uGrow: u(1), uWind: u(1), uWater: u(1),
+        uTime: u(0), uAspect: u(aspect), uTexel: u(texel), uGrow: u(1), uFadeMode: u(0), uWind: u(1), uWater: u(1),
         uFog: u(0.5), uFogLift: u(0.3), uFogLayers: u(3), uFogColor: u([0.6, 0.66, 0.64]), uFogGlow: u(0),
         uRays: u(0.4), uRayW: u([1, 0, 0, 0]), uRayAng: u([0, 0, 0, 0]), uRayWidth: u([0.08, 0.08, 0.08, 0.08]),
         uLight: u([0.6, 0.02]), uRayColor: u([1, 0.94, 0.8]), uSparkle: u(0), uMoss: u(0), uMoon: u(0), uDetail: u(1),
@@ -79,7 +79,7 @@ export class Pipeline {
       vertex: FULLSCREEN_VERT,
       fragment: POST_FRAG,
       uniforms: {
-        uScene: u(blank), uLutA: u(blank), uLutB: u(blank), uHasA: u(0), uHasB: u(0), uLutMix: u(0),
+        uScene: u(blank), uLutA: u(blank), uLutB: u(blank), uHasA: u(0), uHasB: u(0), uAmtA: u(1), uAmtB: u(1), uLutMix: u(0),
         uNightProc: u(0), uExposure: u(0), uSaturation: u(1), uWarmth: u(0), uVignette: u(0.4),
         uGrain: u(0.025), uSeed: u(0), uRes: u([1, 1]), uTint: u([1, 1, 1]),
       },
@@ -93,7 +93,7 @@ export class Pipeline {
       fragment: FOREGROUND_FRAG,
       uniforms: {
         ...f, uFg: u(blank), uTime: u(0), uSway: u(1), uTexel: u(texel), uFgDepth: u(1.3),
-        uFogColor: u([0.6, 0.66, 0.64]), uFogMix: u(0),
+        uFogColor: u([0.6, 0.66, 0.64]), uFogMix: u(0), uFgSeason: u([0, 0, 0]),
       },
     });
     fgProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -146,7 +146,7 @@ export class Pipeline {
         ...f,
         uTime: u(0), uCount: u(0), uSeason: u(1), uSizeK: u(1), uAspect: u(aspect), uGust: u(0),
         uWhirl: u([0, 0, 0, 0.16]), uWhirlK: u(0), uAvoid: u(Array.from({ length: 6 }, () => [0, 0, 0, 0])),
-        uRest: u(0), uRestPts: u(restPoints()), uRestCount: u(0), uFogColor: u([0.6, 0.66, 0.64]), uFog: u(0.5),
+        uRest: u(0), uRestPts: u(restPoints()), uRestCount: u(0), uFogColor: u([0.6, 0.66, 0.64]), uFog: u(0.5), uVivid: u(0),
       },
     });
     seasonProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

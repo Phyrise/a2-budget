@@ -4,6 +4,7 @@ import {
   SEASONS_CACHE,
   SEASON_MAX_AGE_MS,
   daysUntilNextSeason,
+  dropOffSeasons,
   isSeasonAsset,
   nextSeason,
   parseSeasonAsset,
@@ -157,5 +158,26 @@ describe('purgeSeasonCache', () => {
   it('sans cache des saisons : rien', async () => {
     const storage = { has: async () => false } as unknown as CacheStorage;
     expect(await purgeSeasonCache(storage, now)).toBe(0);
+  });
+});
+
+describe('dropOffSeasons (fin d’aperçu)', () => {
+  const files = [
+    'season-winter-stage-1-BeGzblgo.webp',
+    'season-spring-stage-1-mSHBmyjA.webp',
+    'season-autumn-stage-1-DoFb_ZKH.webp',
+    'season-budget-autumn-landscape-DPmusyeZ.webp',
+  ];
+
+  it('garde la saison en cours seule, loin du changement', async () => {
+    const { storage, urls } = fakeStorage(files.map((f) => ({ url: U(f), at: 0 })));
+    expect(await dropOffSeasons(storage, day(2027, 1, 10))).toBe(3);
+    expect(urls()).toEqual(['season-winter-stage-1-BeGzblgo.webp']);
+  });
+
+  it('garde aussi la saison suivante à J-14', async () => {
+    const { storage, urls } = fakeStorage(files.map((f) => ({ url: U(f), at: 0 })));
+    expect(await dropOffSeasons(storage, day(2027, 2, 20))).toBe(2);
+    expect(urls()).toEqual(['season-winter-stage-1-BeGzblgo.webp', 'season-spring-stage-1-mSHBmyjA.webp']);
   });
 });

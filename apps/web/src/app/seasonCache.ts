@@ -124,3 +124,23 @@ export async function purgeSeasonCache(storage: CacheStorage, now: Date, keepUrl
   for (const req of drop) if (await cache.delete(req)) removed += 1;
   return removed;
 }
+
+/**
+ * Fin d'un aperçu de saison (mode développeur) : retire du cache les saisons
+ * qui ne servent pas maintenant — tout sauf la saison en cours et, à ≤ 14
+ * jours du changement, la suivante (celles du préchargement discret). Un
+ * aperçu ne laisse donc rien pour 90 jours. Retourne le nombre d'entrées retirées.
+ */
+export async function dropOffSeasons(storage: CacheStorage, now: Date): Promise<number> {
+  if (!(await storage.has(SEASONS_CACHE))) return 0;
+  const current = seasonOfDate(now);
+  const keep = new Set<SeasonName>([current]);
+  if (daysUntilNextSeason(now) <= NEXT_SEASON_LEAD_DAYS) keep.add(nextSeason(current));
+  const cache = await storage.open(SEASONS_CACHE);
+  let removed = 0;
+  for (const req of await cache.keys()) {
+    const parsed = parseSeasonAsset(new URL(req.url).pathname);
+    if (parsed !== null && !keep.has(parsed.season) && (await cache.delete(req))) removed += 1;
+  }
+  return removed;
+}

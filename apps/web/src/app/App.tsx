@@ -46,7 +46,7 @@ import { ShellProvider, useMediaQuery, useShell } from './ShellContext';
 import { useSoundEvents } from './sound';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useKeyboardOpen } from './useKeyboardOpen';
-import { useSeasonPrefetch } from './seasonPrefetch';
+import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
 
@@ -97,7 +97,7 @@ function usePageVisible(): boolean {
 
 function Shell() {
   const { module, sheet, closeSheet, prefs, isDesktop, foregroundSheet } = useShell();
-  const { setPresentation, setPreview, realState } = useWorld();
+  const { setPresentation, setPreview, realState, preview } = useWorld();
   const { today } = useApp();
   const { solid, covered } = useScrollState(module, isDesktop);
   const visible = usePageVisible();
@@ -109,6 +109,8 @@ function Shell() {
   // Peintures de saison hors précache : préchargement discret (saison en
   // cours, puis la suivante ~14 jours avant), d'après la VRAIE forêt.
   useSeasonPrefetch(realState?.stage ?? null, today, isDesktop);
+  // Fin d'un aperçu de saison : ses images ne restent pas dans le cache des saisons.
+  useForgetPreviewSeason(preview?.season ?? null);
 
   // Présentation du monde selon module, largeur, recouvrement et préférence.
   // La forêt ne s'anime que là où elle se voit : Maison, et Calendrier sur

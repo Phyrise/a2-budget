@@ -14,9 +14,9 @@
  * « a2-budget-seasons » (sw.ts) : sans service worker (développement), rien
  * n'est préchargé.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { planSeasonPrefetch } from './seasonAssets';
-import { SEASONS_CACHE } from './seasonCache';
+import { SEASONS_CACHE, dropOffSeasons } from './seasonCache';
 
 /** Délai après le démarrage avant la première image (le premier rendu d'abord). */
 const START_DELAY_MS = 2500;
@@ -103,4 +103,21 @@ export function useSeasonPrefetch(stage: number | null, today: Date, isDesktop: 
     void prefetchAll(urls, ctrl.signal).catch(() => undefined);
     return () => ctrl.abort();
   }, [stage, day, isDesktop]);
+}
+
+/**
+ * Aperçu de saison du mode développeur : à sa fin, les images d'autres
+ * saisons qu'il a mises en cache sont retirées (dropOffSeasons).
+ */
+export function useForgetPreviewSeason(previewSeason: string | null): void {
+  const had = useRef(false);
+  useEffect(() => {
+    if (previewSeason !== null) {
+      had.current = true;
+      return;
+    }
+    if (!had.current || typeof caches === 'undefined') return;
+    had.current = false;
+    void dropOffSeasons(caches, new Date()).catch(() => 0);
+  }, [previewSeason]);
 }

@@ -29,6 +29,7 @@ export type {
   GroceriesState,
   GroceryAuthor,
   GroceryCategory,
+  GroceryCategoryMemory,
   GroceryItem,
   GroceryPurchase,
   HouseholdTask,
@@ -127,7 +128,14 @@ export {
   recentGroceryPurchases,
   grocerySuggestions,
   groupGroceryItems,
+  rememberedCategory,
 } from './groceries.js';
+export {
+  GROCERY_MEMORY_MAX,
+  rememberGroceryCategory,
+  forgetGroceryCategory,
+  validateGroceryMemory,
+} from './groceryMemory.js';
 export type { GroceryItemPatch, GrocerySuggestion, GroceryGroup } from './groceries.js';
 
 export {
@@ -201,6 +209,21 @@ export type {
   WeeklyGoalOptions,
   WeeklyGoalTrend,
 } from './forestProgress.js';
+
+// V4 — tâches au calendrier, lanternes de pierre.
+export { TASK_CALENDAR_MAX_DAYS, taskOccurrencesBetween } from './taskCalendar.js';
+export type { TaskCalendarOccurrence } from './taskCalendar.js';
+export {
+  LANTERNS,
+  DEFAULT_LANTERN_ID,
+  isLanternId,
+  unlockedLanterns,
+  isLanternUnlocked,
+  nextLantern,
+  activeLantern,
+  selectLantern,
+} from './lanterns.js';
+export type { LanternDef } from './lanterns.js';
 
 export {
   migrateV1toV2,

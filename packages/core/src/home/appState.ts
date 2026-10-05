@@ -20,9 +20,11 @@ import { currentMonthKey } from '../months.js';
 import { defaultSettings, validatePersistedState } from '../state.js';
 import { normalizeMonthIncome } from '../income.js';
 import type { PersistedStateInput } from '../types.js';
+import { validateBudgetBalance } from '../accountBalance.js';
 import { isValidLocalDateKey } from './dates.js';
 import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
 import { isGroceryCategory } from './groceries.js';
+import { validateGroceryMemory } from './groceryMemory.js';
 import { validateCalendar } from './calendar.js';
 import {
   validateCompletionCare,
@@ -507,12 +509,18 @@ function validateGroceries(value: unknown): Ok<GroceriesState> | Fail {
     }
     items.push(out);
   }
-  if (value.history === undefined || value.history === null) {
-    return { ok: true, state: { items } };
+  const state: GroceriesState = { items };
+  if (value.history !== undefined && value.history !== null) {
+    const history = validateGroceryHistory(value.history);
+    if (!history.ok) return history;
+    state.history = history.state;
   }
-  const history = validateGroceryHistory(value.history);
-  if (!history.ok) return history;
-  return { ok: true, state: { items, history: history.state } };
+  if (value.categoryMemory !== undefined && value.categoryMemory !== null) {
+    const memory = validateGroceryMemory(value.categoryMemory);
+    if (!memory.ok) return memory;
+    state.categoryMemory = memory.state;
+  }
+  return { ok: true, state };
 }
 
 /**
@@ -534,6 +542,13 @@ export function validateAppState(
       selectedMonth: isPlainObject(value.budget) ? value.budget.selectedMonth : undefined,
     });
     if (!budget.ok) return { ok: false, reason: `budget-${budget.reason}` };
+    const rawBalance = isPlainObject(value.budget) ? value.budget.balance : undefined;
+    let balance: AppState['budget']['balance'];
+    if (rawBalance !== undefined && rawBalance !== null) {
+      const checked = validateBudgetBalance(rawBalance);
+      if (!checked.ok) return { ok: false, reason: `budget-${checked.reason}` };
+      balance = checked.state;
+    }
 
     const household = validateHousehold(value.household);
     if (!household.ok) return household;
@@ -574,6 +589,7 @@ export function validateAppState(
           settings: budget.state.settings,
           months: budget.state.months,
           selectedMonth: budget.state.selectedMonth,
+          ...(balance !== undefined ? { balance } : {}),
         },
         chores: chores.state,
         forest: forest.state,

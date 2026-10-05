@@ -11,6 +11,7 @@ import { isValidLocalDateKey } from './dates.js';
 import { ONCE } from './occurrences.js';
 import { isWeekStartKey } from './rituals.js';
 import { FOCUS_MINUTES_MAX } from './focus.js';
+import { isLanternUnlocked } from './lanterns.js';
 import type {
   ChoreCompletion,
   ChoreSkip,
@@ -178,5 +179,11 @@ export function validateFocus(value: unknown): Ok<FocusState> | Fail {
     }
     sessions.push(out);
   }
-  return { ok: true, state: { sessions } };
+  const state: FocusState = { sessions };
+  // V4 — lanterne choisie : type exact exigé ; inconnue ou verrouillée → ignorée.
+  if (value.selectedLantern !== undefined && value.selectedLantern !== null) {
+    if (typeof value.selectedLantern !== 'string') return { ok: false, reason: 'focus-invalid-selected-lantern' };
+    if (isLanternUnlocked(sessions, value.selectedLantern)) state.selectedLantern = value.selectedLantern;
+  }
+  return { ok: true, state };
 }

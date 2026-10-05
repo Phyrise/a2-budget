@@ -71,6 +71,45 @@ export interface MonthRecord {
    * Ce n'est pas un solde bancaire existant. 0 = pas de réserve.
    */
   reserveTargetCents: number;
+  /**
+   * V4 — cases à cocher des paiements du mois (virements faits, dépenses
+   * payées). Absent = rien de coché. Jamais copié dans un nouveau mois.
+   */
+  paid?: MonthPaid;
+}
+
+/** V4 — paiements cochés d'un mois (voir payments.ts). */
+export interface MonthPaid {
+  /** Virement de la personne A sur le compte commun fait. */
+  transferA?: boolean;
+  /** Virement de la personne B fait. */
+  transferB?: boolean;
+  /** Dépenses payées : id de dépense du mois → coché. */
+  expenses?: Record<string, boolean>;
+}
+
+/**
+ * V4 — correction du solde du compte commun (« Recaler sur le compte ») :
+ * solde réel **au début** du mois `monthKey`. Remplace le report automatique
+ * à partir de ce mois, sans réécrire les mois passés.
+ */
+export interface BalanceCorrection {
+  /** Identifiant stable, unique. */
+  id: string;
+  /** Mois « YYYY-MM » dont c'est le solde d'ouverture (une correction par mois). */
+  monthKey: string;
+  /** Solde au début du mois, en centimes ; peut être négatif. */
+  balanceCents: number;
+  /** Horodatage ISO de la saisie. */
+  recordedAt: string;
+  /** Note libre facultative (≤ 200 caractères). */
+  note?: string;
+}
+
+/** V4 — solde du compte commun estimé (report automatique + corrections). */
+export interface BudgetBalance {
+  /** Corrections, une par mois au plus, triées par mois. */
+  corrections: BalanceCorrection[];
 }
 
 /**

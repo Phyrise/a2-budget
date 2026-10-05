@@ -48,7 +48,7 @@ export function addFocusSession(
   if (typeof session.taskId === 'string' && session.taskId !== '') out.taskId = session.taskId;
   const next = [...sessions, out];
   return {
-    focus: { sessions: next.length > FOCUS_SESSIONS_MAX ? next.slice(-FOCUS_SESSIONS_MAX) : next },
+    focus: { ...focus, sessions: next.length > FOCUS_SESSIONS_MAX ? next.slice(-FOCUS_SESSIONS_MAX) : next },
     added: true,
   };
 }

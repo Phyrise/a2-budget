@@ -15,6 +15,7 @@ import type {
   GroceriesState,
   GroceryAuthor,
   GroceryCategory,
+  GroceryCategoryMemory,
   GroceryItem,
   GroceryPurchase,
 } from './types.js';
@@ -367,6 +368,20 @@ export function groceryKey(label: string): string {
     .join(' ');
 }
 
+/**
+ * V4 — rayon mémorisé pour ce libellé (même `groceryKey`), ou undefined.
+ */
+export function rememberedCategory(
+  memory: GroceryCategoryMemory | undefined,
+  label: string,
+): GroceryCategory | undefined {
+  if (memory === undefined) return undefined;
+  const key = groceryKey(label);
+  if (key === '' || !Object.hasOwn(memory, key)) return undefined;
+  const category = memory[key];
+  return isGroceryCategory(category) ? category : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Opérations sur la liste
 // ---------------------------------------------------------------------------
@@ -374,7 +389,8 @@ export function groceryKey(label: string): string {
 /**
  * Ajoute un article depuis une saisie rapide (« 2 pommes », « lait x2 »…).
  *
- * - Libellé normalisé, quantité extraite, rayon déduit des mots-clés.
+ * - Libellé normalisé, quantité extraite ; rayon : `opts.category`, sinon
+ *   la mémoire des rayons (V4, `opts.memory`), sinon les mots-clés.
  * - Saisie vide → `{ items, item: null, added: false }` (même référence).
  * - Un article **identique non coché** existe déjà (même `groceryKey`) → pas
  *   de doublon : `added: false`, `item` = l'existant ; si la saisie précise
@@ -384,7 +400,14 @@ export function groceryKey(label: string): string {
 export function addGroceryItem(
   items: GroceryItem[],
   raw: string,
-  opts: { id: string; now: Date; addedBy?: GroceryAuthor; category?: GroceryCategory },
+  opts: {
+    id: string;
+    now: Date;
+    addedBy?: GroceryAuthor;
+    category?: GroceryCategory;
+    /** V4 — mémoire des rayons, consultée avant les mots-clés. */
+    memory?: GroceryCategoryMemory;
+  },
 ): { items: GroceryItem[]; item: GroceryItem | null; added: boolean } {
   const parsed = parseGroceryInput(raw);
   if (parsed.label === '') return { items, item: null, added: false };
@@ -407,7 +430,7 @@ export function addGroceryItem(
     label: parsed.label,
     done: false,
     ...(parsed.quantity !== undefined ? { quantity: parsed.quantity } : {}),
-    category: opts.category ?? categorizeGrocery(parsed.label),
+    category: opts.category ?? rememberedCategory(opts.memory, parsed.label) ?? categorizeGrocery(parsed.label),
     addedAt: opts.now.toISOString(),
     doneAt: null,
     ...(opts.addedBy !== undefined ? { addedBy: opts.addedBy } : {}),
@@ -470,12 +493,16 @@ export interface GroceryItemPatch {
 
 /**
  * Modifie un article. Les champs invalides sont ignorés (jamais d'exception).
+ * V4 : un libellé renommé sans rayon explicite prend d'abord le rayon
+ * mémorisé (`memory`), sinon les mots-clés. La mémorisation elle-même
+ * (`rememberGroceryCategory`) est faite par l'appelant (store).
  * Id inconnu ou patch sans effet → même référence.
  */
 export function updateGroceryItem(
   items: GroceryItem[],
   id: string,
   patch: GroceryItemPatch,
+  memory?: GroceryCategoryMemory,
 ): GroceryItem[] {
   const index = items.findIndex((item) => item.id === id);
   if (index === -1) return items;
@@ -490,7 +517,7 @@ export function updateGroceryItem(
         next.quantity = parsed.quantity;
       }
       if (patch.category === undefined && parsed.label !== current.label) {
-        next.category = categorizeGrocery(parsed.label);
+        next.category = rememberedCategory(memory, parsed.label) ?? categorizeGrocery(parsed.label);
       }
     }
   }

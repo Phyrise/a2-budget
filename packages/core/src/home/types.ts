@@ -11,7 +11,7 @@
  *   à l'utilisateur : seuls des états qualitatifs sont affichés.
  */
 
-import type { MonthRecord, Settings } from '../types.js';
+import type { BudgetBalance, MonthRecord, Settings } from '../types.js';
 import type { CalendarState } from './calendarTypes.js';
 
 // ---------------------------------------------------------------------------
@@ -173,6 +173,12 @@ export interface FocusSession {
 /** État des lanternes (optionnel dans AppState). Au plus FOCUS_SESSIONS_MAX. */
 export interface FocusState {
   sessions: FocusSession[];
+  /**
+   * V4 — lanterne de pierre posée dans la forêt (id de LANTERNS). Absent =
+   * lanterne de base. Un modèle inconnu ou pas encore débloqué est ignoré à
+   * la validation.
+   */
+  selectedLantern?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -326,7 +332,17 @@ export interface GroceriesState {
    * au premier « Vider le panier »).
    */
   history?: GroceryPurchase[];
+  /**
+   * V4 — mémoire des rayons : clé normalisée du libellé (`groceryKey`) →
+   * rayon choisi à la main. Utilisée avant les mots-clés aux prochains
+   * ajouts du même article. Au plus GROCERY_MEMORY_MAX entrées (les plus
+   * anciennes sont oubliées). Absente tant qu'aucun rayon n'a été corrigé.
+   */
+  categoryMemory?: GroceryCategoryMemory;
 }
+
+/** V4 — mémoire des rayons (clé normalisée → rayon). */
+export type GroceryCategoryMemory = Record<string, GroceryCategory>;
 
 // ---------------------------------------------------------------------------
 // État applicatif modulaire (V2)
@@ -360,6 +376,11 @@ export interface AppState {
     settings: Settings;
     months: MonthRecord[];
     selectedMonth: string;
+    /**
+     * V4 — solde du compte commun : corrections « Recaler sur le compte »
+     * (absent tant qu'aucune correction n'a été posée ; voir accountBalance.ts).
+     */
+    balance?: BudgetBalance;
   };
   chores: ChoresState;
   forest: ForestState;

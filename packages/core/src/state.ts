@@ -6,8 +6,10 @@
 import { MAX_AMOUNT_CENTS, MAX_RATE_BPS } from './amounts.js';
 import { normalizeMonthIncome, sharedRates } from './income.js';
 import { currentMonthKey, isValidMonthKey } from './months.js';
+import { prunePaidExpenses } from './payments.js';
 import type {
   Expense,
+  MonthPaid,
   MonthRecord,
   MonthRecordInput,
   PersistedState,
@@ -132,6 +134,7 @@ export function ensureMonth(state: PersistedState, monthKey: string): PersistedS
  * Action explicite « Appliquer au mois affiché » : remplace dans le mois les
  * copies des personnes (taux communs), les dépenses et la cible de réserve
  * par les réglages courants. Les salaires et compléments saisis dans le mois sont conservés.
+ * V4 : les paiements cochés sont conservés, sauf ceux de dépenses disparues.
  * Sans effet si le mois n'existe pas. Pur : ne mute jamais l'entrée.
  */
 export function applySettingsToMonth(
@@ -151,7 +154,8 @@ export function applySettingsToMonth(
     reserveTargetCents: state.settings.defaultReserveTargetCents,
   };
   const months = state.months.slice();
-  months[index] = updated;
+  // V4 : les cases cochées des dépenses disparues sont nettoyées.
+  months[index] = prunePaidExpenses(updated);
   return { ...state, months };
 }
 
@@ -267,6 +271,34 @@ function isOptionalAmount(value: unknown): value is number | undefined | null {
 }
 
 /**
+ * V4 — paiements cochés : absent (ou null) → omis ; présent → objet avec
+ * booléens facultatifs. Les cases de dépenses inconnues du mois sont
+ * nettoyées (jamais une raison de rendre les données illisibles) ; les
+ * autres valeurs sont recopiées telles quelles.
+ */
+function validatePaid(value: unknown, expenses: Expense[]): Ok<MonthPaid | undefined> | Fail {
+  if (value === undefined || value === null) return { ok: true, state: undefined };
+  if (!isPlainObject(value)) return { ok: false, reason: 'month-invalid-paid' };
+  const out: MonthPaid = {};
+  for (const key of ['transferA', 'transferB'] as const) {
+    if (value[key] === undefined) continue;
+    if (typeof value[key] !== 'boolean') return { ok: false, reason: 'month-invalid-paid' };
+    out[key] = value[key];
+  }
+  if (value.expenses !== undefined) {
+    if (!isPlainObject(value.expenses)) return { ok: false, reason: 'month-invalid-paid' };
+    const ids = new Set(expenses.map((e) => e.id));
+    const kept: Record<string, boolean> = {};
+    for (const [id, flag] of Object.entries(value.expenses)) {
+      if (typeof flag !== 'boolean') return { ok: false, reason: 'month-invalid-paid' };
+      if (ids.has(id)) kept[id] = flag;
+    }
+    out.expenses = kept;
+  }
+  return { ok: true, state: out };
+}
+
+/**
  * Valide un mois et le **normalise** (modèle salaire + compléments, V3.1) :
  * un mois sans compléments (ancien modèle à seuil) est converti par
  * `normalizeMonthIncome`, contributions strictement identiques.
@@ -289,6 +321,8 @@ function validateMonthRecord(value: unknown): Ok<MonthRecord> | Fail {
   if (!isAmountCents(value.reserveTargetCents)) {
     return { ok: false, reason: 'month-invalid-reserve' };
   }
+  const paid = validatePaid(value.paid, expenses.state);
+  if (!paid.ok) return paid;
   const month: MonthRecordInput = {
     monthKey: value.monthKey,
     personA: personA.state,
@@ -301,21 +335,20 @@ function validateMonthRecord(value: unknown): Ok<MonthRecord> | Fail {
   if (typeof value.bonusACents === 'number') month.bonusACents = value.bonusACents;
   if (typeof value.bonusBCents === 'number') month.bonusBCents = value.bonusBCents;
   const normalized = normalizeMonthIncome(month);
-  // Ordre des champs stable (salaires, compléments, dépenses, réserve).
-  return {
-    ok: true,
-    state: {
-      monthKey: normalized.monthKey,
-      personA: normalized.personA,
-      personB: normalized.personB,
-      salaryACents: normalized.salaryACents,
-      salaryBCents: normalized.salaryBCents,
-      bonusACents: normalized.bonusACents,
-      bonusBCents: normalized.bonusBCents,
-      expenses: normalized.expenses,
-      reserveTargetCents: normalized.reserveTargetCents,
-    },
+  // Ordre des champs stable (salaires, compléments, dépenses, réserve, paiements).
+  const state: MonthRecord = {
+    monthKey: normalized.monthKey,
+    personA: normalized.personA,
+    personB: normalized.personB,
+    salaryACents: normalized.salaryACents,
+    salaryBCents: normalized.salaryBCents,
+    bonusACents: normalized.bonusACents,
+    bonusBCents: normalized.bonusBCents,
+    expenses: normalized.expenses,
+    reserveTargetCents: normalized.reserveTargetCents,
   };
+  if (paid.state !== undefined) state.paid = paid.state;
+  return { ok: true, state };
 }
 
 /**

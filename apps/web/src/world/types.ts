@@ -114,6 +114,17 @@ export type GrowthStage = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type LutName = Mood | 'night';
 export type CompanionMood = 'idle' | 'happy' | 'proud' | 'sleepy' | 'curious';
 
+/**
+ * Variante saisonnière de la forêt : mêmes stades, même cadrage que la base
+ * (la base = été / saison des pluies). La profondeur peut être celle de la base
+ * (champ depth = profondeur de base) si l'alignement est vérifié.
+ */
+export interface SeasonSet {
+  stages: Record<GrowthStage, SceneImage>;
+  /** LUT nuit propre à la saison (maîtresse de saison → nuit de saison), null = LUT nuit de base. */
+  nightLut: string | null;
+}
+
 export interface WorldManifest {
   /** Taille de référence des images portrait (px). */
   size: { w: number; h: number };
@@ -166,4 +177,9 @@ export interface WorldManifest {
   banners: { budget: string; courses: string };
   /** Petite image très légère (≤ 30 KB) affichée avant le chargement. */
   placeholder: string;
+  /**
+   * Variantes saisonnières (printemps, automne, hiver). Absent = la base sert
+   * toute l'année. Chargées à la demande (jamais toutes précachées).
+   */
+  seasons?: Partial<Record<Exclude<Season, 'summer'>, SeasonSet>>;
 }

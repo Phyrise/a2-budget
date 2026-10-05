@@ -15,6 +15,8 @@ export type NoFacePose = 'calm' | 'offering' | 'content' | 'shy' | 'bow' | 'fadi
 
 export interface BudgetTheme {
   banners: ThemeBanners;
+  /** Bandeaux de saison (automne, hiver) ; absent = bandeau de base. Chargés à la demande. */
+  seasons?: Partial<Record<'autumn' | 'winter', ThemeBanners>>;
   /** Scène paysage du Sans-Visage sur le pont (même cadre que banners.landscape). */
   scene: string;
   noFace: Record<NoFacePose, string>;
@@ -42,6 +44,8 @@ export type BasketFill = 'empty' | 'half' | 'full';
 
 export interface CoursesTheme {
   banners: ThemeBanners;
+  /** Bandeaux de saison (automne, hiver) ; absent = bandeau de base. Chargés à la demande. */
+  seasons?: Partial<Record<'autumn' | 'winter', ThemeBanners>>;
   kiki: Record<KikiPose, string>;
   jiji: Record<JijiPose, string>;
   basket: Record<BasketFill, string>;

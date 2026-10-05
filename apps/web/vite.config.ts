@@ -55,8 +55,19 @@ export default defineConfig({
         // bandeau forestier des Courses (manifest.banners.courses), émis par
         // les manifests générés mais jamais affichés ; les peintures portrait
         // des univers, qui ne servent que sur ordinateur (cache à l'exécution,
-        // voir sw.ts) — le téléphone ne les télécharge plus à l'installation.
-        globIgnores: ['**/node_modules/**', 'assets/scene-bridge-*.webp', 'assets/courses-*.webp', 'assets/banner-portrait-*.webp'],
+        // voir sw.ts) — le téléphone ne les télécharge plus à l'installation ;
+        // et TOUTES les peintures de saison (assets/season-* : forêt de
+        // printemps / automne / hiver, LUT nuit de saison, bandeaux automne /
+        // hiver), servies par le cache d'exécution « a2-budget-seasons » : la
+        // saison en cours à la demande et en préchargement discret, la
+        // suivante ~14 jours avant (app/seasonPrefetch.ts, app/seasonCache.ts).
+        globIgnores: [
+          '**/node_modules/**',
+          'assets/scene-bridge-*.webp',
+          'assets/courses-*.webp',
+          'assets/banner-portrait-*.webp',
+          'assets/season-*',
+        ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),

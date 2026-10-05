@@ -9,10 +9,12 @@
  * injectManifest.globIgnores) et servies par un cache d'exécution dédié
  * (cache d'abord), rempli à la demande et par le préchargement discret.
  *
- * Purge douce : on garde toujours la saison en cours et ses deux voisines
- * (au plus deux saisons hors saison courante) ; une entrée d'une autre
- * saison que la courante est retirée après 90 jours, et une seule version
- * (hash) de chaque image est gardée d'un build à l'autre.
+ * Purge douce : la saison en cours n'est jamais purgée ; une entrée d'une
+ * autre saison est retirée 90 jours après sa mise en cache (la saison
+ * passée part donc au plus une saison plus tard, la suivante, préchargée
+ * ~14 jours avant, reste) ; une seule version (hash) de chaque image est
+ * gardée d'un build à l'autre. Règle fondée sur l'âge plutôt que sur un
+ * nombre de saisons : elle ne dépend que de l'horloge du service worker.
  */
 
 /** Même union que world/types.ts (dupliquée : ce module reste sans import). */
@@ -43,10 +45,6 @@ export function seasonOfDate(now: Date): SeasonName {
 
 export function nextSeason(s: SeasonName): SeasonName {
   return ORDER[(ORDER.indexOf(s) + 1) % 4] as SeasonName;
-}
-
-export function previousSeason(s: SeasonName): SeasonName {
-  return ORDER[(ORDER.indexOf(s) + 3) % 4] as SeasonName;
 }
 
 /** Jours entiers (dates locales) jusqu'au premier jour de la saison suivante. */
@@ -81,21 +79,13 @@ export function parseSeasonAsset(pathname: string): { key: string; season: Seaso
   return s ? { key, season: s[1] as SeasonName } : null;
 }
 
-/** Saisons gardées en cache quoi qu'il arrive (courante et ses voisines). */
-export function keptSeasons(now: Date): SeasonName[] {
-  const cur = seasonOfDate(now);
-  return [cur, previousSeason(cur), nextSeason(cur)];
-}
-
 /**
  * Faut-il retirer cette entrée ? `cachedAt` = date de mise en cache (ms),
- * null si inconnue (entrée gardée tant que sa saison est gardée).
+ * null si inconnue (gardée : on ne sait pas la dater).
  */
 export function shouldPurge(season: SeasonName, cachedAt: number | null, now: Date): boolean {
-  const cur = seasonOfDate(now);
-  if (season === cur) return false;
-  if (!keptSeasons(now).includes(season)) return true;
-  return cachedAt !== null && now.getTime() - cachedAt > SEASON_MAX_AGE_MS;
+  if (season === seasonOfDate(now) || cachedAt === null) return false;
+  return now.getTime() - cachedAt > SEASON_MAX_AGE_MS;
 }
 
 /**

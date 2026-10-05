@@ -21,7 +21,8 @@ const V2 = path.join(PWA_DIR, 'dist-v2');
 const pwaReady = existsSync(V1) && existsSync(V2);
 const pwaSkipReason =
   'builds PWA absents : lancer apps/web/scripts/pwa-builds.sh avant la suite';
-const PORT = 4210;
+// Port du serveur statique : A2_PWA_PORT si défini (plusieurs suites en parallèle).
+const PORT = Number(process.env.A2_PWA_PORT ?? 4210);
 const BASE = `http://127.0.0.1:${PORT}/a2-budget/`;
 
 const MIME: Record<string, string> = {
@@ -33,6 +34,7 @@ const MIME: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.webmanifest': 'application/manifest+json',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',

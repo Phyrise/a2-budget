@@ -73,8 +73,8 @@ self.addEventListener('fetch', (event) => {
 // dans un cache dédié, rempli à la demande et par le préchargement discret de
 // la page (app/seasonPrefetch.ts). Chaque mise en cache est datée (en-tête
 // x-a2-cached-at) puis suivie d'une purge douce (app/seasonCache.ts) : saison
-// courante et voisines gardées, autres saisons retirées après 90 jours, une
-// seule version par image d'un build à l'autre.
+// courante jamais purgée, autres saisons retirées 90 jours après leur mise en
+// cache, une seule version par image d'un build à l'autre.
 async function seasonFirst(request: Request, event: FetchEvent): Promise<Response> {
   const cache = await caches.open(SEASONS_CACHE);
   const hit = await cache.match(request);

@@ -11,11 +11,18 @@
  * - Mouvement réduit : un seul son par geste, pas de répétition rapprochée,
  *   grains de scintillement / feuilles allégés.
  * - Préférence « Petits sons » coupée, page cachée : rien.
+ * - V4 (`detectV4.ts`) : paiement coché (« nom » du Sans-Visage), solde
+ *   recalé (cloche), nouvelle lanterne débloquée (carillon, après la
+ *   floraison) ; la lanterne de pierre allumée (allumette + souffle) suit
+ *   l'état du minuteur (lanternStore), pas l'AppState.
  */
 import type { AppState } from '@a2/core';
 import { useEffect, useRef } from 'react';
+import { useLantern } from '../../features/rituals/lantern/lanternStore';
 import { useApp } from '../../state/store';
+import type { PlannedSound } from './cues';
 import { detectSoundEvents, planSounds, removedKeys } from './detect';
+import { LANTERN_NEW_DELAY_MS, detectV4SoundEvents, lanternLitNow, type LanternTimerView } from './detectV4';
 import { soundEngine } from './engine';
 import { playPlan, prefersReducedMotion } from './play';
 
@@ -40,8 +47,28 @@ export function useSoundEvents(): void {
       memory.add(key);
     }
     while (memory.size > REMOVED_MEMORY) memory.delete(memory.values().next().value!);
-    if (events.length === 0) return;
+    const v4 = detectV4SoundEvents(prev, appState);
+    const later = v4.filter((e) => e.cue === 'lanternNew');
+    events.push(...v4.filter((e) => e.cue !== 'lanternNew'));
+    if (events.length === 0 && later.length === 0) return;
     const reduced = prefersReducedMotion();
-    playPlan(planSounds(events, { reduced }), reduced);
+    const plan: PlannedSound[] = planSounds(events, { reduced });
+    // Mouvement réduit : un seul son par geste — la nouvelle lanterne l'emporte.
+    if (later.length > 0) {
+      const chime: PlannedSound = { cue: 'lanternNew', delayMs: reduced ? 0 : LANTERN_NEW_DELAY_MS };
+      playPlan(reduced ? [chime] : [...plan, chime], reduced);
+    } else {
+      playPlan(plan, reduced);
+    }
   }, [appState]);
+
+  // La lanterne de pierre s'allume : nouvelle session du minuteur (jamais au montage).
+  const timer = useLantern();
+  const timerSeen = useRef<LanternTimerView | null>(null);
+  useEffect(() => {
+    const prev = timerSeen.current;
+    const next: LanternTimerView = { phase: timer.phase, sessionId: timer.sessionId };
+    timerSeen.current = next;
+    if (lanternLitNow(prev, next)) playPlan([{ cue: 'lanternLit', delayMs: 0 }], prefersReducedMotion());
+  }, [timer.phase, timer.sessionId]);
 }

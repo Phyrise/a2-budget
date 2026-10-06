@@ -7,6 +7,7 @@
 import type { CalendarEvent, CalendarEventDraft, CalendarEventKind, CalendarWho } from '@a2/core';
 import { birthdayOrigin } from './birthdayDate';
 import { originYearKnown } from './calendarText';
+import { quickParse } from './quickParse';
 
 export interface EventFormValues {
   title: string;
@@ -80,6 +81,36 @@ export function initialValues(state: Exclude<EventSheetState, null>): EventFormV
     birthYear: known ? e.date.slice(0, 4) : '',
     initialDate: date,
     originDate: e.date,
+  };
+}
+
+/**
+ * Saisie en une phrase (feuille d'ajout) : « dîner chez Léa samedi 20h »
+ * remplit titre, jour, heure(s) et nature, au fil de la frappe. Les champs
+ * que la phrase ne précise pas reviennent à leur valeur d'ouverture (`base`)
+ * ; qui, lieu et note ne sont jamais touchés. Une retouche à la main tient
+ * jusqu'à la prochaine frappe dans la phrase. Phrase vide : retour à `base`.
+ */
+export function applySentence(
+  current: EventFormValues,
+  base: EventFormValues,
+  raw: string,
+  now: Date,
+  yearlyTouched: boolean,
+): EventFormValues {
+  const text = raw.replace(/\s+/g, ' ').trim();
+  const parsed = text === '' ? null : quickParse(text, now);
+  const kind = parsed?.kind ?? base.kind;
+  const time = parsed?.time;
+  return {
+    ...current,
+    title: parsed ? parsed.title || text : base.title,
+    date: parsed?.date ?? base.date,
+    allDay: time === undefined ? base.allDay : false,
+    time: time ?? base.time,
+    endTime: time === undefined ? base.endTime : (parsed?.endTime ?? ''),
+    kind,
+    yearly: yearlyTouched ? current.yearly : kind === 'anniversaire',
   };
 }
 

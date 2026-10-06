@@ -75,6 +75,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
 
   // --- Lanterne : progression lissée, floraison (souffle, éclat de rayon).
   e.lantern.update(dt, n, animate || stillLive, stillLive);
+  e.stone.update(n, animate, e.lantern.blooming(n));
   if (e.lantern.bloomEvent) {
     e.lantern.bloomEvent = false;
     if (animate) {
@@ -180,7 +181,8 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   // --- Esprits.
   const spots = m.kodamaSpots.length;
   e.spirits.update(n, dt, kodamaCount(s.mood, spots, s.paused), s.creatures, animate || stillLive);
-  const sprites = e.spirits.draws(n, night, mood.fog, g);
+  // Lanterne de pierre d'abord (au loin, sous les kodama des racines), puis les esprits.
+  const sprites = [...e.stone.draws(n, t, e.lantern.litLevel(n), night, mood.fog, animate), ...e.spirits.draws(n, night, mood.fog, g)];
 
   // --- Lots additifs.
   e.pipe.sceneFx.reset();
@@ -190,6 +192,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   e.spirits.emitHalos(e.pipe.emissive, t, night, e.fx.atlas);
   e.lights.emit(e.pipe.emissive, n, t, night, 1, aspect);
   e.lantern.emit(e.pipe.emissive, n, t, night, animate);
+  e.stone.emitNight(e.pipe.emissive, t, night);
 
   // --- Particules.
   const sizeK = e.dpr * Math.min(1.4, Math.max(0.75, e.cssH / 700));

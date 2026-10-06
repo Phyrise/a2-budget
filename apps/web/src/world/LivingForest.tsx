@@ -15,6 +15,11 @@ import { manifest as defaultManifest } from './manifest';
 import type { GrowthStage, LivingForestHandle, LivingForestProps, Who, WorldManifest, WorldMotion } from './types';
 import { ForestMist } from './engine/ForestMist';
 import { paintSeason, stageImage } from './engine/paint';
+import type { LanternArtSource } from './engine/stoneLantern';
+import { KODAMA_ON_LANTERN, LANTERN_ART } from '../themes/lanterns';
+
+/** Peintures des lanternes de pierre (une seule chargée : le modèle posé). */
+const DEFAULT_LANTERNS: LanternArtSource = { art: LANTERN_ART, kodama: KODAMA_ON_LANTERN };
 
 /** Poignée étendue (labo de dev uniquement). */
 export interface LivingForestDebugHandle extends LivingForestHandle {
@@ -22,6 +27,8 @@ export interface LivingForestDebugHandle extends LivingForestHandle {
   setQuality(q: QualitySetting): void;
   /** Heure locale simulée (lucioles du soir en été) ; null = horloge réelle. */
   setHour(h: number | null): void;
+  /** Un kodama vient s'asseoir sur la lanterne tout de suite (pose 0..3). */
+  lanternKodama(pose?: number): void;
 }
 
 type Mode = 'loading' | 'webgl' | 'fallback';
@@ -46,8 +53,8 @@ const layer: CSSProperties = { position: 'absolute', inset: 0, pointerEvents: 'n
  */
 const BASE_CSS = ':where(.living-forest){position:relative;display:block;width:100%;height:100%;}';
 
-export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & { manifest?: WorldManifest }>(function LivingForest(
-  { state, variant = 'hero', live, motion = 'full', className = '', onReady, manifest = defaultManifest },
+export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & { manifest?: WorldManifest; lanterns?: LanternArtSource | null }>(function LivingForest(
+  { state, variant = 'hero', live, motion = 'full', className = '', onReady, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS },
   ref,
 ) {
   const reduced = usePrefersReducedMotion();
@@ -129,6 +136,7 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
             motion: cur.motion,
             live: cur.live,
             quality: qualityRef.current,
+            lanterns,
             onFirstFrame: () => {
               if (cancelled) return;
               setCanvasShown(true);
@@ -147,6 +155,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         await engine.init(cur.state);
         if (cancelled) return;
         engineRef.current = engine;
+        // QA (serveur de dev uniquement) : inspection du moteur par Playwright.
+        if (import.meta.env.DEV) (window as unknown as { __worldEngine?: WorldEngine }).__worldEngine = engine;
         engine.setState(latest.current.state);
         engine.seasons.hourOverride = hourRef.current;
         if (focusRef.current.progress !== null) engine.focus(focusRef.current.progress, focusRef.current.who);
@@ -194,6 +204,12 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         engineRef.current?.focus(progress, who);
       },
       stats: () => engineRef.current?.stats() ?? null,
+      lanternKodama: (pose = 0) => {
+        const e = engineRef.current;
+        if (!e) return;
+        e.stone.visitNow(performance.now() / 1000, pose);
+        e.requestFrame(true);
+      },
       setHour: (h) => {
         hourRef.current = h;
         const e = engineRef.current;

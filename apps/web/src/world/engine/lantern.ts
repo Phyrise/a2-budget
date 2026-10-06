@@ -1,17 +1,18 @@
 /**
- * Lanterne (minuteur de concentration) : une lanterne de papier posée au pied
- * du cèdre. Sa lumière et son halo grandissent avec la progression, quelques
- * lucioles s'en approchent ; à 1, floraison de lumière (≈2 s) ; null l'éteint
- * en fondu. Éclaire aussi la peinture alentour (uniforme uLantern de la passe
- * principale). Calcul seul : le moteur dessine (lot émissif).
+ * Lumière de la lanterne (minuteur de concentration) : la lanterne de pierre
+ * (stoneLantern.ts) posée au pied du cèdre s'allume dans son foyer. La lueur
+ * et le halo grandissent avec la progression, quelques lucioles s'en
+ * approchent ; à 1, floraison de lumière (≈2 s) ; null l'éteint en fondu.
+ * Éclaire aussi la peinture alentour (uniforme uLantern de la passe
+ * principale). Calcul seul : le moteur dessine (lot émissif). Sans peinture
+ * de lanterne (chargement, échec), une lanterne de papier procédurale sert de
+ * repli.
  */
 import type { Who } from '../types';
 import { GLOW, LANTERN, type BillboardWriter } from './batch';
 import { WHO_COLORS } from './lights';
 import { rng } from './noise';
-
-/** Au pied du cèdre, sur la mousse entre les racines (cadrage mobile : au-dessus de la feuille). */
-export const LANTERN_SPOT = { x: 0.548, y: 0.632, depth: 0.24 } as const;
+import { FALLBACK_SHAPE, lanternGeometry, type LanternGeometry } from './toro';
 
 const BLOOM = 2.2;
 const FADE_OUT = 1.6;
@@ -43,10 +44,33 @@ export class Lantern {
   private readonly seeds: [number, number, number, number][];
   /** Floraison qui vient de commencer (lue une fois par le moteur : souffle, rayon). */
   bloomEvent = false;
+  /** Lanterne de pierre posée (foyer, taille) : réglée par le moteur. */
+  geo: LanternGeometry;
+  /**
+   * Peinture de la lanterne affichée ou attendue (sinon repli : lanterne de
+   * papier procédurale). Réglé par le moteur.
+   */
+  painted = false;
 
   constructor(private readonly aspect: number) {
     const r = rng(2024);
     this.seeds = Array.from({ length: Math.max(FIREFLIES, SPARKS) }, (): [number, number, number, number] => [r(), r(), r(), r()]);
+    this.geo = lanternGeometry(FALLBACK_SHAPE, aspect);
+  }
+
+  /**
+   * Allumage de la peinture (fondu éteinte → allumée), 0..1 : franc dès que
+   * le minuteur tourne, plein vers la fin, éclat à la floraison.
+   */
+  litLevel(now: number): number {
+    const bk = this.bloom(now);
+    const bloom = bk >= 0 ? Math.sin(Math.PI * Math.min(1, bk * 1.6)) * 0.3 : 0;
+    return Math.min(1, this.on * (0.62 + 0.38 * this.p + bloom));
+  }
+
+  /** Floraison en cours (aucun kodama ne vient s'asseoir pendant ce temps). */
+  blooming(now: number): boolean {
+    return this.bloom(now) >= 0;
   }
 
   set(progress: number | null, who: Who | undefined, now: number) {
@@ -104,34 +128,40 @@ export class Lantern {
 
   /** Lumière portée sur la peinture (rayon et intensité selon la progression). */
   sceneLight(now: number, t: number, flicker: boolean): LanternLight {
-    const s = LANTERN_SPOT;
+    const s = this.geo.fire;
     const bk = this.bloom(now);
     const bloom = bk >= 0 ? Math.sin(Math.PI * Math.min(1, bk * 1.6)) * (1 - bk * 0.4) : 0;
     const fl = flicker ? 0.92 + 0.05 * Math.sin(t * 7.3) + 0.03 * Math.sin(t * 13.1 + 1) : 1;
     const intensity = this.on * (0.3 + 0.7 * this.p) * fl + bloom * 0.9 * this.on;
     const radius = 0.045 + 0.06 * this.p + bloom * 0.07;
-    return { light: [s.x, s.y - 0.012, radius, intensity], color: this.color };
+    return { light: [s.x, s.y, radius, intensity], color: this.color };
   }
 
   emit(out: BillboardWriter, now: number, t: number, night: number, animate: boolean) {
     if (this.on < 0.002) return;
-    const { x, y, depth } = LANTERN_SPOT;
+    const { fire, ground, h: tall } = this.geo;
+    const { x } = fire;
+    const y = ground.y;
+    const depth = ground.depth;
     const [r, g, b] = this.color;
     const on = this.on;
     const p = this.p;
     const glowK = 0.85 + 0.3 * night;
     const fl = animate ? 0.9 + 0.06 * Math.sin(t * 7.3) + 0.04 * Math.sin(t * 13.1 + 1) : 1;
     const bk = this.bloom(now);
-    const h = 0.05;
-    const cy = y - h * 0.5;
+    // Échelle des effets : celle de l'ancienne lanterne de papier (0,05), d'après la pierre posée.
+    const h = Math.max(0.035, tall * 0.42);
+    const cy = this.painted ? fire.y : y - h * 0.5;
     const inten = (0.38 + 0.62 * p) * on;
-    // Flaque de lumière sur la mousse, halo, lanterne, cœur.
-    // (Le jour, l'addition sature vite : halo large mais doux, le papier reste lisible.)
+    // Flaque de lumière sur la mousse, halo, foyer, cœur.
+    // (Le jour, l'addition sature vite : halo large mais doux, la pierre reste lisible.)
     out.push(x, y - 0.002, depth, h * (3.2 + 2.6 * p), h * (0.9 + 0.5 * p), 0, r, g * 0.9, b * 0.75, 0.26 * inten * glowK, GLOW);
     const halo = h * (2.6 + 4 * p);
     out.push(x, cy, depth, halo, halo, 0, r, g * 0.92, b * 0.8, (0.12 + 0.2 * p) * on * fl * glowK, GLOW);
-    out.push(x, cy, depth, h * 0.72, h, 0, r, g, b, (0.6 + 0.3 * p) * on * fl, LANTERN);
-    out.push(x, cy + h * 0.1, depth, h * 0.4, h * 0.4, 0, 1, 0.88, 0.66, (0.2 + 0.3 * p) * on * fl, GLOW);
+    if (!this.painted) out.push(x, cy, depth, h * 0.72, h, 0, r, g, b, (0.6 + 0.3 * p) * on * fl, LANTERN);
+    // Foyer : une flamme vivante dans la chambre à feu de la pierre (le cœur du papier en repli).
+    const core = this.painted ? h * (0.34 + 0.12 * p) : h * 0.4;
+    out.push(x, cy + (this.painted ? 0 : h * 0.1), depth, core, core, 0, 1, 0.88, 0.66, (this.painted ? 0.35 + 0.35 * p : 0.2 + 0.3 * p) * on * fl, GLOW);
 
     // Lucioles qui s'approchent à mesure que la lumière grandit.
     const n = animate ? Math.round(2 + 8 * p) : 0;

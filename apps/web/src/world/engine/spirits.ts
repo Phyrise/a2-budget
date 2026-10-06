@@ -15,6 +15,8 @@ export interface SpriteAsset {
   rect: Rect;
   /** Largeur / hauteur (px) de la partie utile. */
   aspect: number;
+  /** Hauteur (px) de la partie utile, à la taille décodée. */
+  px?: number;
 }
 
 export interface SpriteDraw {

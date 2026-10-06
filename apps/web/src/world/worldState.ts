@@ -3,6 +3,7 @@
  * Partagée par tous les écrans qui affichent la forêt.
  */
 import {
+  activeLantern,
   CREATURES,
   GROWTH_THRESHOLDS,
   localDateKey,
@@ -39,6 +40,7 @@ export function toWorldState(app: AppState, now: Date): WorldState {
     creatures: forest.unlockedCreatureIds,
     lights,
     season: seasonOf(now),
+    lantern: { id: activeLantern(app.focus) },
   };
 }
 

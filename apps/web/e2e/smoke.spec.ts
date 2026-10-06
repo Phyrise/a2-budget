@@ -85,7 +85,7 @@ test.describe('Clavier virtuel (écran tactile)', () => {
   });
 });
 
-test('4ᵉ onglet Calendrier : ?module=calendar, bandeau de la forêt, historique des événements passés', async ({ page }) => {
+test('4ᵉ onglet Calendrier : ?module=calendar, bandeau de Totoro, historique des événements passés', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto(`${APP}?module=calendar`);
   await expect(nav(page).getByRole('button', { name: 'Calendrier', exact: true })).toHaveAttribute('aria-current', 'page');
@@ -104,6 +104,20 @@ test('4ᵉ onglet Calendrier : ?module=calendar, bandeau de la forêt, historiqu
   await expect(page.locator('.app-world__banner[data-universe="courses"]')).toHaveClass(/is-shown/);
   const ui = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), UI_KEY);
   expect(ui.module).toBe('courses');
+  expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+});
+
+test('ordinateur : le Calendrier montre l’arrêt de bus de Totoro en fond, la forêt vivante ne reste que pour Maison', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${APP}?module=calendar`);
+  await expect(page.locator('#calendar-title')).toBeVisible();
+  const backdrop = page.locator('.app-world__backdrop[data-universe="calendar"]');
+  await expect(backdrop).toHaveClass(/is-shown/);
+  await expect.poll(() => backdrop.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+  await goTo(page, 'Maison');
+  await expect(backdrop).not.toHaveClass(/is-shown/);
+  await expect(page.locator('.app-world__backdrop.is-shown')).toHaveCount(0);
   expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
 });
 

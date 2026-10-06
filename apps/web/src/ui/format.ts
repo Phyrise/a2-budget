@@ -1,29 +1,38 @@
 /**
  * Aides d'affichage (présentation uniquement, aucune logique financière).
  *
- * - Les montants passent toujours par `formatCents` (@a2/core) ; on ne fait
- *   ici que de la mise en forme de chaînes (retrait des « ,00 », etc.).
+ * - V4 : plus aucun centime à l'écran. Les montants passent par
+ *   `formatEuros` (@a2/core, arrondi à l'euro, « 1 235 € ») ; les totaux
+ *   qui doivent tomber juste (A + B = ensemble) s'arrondissent ensemble avec
+ *   `roundEurosConsistent` avant d'être affichés.
  * - Typographie française : espace fine insécable (U+202F) avant ; ! ?,
  *   espace insécable (U+00A0) avant : et à l'intérieur des guillemets.
  */
-import { formatCents } from '@a2/core';
+import { formatEuros, roundToEuroCents } from '@a2/core';
 
-export const NBSP = ' ';
-export const NNBSP = ' ';
+export const NBSP = '\u00a0';
+export const NNBSP = '\u202f';
 
-/** 123456 → « 1 234,56 € » (formatCents de core). */
+/** 123456 → « 1 235 € » (euros entiers, formatEuros de core). */
 export function euro(cents: number): string {
-  return formatCents(cents);
+  return formatEuros(cents);
 }
 
-/** Montant sans centimes nuls : 300000 → « 3 000 € », 67550 → « 675,50 € ». */
+/** Alias historique : les montants sont désormais toujours sans centimes. */
 export function euroShort(cents: number): string {
-  return formatCents(cents).replace(/,00(?=\s*€)/u, '');
+  return formatEuros(cents);
 }
 
-/** Montant signé pour une ligne de soustraction : « − 1 845,00 € ». */
+/** Montant d'une ligne de soustraction : « − 1 845 € ». */
 export function euroMinus(cents: number): string {
-  return `−${NNBSP}${formatCents(cents)}`;
+  return `−${NNBSP}${formatEuros(cents)}`;
+}
+
+/** Montant signé (« + 370 € », « − 120 € », « 0 € »), pour un écart. */
+export function euroSigned(cents: number): string {
+  const rounded = roundToEuroCents(cents);
+  if (rounded === 0) return formatEuros(0);
+  return rounded > 0 ? `+${NNBSP}${formatEuros(rounded)}` : euroMinus(-rounded);
 }
 
 const rateFormatter = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
@@ -38,11 +47,9 @@ export function percent(bps: number): string {
   return `${formatRateBps(bps)}${NNBSP}%`;
 }
 
-/** Notation plate d'un montant validé, point de départ d'une édition : 123456 → « 1234,56 ». */
+/** Notation plate (euros entiers) d'un montant, point de départ d'une édition : 123456 → « 1235 ». */
 export function centsToPlain(cents: number): string {
-  const euros = Math.trunc(cents / 100);
-  const rest = cents % 100;
-  return rest === 0 ? String(euros) : `${euros},${String(rest).padStart(2, '0')}`;
+  return String(roundToEuroCents(cents) / 100);
 }
 
 /** 4000 → « 40 », 3333 → « 33,33 », 50 → « 0,50 ». */

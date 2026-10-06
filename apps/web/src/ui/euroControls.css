@@ -1,0 +1,238 @@
+/* Montants en euros entiers : curseur (EuroSlider), − / + (EuroStepper),
+   montant « toucher pour saisir » (EuroValue). */
+
+/* ------------------------------------------------ Montant à toucher */
+
+.euro-value {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.euro-value__button {
+  position: relative;
+  min-height: 36px;
+  padding: 2px 2px 0;
+  border: 0;
+  border-bottom: 1px dashed rgba(185, 198, 189, 0.28);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ivory-50);
+  font-size: inherit;
+  font-weight: 520;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: text;
+  transform-origin: right bottom;
+  transition:
+    color var(--dur-base) var(--ease-soft),
+    border-color var(--dur-base) var(--ease-soft),
+    transform var(--dur-base) var(--ease-out);
+}
+
+/* Zone tactile ≥ 44 px sans grossir le chiffre. */
+.euro-value__button::after {
+  content: '';
+  position: absolute;
+  inset: -6px -8px;
+}
+
+.euro-value__button:hover {
+  border-bottom-color: var(--amber-400);
+}
+
+.euro-value.is-active .euro-value__button {
+  color: var(--amber-300);
+}
+
+.euro-value__field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.euro-value__input {
+  width: 5.2em;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--amber-400);
+  border-radius: 12px;
+  background: rgba(5, 10, 8, 0.55);
+  color: var(--ivory-50);
+  font-size: inherit;
+  text-align: right;
+  box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.16);
+}
+
+.euro-value__input:focus {
+  outline: none;
+}
+
+.euro-value__unit {
+  color: var(--text-muted);
+  font-size: 0.8em;
+}
+
+.euro-value.is-invalid .euro-value__button {
+  border-bottom-color: var(--danger);
+}
+
+.euro-value__error {
+  max-width: 14em;
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 12.5px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: right;
+  white-space: normal;
+}
+
+/* ------------------------------------------------ Curseur de montant */
+
+.euro-slider {
+  gap: 2px;
+}
+
+.euro-slider .slider__head {
+  align-items: center;
+  min-height: 40px;
+}
+
+.euro-slider .slider__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fog-300);
+}
+
+.euro-slider .slider__hint {
+  font-size: 12px;
+}
+
+.euro-slider .euro-value {
+  font-size: 24px;
+}
+
+.euro-slider.is-active .euro-value__button {
+  transform: scale(1.08);
+}
+
+.euro-slider .slider__row {
+  gap: 8px;
+}
+
+.euro-slider .slider__step {
+  width: 40px;
+  height: 40px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Zone tactile de 44 px autour des boutons de 40 px. */
+.euro-step {
+  position: relative;
+}
+
+.euro-step::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+/* ------------------------------------------------ − / + (dépenses) */
+
+.euro-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.euro-stepper .euro-value {
+  min-width: 4.4em;
+  font-size: 16.5px;
+  align-items: center;
+}
+
+.euro-stepper .euro-value__button {
+  min-height: 34px;
+  padding: 0 4px;
+}
+
+.euro-stepper .euro-value__input {
+  width: 4.6em;
+  min-height: 38px;
+  padding: 0 8px;
+}
+
+.euro-stepper .euro-value__error {
+  position: absolute;
+  top: 100%;
+  right: -40px;
+  z-index: 2;
+  width: max-content;
+  max-width: 13em;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: var(--ink-950);
+  box-shadow: var(--shadow-1);
+}
+
+.euro-stepper__btn {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(236, 230, 211, 0.04);
+  color: var(--ivory-200);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    background-color var(--dur-fast) var(--ease-soft),
+    transform 120ms var(--ease-soft);
+}
+
+.euro-stepper__btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.euro-stepper__btn:hover:not(:disabled) {
+  background: rgba(236, 230, 211, 0.1);
+}
+
+.euro-stepper__btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.euro-stepper__btn:disabled {
+  opacity: 0.3;
+}
+
+.euro-stepper.is-active .euro-value__button {
+  color: var(--amber-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .euro-value__button,
+  .euro-stepper__btn {
+    transition: none;
+  }
+
+  .euro-slider.is-active .euro-value__button {
+    transform: none;
+  }
+}

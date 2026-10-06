@@ -6,20 +6,20 @@
  * 216 px de haut). Le Carnet n'affiche le vrai sprite qu'une fois la
  * créature rencontrée.
  */
-import kodama1 from './assets/silhouettes/kodama-1.webp';
-import kodama2 from './assets/silhouettes/kodama-2.webp';
-import kodama3 from './assets/silhouettes/kodama-3.webp';
-import kodama4 from './assets/silhouettes/kodama-4.webp';
-import kodama5 from './assets/silhouettes/kodama-5.webp';
-import kodama6 from './assets/silhouettes/kodama-6.webp';
-import kodama7 from './assets/silhouettes/kodama-7.webp';
-import kodama8 from './assets/silhouettes/kodama-8.webp';
-import emberWisp from './assets/silhouettes/ember-wisp.webp';
-import leafSprite from './assets/silhouettes/leaf-sprite.webp';
-import mossLing from './assets/silhouettes/moss-ling.webp';
-import mushroomPip from './assets/silhouettes/mushroom-pip.webp';
-import seedSpirit from './assets/silhouettes/seed-spirit.webp';
-import waterDrip from './assets/silhouettes/water-drip.webp';
+import kodama1 from './assets/silhouettes/silhouette-kodama-1.webp';
+import kodama2 from './assets/silhouettes/silhouette-kodama-2.webp';
+import kodama3 from './assets/silhouettes/silhouette-kodama-3.webp';
+import kodama4 from './assets/silhouettes/silhouette-kodama-4.webp';
+import kodama5 from './assets/silhouettes/silhouette-kodama-5.webp';
+import kodama6 from './assets/silhouettes/silhouette-kodama-6.webp';
+import kodama7 from './assets/silhouettes/silhouette-kodama-7.webp';
+import kodama8 from './assets/silhouettes/silhouette-kodama-8.webp';
+import emberWisp from './assets/silhouettes/silhouette-ember-wisp.webp';
+import leafSprite from './assets/silhouettes/silhouette-leaf-sprite.webp';
+import mossLing from './assets/silhouettes/silhouette-moss-ling.webp';
+import mushroomPip from './assets/silhouettes/silhouette-mushroom-pip.webp';
+import seedSpirit from './assets/silhouettes/silhouette-seed-spirit.webp';
+import waterDrip from './assets/silhouettes/silhouette-water-drip.webp';
 
 export interface SilhouetteManifest {
   /** Même ordre que les fichiers kodama-1..8 (pas celui de manifest.sprites.kodama). */

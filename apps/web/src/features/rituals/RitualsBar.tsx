@@ -23,7 +23,6 @@ import { LanternSheet } from './lantern/LanternSheet';
 import { lantern, remainingMs, useLantern } from './lantern/lanternStore';
 import { ToroArt } from './lantern/ToroArt';
 import { useLanternController } from './lantern/useLanternController';
-import { useRitualRequests, type RitualRequest } from './ritualsBus';
 import { RitualGlyph } from './RitualGlyph';
 import { NB, isCircleWindow, ritualWeek, typo, type Names } from './ritualText';
 import './rituals.css';
@@ -72,14 +71,6 @@ export function RitualsBar() {
     setCarnetSection(section);
     setOpen('carnet');
   }, []);
-  const onRequest = useCallback(
-    (r: RitualRequest) => {
-      if (r.kind === 'carnet') openCarnet(r.section);
-      else setOpen('lantern');
-    },
-    [openCarnet],
-  );
-  useRitualRequests(onRequest);
 
   const onLanternCard = () => {
     if (lanternState.phase === 'running' || lanternState.phase === 'paused') {

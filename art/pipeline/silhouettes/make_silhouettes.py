@@ -15,7 +15,7 @@ Recette, par sprite :
      haut (lumière de canopée), alpha plafonné à 0,9.
 
 Sortie : WebP RGBA (qualité 82, alpha 90), quelques Ko chacun, dans
-apps/web/src/themes/assets/silhouettes/<id>.webp. Le petit manifeste
+apps/web/src/themes/assets/silhouettes/silhouette-<id>.webp. Le petit manifeste
 apps/web/src/themes/silhouettes.ts les importe (écrit à la main : 14 lignes).
 
 Usage (depuis la racine du dépôt) :
@@ -84,7 +84,7 @@ def main() -> int:
         if not src.exists():
             print(f"absent : {src}", file=sys.stderr)
             return 1
-        dst = OUT / f"{sid}.webp"
+        dst = OUT / f"silhouette-{sid}.webp"
         silhouette(src).save(dst, "WEBP", quality=82, alpha_quality=90, method=6)
         size = dst.stat().st_size
         total += size
@@ -93,7 +93,7 @@ def main() -> int:
     # Contrôle : les pixels visibles n'ont que des tons de brume (aucune
     # couleur du sprite d'origine n'a survécu, à la compression près).
     for sid in KODAMA + CREATURES:
-        im = Image.open(OUT / f"{sid}.webp").convert("RGBA")
+        im = Image.open(OUT / f"silhouette-{sid}.webp").convert("RGBA")
         px = im.tobytes()
         for i in range(0, len(px), 4):
             r, g, b, a = px[i], px[i + 1], px[i + 2], px[i + 3]

@@ -1,6 +1,8 @@
 /**
- * Rituels V3 : cercle de la semaine (tenu puis relu), lanterne (horloge
- * accélérée : en cours, pause, floraison, cocher la tâche liée), carnet.
+ * Rituels V3 : cercle de la semaine (tenu puis relu), carnet (V4 : sans
+ * triche — silhouettes à part, aucune URL de vrai sprite avant la
+ * rencontre ; collection des lanternes de pierre). La lanterne elle-même :
+ * rituels-lanterne.spec.ts.
  * L'état de départ est construit avec @a2/core (valide pour validateAppState).
  */
 import { addDays, createTask, emptyAppState, localDateKey, toggleTaskToday, validateAppState, type AppState } from '@a2/core';
@@ -99,79 +101,6 @@ test.describe('Rituels', () => {
     expect(errors).toEqual([]);
   });
 
-  test('lanterne : en cours, pause, floraison et tâche cochée', async ({ page }) => {
-    const errors = trackErrors(page);
-    await page.clock.install();
-    await openSeeded(page);
-    const card = rituals(page).getByRole('button', { name: /^Lanterne/ });
-    await expect(card).toContainText('Un minuteur doux pour s’y mettre');
-    await card.click();
-    const setup = page.getByRole('dialog', { name: 'Allumer une lanterne', exact: true });
-    await expect(setup).toBeVisible();
-
-    // Première fois : l'explication en trois gestes, puis la préparation.
-    const intro = setup.locator('.lantern-intro');
-    await expect(intro.locator('.lantern-intro__step')).toHaveCount(3);
-    await expect(intro).toContainText('Choisissez une durée');
-    await expect(intro).toContainText('La lanterne s’allume dans la forêt');
-    await expect(intro).toContainText('À la fin, elle fleurit');
-    await setup.getByRole('button', { name: 'Choisir une durée' }).click();
-    await expect(intro).toHaveCount(0);
-    // « Comment ça marche ? » la rouvre à la demande.
-    await setup.getByRole('button', { name: /Comment ça marche/ }).click();
-    await expect(setup.locator('.lantern-intro')).toBeVisible();
-    await setup.getByRole('button', { name: 'Choisir une durée' }).click();
-
-    await expect(setup.getByRole('button', { name: /^Lancer 10\s+minutes$/ })).toBeVisible();
-    await setup.locator('#lantern-minutes-5').check();
-    await setup.getByRole('button', { name: 'Ranger le bureau' }).click();
-    await expect(setup.locator('#lantern-who-a')).toBeChecked();
-    await setup.getByRole('button', { name: /^Lancer 5\s+minutes$/ }).click();
-
-    const running = page.getByRole('dialog', { name: 'Lanterne allumée', exact: true });
-    await expect(running).toBeVisible();
-    await expect(running.locator('.lantern-stage__time')).toHaveText(/^(5:00|4:5\d)$/);
-    await expect(running).toContainText('Ranger le bureau');
-
-    // Le temps vient de l'horloge : deux minutes plus tard, il en reste trois.
-    await page.clock.fastForward('02:00');
-    await expect(running.locator('.lantern-stage__time')).toHaveText(/^(3:00|2:5\d)$/);
-
-    // Pause : le temps s'arrête.
-    await running.getByRole('button', { name: 'Pause' }).click();
-    const paused = page.getByRole('dialog', { name: 'Lanterne en pause', exact: true });
-    await expect(paused).toBeVisible();
-    const frozen = await paused.locator('.lantern-stage__time').textContent();
-    await page.clock.fastForward('01:00');
-    await expect(paused.locator('.lantern-stage__time')).toHaveText(frozen ?? '');
-    await paused.getByRole('button', { name: 'Reprendre' }).click();
-
-    // Fermer la feuille : la lanterne continue, la carte affiche le temps restant.
-    await running.getByRole('button', { name: 'Fermer', exact: true }).click();
-    await expect(running).toBeHidden();
-    await expect(rituals(page).getByRole('button', { name: /Lanterne allumée/ })).toContainText('min');
-
-    // Au bout du temps, la feuille se rouvre sur la floraison.
-    await page.clock.fastForward('03:10');
-    const done = page.getByRole('dialog', { name: 'Lanterne', exact: true });
-    await expect(done).toBeVisible();
-    await expect(done).toContainText('La lanterne a fleuri');
-    await expect.poll(async () => (await persisted(page)).focus?.sessions?.length ?? 0).toBe(1);
-    const session = (await persisted(page)).focus.sessions[0];
-    expect(session).toMatchObject({ minutes: 5, who: 'a', taskId: 't-bureau', label: 'Ranger le bureau' });
-
-    // Proposition de cocher la tâche liée.
-    await expect(done).toContainText('Cocher « Ranger le bureau » ?');
-    await done.getByRole('button', { name: 'Cocher', exact: true }).click();
-    await expect(done).toContainText('C’est fait');
-    await expect
-      .poll(async () => (await persisted(page)).chores.completions.some((c: { taskId: string }) => c.taskId === 't-bureau'))
-      .toBe(true);
-    await done.getByRole('button', { name: 'Fermer', exact: true }).last().click();
-    await expect(done).toBeHidden();
-    expect(errors).toEqual([]);
-  });
-
   test('carnet de la forêt', async ({ page }) => {
     const errors = trackErrors(page);
     await openSeeded(page);
@@ -186,6 +115,46 @@ test.describe('Rituels', () => {
     await expect(carnet.locator('.carnet-stage.is-current')).toHaveCount(1);
     await expect(carnet.getByRole('heading', { name: 'Souvenirs' })).toBeVisible();
     await expect(carnet).toContainText('Le premier cercle sera le plus doux.');
+
+    // Sans triche : chaque créature pas encore rencontrée est une silhouette à
+    // part, et l'URL d'aucun vrai sprite de créature n'est dans la page.
+    const met: string[] = (await persisted(page)).forest.unlockedCreatureIds;
+    const unmetIds = ['moss-ling', 'seed-spirit', 'leaf-sprite', 'ember-wisp', 'mushroom-pip', 'water-drip'].filter((id) => !met.includes(id));
+    expect(unmetIds.length).toBeGreaterThanOrEqual(4);
+    const unmet = carnet.locator('.carnet-creature.is-unmet img');
+    await expect(unmet).toHaveCount(unmetIds.length);
+    for (const src of await unmet.evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src))) {
+      expect(src).toMatch(/silhouette-/);
+    }
+    const leaked = await page.evaluate(
+      (ids) =>
+        Array.from(document.querySelectorAll('img'))
+          .map((i) => i.src)
+          .filter((src) => ids.some((id) => src.includes(`/${id}-`)) && !/silhouette-/.test(src)),
+      unmetIds,
+    );
+    expect(leaked).toEqual([]);
+    // Ni glisser, ni menu contextuel sur les images du carnet.
+    expect(await unmet.first().getAttribute('draggable')).toBe('false');
+    const blocked = await unmet.first().evaluate((img) => {
+      const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      img.dispatchEvent(e);
+      return e.defaultPrevented;
+    });
+    expect(blocked).toBe(true);
+    // Les stades à venir : de la brume, pas la peinture.
+    await expect(carnet.locator('.carnet-stage.is-future img')).toHaveCount(0);
+
+    // Lanternes : la première est posée dans la forêt, les six autres sont
+    // des silhouettes (« après trois lanternes »), sans leur vraie peinture.
+    await expect(carnet.getByRole('heading', { name: 'Lanternes' })).toBeVisible();
+    await expect(carnet.locator('.carnet-lantern')).toHaveCount(7);
+    await expect(carnet.locator('.carnet-lantern.is-locked')).toHaveCount(6);
+    await expect(carnet.locator('.carnet-lantern.is-locked').first()).toContainText('Après trois lanternes');
+    await expect(carnet.getByRole('button', { name: /La Kasuga moussue, posée dans la forêt/ })).toHaveAttribute('aria-pressed', 'true');
+    const lockedSrcs = await carnet.locator('.carnet-lantern.is-locked img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src));
+    expect(lockedSrcs).toHaveLength(6);
+    for (const src of lockedSrcs) expect(src).toMatch(/-silhouette/);
     expect(errors).toEqual([]);
   });
 });

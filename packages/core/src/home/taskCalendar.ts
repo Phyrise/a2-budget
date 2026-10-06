@@ -7,7 +7,11 @@
  * Tâches montrées :
  * - hebdomadaires à **jour fixe** (pas les souples) : chaque `weeklyDay` ;
  * - mensuelles : chaque `monthlyDay` (ajusté au dernier jour des mois courts) ;
- * - ponctuelles : à leur date (`createdAt`).
+ * - ponctuelles, comme dans Maison : non faites, elles sont proposées chaque
+ *   jour jusqu'à ce qu'elles soient faites → affichées à max(création,
+ *   aujourd'hui) (« pas aujourd'hui » lu pour ce jour-là : demain elle
+ *   revient) ; faites, elles restent barrées au jour où elles l'ont été
+ *   (`completedAt`, jamais avant la création).
  * Jamais les quotidiennes (elles rempliraient chaque case) ni les souples
  * (pas de jour). Les occurrences récurrentes antérieures à la création de la
  * tâche ne sont pas inventées.
@@ -41,6 +45,21 @@ function showsInCalendar(task: HouseholdTask): boolean {
   return true;
 }
 
+/** Jour d'affichage d'une ponctuelle (voir l'en-tête). */
+function onceDisplay(
+  task: HouseholdTask,
+  completions: ChoreCompletion[],
+  today: string | undefined,
+): { date: string; done: boolean } {
+  if (hasCompletion(completions, task.id, ONCE)) {
+    const made = completions.find((c) => c.taskId === task.id && c.dueDate === ONCE);
+    const at = made === undefined ? NaN : Date.parse(made.completedAt);
+    const doneDay = Number.isNaN(at) ? task.createdAt : localDateKey(new Date(at));
+    return { date: doneDay > task.createdAt ? doneDay : task.createdAt, done: true };
+  }
+  return { date: today !== undefined && today > task.createdAt ? today : task.createdAt, done: false };
+}
+
 /**
  * Occurrences des tâches dans [from, to] (bornes incluses, clés
  * « YYYY-MM-DD »), triées par date puis dans l'ordre de la liste des tâches
@@ -49,6 +68,8 @@ function showsInCalendar(task: HouseholdTask): boolean {
  *
  * Pour cocher depuis le Calendrier : `toggleHomeTask` coche l'occurrence du
  * jour (ou l'unique occurrence d'une ponctuelle, quelle que soit sa date).
+ * `today` (« YYYY-MM-DD ») : jour courant, pour reporter les ponctuelles non
+ * faites ; absent → affichées à leur création.
  */
 export function taskOccurrencesBetween(
   tasks: readonly HouseholdTask[],
@@ -56,11 +77,15 @@ export function taskOccurrencesBetween(
   skips: readonly ChoreSkip[] | undefined,
   from: string,
   to: string,
+  today?: string,
 ): TaskCalendarOccurrence[] {
   if (!isValidLocalDateKey(from) || !isValidLocalDateKey(to) || from > to) return [];
   const shown = tasks.filter(showsInCalendar);
   if (shown.length === 0) return [];
   const list = completions as ChoreCompletion[];
+  const now = today !== undefined && isValidLocalDateKey(today) ? today : undefined;
+  const onceDates = new Map<string, { date: string; done: boolean }>();
+  for (const task of shown) if (task.recurrence === 'none') onceDates.set(task.id, onceDisplay(task, list, now));
   const out: TaskCalendarOccurrence[] = [];
   let day = parseLocalDateKey(from);
   for (let i = 0; i < TASK_CALENDAR_MAX_DAYS; i++, day = addDays(day, 1)) {
@@ -68,13 +93,14 @@ export function taskOccurrencesBetween(
     if (date > to) break;
     for (const task of shown) {
       if (task.recurrence === 'none') {
-        if (task.createdAt !== date) continue;
+        const once = onceDates.get(task.id);
+        if (once === undefined || once.date !== date) continue;
         out.push({
           task,
           date,
           dueDate: ONCE,
-          done: hasCompletion(list, task.id, ONCE),
-          skipped: isSkipped(task, skips, day),
+          done: once.done,
+          skipped: !once.done && isSkipped(task, skips, day),
         });
         continue;
       }

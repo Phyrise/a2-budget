@@ -10,7 +10,7 @@
  *   modèle (nextLantern), il est noté pour l'annonce du bandeau ;
  * - une lanterne arrêtée avant la première minute est simplement oubliée.
  */
-import { nextLantern } from '@a2/core';
+import { completedFocusCount, nextLantern } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../../state/store';
 import { useWorld } from '../../../world/WorldContext';
@@ -123,8 +123,10 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
     if (!s.recorded && s.minutesSpent >= 1) {
       const before = focusRef.current;
       const upcoming = nextLantern(before);
-      const count = before?.sessions.length ?? 0;
+      // Seules les sessions menées au bout comptent pour les lanternes de pierre.
+      const count = completedFocusCount(before);
       const saved = addFocusSession({
+        completed: s.completed,
         minutes: Math.min(120, s.minutesSpent),
         who: config.who,
         label: config.label,
@@ -132,7 +134,7 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
         startedAt: new Date(s.startedAt).toISOString(),
       });
       lantern.markRecorded();
-      if (saved && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
+      if (saved && s.completed && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
     }
     if (s.completed) onFinishedRef.current?.();
   }, [s, focus, addFocusSession]);

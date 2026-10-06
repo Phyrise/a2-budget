@@ -177,6 +177,10 @@ export function validateFocus(value: unknown): Ok<FocusState> | Fail {
       if (typeof s.taskId !== 'string') return { ok: false, reason: 'focus-invalid-task-id' };
       out.taskId = s.taskId;
     }
+    if (s.completed !== undefined) {
+      if (typeof s.completed !== 'boolean') return { ok: false, reason: 'focus-invalid-completed' };
+      out.completed = s.completed;
+    }
     sessions.push(out);
   }
   const state: FocusState = { sessions };

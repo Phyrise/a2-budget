@@ -168,6 +168,12 @@ export interface FocusSession {
   who: ChoreDoer;
   label?: string;
   taskId?: string;
+  /**
+   * V4 — `false` : lanterne arrêtée avant la fin (gardée en mémoire, mais
+   * ne compte pas pour débloquer une lanterne de pierre). Absent : menée au
+   * bout (ou session d'avant V4, comptée par bienveillance).
+   */
+  completed?: boolean;
 }
 
 /** État des lanternes (optionnel dans AppState). Au plus FOCUS_SESSIONS_MAX. */

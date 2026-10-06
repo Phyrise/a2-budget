@@ -4,7 +4,8 @@
  * nouveau modèle ; les modèles débloqués se collectionnent dans le Carnet et
  * l'on choisit celui qui est posé dans la forêt.
  *
- * Seuils (nombre de sessions terminées, `focus.sessions.length`) — réglables
+ * Seuils (nombre de sessions menées au bout : celles qui ne portent pas
+ * `completed: false` ; les sessions d'avant V4 comptent) — réglables
  * ici sans migration : rien n'est stocké hormis le choix (`selectedLantern`),
  * et un choix devenu verrouillé est simplement ignoré (lanterne de base).
  * Un déblocage ne se perd jamais : les sessions ne sont jamais retirées
@@ -43,14 +44,18 @@ export function isLanternId(value: unknown): value is string {
   return typeof value === 'string' && LANTERNS.some((l) => l.id === value);
 }
 
-function countOf(sessions: readonly FocusSession[] | FocusState | undefined): number {
+/** Nombre de sessions qui comptent pour les lanternes (menées au bout). */
+export function completedFocusCount(sessions: readonly FocusSession[] | FocusState | undefined): number {
   if (sessions === undefined) return 0;
-  return Array.isArray(sessions) ? sessions.length : (sessions as FocusState).sessions.length;
+  const list: readonly FocusSession[] = Array.isArray(sessions) ? sessions : (sessions as FocusState).sessions;
+  let n = 0;
+  for (const s of list) if (s.completed !== false) n++;
+  return n;
 }
 
 /** Modèles débloqués (ordre du catalogue ; la lanterne de base toujours incluse). */
 export function unlockedLanterns(sessions: readonly FocusSession[] | FocusState | undefined): LanternDef[] {
-  const n = countOf(sessions);
+  const n = completedFocusCount(sessions);
   return LANTERNS.filter((l) => l.unlockAt <= n);
 }
 
@@ -60,12 +65,12 @@ export function isLanternUnlocked(
   id: string,
 ): boolean {
   const def = LANTERNS.find((l) => l.id === id);
-  return def !== undefined && def.unlockAt <= countOf(sessions);
+  return def !== undefined && def.unlockAt <= completedFocusCount(sessions);
 }
 
 /** Prochain modèle à débloquer, ou null si toute la collection est là. */
 export function nextLantern(sessions: readonly FocusSession[] | FocusState | undefined): LanternDef | null {
-  const n = countOf(sessions);
+  const n = completedFocusCount(sessions);
   return LANTERNS.find((l) => l.unlockAt > n) ?? null;
 }
 

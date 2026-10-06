@@ -45,6 +45,8 @@ export interface FocusInput {
   taskId?: string;
   /** Horodatage ISO du début ; défaut : maintenant − minutes. */
   startedAt?: string;
+  /** false : arrêtée avant la fin (ne débloque pas de lanterne de pierre). */
+  completed?: boolean;
 }
 
 export interface CareActions {
@@ -162,6 +164,7 @@ export function useCareActions(transact: Transact): CareActions {
             who: input.who,
             ...(input.label !== undefined ? { label: input.label } : {}),
             ...(input.taskId !== undefined ? { taskId: input.taskId } : {}),
+            ...(input.completed === false ? { completed: false } : {}),
           });
           const saved = r.focus.sessions.find((x) => x.id === id) ?? null;
           return { state: r.added ? { ...s, focus: r.focus } : s, result: saved };

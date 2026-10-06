@@ -222,6 +222,7 @@ export {
   nextLantern,
   activeLantern,
   selectLantern,
+  completedFocusCount,
 } from './lanterns.js';
 export type { LanternDef } from './lanterns.js';
 

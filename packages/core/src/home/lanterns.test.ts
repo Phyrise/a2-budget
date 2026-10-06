@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addFocusSession } from './focus.js';
 import {
   activeLantern,
+  completedFocusCount,
   DEFAULT_LANTERN_ID,
   isLanternId,
   isLanternUnlocked,
@@ -101,5 +102,33 @@ describe('validation de selectedLantern', () => {
 
   it('mauvais type → raison stable', () => {
     expect(validateFocus({ sessions: [], selectedLantern: 3 })).toEqual({ ok: false, reason: 'focus-invalid-selected-lantern' });
+  });
+});
+
+describe('seules les sessions menées au bout débloquent', () => {
+  const at = '2026-10-05T19:00:00.000Z';
+  const session = (i: number, completed?: boolean) => ({
+    id: `s${i}`,
+    startedAt: at,
+    minutes: 1,
+    who: 'a' as const,
+    ...(completed === undefined ? {} : { completed }),
+  });
+
+  it('sept lanternes arrêtées au bout d’une minute ne débloquent rien', () => {
+    const stopped = Array.from({ length: 7 }, (_, i) => session(i, false));
+    expect(completedFocusCount(stopped)).toBe(0);
+    expect(unlockedLanterns([...stopped, session(9)]).map((l) => l.id)).toEqual(['kasuga-moss']);
+  });
+
+  it('les sessions d’avant V4 (sans drapeau) comptent', () => {
+    expect(completedFocusCount([session(1), session(2), session(3)])).toBe(3);
+  });
+
+  it('addFocusSession garde « arrêtée » et la validation le relit', () => {
+    const r = addFocusSession(undefined, session(1, false));
+    expect(r.focus.sessions[0]!.completed).toBe(false);
+    expect(validateFocus({ sessions: [session(1, false)] })).toEqual({ ok: true, state: { sessions: [session(1, false)] } });
+    expect(validateFocus({ sessions: [{ ...session(1), completed: 'non' }] })).toEqual({ ok: false, reason: 'focus-invalid-completed' });
   });
 });

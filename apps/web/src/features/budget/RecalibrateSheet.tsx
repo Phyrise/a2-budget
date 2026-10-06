@@ -9,23 +9,14 @@
  * Écriture : `recordBalanceCorrection(..., { asOf: 'now' })` du store.
  */
 import type { BalanceCorrection } from '@a2/core';
-import { BALANCE_NOTE_MAX, monthKeyToLabel, parseEurosInput, roundToEuroCents } from '@a2/core';
+import { BALANCE_NOTE_MAX, monthKeyToLabel, roundToEuroCents } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Disclosure, Sheet, Switch, TextField, euro, euroMinus, fr, useToast } from '../../ui';
 import { EURO_ERROR_MESSAGES } from '../../ui/AmountInput';
+import { parseSignedEuros } from './signedEuros';
 
 const dateFormatter = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
-
-/** « 1 234 », « −120 », « - 1 200 € » → euros entiers signés. */
-export function parseSignedEuros(raw: string): { ok: true; euros: number } | { ok: false; reason: string } {
-  const text = raw.trim();
-  const negative = /^[-−–]/u.test(text);
-  const result = parseEurosInput(negative ? text.slice(1) : text);
-  if (!result.ok) return { ok: false, reason: result.reason };
-  const euros = result.cents / 100;
-  return { ok: true, euros: negative && euros !== 0 ? -euros : euros };
-}
 
 function signed(cents: number): string {
   return cents < 0 ? euroMinus(-cents) : euro(cents);

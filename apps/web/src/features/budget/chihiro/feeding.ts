@@ -65,7 +65,7 @@ export function flyNuggets(from: { x: number; y: number }, target: HTMLElement |
     const spread = (i - (count - 1) / 2) * 12;
     const lift = 70 + (i % 3) * 18;
     const midX = (from.x + to.x) / 2 + spread * 1.6;
-    const midY = Math.min(from.y, to.y) - lift;
+    const midY = Math.max(28, Math.min(from.y, to.y) - lift);
     const turn = (i % 2 === 0 ? 1 : -1) * (120 + i * 35);
     const animation = img.animate(
       [

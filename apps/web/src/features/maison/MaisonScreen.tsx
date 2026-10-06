@@ -137,7 +137,7 @@ export function MaisonScreen() {
     // La coche est immédiate ; la luciole s'envole de la case une fois la
     // feuille fermée (sinon elle partirait de sous la feuille, forêt figée).
     if (actionableIds.has(task.id))
-      actions.toggle(task, checkCenter(task.id), doneBy, { afterMs: SHEET_SWAP_MS + 20, from: () => checkCenter(task.id) });
+      actions.toggle(task, checkCenter(task.id), doneBy, { from: () => checkCenter(task.id) });
     focusTitleIfLost();
   };
   const onMenuSkip = (task: HouseholdTask) => {

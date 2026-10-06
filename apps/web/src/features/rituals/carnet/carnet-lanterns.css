@@ -145,6 +145,11 @@
     radial-gradient(60% 24% at 50% 94%, rgba(7, 13, 10, 0.4), transparent);
 }
 
+.carnet-lantern.is-locked .toro__img {
+  filter: brightness(1.9) saturate(0.6);
+  opacity: 0.8;
+}
+
 .carnet-lantern.is-locked .carnet-lantern__name {
   color: var(--fog-300);
   font-style: italic;

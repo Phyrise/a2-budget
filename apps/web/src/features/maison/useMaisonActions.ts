@@ -15,6 +15,8 @@ import type { Names, Origin } from './TaskRow';
 import { speakerFor, useCompanionVoice } from './useCompanionVoice';
 
 const LINGER_MS = 1300;
+/** Attente maximale de la fermeture d'une feuille avant l'envol (< LINGER_MS). */
+const SHEET_WAIT_MS = 900;
 
 export interface Reaction {
   who: Who;
@@ -72,6 +74,25 @@ function handOffFocus(taskId: string) {
   target?.focus({ preventScroll: true });
 }
 
+/**
+ * QA (serveur de dev uniquement) : trace de chaque envol de luciole — la
+ * case est-elle encore là, et rien (feuille, dialogue) ne la recouvre-t-il ?
+ */
+function tracePulse(taskId: string, o: Origin) {
+  const hit = document.elementFromPoint(o.x, o.y);
+  const row = hit?.closest<HTMLElement>('[data-task-id]');
+  const w = window as unknown as { __maisonPulses?: unknown[] };
+  (w.__maisonPulses ??= []).push({
+    taskId,
+    x: o.x,
+    y: o.y,
+    t: performance.now(),
+    onRow: row?.dataset.taskId === taskId,
+    inSheet: hit?.closest('.screen-sheet') !== null && hit?.closest('.screen-sheet') !== undefined,
+    dialogOpen: document.querySelector('dialog[open]') !== null,
+  });
+}
+
 export function useMaisonActions(names: Names, snapshot: Snapshot) {
   const { toggleHomeTask, skipToday, unskipToday, toggleHomePause } = useApp();
   const world = useWorld();
@@ -88,6 +109,12 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
 
   const later = (fn: () => void, ms: number) => {
     timers.current.push(window.setTimeout(fn, ms));
+  };
+
+  /** Dès qu'aucune feuille n'est ouverte (au plus ~1 s : la ligne attend LINGER_MS). */
+  const whenSheetsClosed = (fn: () => void, waited = 0) => {
+    if (waited >= SHEET_WAIT_MS || document.querySelector('dialog[open]') === null) fn();
+    else later(() => whenSheetsClosed(fn, waited + 40), 40);
   };
 
   const react = useCallback((who: Who, mood: CompanionMood) => {
@@ -108,11 +135,11 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
   /**
    * Cocher / décocher. La lumière (pulse) part de la case cochée tant que la
    * ligne est encore là (elle reste LINGER_MS avant de quitter la liste).
-   * Depuis le menu ⋯, `pulse.afterMs` attend que la feuille se soit fermée —
-   * la forêt redevient visible, la case n'est plus sous la feuille — et
-   * `pulse.from` remesure alors la case.
+   * Depuis le menu ⋯, `afterSheet` attend que la feuille se soit vraiment
+   * fermée (plus aucun <dialog open>) — la forêt redevient vivante, la case
+   * n'est plus sous la feuille — puis `from` remesure la case.
    */
-  const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer, pulse?: { afterMs: number; from: () => Origin }) => {
+  const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer, afterSheet?: { from: () => Origin }) => {
     const { actionable, completions, doneTodayCount } = snap.current;
     const planned = nextAssignee(task, completions);
     const result = toggleHomeTask(task, doneBy !== undefined ? { doneBy } : undefined);
@@ -123,9 +150,11 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       return;
     }
     const who = (result.doneBy ?? planned) as Who;
-    const fly = (o: Origin) =>
+    const fly = (o: Origin) => {
+      if (import.meta.env.DEV) tracePulse(task.id, o);
       world.pulse({ id: completionId, who, fromClientX: o.x, fromClientY: o.y, ...(task.effort === 3 ? { strong: true } : {}) });
-    if (pulse) later(() => fly(pulse.from()), pulse.afterMs);
+    };
+    if (afterSheet) whenSheetsClosed(() => fly(afterSheet.from()));
     else fly(origin);
     setLingering((m) => ({ ...m, [task.id]: completionId }));
     later(() => {

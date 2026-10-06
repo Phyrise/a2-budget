@@ -247,7 +247,7 @@ html:has(.lantern-bar) .screen-sheet.maison {
 
 .lantern-bar__unlock-text {
   display: flex;
-  flex: 1;
+  flex: 1 1 150px;
   flex-direction: column;
   min-width: 0;
   margin: 0;

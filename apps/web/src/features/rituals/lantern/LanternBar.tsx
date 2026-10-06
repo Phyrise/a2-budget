@@ -18,7 +18,7 @@ import { Segmented, cx } from '../../../ui';
 import { clock, remainingWords, whoLabel, type Names } from '../ritualText';
 import { ambience } from './ambience';
 import { LanternBarDone } from './LanternBarDone';
-import { lanternName } from './lanternData';
+import { lanternShortName } from './lanternData';
 import { revealForest } from './lanternActions';
 import { lantern, remainingMs, useLantern, type LanternSound } from './lanternStore';
 import { ToroArt } from './ToroArt';
@@ -95,7 +95,7 @@ function Running({ names, lanternId }: { names: Names; lanternId: string }) {
           onClick={() => setExpanded((e) => !e)}
         >
           <span className="lantern-bar__label">{config.label ?? 'Un moment de calme'}</span>
-          <span className="lantern-bar__sub">{paused ? 'En pause' : `${who} · ${lanternName(lanternId)}`}</span>
+          <span className="lantern-bar__sub">{paused ? 'En pause' : `${who} · ${lanternShortName(lanternId)}`}</span>
         </button>
         <span className={cx('lantern-bar__time', 'num', paused && 'is-paused')} aria-hidden="true">
           {clock(remaining)}

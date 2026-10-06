@@ -1,11 +1,14 @@
 /**
- * Natures d'événement du Calendrier : libellé, couleur douce et petite icône
- * au trait (même grammaire que ui/Icon : grille 24 px, trait 1,6 px,
- * extrémités arrondies). Les icônes sont décoratives : le libellé est porté
- * par le contrôle ou le texte voisin.
+ * Natures d'événement du Calendrier : libellé, couleur douce et icône.
+ * V4 (univers Totoro) : icônes peintes de `calendarTheme.kinds` (bento,
+ * gland noué dans une feuille, Chatbus…) dans la grille, les listes et la
+ * feuille ; l'icône au trait (même grammaire que ui/Icon) reste en repli
+ * si une peinture manquait. Toujours décoratives : le libellé est porté par
+ * le contrôle ou le texte voisin.
  */
 import type { CalendarEventKind } from '@a2/core';
 import type { CSSProperties, ReactNode } from 'react';
+import { calendarTheme } from '../../themes/manifest';
 
 export interface KindMeta {
   kind: CalendarEventKind;
@@ -111,11 +114,41 @@ export function KindIcon({ kind, size = 20, strokeWidth = 1.6 }: { kind: Calenda
   );
 }
 
-/** Tuile ronde teintée portant l'icône de la nature (listes d'événements). */
-export function KindBadge({ kind, size = 40 }: { kind: CalendarEventKind; size?: number }) {
+/** Icône peinte de la nature (repli : icône au trait). */
+export function KindArt({ kind, size = 20, className }: { kind: CalendarEventKind; size?: number; className?: string }) {
+  const src = calendarTheme.kinds[kind];
+  if (!src) return <KindIcon kind={kind} size={size} />;
   return (
-    <span className={`cal-kind-badge cal-kind-badge--${kind}`} style={{ ...kindStyle(kind), '--badge': `${size}px` } as CSSProperties} aria-hidden="true">
-      <KindIcon kind={kind} size={Math.round(size * 0.52)} />
+    <img
+      className={className ? `cal-kind-art ${className}` : 'cal-kind-art'}
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      decoding="async"
+      draggable={false}
+      aria-hidden="true"
+    />
+  );
+}
+
+/**
+ * Tuile teintée portant l'icône peinte de la nature (listes d'événements).
+ * Anniversaire : Totoro tend son paquet-feuille, à la place de l'icône.
+ */
+export function KindBadge({ kind, size = 40 }: { kind: CalendarEventKind; size?: number }) {
+  const gift = kind === 'anniversaire' ? calendarTheme.totoro.gift : '';
+  return (
+    <span
+      className={`cal-kind-badge cal-kind-badge--${kind}${gift ? ' cal-kind-badge--gift' : ''}`}
+      style={{ ...kindStyle(kind), '--badge': `${size}px` } as CSSProperties}
+      aria-hidden="true"
+    >
+      {gift ? (
+        <img className="cal-kind-badge__gift" src={gift} alt="" decoding="async" draggable={false} />
+      ) : (
+        <KindArt kind={kind} size={Math.round(size * 0.8)} />
+      )}
     </span>
   );
 }

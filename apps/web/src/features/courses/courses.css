@@ -1,5 +1,20 @@
 /* Courses — la liste commune */
 
+/*
+ * Rien ne déborde sur les côtés (V4, « zoom » du bandeau en cochant) :
+ * pendant le coup de balai, Kiki et la poussière traversent la ligne
+ * jusqu'à 100cqw + 76 px, soit ~56 px au-delà du bord droit de l'écran.
+ * Chromium rogne grâce à `body { overflow-x: hidden }`, mais Safari iOS
+ * élargit alors la page pendant ~0,5 s : le bandeau peint, `position: fixed`
+ * et `object-fit: cover`, s'élargit avec elle et semble zoomer.
+ * `clip` (et non `hidden`) : pas de conteneur de défilement, la saisie
+ * rapide reste collante (sticky) et l'article peut toujours s'envoler vers
+ * le panier en hauteur.
+ */
+.screen-sheet.courses {
+  overflow-x: clip;
+}
+
 .courses-banner__summary {
   margin-top: 6px;
   color: var(--ivory-200);
@@ -302,4 +317,13 @@
 
 .app--desktop .quick-add {
   top: 76px;
+}
+
+/* Feuille d'un article : le rayon choisi sera retenu (V4). */
+.item-sheet__memory {
+  color: var(--moss-300);
+}
+
+.item-sheet__memory:empty {
+  margin: 0;
 }

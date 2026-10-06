@@ -1,7 +1,9 @@
 /**
- * Grille mensuelle compacte (lundi d'abord). Chaque jour porte des pastilles
- * colorées selon la nature de ses événements ; aujourd'hui est cerclé
- * d'ambre, le jour choisi est éclairé.
+ * Grille mensuelle compacte (lundi d'abord). Chaque jour porte les petites
+ * icônes peintes de ses événements (univers Totoro), puis — plus discret — un
+ * petit anneau de mousse s'il y a des tâches de la maison (plein quand
+ * elles sont toutes faites) ; aujourd'hui est cerclé d'ambre, le jour
+ * choisi est éclairé.
  *
  * Clavier (motif « grille » ARIA, tabindex itinérant) : flèches = jour
  * voisin / même jour de la semaine voisine, Début / Fin = début / fin de
@@ -13,10 +15,11 @@ import { addDays, localDateKey, parseLocalDateKey, type CalendarOccurrence } fro
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { WEEKDAYS, cx, fr, longDate } from '../../ui';
 import { displayTitle, eventsCount, monthWeeks } from './calendarText';
-import { kindStyle } from './kinds';
+import { KindArt } from './kinds';
+import { tasksCount, type TaskItem } from './taskAgenda';
 
-/** Pastilles montrées par jour avant « + ». */
-const MAX_DOTS = 3;
+/** Icônes montrées par jour avant « + ». */
+const MAX_DOTS = 2;
 
 function shiftMonthKeepingDay(key: string, delta: number): string {
   const d = parseLocalDateKey(key);
@@ -25,19 +28,26 @@ function shiftMonthKeepingDay(key: string, delta: number): string {
   return localDateKey(new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), last)));
 }
 
-function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence[]): string {
+function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence[], tasks: TaskItem[]): string {
   const parts = [longDate(parseLocalDateKey(key))];
   if (key === todayKey) parts.push('aujourd’hui');
-  if (occurrences.length === 0) parts.push('rien de prévu');
-  else parts.push(fr(`${eventsCount(occurrences.length)} : ${occurrences.map((o) => displayTitle(o.event)).join(', ')}`));
+  if (occurrences.length === 0 && tasks.length === 0) parts.push('rien de prévu');
+  if (occurrences.length > 0) parts.push(fr(`${eventsCount(occurrences.length)} : ${occurrences.map((o) => displayTitle(o.event)).join(', ')}`));
+  if (tasks.length > 0) {
+    const done = tasks.filter((t) => t.done).length;
+    parts.push(fr(`${tasksCount(tasks.length)} de la maison${done > 0 ? ` (${done === tasks.length ? 'faites' : `${done} faite${done > 1 ? 's' : ''}`})` : ''}`));
+  }
   return parts.join(', ');
 }
+
+const NO_TASKS: TaskItem[] = [];
 
 export function MonthGrid({
   monthKey,
   selected,
   todayKey,
   byDay,
+  tasksByDay,
   onSelect,
   labelledBy,
 }: {
@@ -46,6 +56,8 @@ export function MonthGrid({
   selected: string;
   todayKey: string;
   byDay: ReadonlyMap<string, CalendarOccurrence[]>;
+  /** Tâches de la maison par jour (vide si « Afficher les tâches » est coupé). */
+  tasksByDay: ReadonlyMap<string, TaskItem[]>;
   /** Choisit un jour (le parent change de mois s'il le faut). */
   onSelect: (dateKey: string) => void;
   labelledBy: string;
@@ -117,6 +129,8 @@ export function MonthGrid({
         <div key={week[0]} className="cal-grid__row" role="row">
           {week.map((key) => {
             const occurrences = byDay.get(key) ?? [];
+            const tasks = tasksByDay.get(key) ?? NO_TASKS;
+            const tasksDone = tasks.length > 0 && tasks.every((t) => t.done);
             const outside = key.slice(0, 7) !== monthKey;
             const isSelected = key === selected;
             const isToday = key === todayKey;
@@ -133,9 +147,10 @@ export function MonthGrid({
                     isSelected && 'is-selected',
                     isToday && 'is-today',
                     occurrences.length > 0 && 'has-events',
+                    tasks.length > 0 && 'has-tasks',
                     birthday && 'has-birthday',
                   )}
-                  aria-label={dayLabel(key, todayKey, occurrences)}
+                  aria-label={dayLabel(key, todayKey, occurrences, tasks)}
                   aria-current={isToday ? 'date' : undefined}
                   onClick={() => onSelect(key)}
                   onKeyDown={(event) => onKeyDown(event, key)}
@@ -145,9 +160,10 @@ export function MonthGrid({
                   </span>
                   <span className="cal-day__dots" aria-hidden="true">
                     {occurrences.slice(0, MAX_DOTS).map((o) => (
-                      <span key={`${o.event.id}-${o.date}`} className="cal-day__dot" style={kindStyle(o.event.kind)} />
+                      <KindArt key={`${o.event.id}-${o.date}`} kind={o.event.kind} size={17} className="cal-day__icon" />
                     ))}
                     {occurrences.length > MAX_DOTS && <span className="cal-day__more">+</span>}
+                    {tasks.length > 0 && <span className={cx('cal-day__task', tasksDone && 'is-done')} />}
                   </span>
                 </button>
               </div>

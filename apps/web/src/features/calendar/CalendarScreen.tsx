@@ -1,17 +1,26 @@
 /**
- * Calendrier commun (V3.2) : les moments partagés du couple — un dîner
- * prévu, un repas chez des amis, un anniversaire…
+ * Calendrier commun : les moments partagés du couple — un dîner prévu, un
+ * repas chez des amis, un anniversaire… — et, depuis la V4, les tâches de
+ * la maison à date fixe.
  *
  * - Bandeau : « Ensemble », mois affiché, ‹ › et « Aujourd’hui ».
- * - Saisie rapide (« dîner chez Léa samedi 20h ») qui pré-remplit la feuille.
- * - Grille mensuelle (lundi d'abord, navigable au clavier) ; toucher un jour
- *   montre ses événements dessous. Après un changement de mois, on montre
- *   tout le mois.
- * - « À venir » : prochains événements (nextEvents), groupés par jour.
- * - Ajout / édition dans une feuille ; suppression annulable (toast).
- * Occurrences, tris et répétitions annuelles : @a2/core uniquement.
+ * - Grille mensuelle (lundi d'abord, navigable au clavier) : icônes peintes
+ *   des événements, petit anneau de mousse pour les tâches ; toucher un jour
+ *   montre ses événements puis ses tâches dessous. Après un changement de
+ *   mois, on montre tout le mois.
+ * - Un SEUL « + » (en tête du jour choisi) ouvre la feuille d'ajout, qui
+ *   commence par la saisie en une phrase (« dîner chez Léa samedi 20h »).
+ * - « À venir » : prochains événements (nextEvents) et tâches de la semaine,
+ *   groupés par jour. « Afficher les tâches » est mémorisé.
+ * - Tâches : hebdomadaires / mensuelles à jour fixe et ponctuelles
+ *   (taskOccurrencesBetween) ; faites = barrées ; seule l'occurrence du jour
+ *   (ou une ponctuelle) se coche ici, comme dans Maison.
+ * - Univers Totoro (calendarTheme) : Totoro endormi ou sous la pluie dans
+ *   les états vides, Totoro au paquet-feuille pour les anniversaires, le
+ *   Chatbus traverse quand on ajoute un moment.
+ * Occurrences, tris et répétitions : @a2/core uniquement.
  */
-import { eventsBetween, eventsOn, localDateKey, nextEvents, type CalendarEvent, type CalendarOccurrence } from '@a2/core';
+import { addDays, eventsBetween, eventsOn, localDateKey, nextEvents, type CalendarEvent, type CalendarOccurrence } from '@a2/core';
 import { useEffect, useMemo, useState } from 'react';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useShell } from '../../app/ShellContext';
@@ -20,14 +29,21 @@ import { IconButton, fr, shiftMonthKey, useToast } from '../../ui';
 import { CalendarBanner } from './CalendarBanner';
 import { CalendarEmpty, DayEmpty } from './CalendarEmpty';
 import { dayHeading, dayPhrase, displayTitle, eventsCount, monthKeyOf, monthLabel, monthWeeks } from './calendarText';
-import { DayEvents, UpcomingEvents } from './EventList';
+import { CatbusRun } from './Catbus';
+import { AgendaList, DayAgenda } from './EventList';
 import { EventSheet } from './EventSheet';
-import type { EventSheetState } from './eventForm';
+import type { EventPrefill, EventSheetState } from './eventForm';
 import { MonthGrid } from './MonthGrid';
-import { QuickAdd } from './QuickAdd';
+import { useShowTasks } from './calendarPrefs';
+import { TasksFilter } from './TasksFilter';
+import { agendaDays, byDate, taskItemsBetween, tasksCount, type TaskItem } from './taskAgenda';
+import { useTaskToggle } from './useTaskToggle';
 import './calendar.css';
 
 const UPCOMING_COUNT = 8;
+/** « À venir » montre les tâches des sept prochains jours. */
+const UPCOMING_TASK_DAYS = 7;
+const NO_TASKS: TaskItem[] = [];
 
 /** Heure courante, rafraîchie chaque minute (« À venir » retire ce qui est fini). */
 function useNow(): Date {
@@ -72,6 +88,9 @@ export function CalendarScreen() {
   const [selected, setSelected] = useState<string | null>(todayKey);
   const [sheet, setSheet] = useState<EventSheetState>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [catbus, setCatbus] = useState(0);
+  const [showTasks, setShowTasks] = useShowTasks();
+  const { celebratingKey, toggle: toggleTask } = useTaskToggle();
 
   useEffect(() => {
     setForegroundSheet(sheet !== null);
@@ -91,23 +110,39 @@ export function CalendarScreen() {
   };
 
   const weeks = useMemo(() => monthWeeks(monthKey), [monthKey]);
-  const byDay = useMemo(() => {
-    const last = weeks[weeks.length - 1]!;
-    return groupByDay(eventsBetween(events, weeks[0]![0]!, last[last.length - 1]!));
-  }, [events, weeks]);
+  const gridFrom = weeks[0]![0]!;
+  const lastWeek = weeks[weeks.length - 1]!;
+  const gridTo = lastWeek[lastWeek.length - 1]!;
+  const byDay = useMemo(() => groupByDay(eventsBetween(events, gridFrom, gridTo)), [events, gridFrom, gridTo]);
+
+  // Tâches de la maison : la grille affichée, plus la semaine à venir.
+  const upcomingTo = localDateKey(addDays(today, UPCOMING_TASK_DAYS));
+  const taskFrom = gridFrom < todayKey ? gridFrom : todayKey;
+  const taskTo = gridTo > upcomingTo ? gridTo : upcomingTo;
+  const taskItems = useMemo(
+    () => (showTasks ? taskItemsBetween(appState, taskFrom, taskTo, todayKey) : NO_TASKS),
+    [showTasks, appState, taskFrom, taskTo, todayKey],
+  );
+  const tasksByDay = useMemo(() => byDate(taskItems), [taskItems]);
+
   // Quand le jour présent est montré juste au-dessus, « À venir » commence après lui.
+  const hideToday = selected === todayKey;
   const upcoming = useMemo(() => {
-    const hideToday = selected === todayKey;
     const todayCount = hideToday ? eventsOn(events, todayKey).length : 0;
-    return nextEvents(events, now, UPCOMING_COUNT + todayCount)
+    const next = nextEvents(events, now, UPCOMING_COUNT + todayCount)
       .filter((o) => !(hideToday && o.date === todayKey))
       .slice(0, UPCOMING_COUNT);
-  }, [events, now, selected, todayKey]);
+    const tasks = taskItems.filter((t) => t.date >= todayKey && t.date <= upcomingTo && !(hideToday && t.date === todayKey));
+    return agendaDays(next, tasks);
+  }, [events, now, hideToday, todayKey, taskItems, upcomingTo]);
   const dayOccurrences = useMemo(() => (selected ? eventsOn(events, selected) : []), [events, selected]);
-  const monthOccurrences = useMemo(() => {
-    const last = weeks[weeks.length - 1]!;
-    return eventsBetween(events, `${monthKey}-01`, last[6]!).filter((o) => o.date.startsWith(monthKey));
-  }, [events, weeks, monthKey]);
+  const dayTasks = selected ? (tasksByDay.get(selected) ?? NO_TASKS) : NO_TASKS;
+  const monthDays = useMemo(() => {
+    const occurrences = eventsBetween(events, `${monthKey}-01`, gridTo).filter((o) => o.date.startsWith(monthKey));
+    return agendaDays(occurrences, taskItems.filter((t) => t.date.startsWith(monthKey)));
+  }, [events, monthKey, gridTo, taskItems]);
+  const monthEventCount = monthDays.reduce((n, d) => n + d.events.length, 0);
+  const monthTaskCount = monthDays.reduce((n, d) => n + d.tasks.length, 0);
 
   const selectDay = (key: string) => {
     setSelected(key);
@@ -125,7 +160,7 @@ export function CalendarScreen() {
     setSelected(todayKey);
   };
 
-  const openCreate = (prefill: Partial<{ title: string; date: string; time: string; endTime: string; kind: CalendarEvent['kind'] }> = {}) => {
+  const openCreate = (prefill: Partial<EventPrefill> = {}) => {
     setSheet({ mode: 'create', prefill: { ...prefill, date: prefill.date ?? selected ?? (monthKey === todayKey.slice(0, 7) ? todayKey : `${monthKey}-01`) } });
   };
 
@@ -135,6 +170,7 @@ export function CalendarScreen() {
     setSheet(null);
     selectDay(landingDate(event, todayKey));
     setHighlightId(event.id);
+    if (created) setCatbus((n) => n + 1);
     toast.show({
       message: created ? fr(`Ajouté au calendrier : ${displayTitle(event)}`) : 'Événement mis à jour',
       icon: created ? 'calendar' : 'check',
@@ -156,6 +192,10 @@ export function CalendarScreen() {
   const away = !isCurrentMonth || selected !== todayKey;
   const { month } = monthLabel(monthKey);
   const selectedInMonth = selected !== null && selected.startsWith(monthKey);
+  const agenda = { names, highlightId, celebratingKey, onOpen: openEdit, onToggleTask: toggleTask };
+  const monthMeta = [monthEventCount > 0 ? eventsCount(monthEventCount) : null, monthTaskCount > 0 ? tasksCount(monthTaskCount) : null]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <>
@@ -164,39 +204,46 @@ export function CalendarScreen() {
       <section className="screen-sheet calendar" aria-labelledby="calendar-title">
         <ShellNotices />
 
-        <QuickAdd now={now} onSubmit={openCreate} />
-
         <div className="cal-month">
           <p id="cal-grid-label" className="visually-hidden">
             {`${month} ${monthKey.slice(0, 4)}`}
           </p>
-          <MonthGrid monthKey={monthKey} selected={selected ?? ''} todayKey={todayKey} byDay={byDay} onSelect={selectDay} labelledBy="cal-grid-label" />
+          <MonthGrid
+            monthKey={monthKey}
+            selected={selected ?? ''}
+            todayKey={todayKey}
+            byDay={byDay}
+            tasksByDay={tasksByDay}
+            onSelect={selectDay}
+            labelledBy="cal-grid-label"
+          />
         </div>
+        <TasksFilter show={showTasks} onChange={setShowTasks} />
 
         <section className="sheet-section cal-day-panel" aria-labelledby="cal-day-title">
           <div className="section-head">
             <h2 id="cal-day-title" className="section-title">
               {selectedInMonth ? dayHeading(selected, today) : `En ${month.toLowerCase()}`}
             </h2>
-            {!selectedInMonth && monthOccurrences.length > 0 && <span className="section-head__meta">{eventsCount(monthOccurrences.length)}</span>}
+            {!selectedInMonth && monthMeta !== '' && <span className="section-head__meta">{monthMeta}</span>}
             <IconButton
               icon="plus"
               label={selectedInMonth ? `Ajouter un événement ${dayPhrase(selected, today)}` : 'Ajouter un événement'}
               variant="accent"
-              size="sm"
+              className="cal-add"
               onClick={() => openCreate()}
             />
           </div>
           {selectedInMonth ? (
-            dayOccurrences.length > 0 ? (
-              <DayEvents occurrences={dayOccurrences} names={names} highlightId={highlightId} onOpen={openEdit} />
+            dayOccurrences.length > 0 || dayTasks.length > 0 ? (
+              <DayAgenda events={dayOccurrences} tasks={dayTasks} {...agenda} />
             ) : (
-              <DayEmpty onAdd={events.length > 0 ? () => openCreate() : undefined} />
+              <DayEmpty />
             )
-          ) : monthOccurrences.length > 0 ? (
-            <UpcomingEvents occurrences={monthOccurrences} today={today} names={names} highlightId={highlightId} onOpen={openEdit} />
+          ) : monthDays.length > 0 ? (
+            <AgendaList days={monthDays} today={today} {...agenda} />
           ) : (
-            <DayEmpty month onAdd={events.length > 0 ? () => openCreate() : undefined} />
+            <DayEmpty month />
           )}
         </section>
 
@@ -206,15 +253,12 @@ export function CalendarScreen() {
               À venir
             </h2>
           </div>
-          {upcoming.length > 0 ? (
-            <UpcomingEvents occurrences={upcoming} today={today} names={names} highlightId={highlightId} onOpen={openEdit} />
-          ) : (
-            <CalendarEmpty hasPast={events.length > 0} onAdd={() => openCreate()} />
-          )}
+          {upcoming.length > 0 ? <AgendaList days={upcoming} today={today} {...agenda} /> : <CalendarEmpty hasPast={events.length > 0} />}
         </section>
       </section>
 
       <EventSheet state={sheet} onClose={() => setSheet(null)} onSaved={onSaved} onRemove={remove} />
+      <CatbusRun run={catbus} />
     </>
   );
 }

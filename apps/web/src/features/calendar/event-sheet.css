@@ -132,8 +132,13 @@
 }
 
 .cal-kind-chip.is-checked .cal-kind-chip__icon {
-  background: var(--kind);
-  color: #14100a;
+  background: color-mix(in srgb, var(--kind) 34%, transparent);
+  box-shadow: 0 0 0 1.5px var(--kind);
+}
+
+.cal-kind-chip__icon .cal-kind-art {
+  width: 24px;
+  height: 24px;
 }
 
 .cal-kind-chip:has(.cal-kind-chip__input:focus-visible) {
@@ -156,4 +161,51 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* « En une phrase » (ajout, V4)                                       */
+/* ------------------------------------------------------------------ */
+
+.cal-sentence__box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: rgba(5, 10, 8, 0.5);
+  transition:
+    border-color var(--dur-fast) var(--ease-soft),
+    box-shadow var(--dur-fast) var(--ease-soft);
+}
+
+.cal-sentence__box:focus-within {
+  border-color: color-mix(in srgb, var(--cal-rain, #8fb3cf) 75%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cal-rain, #8fb3cf) 18%, transparent);
+}
+
+.cal-sentence__icon {
+  flex: none;
+  color: var(--cal-rain, var(--amber-400));
+}
+
+.cal-sentence__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.cal-sentence__input::placeholder {
+  color: var(--fog-500);
+}
+
+.cal-sentence__input:focus {
+  outline: none;
 }

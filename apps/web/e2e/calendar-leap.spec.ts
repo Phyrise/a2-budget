@@ -19,16 +19,18 @@ test.describe('Calendrier — 29 février et libellés', () => {
   test('bouton d’ajout : « Ajouter un événement aujourd’hui »', async ({ page }) => {
     await openCalendar(page);
     const add = page.locator('.cal-day-panel .section-head button');
+    // V4 : un seul bouton d'ajout dans tout l'écran.
+    await expect(page.locator('.calendar button[aria-label^="Ajouter"], .calendar button:has-text("Prévoir")')).toHaveCount(1);
     await expect(add).toHaveAttribute('aria-label', 'Ajouter un événement aujourd’hui');
   });
 
   test('« anniv de Léa le 29 février » : le prochain 29 février, fêté dès cette année, sans âge', async ({ page }) => {
     const errors = trackErrors(page);
     await openCalendar(page);
-    await page.locator('#cal-quick-input').fill('anniv de Léa le 29 février');
-    await page.locator('#cal-quick-input').press('Enter');
+    await page.getByRole('button', { name: /^Ajouter un événement/ }).click();
     const dialog = sheet(page, 'Nouvel événement');
     await expect(dialog).toBeVisible();
+    await dialog.locator('#event-sentence').fill('anniv de Léa le 29 février');
     const now = await page.evaluate(() => ({ y: new Date().getFullYear(), m: new Date().getMonth(), d: new Date().getDate() }));
     let next = now.y;
     while (!isLeap(next) || (next === now.y && (now.m > 1 || (now.m === 1 && now.d > 29)))) next += 1;

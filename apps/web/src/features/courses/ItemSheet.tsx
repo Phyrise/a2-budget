@@ -1,8 +1,15 @@
-/** Feuille d'édition d'un article : libellé, quantité, rayon, retrait. */
+/**
+ * Feuille d'édition d'un article : libellé, quantité, rayon, retrait.
+ * Rayon choisi à la main : le store le mémorise pour ce libellé (V4) — les
+ * prochains ajouts du même article iront dans ce rayon. On le dit, sous le
+ * choix puis dans un toast : « Je m'en souviendrai pour les prochaines fois ».
+ */
 import { GROCERY_CATEGORIES, categorizeGrocery, groceryCategoryLabel, type GroceryCategory, type GroceryItem } from '@a2/core';
 import { useEffect, useState } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Sheet, TextField } from '../../ui';
+import { Button, Sheet, TextField, fr, useToast } from '../../ui';
+
+const REMEMBER = 'Je m’en souviendrai pour les prochaines fois.';
 
 export function ItemSheet({
   item,
@@ -14,18 +21,26 @@ export function ItemSheet({
   onRemove: (item: GroceryItem) => void;
 }) {
   const { updateGrocery } = useApp();
+  const toast = useToast();
   const [label, setLabel] = useState('');
   const [quantity, setQuantity] = useState('');
   const [category, setCategory] = useState<GroceryCategory | ''>('');
+  const [initialCategory, setInitialCategory] = useState<GroceryCategory | ''>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (item === null) return;
+    const chosen = item.category && item.category !== categorizeGrocery(item.label) ? item.category : '';
     setLabel(item.label);
     setQuantity(item.quantity ?? '');
-    setCategory(item.category && item.category !== categorizeGrocery(item.label) ? item.category : '');
+    setCategory(chosen);
+    setInitialCategory(chosen);
     setError(null);
   }, [item]);
+
+  // Un rayon choisi à la main (et changé) sera retenu pour ce libellé.
+  const remembers = category !== '' && category !== initialCategory;
+  const forgets = category === '' && initialCategory !== '';
 
   const save = () => {
     if (item === null) return;
@@ -38,6 +53,9 @@ export function ItemSheet({
       quantity: quantity.trim() === '' ? null : quantity,
       category: category === '' ? null : category,
     });
+    if (remembers) {
+      toast.show({ message: fr(`${label.trim()} : rayon ${groceryCategoryLabel(category)}. ${REMEMBER}`), icon: 'check' });
+    }
     onClose();
   };
 
@@ -93,7 +111,13 @@ export function ItemSheet({
           <label className="field__label" htmlFor="item-category">
             Rayon
           </label>
-          <select id="item-category" className="select" value={category} onChange={(e) => setCategory(e.target.value as GroceryCategory | '')}>
+          <select
+            id="item-category"
+            className="select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as GroceryCategory | '')}
+            aria-describedby="item-category-hint"
+          >
             <option value="">Automatique ({autoLabel})</option>
             {GROCERY_CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
@@ -101,6 +125,9 @@ export function ItemSheet({
               </option>
             ))}
           </select>
+          <p id="item-category-hint" className="field__hint item-sheet__memory" aria-live="polite">
+            {remembers ? REMEMBER : forgets ? 'Retour au rayon automatique pour cet article.' : ''}
+          </p>
         </div>
       </form>
     </Sheet>

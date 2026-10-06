@@ -340,6 +340,33 @@ Sémantique :
   focus visible ; labels explicites ; navigation inférieure avec
   `safe-area-inset-bottom`.
 
+### 5bis. Interface V4 (intégrée sur main)
+
+- **Montants** : jamais de centimes à l'écran (`formatEuros`, `EuroValue`).
+  Salaires : `EuroSlider` 0–5 000 € (cran 10 €, −/+ 1 €, appui long qui
+  accélère, toucher le montant pour saisir) ; compléments 0–3 000 € ;
+  dépenses : `EuroStepper` (−/+ et saisie). Les deux virements sont arrondis
+  ensemble (`roundEurosConsistent`) : AL + AC affichés = « Ensemble ».
+- **Solde du compte commun** (`BalanceCard`) : « en ce moment » en grand,
+  fin du mois dessous ; « Recaler sur le compte » →
+  `recordBalanceCorrection(…, { asOf: 'now' })`. « À payer ce mois »
+  (`PaymentList`) : cocher → le Sans-Visage mange (animation seulement ; le
+  son « nom » est joué par la coquille, `app/sound`).
+- **Monde** : `WorldState.lantern?: { id }` (world/types.ts), toujours
+  rempli par `toWorldState` via `lanternModelOf(app) = activeLantern(focus)` ;
+  l'aperçu DEV `lanternModel` le remplace. `focus(progress, who)` allume la
+  lanterne de pierre posée ; plus de fenêtre dédiée : bandeau `LanternBar`
+  au-dessus de la navigation (`--lantern-bar-h`).
+- **Carnet** : silhouettes à part (`themes/silhouettes.ts`) ; la vraie
+  image n'est référencée qu'une fois rencontrée / débloquée.
+- **Calendrier** : un seul « + » ; tâches via `taskOccurrencesBetween`
+  (cochables le jour même ou ponctuelles, `toggleHomeTask`) ; préférence
+  locale `a2-budget:calendar:v1` (`{ showTasks }`).
+- **Débordement horizontal** : `.app-main { overflow-x: clip }` (coquille)
+  et `.screen-sheet.courses { overflow-x: clip }` : aucune animation ne doit
+  élargir la page (sinon le bandeau peint « zoome »).
+- QA d'intégration : `apps/web/scripts/qa-integration-v4.mjs [port]`.
+
 ## 6. Propriété des fichiers (chemins exacts)
 
 | Chemin | Propriétaire |

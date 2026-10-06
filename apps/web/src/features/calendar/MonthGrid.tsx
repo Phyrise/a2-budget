@@ -1,6 +1,6 @@
 /**
- * Grille mensuelle compacte (lundi d'abord). Chaque jour porte des pastilles
- * colorées selon la nature de ses événements, puis — plus discret — un
+ * Grille mensuelle compacte (lundi d'abord). Chaque jour porte les petites
+ * icônes peintes de ses événements (univers Totoro), puis — plus discret — un
  * petit anneau de mousse s'il y a des tâches de la maison (plein quand
  * elles sont toutes faites) ; aujourd'hui est cerclé d'ambre, le jour
  * choisi est éclairé.
@@ -15,11 +15,11 @@ import { addDays, localDateKey, parseLocalDateKey, type CalendarOccurrence } fro
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { WEEKDAYS, cx, fr, longDate } from '../../ui';
 import { displayTitle, eventsCount, monthWeeks } from './calendarText';
-import { kindStyle } from './kinds';
+import { KindArt } from './kinds';
 import { tasksCount, type TaskItem } from './taskAgenda';
 
-/** Pastilles montrées par jour avant « + ». */
-const MAX_DOTS = 3;
+/** Icônes montrées par jour avant « + ». */
+const MAX_DOTS = 2;
 
 function shiftMonthKeepingDay(key: string, delta: number): string {
   const d = parseLocalDateKey(key);
@@ -160,7 +160,7 @@ export function MonthGrid({
                   </span>
                   <span className="cal-day__dots" aria-hidden="true">
                     {occurrences.slice(0, MAX_DOTS).map((o) => (
-                      <span key={`${o.event.id}-${o.date}`} className="cal-day__dot" style={kindStyle(o.event.kind)} />
+                      <KindArt key={`${o.event.id}-${o.date}`} kind={o.event.kind} size={17} className="cal-day__icon" />
                     ))}
                     {occurrences.length > MAX_DOTS && <span className="cal-day__more">+</span>}
                     {tasks.length > 0 && <span className={cx('cal-day__task', tasksDone && 'is-done')} />}

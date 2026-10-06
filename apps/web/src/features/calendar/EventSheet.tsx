@@ -2,7 +2,9 @@
  * Feuille d'ajout / d'édition d'un événement : titre, nature (chips
  * illustrées), jour, journée entière ou heures, pour qui, lieu, note,
  * « tous les ans » (automatique pour un anniversaire, avec l'année de
- * naissance facultative pour afficher l'âge). Suppression : le parent
+ * naissance facultative pour afficher l'âge). À l'ajout (V4, seul point
+ * d'entrée), une phrase en tête (« dîner chez Léa samedi 20h ») remplit
+ * titre, jour, heure et nature au fil de la frappe. Suppression : le parent
  * retire l'événement et propose « Annuler » dans un toast.
  */
 import { parseLocalDateKey, type CalendarEvent, type CalendarEventKind, type CalendarWho } from '@a2/core';
@@ -10,8 +12,9 @@ import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Companion, Icon, Segmented, Sheet, TextField, cx, longDate } from '../../ui';
 import { Switch } from '../../ui/Switch';
-import { initialValues, reasonMessage, toDraft, validate, type EventFormValues, type EventSheetState, type FieldErrors } from './eventForm';
-import { KINDS, KindIcon, kindStyle } from './kinds';
+import { applySentence, initialValues, reasonMessage, toDraft, validate, type EventFormValues, type EventSheetState, type FieldErrors } from './eventForm';
+import { KINDS, KindArt, kindStyle } from './kinds';
+import { SentenceField } from './SentenceField';
 import './event-sheet.css';
 
 function KindPicker({ value, onChange }: { value: CalendarEventKind; onChange: (kind: CalendarEventKind) => void }) {
@@ -30,7 +33,7 @@ function KindPicker({ value, onChange }: { value: CalendarEventKind; onChange: (
               className="cal-kind-chip__input"
             />
             <span className="cal-kind-chip__icon">
-              <KindIcon kind={k.kind} size={18} />
+              <KindArt kind={k.kind} size={24} />
             </span>
             <span className="cal-kind-chip__label">{k.label}</span>
           </label>
@@ -62,8 +65,11 @@ export function EventSheet({
 }) {
   const { appState, addCalendarEvent, updateCalendarEvent } = useApp();
   const titleRef = useRef<HTMLInputElement>(null);
+  const sentenceRef = useRef<HTMLInputElement>(null);
   const editing = state?.mode === 'edit' ? state.event : null;
   const [v, setV] = useState<EventFormValues | null>(null);
+  const [base, setBase] = useState<EventFormValues | null>(null);
+  const [sentence, setSentence] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [yearlyTouched, setYearlyTouched] = useState(false);
@@ -74,7 +80,10 @@ export function EventSheet({
   if (state !== shownState) {
     setShownState(state);
     if (state !== null) {
-      setV(initialValues(state));
+      const initial = initialValues(state);
+      setV(initial);
+      setBase(initial);
+      setSentence('');
       setErrors({});
       setFormError(null);
       setYearlyTouched(state.mode === 'edit');
@@ -102,12 +111,19 @@ export function EventSheet({
     });
   };
 
+  const onSentence = (text: string) => {
+    setSentence(text);
+    setV((prev) => (prev && base ? applySentence(prev, base, text, new Date(), yearlyTouched) : prev));
+    setErrors({});
+    setFormError(null);
+  };
+
   const submit = () => {
     if (!v) return;
     const found = validate(v, new Date());
     if (Object.keys(found).length > 0) {
       setErrors(found);
-      if (found.title) titleRef.current?.focus();
+      if (found.title) (editing || sentence.trim() === '' ? titleRef : sentenceRef).current?.focus();
       return;
     }
     const draft = toDraft(v, new Date());
@@ -132,7 +148,7 @@ export function EventSheet({
       onClose={onClose}
       title={editing ? 'Modifier l’événement' : 'Nouvel événement'}
       size="auto"
-      initialFocusRef={editing ? undefined : titleRef}
+      initialFocusRef={editing ? undefined : sentenceRef}
       className="event-sheet"
       footer={
         <>
@@ -156,6 +172,8 @@ export function EventSheet({
             submit();
           }}
         >
+          {!editing && <SentenceField ref={sentenceRef} value={sentence} onChange={onSentence} />}
+
           <TextField
             ref={titleRef}
             id="event-title"

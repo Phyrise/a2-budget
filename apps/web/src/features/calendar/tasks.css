@@ -1,0 +1,220 @@
+/*
+ * Calendrier — tâches de la maison (V4). Plus discrètes que les événements :
+ * pas de carte, une ligne fine sur un filet de mousse, petite case, titre,
+ * rythme et compagnon. Faite : barrée, adoucie, jamais retirée.
+ */
+
+.cal-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--cal-paddy, #8fbf7a) 30%, transparent);
+}
+
+.cal-events + .cal-tasks {
+  margin-top: 8px;
+}
+
+.cal-task {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 0 4px 0 0;
+  border-radius: 12px;
+}
+
+/* Case du Calendrier : 44 px de zone tactile, cercle visible plus petit. */
+.cal-task .check {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.cal-task .check .check__svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cal-task__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: 0 12px;
+  border: 1.5px dashed color-mix(in srgb, var(--cal-paddy, #8fbf7a) 55%, transparent);
+  border-radius: 50%;
+  color: var(--cal-paddy, #8fbf7a);
+}
+
+.cal-task.is-done .cal-task__mark {
+  border-style: solid;
+  background: color-mix(in srgb, var(--cal-paddy, #8fbf7a) 18%, transparent);
+}
+
+.cal-task__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cal-task__title {
+  overflow: hidden;
+  color: var(--ivory-100);
+  font-size: 14.5px;
+  font-weight: 520;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cal-task__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fog-400);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.cal-task__leaf {
+  flex: none;
+  color: var(--cal-paddy, #8fbf7a);
+}
+
+.cal-task__who {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  width: 30px;
+  opacity: 0.92;
+}
+
+/* Faite : barrée, adoucie — elle reste là, c'est un souvenir, pas un reproche. */
+.cal-task.is-done .cal-task__title {
+  color: var(--fog-400);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--cal-paddy, #8fbf7a) 70%, transparent);
+  text-decoration-thickness: 1.5px;
+}
+
+.cal-task.is-done .cal-task__who {
+  opacity: 0.6;
+}
+
+.cal-task.is-skipped .cal-task__title {
+  color: var(--fog-400);
+}
+
+/* Cochée depuis le Calendrier : une lueur de rizière qui s'éteint. */
+.cal-task__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(60% 120% at 10% 50%, color-mix(in srgb, var(--cal-paddy, #8fbf7a) 28%, transparent), transparent 70%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-task__glow {
+    animation: cal-task-glow 1.4s var(--ease-out);
+  }
+}
+
+@keyframes cal-task-glow {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Filtre « Afficher les tâches » (sous la grille). */
+.cal-filter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.cal-filter__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  color: var(--fog-400);
+  font-size: 12px;
+}
+
+.cal-filter__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cal-filter__toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 4px 0 10px;
+  border: 0;
+  background: none;
+  color: var(--fog-300);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.cal-filter__toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.cal-filter__pill {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(185, 198, 189, 0.22);
+  transition: background-color var(--dur-fast) var(--ease-soft);
+}
+
+.cal-filter__pill::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ivory-100);
+  transition: transform var(--dur-fast) var(--ease-soft);
+}
+
+.cal-filter__toggle[aria-pressed='true'] .cal-filter__pill {
+  background: var(--cal-paddy, #8fbf7a);
+}
+
+.cal-filter__toggle[aria-pressed='true'] .cal-filter__pill::after {
+  transform: translateX(14px);
+}
+
+.cal-filter__icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}

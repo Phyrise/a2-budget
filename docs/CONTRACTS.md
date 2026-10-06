@@ -132,8 +132,16 @@ permis, |v| ≤ `MAX_AMOUNT_CENTS`).
 
 Fonctions pures ; `source` = `appState.budget` (`{ months, balance? }`) :
 
+Montants affichés = mouvements du compte (`monthFlows.ts`) :
+`monthFlows(m)` → `{ transferACents, transferBCents, transfersTotalCents,
+expenseCents: { [id]: cents }, expensesTotalCents, netCents }` : virements
+arrondis ensemble (`roundEurosConsistent`, ce que chacun vire vraiment),
+dépenses par `splitRounded` (Σ lignes = total affiché). `paidFlows(m)` :
+virements et dépenses cochés, avec ces mêmes montants. Cocher une ligne fait
+donc bouger « en ce moment » exactement du montant affiché sur la ligne.
+
 ```
-monthNetCents(m)                 = computeMonthSummary(m).remainingCents
+monthNetCents(m)                 = monthFlows(m).netCents (euros entiers)
 openingBalance(src, K)           = C.balanceCents + Σ net(M), C.monthKey ≤ M < K
                                    (C = dernière correction ≤ K ; sans correction :
                                     0 au premier mois connu, Σ net(M) pour M < K)
@@ -142,7 +150,26 @@ endOfMonthProjection(src, K)     = openingBalance + net(K)
 openingFromCurrentBalance(src, K, réel) = réel − (virements cochés − dépenses cochées)
 ```
 
-- Un mois absent de la liste compte pour 0 ; mois inconnu → ouverture.
+- Un mois absent de la liste compte pour 0 ; mois inconnu → ouverture. Une
+  correction héritée avec centimes est lue arrondie à l'euro.
+- **Consulter n'écrit rien** (store, `budgetMonths.ts`) : seul le mois
+  courant est créé à l'ouverture ou au retour ; un autre mois affiché est
+  virtuel (`createMonthRecord` depuis les réglages) et n'est enregistré qu'à
+  sa première modification. Sans cela, « Mois précédent » ajoutait le net
+  par défaut d'un mois jamais vécu au solde du mois courant.
+- « Recaler sur le compte » n'est proposé que sur le **mois courant** (le
+  vrai solde se constate aujourd'hui). Mois passé : solde estimé à la fin du
+  mois ; mois à venir : au début du mois.
+- `restoreBalanceCorrection(src, correction)` : annuler un recalage remet la
+  correction précédente **à l'identique** (id, centimes, date, note).
+- Données d'avant le solde : `anchorBalance(src, moisCourant, { id,
+  recordedAt })` (au chargement, si `balance` est absent et qu'il existe des
+  mois antérieurs) pose 0 € au début du mois courant avec la note
+  `BALANCE_ANCHOR_NOTE` — sinon le solde additionnerait d'anciens « restes »
+  souvent dépensés. `balanceStatus(src)` → `{ confirmed, sinceMonthKey }` :
+  tant qu'aucun vrai recalage n'existe, la carte dit doucement « Estimé
+  depuis début <mois>, en partant de 0 € : recalez quand vous regardez le
+  vrai compte. »
 - `recordBalanceCorrection(src, K, balanceCents, { id, recordedAt, note? })`
   : une correction par mois (la dernière remplace, id conservé), triées par
   mois, au plus `BALANCE_CORRECTIONS_MAX` = 600 ; note nettoyée (≤ 200, vide

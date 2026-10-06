@@ -420,7 +420,7 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 | `addCalendarEvent(draft)` / `updateCalendarEvent(id, patch)` | `addEvent` / `updateEvent` (§12) | `{ ok: true, event } \| { ok: false, reason }` |
 | `removeCalendarEvent(id)` / `restoreCalendarEvent(removed)` | `removeEvent` / `restoreEvent` | `{ event, index } \| null` / `boolean` |
 | `selectLantern(id)` | V4 : lanterne de pierre posée dans la forêt (§14.3) | `boolean` (false : inconnue / verrouillée) |
-| `setTransferPaid` / `setExpensePaid` / `recordBalanceCorrection` / `removeBalanceCorrection` | V4 budget (CONTRACTS §4) | `boolean` |
+| `setTransferPaid` / `setExpensePaid` / `recordBalanceCorrection` / `removeBalanceCorrection` / `restoreBalanceCorrection` / `restoreExpense` | V4 budget (CONTRACTS §2ter ; annulations à l’identique) | `boolean` |
 
 Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `actionableTasksToday(tasks, today, completions, chores.skips)`,
@@ -432,7 +432,7 @@ Dérivés à calculer dans l'UI avec `@a2/core` (jamais de logique maison) :
 `recentGroceryPurchases(groceries, 20)`, `groceryCategoryLabel` ; V3.2 :
 `eventsOn`, `eventsBetween`, `nextEvents` (§12.3), `forestProgress(forest,
 today)`, `weeklyCareGoal(forest, today)` (§13) ; V4 :
-`taskOccurrencesBetween(tasks, completions, chores.skips, from, to)` (§14.2),
+`taskOccurrencesBetween(tasks, completions, chores.skips, from, to, today)` (§14.2),
 `activeLantern(focus)`, `unlockedLanterns(focus)`, `nextLantern(focus)`
 (§14.3).
 
@@ -638,8 +638,9 @@ cocher la tâche). Validation : `focus-not-object`,
 `focus-session-not-object`, `focus-invalid-id`, `duplicate-focus-id`,
 `focus-invalid-started-at`, `focus-invalid-minutes`, `focus-invalid-who`,
 `focus-invalid-label`, `focus-invalid-task-id` ; V4 :
-`focus-invalid-selected-lantern` (§14.3). `addFocusSession` conserve
-`selectedLantern`.
+`focus-invalid-selected-lantern` (§14.3), `focus-invalid-completed`
+(`completed` non booléen). `addFocusSession` conserve `selectedLantern` et
+n'écrit `completed: false` que pour une lanterne arrêtée avant la fin.
 
 ### 11.8 Store (`careActions.ts`, exposé par `useApp()`)
 
@@ -821,14 +822,21 @@ casse, pluriels simples ignorés) vont dans ce rayon.
 
 ### 14.2 Tâches au calendrier (`taskCalendar.ts`)
 
-`taskOccurrencesBetween(tasks, completions, skips, from, to)` →
+`taskOccurrencesBetween(tasks, completions, skips, from, to, today?)` →
 `{ task, date, dueDate, done, skipped }[]`, bornes incluses
 « YYYY-MM-DD », tri par date puis ordre de la liste des tâches (stable).
 
 - Montrées : hebdomadaires **à jour fixe** (`weeklyDay`), mensuelles
-  (`monthlyDay`, ajusté au dernier jour des mois courts), ponctuelles à leur
-  date (`createdAt`, `dueDate = "once"`). Jamais les quotidiennes ni les
-  hebdomadaires souples. Pas d'occurrence récurrente avant `createdAt`.
+  (`monthlyDay`, ajusté au dernier jour des mois courts), ponctuelles
+  (`dueDate = "once"`) **comme dans Maison** : non faites, elles sont
+  proposées chaque jour jusqu'à ce qu'elles le soient → affichées à
+  max(`createdAt`, `today`), « pas aujourd'hui » lu pour ce jour-là (elle
+  revient le lendemain) ; faites, barrées au jour de `completedAt` (jamais
+  avant `createdAt`). Sans `today` : à `createdAt`. Jamais les quotidiennes
+  ni les hebdomadaires souples. Pas d'occurrence récurrente avant
+  `createdAt`.
+- Tour à tour (présentation, `taskAgenda.ts`) : les occurrences à venir non
+  faites alternent à partir de `nextAssignee` (comptées depuis aujourd'hui).
 - `done` : fait Maison de l'occurrence (`findOccurrenceCompletion`, donc
   synchronisé avec Maison ; une hebdomadaire repassée en jour fixe garde le
   fait daté du lundi) — l'UI affiche la tâche **barrée**, jamais retirée.
@@ -842,8 +850,10 @@ casse, pluriels simples ignorés) vont dans ce rayon.
 ### 14.3 Lanternes de pierre (`lanterns.ts`, `focus.selectedLantern?`)
 
 Lancer un minuteur allume la lanterne de pierre (tōrō) posée dans la forêt.
-Chaque session terminée (`focus.sessions.length`) rapproche d'un nouveau
-modèle, collectionné dans le Carnet ; on choisit celui qui est posé.
+Chaque session **menée au bout** rapproche d'un nouveau modèle, collectionné
+dans le Carnet ; on choisit celui qui est posé. Une lanterne arrêtée avant
+la fin est gardée en mémoire (`completed: false`) mais ne compte pas ; les
+sessions d'avant ce drapeau comptent (`completedFocusCount`).
 
 | id | débloquée après (sessions terminées) |
 |---|---|

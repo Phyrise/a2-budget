@@ -1,0 +1,460 @@
+# A² Home — synchronisation à deux (conception V5)
+
+**Document de conception uniquement : rien n'est implémenté en V4.** Il remplace la piste «
+Fastify + SQLite » de `FUTURE_SYNC.md` (serveur maison, tunnel) par une solution gratuite,
+sans serveur et sans carte bancaire : Firebase (Auth Google + Cloud Firestore, offre Spark).
+Pas à pas console : `docs/FIREBASE_SETUP.md` (qui contient aussi le fichier de règles
+complet).
+
+Principes conservés (V3 §1) : hors ligne d'abord, cocher reste instantané, rien ne punit,
+rien ne compare. Ajouté : chacun voit ce que l'autre fait, en douceur, et personne n'annule
+les gestes de l'autre (sauf mode développeur).
+
+## 1. Architecture
+
+```
+Téléphone AL (PWA, phyrise.github.io/a2-budget/)    Téléphone AC (idem)
+  React + store (AppState, inchangé pour l'UI)        …
+  └─ SyncBridge (nouveau, apps/web/src/sync/)
+       ├─ Firebase Auth : connexion Google
+       ├─ Firestore SDK web + cache persistant IndexedDB
+       │    (persistentLocalCache + persistentMultipleTabManager)
+       └─ file d'écritures hors ligne (gérée par le SDK)
+                    │  HTTPS / WebChannel (temps réel)
+                    ▼
+   Cloud Firestore (offre Spark, base « (default) »)
+     households/{hid}/…  — règles : seuls les 2 UID membres
+                    ▲
+   (option) Cloudflare Worker gratuit « a2-push » : Web Push VAPID (§8)
+```
+
+- **Hébergement** : GitHub Pages, inchangé (`base: '/a2-budget/'`). Aucun Firebase Hosting,
+  aucune Cloud Function (elles exigent l'offre Blaze, donc une carte). Aucun Cloud Storage
+  (même raison depuis fin 2024).
+- **Configuration web publique** (`apiKey`, `authDomain`, `projectId`, `appId`…) : ce ne
+  sont **pas** des secrets ; la sécurité vient des règles. Elle est fournie au build par
+  `apps/web/.env.production` (variables `VITE_FIREBASE_*`, versionnées).
+- **Drapeau** : sans `VITE_FIREBASE_PROJECT_ID`, l'app reste **100 % locale** et le SDK
+  Firebase n'est jamais chargé (import dynamique, chunk à part). Avec la config, l'app reste
+  locale tant que personne ne choisit « Synchroniser nos deux téléphones » dans Réglages.
+- **SDK** : `firebase` v12+ modulaire (`firebase/app`, `firebase/auth`, `firebase/firestore`
+  ; jamais `firestore/lite`, qui n'a pas de hors ligne). ≈ 120–150 Ko gzip, chargés
+  seulement en mode synchronisé, puis précachés par le service worker.
+- **Foyer** : exactement 2 membres, chacun avec un rôle `a` (AL, Jiji) ou `b` (AC,
+  Calcifer). Le rôle relie l'UID Google aux `'a' | 'b'` déjà utilisés partout dans
+  `@a2/core` (assignee, doneBy, addedBy…).
+
+### 1.1 Connexion Google : le point délicat
+
+`signInWithRedirect` casse quand `authDomain` (`<projet>.firebaseapp.com`) diffère du
+domaine de l'app et que le navigateur bloque le stockage tiers (Safari 16.1+, Chrome 115+,
+Firefox 109+). `signInWithPopup` marche dans un onglet, mais **pas dans une PWA installée
+sur iPhone** (la fenêtre ne partage pas le stockage de l'app : la promesse ne se résout
+jamais).
+
+Stratégie retenue :
+
+1. Navigateur classique, Android (même installé) : `signInWithPopup`.
+2. PWA installée sur iPhone : **auto-hébergement du « helper »** Firebase (option 4 de la
+   doc *redirect best practices*) : les fichiers `__/auth/handler`, `handler.js`,
+   `experiments.js`, `iframe`, `iframe.js`, `links`, `links.js` et `__/firebase/init.json`
+   sont servis à la **racine** de `phyrise.github.io` (dépôt de site utilisateur
+   `phyrise.github.io`, avec `.nojekyll`, sinon GitHub ignore les dossiers commençant par
+   `_`) ; `authDomain` devient `phyrise.github.io` ; `signInWithRedirect` redevient même
+   origine. GitHub Pages sert `handler.html` pour `/__/auth/handler` (fichiers sans
+   extension renommés en `.html`) — **à confirmer à l'étape 0** (§11).
+3. Plan B si l'étape 0 échoue sur iPhone : **connexion anonyme Firebase + code
+   d'invitation** (aucune fenêtre, aucun Google). L'UID vit dans l'IndexedDB de la PWA (non
+   purgée pour une app installée) ; perdu (réinstallation), l'autre membre régénère un code
+   et l'on rejoint de nouveau (règle « remplacer le membre de même rôle », à ajouter alors).
+
+La session Firebase est persistée (`browserLocalPersistence`) : on se connecte une fois par
+téléphone.
+
+## 2. Modèle de données Firestore
+
+Tout vit sous `households/{hid}`. `hid` = id aléatoire (20 caractères). Les ids des
+documents sont **les ids déjà générés par l'app** (`newId()`, UUID) : aucune traduction
+d'identifiant.
+
+| Chemin | Nature | Contenu |
+|---|---|---|
+| `users/{uid}` | profil privé | `{ hid }` — où est mon foyer |
+| `invites/{code}` | invitation | `{ hid, role, createdBy, expiresAt }` — usage unique, `role` = celui offert |
+| `households/{hid}` | foyer | `memberUids: [uid…]` (≤ 2), `members: { uid: 'a'\|'b' }`, `names: { a, b }`, `schema`, `minApp`, `inviteCode?`, `inviteExpiresAt?` |
+| `…/tasks/{id}` | objet | `HouseholdTask` |
+| `…/completions/{id}` | **fait** | `ChoreCompletion` + `localDay`, `creditKey` |
+| `…/skips/{id}` | **fait** | `ChoreSkip` |
+| `…/forestEvents/{id}` | **fait** | `{ kind: 'pause'\|'resume', localDay, at }` |
+| `…/focusSessions/{id}` | **fait** | `FocusSession` |
+| `…/groceries/{id}` | objet | `GroceryItem` |
+| `…/groceryHistory/{id}` | **fait** | `GroceryPurchase` (200 gardés) |
+| `…/events/{id}` | objet | `CalendarEvent` |
+| `…/months/{YYYY-MM}` | objet | `MonthRecord` (dépenses et paiements en **maps**, §2.3) |
+| `…/balanceCorrections/{YYYY-MM}` | objet | `BalanceCorrection` (une par mois) |
+| `…/circles/{id}` | objet | `Circle` |
+| `…/settings/budget` | objet | `Settings` (dépenses récurrentes en map) |
+| `…/settings/focus` | objet | `{ selectedLantern }` |
+| `…/settings/groceryMemory` | objet | `{ memory: { clé: rayon } }` |
+| `…/activity/{id}` | **fait** | fil des nouvelles (§7) |
+| `…/checkpoints/{YYYY-MM-DD}` | dérivé | `ForestState` figé à ce jour (§3.3) |
+| `…/meta/forestMilestones` | monotone | plus hauts stade / soins / déblocages vus |
+| `…/memberState/{uid}` | privé partagé | `{ activitySeenAt }` |
+| `…/push/{uid}` | privé partagé | abonnement Web Push (option, §8) |
+
+Unités inchangées : montants en **centimes** entiers (l'affichage à l'euro reste un rendu,
+V4), dates « YYYY-MM-DD » locales, horodatages ISO. `selectedMonth` et toutes les
+préférences d'interface restent **par téléphone** (jamais synchronisées).
+
+### 2.1 Métadonnées communes
+
+- Tous : `syncedAt` = `serverTimestamp()` à **chaque** écriture (curseur de synchronisation,
+  §4.2), `updatedBy` = UID de l'auteur de l'écriture.
+- Objets : `updatedAt` (ISO, horloge du téléphone, informatif) ; suppression **douce**
+  `deletedAt` (heure serveur), purge définitive après 30 jours.
+- Faits : `createdBy` (UID), `role` (`a`|`b`) ; annulation douce `undoneAt` (ISO),
+  `undoneDay` (« YYYY-MM-DD »), `undoneBy` (UID), `devOverride?: true` (§9). Un fait n'est
+  **jamais** supprimé ni réécrit.
+
+### 2.2 Faits en ajout seulement → forêt recalculable
+
+Aujourd'hui, décocher **retire** la complétion et tombstone le crédit ; la forêt est un état
+accumulé. En mode synchronisé, la forêt devient une **fonction pure des faits** :
+
+```
+forêt = replayForest(dernierCheckpoint, faits postérieurs, aujourd'hui)
+```
+
+Événements rejoués, triés par `(jour, horodatage, id)` :
+
+- complétion → `grantCredit(creditKey, localDay)`, puis `updateStreak`,
+  `evaluateRareEvents`, `evaluateUnlocks` (exactement `toggleTaskToday`) ;
+- annulation (`undoneAt`, au jour `undoneDay`) → `tombstoneCredit` ;
+- pause / reprise → `pauseForest` / `resumeForest` ;
+- chaque jour franchi → `advanceDay` (décroissance douce, idempotent).
+
+Les deux téléphones ayant les mêmes faits obtiennent **la même forêt**, quel que soit
+l'ordre d'arrivée. Le plafond de 3 crédits/jour reste déterministe : AL et AC cochent chacun
+2 tâches hors ligne le même jour → après fusion, 3 crédits, attribués dans l'ordre
+`(localDay, completedAt, id)`. `localDay` est figé par l'auteur (pas recalculé dans le
+fuseau du lecteur). Une recomplétion après annulation crée un **nouveau** fait (nouvel id) :
+la clé de crédit est déjà tombstonée → aucun crédit (inchangé).
+
+**La croissance ne diminue jamais**, même après fusion : le seul cas où un rejeu donne moins
+que ce qu'un téléphone a affiché est une pause posée par l'un pendant que l'autre cochait
+hors ligne. `meta/forestMilestones` garde le maximum vu (stade, `lifetimeCare`, ids
+débloqués, plus long streak) ; chaque téléphone y écrit `max(local, distant)` (règle :
+jamais en baisse) ; l'affichage prend `max(rejeu, jalons)`. La vitalité (court terme) peut,
+elle, s'ajuster doucement : c'est voulu.
+
+### 2.3 Objets : « dernier qui écrit gagne », champ par champ
+
+Écritures par `updateDoc` avec **seulement les champs modifiés** : deux modifications de
+champs différents se combinent (AL change le titre, AC l'effort → les deux restent). Même
+champ : la dernière écriture **arrivée au serveur** gagne (une modification hors ligne
+arrive à la reconnexion).
+
+Les tableaux sont remplacés en bloc par Firestore ; on les transforme donc en maps quand
+deux personnes peuvent toucher des éléments différents :
+
+- `months/{m}.expenses` → `{ [expenseId]: { label, amountCents, order } }` ;
+- `months/{m}.paid` → `{ transferA, transferB, expenses: { [id]: true } }` ;
+- `settings/budget.recurringExpenses` → map, même forme ;
+- `settings/groceryMemory.memory` → map ; les clés (libellés normalisés, accents, espaces)
+  passent par `new FieldPath('memory', clé)`, jamais par une chaîne pointée.
+
+Suppression contre modification : la suppression douce gagne (un `deletedAt` n'est retiré
+que par « Annuler » explicite, ex. `restoreGrocery`, `restoreCalendarEvent`).
+
+## 3. Lien avec le store existant
+
+### 3.1 SyncBridge par différence (aucune action réécrite)
+
+Les ~30 actions de `useApp()` restent **inchangées** (transitions pures sur `AppState`). Le
+pont observe chaque transition **locale** `prev → next` et la traduit en écritures Firestore
+par une fonction pure et testée `diffToOps(prev, next, ctx)` :
+
+| Différence | Écriture |
+|---|---|
+| tâche / article / événement / cercle ajouté ou champs changés | `set` ou `update` des champs |
+| objet retiré | `deletedAt` |
+| complétion ou « pas aujourd'hui » ajouté | création du fait |
+| complétion ou « pas aujourd'hui » retiré | `undoneAt` sur le fait |
+| article passé du panier à l'historique | `deletedAt` + fait `groceryHistory` (même lot) |
+| `forest.paused` basculé | fait `forestEvents` |
+| autres champs de `forest` | rien (dérivés) |
+
+Les changements **distants** arrivent par les écouteurs, sont projetés en `AppState`
+(`projectState(docs, today)`, pure) et appliqués au store avec l'origine `remote` : ils ne
+repassent jamais par `diffToOps` (pas d'écho). En mode synchronisé, après toute transition,
+`forest` est recalculée par `replayForest` (même résultat que la transition locale quand
+rien d'autre n'a changé) ; animations et lucioles partent du résultat local immédiat.
+
+### 3.2 Domaine (`@a2/core`, nouveaux modules purs)
+
+`replayForest`, `creditKeyFor` exporté, `projectState`, `diffToOps`, conversions
+`MonthRecord ⇄ doc` (maps), validation des docs entrants (réutilise `validateAppState` sur
+la projection : un doc invalide est ignoré et signalé, jamais propagé).
+
+### 3.3 Points de reprise de la forêt
+
+Rejouer des années de faits à chaque ouverture serait lent. Le premier jour de chaque mois,
+si le jour J = dernier jour d'il y a deux mois n'a pas de point de reprise, un téléphone
+écrit `checkpoints/{J}` = forêt rejouée jusqu'à J (déterministe : si les deux l'écrivent, le
+contenu est identique). Chaque point porte `day` = son id ; la genèse (§6) porte en plus
+`genesis: true` et n'est jamais supprimée. Un fait arrivé après coup avec `localDay ≤ J`
+(téléphone hors ligne plus de 30 jours) reste dans l'historique et la répartition mais
+n'affecte plus la forêt. On garde la genèse et les 3 derniers.
+
+## 4. Hors ligne, temps réel et quotas
+
+### 4.1 Persistance
+
+`initializeFirestore(app, { localCache: persistentLocalCache({ tabManager:
+persistentMultipleTabManager() }) })` : lectures hors ligne, écritures mises en file et
+**conservées au rechargement**, plusieurs onglets cohérents. Le store garde en plus sa copie
+`localStorage` (premier affichage instantané) sous une **clé distincte** `a2-budget:sync:v1`
+: la clé locale `a2-budget:state:v1` n'est jamais écrasée par la synchro.
+
+### 4.2 Écouteurs « delta » (indispensable pour les quotas)
+
+Un écouteur Firestore rouvert après plus de 30 minutes est facturé comme une nouvelle
+requête : **chaque document** du résultat est relu. Écouter toutes les complétions (≈ 3 500
+par an) à chaque ouverture coûterait plus de 100 000 lectures par jour en un an — au-delà du
+quota gratuit.
+
+Donc :
+
+1. Au démarrage : projection depuis le cache local (`getDocsFromCache`, gratuit) et la copie
+   `localStorage`.
+2. Un écouteur par collection : `where('syncedAt', '>', curseur − 2 min)`. Seuls les
+   documents écrits depuis le dernier passage sont lus. Le curseur = plus grand `syncedAt`
+   reçu du serveur (jamais d'une écriture en attente), gardé dans `a2-budget:sync:v1`. Le
+   chevauchement de 2 minutes est sans risque (application idempotente).
+3. Resynchronisation complète si : curseur absent, plus vieux que 25 jours (les suppressions
+   douces sont purgées à 30), cache IndexedDB vidé (le doc `households/{hid}` n'est plus en
+   cache), ou `schema` du foyer changé.
+
+Les suppressions sont toujours douces, donc visibles par ces écouteurs.
+
+### 4.3 Estimation par jour (2 téléphones, usage soutenu)
+
+Hypothèses : 15 ouvertures par jour et par personne espacées de plus de 30 min ; 120 actions
+par jour pour le foyer (20 tâches, 40 gestes de courses, 5 budget, 3 calendrier, 30
+nouvelles, 20 divers).
+
+| Poste | Lectures | Écritures |
+|---|---|---|
+| 30 ouvertures × 16 écouteurs (1 lecture minimum par requête) | 480 | — |
+| chaque écriture relue par les 2 téléphones | 240 | 120 |
+| `get()` des règles (appartenance, 1 par requête) | 120 | — |
+| fil des nouvelles, curseurs, jalons | 60 | 40 |
+| **Total** | **≈ 900 (1,8 % de 50 000)** | **≈ 160 (0,8 % de 20 000)** |
+
+Stockage : ≈ 400 o par fait → ≈ 2 Mo par an (quota : 1 Gio). Sortie réseau : quelques Mo par
+mois (quota : 10 Gio). Migration initiale (§6) : une seule fois, ≈ 1 000 à 3 000 écritures.
+Une resynchronisation complète (rare) relit tout : ≈ 5 000 lectures la première année. Marge
+confortable ; un compteur discret du mode développeur affiche les lectures de la session.
+
+Limites Spark à respecter : 50 000 lectures, 20 000 écritures et 20 000 suppressions par
+jour, 1 Gio stocké, 10 Gio/mois sortants, une seule base gratuite par projet, ni TTL, ni
+sauvegardes, ni PITR (payants). Dépassement : les requêtes échouent jusqu'à minuit (heure du
+Pacifique), **sans facture**.
+
+## 5. Sécurité
+
+Règles complètes : `docs/FIREBASE_SETUP.md` §5. En résumé :
+
+- `households/{hid}` et tout ce qu'il contient : lecture et écriture réservées aux UID de
+  `memberUids` (un `get()` du foyer par requête).
+- Chaque écriture doit porter `updatedBy == request.auth.uid` et `syncedAt == request.time`
+  (curseur fiable, auteur vérifié).
+- Faits : création seulement ; une seule mise à jour possible, l'annulation (`undoneAt`,
+  `undoneDay`, `undoneBy`, `devOverride`) ; jamais supprimés (sauf `groceryHistory` et
+  `activity`, élagués).
+- Objets : purge définitive seulement 30 jours après `deletedAt`.
+- `meta/forestMilestones` : aucune valeur ne peut baisser.
+- `memberState/{uid}`, `push/{uid}` : écrits seulement par leur propriétaire.
+- Liste des membres : immuable pour les membres (pas de 3e, pas d'éviction depuis l'app ; la
+  console reste le recours).
+
+### 5.1 Invitation du 2e membre (code à usage unique)
+
+1. AL : « Créer notre foyer » → lot : `households/{hid}` (AL seul membre, rôle choisi) +
+   `users/{uidAL}`.
+2. AL : « Inviter AC » → code de 8 caractères (alphabet sans ambiguïté, ≈ 40 bits, ex.
+   `KQ7M-2XPD`), valable 48 h. Lot : `invites/{code}` + `inviteCode`/`inviteExpiresAt` sur
+   le foyer. Partage : lien `https://phyrise.github.io/a2-budget/#rejoindre=KQ7M-2XPD`
+   (fragment : jamais envoyé à un serveur) ou code à taper / QR affiché à l'écran.
+3. AC, connecté : lit `invites/{code}` (lecture par code exact seulement, aucune liste
+   possible ; il y trouve `hid` et son rôle) → lot : ajout de son UID au foyer
+   (`arrayUnion`) avec **l'autre rôle** + suppression de l'invitation + `users/{uidAC}`. Les
+   règles exigent que l'invitation référencée par le foyer existe avant et n'existe plus
+   après le lot (`exists` / `existsAfter`) : le code ne sert qu'une fois, et seulement si le
+   foyer n'a qu'un membre.
+
+N'importe quel compte Google peut se connecter au projet (Firebase Auth ne filtre pas), mais
+un inconnu ne lit rien : il n'est membre d'aucun foyer et ne connaît aucun code.
+
+## 6. Migration depuis le localStorage
+
+1. **Sauvegarde d'abord** : sur chaque téléphone, export JSON automatique (format actuel,
+   `exportImport.ts`) proposé au téléchargement, plus copie `a2-budget:backup-pre-sync` dans
+   `localStorage`.
+2. **Téléphone de référence** (celui dont les données sont les plus complètes ; l'écran
+   montre les deux résumés `ImportSummary` pour choisir) : crée le foyer et envoie son état,
+   par lots de 450 écritures au plus (limite d'un lot : 500), avec reprise si coupure (ids
+   stables → relancer est idempotent ; un doc `meta/migration` note l'avancement).
+   - complétions et « pas aujourd'hui » existants → faits marqués `imported: true` ;
+   - forêt actuelle → `checkpoints/{jour de migration}` (`genesis: true`) = `ForestState`
+     tel quel (les crédits déjà tombstonés n'ont plus de fait : on part de l'état, on ne le
+     reconstruit pas) ; les faits importés sont antérieurs au point de reprise, donc jamais
+     rejoués ;
+   - `meta/forestMilestones` initialisé depuis cette forêt.
+3. **Second téléphone** : rejoint avec le code ; ses données locales ne sont **pas
+   fusionnées** (deux historiques indépendants créeraient des doublons de tâches et
+   fausseraient la forêt). Elles restent intactes sous `a2-budget:state:v1` et dans l'export
+   ; un écran propose d'ajouter à la liste commune ses articles de courses non cochés (seul
+   ajout utile).
+4. **Se déconnecter** : retour au mode local avec, au choix, la dernière copie synchronisée
+   ou les anciennes données locales.
+
+## 7. Notifications gratuites dans l'app (recommandé)
+
+Collection `activity` : un fait écrit **dans le même lot** que l'action, seulement pour les
+gestes qui intéressent l'autre :
+
+| `kind` | Exemple affiché |
+|---|---|
+| `circle` | « AC a écrit dans le cercle » |
+| `thanks` | « AL te dit merci » |
+| `task-done` | « AC a arrosé les plantes » (tâches assignées à l'autre ou à deux) |
+| `grocery-added` | « AL a ajouté 3 articles aux courses » (groupés par 10 min) |
+| `event` | « AC a ajouté Dîner chez Léa, samedi » |
+| `lantern` | « AL a allumé la lanterne 15 min » |
+| `budget` | « AC a recalé le solde » / « virement d'AL fait » |
+| `join` | « AC a rejoint le foyer » |
+
+- Temps réel (écouteur delta) : petit toast doux, au plus un par type toutes les 10 minutes,
+  jamais pendant une animation ; aucun son.
+- Badge : pastille discrète sur l'onglet concerné + feuille « Nouvelles » (depuis l'en-tête)
+  ; « vu » = `memberState/{uid}.activitySeenAt`.
+- Une complétion distante fait arriver une luciole dans la forêt.
+- Jamais de nouvelle négative (« AC n'a pas fait… »), jamais de compteur comparatif (V3 §1).
+- Conservation : 90 jours, élagués par n'importe quel téléphone.
+
+## 8. Option Web Push (Cloudflare Worker, gratuit, sans carte)
+
+Pour être prévenu **app fermée**. Faisabilité :
+
+- **iPhone** : Web Push seulement pour une PWA **ajoutée à l'écran d'accueil** (iOS/iPadOS
+  16.4+), permission demandée après un geste explicite ; pas de push silencieux (chaque push
+  doit afficher une notification) ; abonnements parfois révoqués par iOS (réabonnement à
+  l'ouverture). iOS 18.4+ accepte aussi le *Declarative Web Push*.
+- **Android / ordinateur** : Chrome, Firefox, Edge ; fonctionne aussi dans un onglet.
+- **Gratuit sans carte** : Cloud Functions et l'envoi FCM côté serveur supposent Blaze ou
+  une clé de compte de service (pouvoir d'administration sur le projet) — écartés. Un
+  **Cloudflare Worker** (plan Free : 100 000 requêtes/jour, 10 ms de CPU par requête,
+  inscription sans carte) envoie directement en Web Push signé VAPID (ECDH, HKDF, AES-GCM,
+  ES256 : WebCrypto natif, quelques ms).
+
+Fonctionnement, **sans aucun stockage côté Worker** : chaque téléphone enregistre son
+`PushSubscription` dans `households/{hid}/push/{uid}`. Après une écriture d'`activity`, le
+client appelle `POST /notify { hid, activityId }` avec son jeton d'identité Firebase. Le
+Worker vérifie le jeton (RS256, `aud` = projet, `iss` = securetoken), relit **avec ce même
+jeton** via l'API REST Firestore le foyer, l'activité et l'abonnement de l'autre (les règles
+prouvent l'appartenance au foyer : le Worker n'a aucun droit propre), compose le texte
+lui-même et envoie. Seul secret : la clé privée VAPID (`wrangler secret put`). Hors ligne :
+l'appel part à la reconnexion.
+
+**Recommandation** : V5 avec les nouvelles dans l'app seulement ; Web Push en V5.1, si
+l'envie est là après quelques semaines, en commençant par « cercle » et « merci ».
+
+## 9. Historique et mode développeur
+
+| Donnée | Conservation |
+|---|---|
+| complétions, « pas aujourd'hui », pauses, lanternes, cercles, mois, corrections de solde, événements | indéfiniment (faits ; la projection garde les plafonds actuels de `@a2/core`, ex. 500 sessions, déjà sans effet sur les déblocages) |
+| historique des courses | 200 achats (`GROCERY_HISTORY_MAX`) ; au-delà, élagués |
+| mémoire des rayons | 500 entrées (`GROCERY_MEMORY_MAX`) |
+| nouvelles (`activity`) | 90 jours |
+| objets supprimés | 30 jours, puis purgés |
+| points de reprise | genèse + 3 derniers |
+
+Pas de sauvegarde serveur sur Spark : chaque téléphone détient une copie complète (cache),
+et un rappel mensuel doux propose l'export JSON.
+
+**Annuler une action de l'autre** : impossible dans l'usage normal (on ne décoche que ses
+propres complétions ; l'élément de l'autre affiche « fait par AC »). En **mode développeur**
+(préférence existante), la feuille « Nouvelles » montre « Annuler » sur les gestes de
+l'autre : l'annulation pose `undoneAt` avec `devOverride: true` et crée une nouvelle « AL
+(mode développeur) a annulé… », visible des deux. Les règles autorisent techniquement les
+deux membres (confiance mutuelle, règles simples) : la retenue est dans l'interface, la
+trace dans les données.
+
+## 10. Conflits, horloges, versions
+
+- **Horloges** : l'ordre de synchronisation utilise l'heure du serveur (`syncedAt`) ; le
+  jour d'une action reste celui de l'auteur (`localDay`). Une horloge fausse ne change que
+  l'ordre intra-journée, identique sur les deux téléphones (même tri, même départage par
+  id).
+- **Deux cochent la même tâche hors ligne** : deux faits pour la même occurrence ; la
+  projection garde le premier (`completedAt`, puis id) comme complétion, l'autre devient «
+  fait ensemble » (`doneBy: 'both'`) dans la répartition ; un seul crédit (même clé).
+- **Même article coché par les deux** : même valeur, aucun conflit.
+- **Nouveau mois créé sur les deux téléphones** (ouverture le 1er) : les dépenses copiées
+  gardent les ids des dépenses récurrentes, donc mêmes clés. La création passe par une
+  transaction « créer si absent » ; hors ligne, le mois reste local jusqu'à la reconnexion,
+  puis seules les modifications faites à la main (différence avec les valeurs par défaut)
+  sont envoyées si l'autre l'a déjà créé — jamais d'écrasement par les valeurs par défaut.
+- **Deux recalages du solde le même mois** : même doc `{YYYY-MM}`, le dernier arrivé gagne
+  (c'est le plus récent regard sur le compte).
+- **Versions d'app différentes** : `households.schema` et `minApp` ; un téléphone trop
+  ancien passe en lecture seule et propose la mise à jour du service worker. Les `updateDoc`
+  partiels préservent les champs inconnus d'une version plus récente.
+
+## 11. Tests (sans compte Firebase)
+
+- **Domaine** (Vitest, `pnpm test`) : `replayForest` — toutes les permutations d'arrivée des
+  faits donnent la même forêt ; plafond, pause, annulation, recomplétion, jalons jamais en
+  baisse ; `diffToOps` / `projectState` aller-retour ; maps des mois.
+- **Règles** : `firebase-tools` (devDependency, `npx firebase`) +
+  `@firebase/rules-unit-testing`, émulateur Firestore + Auth, projet `demo-a2home` (préfixe
+  `demo-` : aucun compte, aucune ressource réelle). Java **21+** requis par l'émulateur.
+  Script `pnpm test:rules` = `firebase emulators:exec --only firestore,auth --project
+  demo-a2home "vitest run -c vitest.rules.config.ts"`, hors de `pnpm test` (Java) et en job
+  CI séparé. Cas : inconnu refusé, 3e membre refusé, code réutilisé refusé, fait modifié
+  refusé, `syncedAt` falsifié refusé, jalons en baisse refusés.
+- **QA bout en bout** (`apps/web/scripts/qa-sync.mjs`) : Playwright, deux contextes = deux
+  téléphones, émulateurs, connexion par faux jeton Google de l'émulateur Auth,
+  `context.setOffline(true)` pour les scénarios hors ligne (cocher des deux côtés, fusion,
+  forêt identique).
+
+## 12. Plan V5 par étapes
+
+0. **Essai de connexion sur le vrai téléphone** (une soirée) : page minimale déployée,
+   Google via popup puis via helper auto-hébergé, PWA installée. Décide du chemin (§1.1).
+   Rien d'autre ne commence avant.
+1. **Domaine** : `replayForest`, faits annulables, maps, jalons + tests.
+2. **Pont** : `diffToOps`, `projectState`, clés `a2-budget:sync:v1`, mode local intact
+   (tests sans Firebase).
+3. **Firebase** : init paresseuse, Auth, foyer, invitation, règles + `test:rules`.
+4. **Migration** : sauvegardes, envoi par lots avec reprise, écran de choix.
+5. **Temps réel** : écouteurs delta, resynchronisation, indicateur discret (« à jour », «
+   hors ligne — tout est gardé »).
+6. **Nouvelles** : `activity`, toasts, badges, annulation mode dev.
+7. **QA deux téléphones**, déploiement, configuration d'Arthur (`FIREBASE_SETUP.md`).
+8. (V5.1, option) **Web Push** via Cloudflare Worker.
+
+## 13. Risques
+
+| Risque | Parade |
+|---|---|
+| Connexion Google dans la PWA iPhone | étape 0 ; helper auto-hébergé ; plan B anonyme + code |
+| Quotas de lecture | écouteurs delta, pas d'écouteur sur collection entière, compteur dev |
+| Cache IndexedDB effacé | détection → resynchronisation complète ; copie `localStorage` |
+| Données perdues (pas de sauvegarde Spark) | 2 copies complètes, export JSON, faits jamais supprimés |
+| Règles trop permissives / bloquantes | tests émulateur obligatoires avant publication |
+| Forêt différente sur les deux téléphones | rejeu déterministe testé par permutations, jalons monotones |
+| Ancien build en cache | `minApp`, lecture seule, invite de mise à jour |
+| Dépôt public GitHub Pages | aucune donnée dans le dépôt ; config web publique par nature |

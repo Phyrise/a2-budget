@@ -39,6 +39,8 @@ export interface LanternState {
   /** La fin a été célébrée (floraison, carillon) : une seule fois. */
   celebrated: boolean;
   sound: LanternSound;
+  /** Modèle de lanterne débloqué par cette session (annonce), ou null. */
+  unlocked: string | null;
 }
 
 const INITIAL: LanternState = {
@@ -54,7 +56,11 @@ const INITIAL: LanternState = {
   recorded: false,
   celebrated: false,
   sound: 'off',
+  unlocked: null,
 };
+
+/** Dernière durée choisie (menu ⋯ d'une tâche, préparation) : le temps de la visite. */
+let lastMinutes = 10;
 
 let state: LanternState = INITIAL;
 const listeners = new Set<() => void>();
@@ -102,8 +108,15 @@ function makeId(): string {
   return `lantern-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+export const LANTERN_MINUTES = [5, 10, 15, 25] as const;
+
+export function lastLanternMinutes(): number {
+  return lastMinutes;
+}
+
 export const lantern = {
   start(config: LanternConfig) {
+    lastMinutes = config.minutes;
     set({
       ...INITIAL,
       sound: state.sound,
@@ -145,6 +158,9 @@ export const lantern = {
   },
   markCelebrated() {
     set({ celebrated: true });
+  },
+  markUnlocked(id: string) {
+    set({ unlocked: id });
   },
   reset() {
     set({ ...INITIAL, sound: state.sound });

@@ -11,13 +11,34 @@ import { manifest } from '../../../world/manifest';
 import type { GrowthStage } from '../../../world/types';
 import { ofName } from '../../maison/taskText';
 import { NB, capitalizeFirst, countWords, durationWords, numberWords, typo } from '../ritualText';
+import { silhouettes } from '../../../themes/silhouettes';
+import { CarnetImage } from './CarnetImage';
+import { CarnetLanterns } from './CarnetLanterns';
 import { CREATURE_ENTRIES, KODAMA, STAGE_NAMES } from './carnetData';
 
-function CreatureCard({ name, legend, sprite, met }: { name: string; legend: string; sprite: string | undefined; met: boolean }) {
+/**
+ * Une créature du carnet. Pas encore rencontrée : sa silhouette (une image à
+ * part, sans aucun détail) — l'URL du vrai sprite n'apparaît jamais dans la
+ * page tant qu'elle n'a pas été rencontrée. `sprite` n'est lu que si `met`.
+ */
+function CreatureCard({
+  name,
+  legend,
+  met,
+  sprite,
+  silhouette,
+}: {
+  name: string;
+  legend: string;
+  met: boolean;
+  sprite: () => string | undefined;
+  silhouette: string | undefined;
+}) {
+  const src = met ? sprite() : silhouette;
   return (
     <li className={cx('carnet-creature', !met && 'is-unmet')}>
       <span className="carnet-creature__art" aria-hidden="true">
-        {sprite ? <img src={sprite} alt="" loading="lazy" decoding="async" draggable={false} /> : <Icon name="leaf" size={28} />}
+        {src ? <CarnetImage src={src} /> : <Icon name="leaf" size={28} />}
       </span>
       <span className="carnet-creature__text">
         <span className="carnet-creature__name">{met ? name : 'Une silhouette dans la brume'}</span>
@@ -94,7 +115,7 @@ export function CarnetSheet({ open, onClose }: { open: boolean; onClose: () => v
           Créatures
         </h3>
         <ul className="carnet-creatures">
-          <CreatureCard name={KODAMA.name} legend={KODAMA.legend} sprite={kodama} met />
+          <CreatureCard name={KODAMA.name} legend={KODAMA.legend} met sprite={() => kodama} silhouette={silhouettes.kodama[0]} />
           {CREATURES.map((c) => {
             const entry = CREATURE_ENTRIES[c.id];
             return (
@@ -102,13 +123,16 @@ export function CarnetSheet({ open, onClose }: { open: boolean; onClose: () => v
                 key={c.id}
                 name={entry?.name ?? c.id}
                 legend={entry?.legend ?? ''}
-                sprite={manifest.sprites.creatures[c.id]}
                 met={met.has(c.id)}
+                sprite={() => manifest.sprites.creatures[c.id]}
+                silhouette={silhouettes.creatures[c.id]}
               />
             );
           })}
         </ul>
       </section>
+
+      <CarnetLanterns />
 
       <section className="carnet-section" aria-labelledby="carnet-cedar">
         <h3 id="carnet-cedar" className="carnet-section__title display">
@@ -123,7 +147,8 @@ export function CarnetSheet({ open, onClose }: { open: boolean; onClose: () => v
             return (
               <li key={n} className={cx('carnet-stage', future && 'is-future', n === stage && 'is-current')} aria-current={n === stage ? 'step' : undefined}>
                 <span className="carnet-stage__img" aria-hidden="true">
-                  <img src={manifest.stages[n].color} alt="" loading="lazy" decoding="async" draggable={false} />
+                  {/* Les stades à venir restent dans la brume : leur peinture n'est pas chargée. */}
+                  {future ? <span className="carnet-stage__mist" /> : <CarnetImage src={manifest.stages[n].color} />}
                 </span>
                 <span className="carnet-stage__name">{future ? 'À venir' : STAGE_NAMES[n]}</span>
                 <span className="visually-hidden">{future ? `Stade ${numberWords(n)}, à venir` : `Stade ${numberWords(n)}`}</span>

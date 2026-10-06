@@ -4,8 +4,11 @@
  * - met à jour la lanterne de la forêt ~1×/s (useWorld().focus) ;
  * - floraison à la fin (focus(1) puis extinction), carillon si le son est
  *   activé, mémorise la session (addFocusSession) une seule fois ;
- * - ambiance sonore (coupée en arrière-plan) et Wake Lock pendant la lanterne.
+ * - ambiance sonore (coupée en arrière-plan) et Wake Lock pendant la lanterne ;
+ * - V4 : si la session terminée débloque un nouveau modèle de lanterne de
+ *   pierre (nextLantern), le note pour l'annonce du bandeau.
  */
+import { nextLantern } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../../state/store';
 import { useWorld } from '../../../world/WorldContext';
@@ -62,7 +65,9 @@ function useWakeLock(active: boolean) {
 
 export function useLanternController({ onFinished }: { onFinished: () => void }) {
   const s = useLantern();
-  const { addFocusSession } = useApp();
+  const { addFocusSession, appState } = useApp();
+  const focusRef = useRef(appState?.focus);
+  focusRef.current = appState?.focus;
   const { focus } = useWorld();
   const visible = usePageVisible();
   const onFinishedRef = useRef(onFinished);
@@ -114,7 +119,10 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
       }
     }
     if (!s.recorded && s.minutesSpent >= 1) {
-      addFocusSession({
+      const before = focusRef.current;
+      const upcoming = nextLantern(before);
+      const count = before?.sessions.length ?? 0;
+      const saved = addFocusSession({
         minutes: Math.min(120, s.minutesSpent),
         who: config.who,
         label: config.label,
@@ -122,6 +130,7 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
         startedAt: new Date(s.startedAt).toISOString(),
       });
       lantern.markRecorded();
+      if (saved && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
     }
     if (s.completed) onFinishedRef.current();
   }, [s, focus, addFocusSession]);

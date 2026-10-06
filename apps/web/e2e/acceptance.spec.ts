@@ -1,80 +1,134 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import {
   PHONE,
   STORAGE_KEY,
   closeSheet,
-  fmt,
   goTo,
   monthKey,
   openApp,
   persisted,
-  setAmount,
   sheet,
 } from './helpers';
 
 test.use({ viewport: PHONE });
+
+/** V4 : euros entiers, jamais de centimes (« 1 335 € »), comme formatEuros de core. */
+const eur0 = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function euros(cents: number): string {
+  return cents < 0 ? `− ${eur0.format(-cents / 100)}` : eur0.format(cents / 100);
+}
+
+/** Montant « toucher pour saisir » (curseurs, − / +) : toucher le chiffre, écrire, Entrée. */
+async function setEuros(page: Page, id: string, text: string) {
+  await page.locator(`#${id}-value`).click();
+  const field = page.locator(`#${id}-edit`);
+  await expect(field).toBeFocused();
+  await field.fill(text);
+  await field.press('Enter');
+}
+
+async function currentMonthOf(page: Page) {
+  const s = await persisted(page);
+  return s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
+}
 
 /**
  * Dépenses récurrentes par défaut (core) :
  * Loyer 1300 + Électricité 100 + Courses 400 + Internet 30 + Assurance 15 = 1845 €.
  */
 test.describe('Budget — critère de réussite', () => {
-  test('A 2200 ; B 3000 + compléments 675 → AL 880, AC 1335, total 2215 ; dépenses 1845 → reste 370 ; persistant', async ({ page }) => {
+  test('A 2200 ; B 3000 + compléments 675 → AL 880, AC 1335, total 2215 ; dépenses 1845 → +370 au compte ; persistant', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-a', '2200');
-    await setAmount(page, 'salary-b', '3000');
-    await expect(page.getByTestId('contribution-b')).toHaveText(fmt(120_000));
+    await setEuros(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-b', '3000');
+    await expect(page.getByTestId('contribution-b')).toHaveText(euros(120_000));
 
-    // Compléments repliés tant qu'ils valent 0 ; le bouton ouvre le champ et lui donne le focus.
+    // Compléments repliés tant qu'ils valent 0 ; le bouton ouvre le curseur et lui donne le focus.
     await expect(page.locator('#bonus-b')).toHaveCount(0);
     await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
     await expect(page.locator('#bonus-b')).toBeFocused();
-    await page.locator('#bonus-b').fill('675');
-    await page.locator('#bonus-b').blur();
+    await setEuros(page, 'bonus-b', '675');
 
-    await expect(page.getByTestId('contribution-a')).toHaveText(fmt(88_000));
-    await expect(page.getByTestId('contribution-b')).toHaveText(fmt(133_500));
-    await expect(page.getByTestId('household-total')).toHaveText(fmt(221_500));
-    await expect(page.getByTestId('expenses-total')).toContainText(fmt(184_500));
-    await expect(page.getByTestId('remaining')).toHaveText(fmt(37_000));
+    await expect(page.getByTestId('contribution-a')).toHaveText(euros(88_000));
+    await expect(page.getByTestId('contribution-b')).toHaveText(euros(133_500));
+    await expect(page.getByTestId('household-total')).toHaveText(euros(221_500));
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
+    // Premier mois, rien de coché : 0 € sur le compte maintenant, +370 € en fin de mois.
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(0));
+    await expect(page.getByTestId('balance-projection')).toHaveText(euros(37_000));
+    await expect(page.getByText(/\bReste\b/u)).toHaveCount(0);
 
-    // Règle des 2 secondes : tout tient dans le premier écran (390 × 844), compléments dépliés.
-    for (const id of ['salary-a', 'salary-b', 'bonus-b']) {
-      await expect(page.locator(`#${id}`)).toBeInViewport();
-    }
-    for (const id of ['contribution-a', 'contribution-b', 'household-total', 'expenses-total', 'remaining']) {
+    // Règle des 2 secondes : versements, total et solde tiennent dans le premier écran (390 × 844).
+    await page.evaluate(() => window.scrollTo(0, 0));
+    for (const id of ['contribution-a', 'contribution-b', 'household-total', 'expenses-total', 'balance-now', 'balance-projection']) {
       await expect(page.getByTestId(id)).toBeInViewport();
     }
-    await expect(page.getByText(/prérempli/i)).toHaveCount(0);
+    // Aucun centime, nulle part dans le Budget.
+    expect(await page.locator('.budget').innerText()).not.toMatch(/\d,\d{2}\s?€/u);
 
-    // Persistance après rechargement (et module mémorisé) : les compléments restent dépliés.
+    // Persistance après rechargement : les compléments restent dépliés.
     await page.reload();
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(220_000));
-    await expect(page.locator('#salary-b')).toHaveValue(fmt(300_000));
-    await expect(page.locator('#bonus-b')).toHaveValue(fmt(67_500));
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
+    await expect(page.locator('#salary-b-value')).toHaveText(euros(300_000));
+    await expect(page.locator('#bonus-b-value')).toHaveText(euros(67_500));
     await expect(page.locator('#bonus-a')).toHaveCount(0);
-    await expect(page.getByTestId('household-total')).toHaveText(fmt(221_500));
-    await expect(page.getByTestId('remaining')).toHaveText(fmt(37_000));
+    await expect(page.getByTestId('household-total')).toHaveText(euros(221_500));
+    await expect(page.getByTestId('balance-projection')).toHaveText(euros(37_000));
     await expect.poll(async () => {
-      const s = await persisted(page);
-      const m = s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
+      const m = await currentMonthOf(page);
       return [m.salaryBCents, m.bonusBCents];
     }).toEqual([300_000, 67_500]);
   });
 
+  test('curseurs : + d’un euro, appui long qui accélère, saisie au-delà du maximum', async ({ page }) => {
+    await openApp(page, 'budget');
+    await setEuros(page, 'salary-a', '2200');
+    const salary = page.locator('#salary-a');
+    await expect(salary).toHaveAttribute('max', '5000');
+    await expect(salary).toHaveAttribute('aria-valuetext', euros(220_000));
+
+    await page.locator('#salary-a-plus').click();
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_100));
+    await page.locator('#salary-a-minus').click();
+    await page.locator('#salary-a-minus').click();
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(219_900);
+
+    // Appui long : l'avance s'accélère (pas de 1 €, puis 10 €, puis 50 €).
+    const plus = await page.locator('#salary-a-plus').boundingBox();
+    if (plus === null) throw new Error('Bouton + introuvable');
+    await page.mouse.move(plus.x + plus.width / 2, plus.y + plus.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(2400);
+    await page.mouse.up();
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBeGreaterThan(219_900 + 3_000);
+    const held = (await currentMonthOf(page)).salaryACents;
+    expect(held % 100).toBe(0);
+
+    // Clavier sur la piste : flèches ±1 €, Page ±100 €.
+    await salary.focus();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('PageUp');
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(held + 9_900);
+
+    // Une valeur au-delà du maximum est acceptée : le curseur se cale au bout.
+    await setEuros(page, 'salary-a', '6200');
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(620_000));
+    await expect(salary).toHaveValue('5000');
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(620_000);
+  });
+
   test('un salaire au-delà du salaire habituel reste au taux de base', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-b', '3675');
-    await expect(page.getByTestId('contribution-b')).toHaveText(fmt(147_000));
+    await setEuros(page, 'salary-b', '3675');
+    await expect(page.getByTestId('contribution-b')).toHaveText(euros(147_000));
   });
 
   test('le détail du calcul est repliable et montre salaire + compléments', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-b', '3000');
+    await setEuros(page, 'salary-b', '3000');
     await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
-    await page.locator('#bonus-b').fill('675');
-    await page.locator('#bonus-b').blur();
+    await setEuros(page, 'bonus-b', '675');
     const toggle = page.getByRole('button', { name: 'Détail du calcul' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
@@ -83,16 +137,92 @@ test.describe('Budget — critère de réussite', () => {
     await expect(line).toContainText('40');
     await expect(line).toContainText('20');
     await expect(line).toContainText('de compléments');
-    await expect(line).toContainText(fmt(133_500).replace(',00', ''));
+    await expect(line).toContainText(euros(133_500));
   });
 
-  test('déficit visible en terre cuite, jamais masqué', async ({ page }) => {
+  test('mois en déficit : note douce et solde prévu en terre cuite, jamais masqués', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-a', '1000');
-    await setAmount(page, 'salary-b', '1000');
-    await expect(page.locator('.ledger--deficit')).toBeVisible();
-    await expect(page.locator('.ledger__row--rest .ledger__label')).toHaveText('Déficit');
-    await expect(page.locator('.ledger__note')).toBeVisible();
+    await setEuros(page, 'salary-a', '1000');
+    await setEuros(page, 'salary-b', '1000');
+    await expect(page.locator('.balance-card--low')).toBeVisible();
+    await expect(page.getByTestId('balance-projection')).toHaveText(euros(-104_500));
+    await expect(page.locator('.balance-card__note')).toBeVisible();
+    await expect(page.locator('.balance-card__note')).toContainText(euros(104_500));
+  });
+});
+
+test.describe('Paiements du mois et compte commun', () => {
+  test('cocher les virements et les dépenses : solde en ce moment, progression, décocher', async ({ page }) => {
+    await openApp(page, 'budget');
+    await setEuros(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-b', '3000');
+    const progress = page.getByTestId('payments-progress');
+    await expect(progress).toHaveText('0 sur 7 payés');
+
+    const transferA = page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true });
+    await transferA.click();
+    await expect(transferA).toHaveAttribute('aria-checked', 'true');
+    await expect(progress).toHaveText('1 sur 7 payés');
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
+    // Le Sans-Visage mange les pépites (décor) ; les chiffres restent la seule information.
+    await expect(page.locator('.noface.is-eating')).toHaveCount(1);
+
+    const rent = page.getByRole('checkbox', { name: 'Loyer + charges payé', exact: true });
+    await rent.click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(-42_000));
+    // La fin du mois ne dépend pas des cases : 0 + (880 + 1 200) − 1 845.
+    await expect(page.getByTestId('balance-projection')).toHaveText(euros(23_500));
+    await expect.poll(async () => (await currentMonthOf(page)).paid).toEqual({ transferA: true, expenses: { rent: true } });
+
+    await rent.click();
+    await expect(rent).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
+    await expect(progress).toHaveText('1 sur 7 payés');
+
+    // Les cases repartent de zéro le mois suivant.
+    await page.getByRole('button', { name: 'Mois suivant', exact: true }).click();
+    await expect(progress).toHaveText('0 sur 7 payés');
+    await expect(page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true })).toHaveAttribute('aria-checked', 'false');
+  });
+
+  test('recaler sur le compte : solde réel, annulable, négatif permis, historique', async ({ page }) => {
+    await openApp(page, 'budget');
+    await setEuros(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-b', '3000');
+    await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
+
+    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
+    const dialog = sheet(page, 'Recaler sur le compte');
+    await expect(page.locator('#recalibrate-amount')).toHaveValue('880');
+    await page.locator('#recalibrate-amount').fill('1500,50');
+    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
+    await expect(dialog.locator('.field__error')).toContainText('sans centimes');
+    await page.locator('#recalibrate-amount').fill('1500');
+    await page.locator('#recalibrate-note').fill('Relevé du jour');
+    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(150_000));
+    // Fin du mois = 1 500 − 880 (déjà versé) + (880 + 1 200) − 1 845.
+    await expect(page.getByTestId('balance-projection')).toHaveText(euros(85_500));
+    await expect.poll(async () => (await persisted(page)).budget.balance.corrections.map((c: { balanceCents: number; note?: string }) => [c.balanceCents, c.note]))
+      .toEqual([[62_000, 'Relevé du jour']]);
+
+    // Annuler depuis le toast : l'estimation revient.
+    await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
+
+    // Compte à découvert : signe « − » accepté.
+    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
+    await page.locator('#recalibrate-amount').fill('-120');
+    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(-12_000));
+
+    // Historique des recalages, replié.
+    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
+    await dialog.getByRole('button', { name: /Recalages précédents/ }).click();
+    await expect(dialog.getByTestId('correction')).toHaveCount(1);
+    await expect(dialog.getByTestId('correction')).toContainText(euros(-100_000));
   });
 });
 
@@ -142,22 +272,23 @@ test.describe('Taux communs au curseur', () => {
 });
 
 test.describe('Saisie des montants', () => {
-  test('ambiguïté rejetée sans toucher l’état ; brouillon invalide bloque Ajouter ; 0 accepté', async ({ page }) => {
+  test('centimes et ambiguïtés rejetés sans toucher l’état ; brouillon invalide bloque Ajouter ; 0 accepté', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-a', '2200');
 
-    // « 1,234 » est ambigu : erreur locale, la valeur enregistrée reste.
-    await setAmount(page, 'salary-a', '1,234');
-    await expect(page.locator('#salary-a-error')).toBeVisible();
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(220_000));
-    await expect.poll(async () => {
-      const s = await persisted(page);
-      return s.budget.months.find((m: { monthKey: string }) => m.monthKey === s.budget.selectedMonth).salaryACents;
-    }).toBe(220_000);
+    // « 1,234 » est ambigu, « 2300,50 » a des centimes : erreur locale, la valeur enregistrée reste.
+    for (const text of ['1,234', '2300,50']) {
+      await setEuros(page, 'salary-a', text);
+      await expect(page.locator('#salary-a-error')).toBeVisible();
+      await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
+    }
+    await expect(page.locator('#salary-a-error')).toContainText('sans centimes');
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(220_000);
 
-    // Virgule ou point acceptés.
-    await setAmount(page, 'salary-a', '2300.5');
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(230_050));
+    // Espaces de milliers et « € » acceptés.
+    await setEuros(page, 'salary-a', '2 300 €');
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(230_000));
+    await expect(page.locator('#salary-a-error')).toHaveCount(0);
 
     const key = await monthKey(page);
     await page.getByRole('button', { name: 'Ajouter une dépense', exact: true }).click();
@@ -181,47 +312,57 @@ test.describe('Saisie des montants', () => {
     const before = await page.locator('.expense-row').count();
     await submit.click();
     await expect(page.locator('.expense-row')).toHaveCount(before + 1);
-    await expect(page.getByTestId('expenses-total')).toContainText(fmt(184_500));
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
   });
 
-  test('renommer, changer le montant et retirer une dépense (annulable)', async ({ page }) => {
+  test('renommer, régler au − / + ou au toucher, retirer une dépense (annulable)', async ({ page }) => {
     await openApp(page, 'budget');
-    const amountId = await page.getByLabel('Montant de Internet', { exact: true }).getAttribute('id');
-    await setAmount(page, amountId!, '45');
-    await expect(page.getByTestId('expenses-total')).toContainText(fmt(186_000));
+    const key = await monthKey(page);
+    await page.getByRole('button', { name: 'Montant de Internet : plus 1 €', exact: true }).click();
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_600));
+    await page.getByRole('button', { name: 'Montant de Internet : moins 1 €', exact: true }).click();
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
+
+    await setEuros(page, `m-${key}-internet-amount`, '45');
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));
+    await expect(page.getByRole('checkbox', { name: 'Internet payé', exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="pay-expense-internet"] .pay-row__amount')).toHaveText(euros(4_500));
 
     await page.getByRole('button', { name: 'Retirer Internet', exact: true }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(fmt(181_500));
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(181_500));
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(fmt(186_000));
+    await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));
   });
 });
 
 test.describe('Historique et mois', () => {
   test('naviguer entre les mois, revenir au mois courant, l’historique ouvre un mois', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-a', '2200');
     const current = await monthKey(page);
     await page.getByRole('button', { name: 'Mois précédent', exact: true }).click();
     await expect.poll(async () => (await persisted(page)).budget.selectedMonth).not.toBe(current);
-    await setAmount(page, 'salary-a', '2400');
+    await setEuros(page, 'salary-a', '2400');
     await page.getByRole('button', { name: 'Revenir au mois courant', exact: true }).click();
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(220_000));
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
 
     await page.getByRole('button', { name: 'Historique du budget', exact: true }).click();
     const history = sheet(page, 'Historique du budget');
     await expect(history.locator('.history-month')).toHaveCount(2);
     await expect(history.locator('input, select, textarea')).toHaveCount(0);
+    // Euros entiers ; le « reste » a laissé place au compte commun en fin de mois.
+    await expect(history.locator('.history-month').first()).toContainText('Compte en fin de mois');
+    expect(await history.innerText()).not.toMatch(/\d,\d{2}\s?€/u);
     await history.locator('.history-month').nth(1).click();
     await expect(history).toBeHidden();
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(240_000));
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(240_000));
   });
 });
 
 test.describe('Import / export', () => {
   test('export puis import confirmé avec résumé ; import invalide sans effet', async ({ page }) => {
     await openApp(page, 'budget');
-    await setAmount(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-a', '2200');
     await page.getByRole('button', { name: 'Réglages', exact: true }).click();
     const settings = sheet(page, 'Réglages');
 
@@ -247,7 +388,7 @@ test.describe('Import / export', () => {
     });
     await expect(page.locator('.import-note--error')).toContainText('invalide');
     await closeSheet(page, 'Réglages');
-    await expect(page.locator('#salary-a')).toHaveValue(fmt(220_000));
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
   });
 });
 
@@ -268,7 +409,7 @@ test.describe('Récupération des données corrompues', () => {
     await expect(notice).toContainText('illisibles');
     expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(corrupted);
 
-    await setAmount(page, 'salary-a', '2200');
+    await setEuros(page, 'salary-a', '2200');
     expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(corrupted);
 
     await notice.getByRole('button', { name: 'Recommencer à zéro' }).click();

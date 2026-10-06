@@ -224,11 +224,6 @@
   gap: 14px;
 }
 
-.recalibrate__unit {
-  color: var(--text-muted);
-  font-size: 16px;
-}
-
 .recalibrate__history {
   margin-top: 16px;
 }

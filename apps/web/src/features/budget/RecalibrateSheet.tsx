@@ -52,7 +52,6 @@ export function RecalibrateSheet({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
-  const label = monthKeyToLabel(monthKey);
 
   // À l'ouverture : l'estimation actuelle sert de point de départ.
   useEffect(() => {
@@ -111,7 +110,7 @@ export function RecalibrateSheet({
       open={open}
       onClose={onClose}
       title="Recaler sur le compte"
-      description={fr(`Regardez le solde de votre compte commun et écrivez-le ici : l’estimation de ${label} repart de ce chiffre, les mois passés ne changent pas.`)}
+      description={fr('Regardez le solde de votre compte commun et écrivez-le ici : l’estimation repart de ce chiffre, sans changer les mois passés.')}
       size="auto"
       className="recalibrate"
       initialFocusRef={amountRef}
@@ -120,7 +119,7 @@ export function RecalibrateSheet({
           <Button variant="ghost" onClick={onClose}>
             Annuler
           </Button>
-          <Button variant="primary" icon="check" onClick={save} disabled={!parsed.ok}>
+          <Button variant="primary" icon="check" onClick={save}>
             Recaler
           </Button>
         </>
@@ -136,7 +135,7 @@ export function RecalibrateSheet({
         <TextField
           ref={amountRef}
           id="recalibrate-amount"
-          label="Solde du compte en ce moment"
+          label="Solde du compte en ce moment, en euros"
           value={amount}
           onChange={(v) => {
             setAmount(v);
@@ -145,7 +144,6 @@ export function RecalibrateSheet({
           inputMode="numeric"
           enterKeyHint="done"
           autoComplete="off"
-          trailing={<span className="recalibrate__unit">€</span>}
           error={error}
           hint="En euros entiers, sans centimes."
           onFocus={(event) => event.currentTarget.select()}

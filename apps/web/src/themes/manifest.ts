@@ -28,6 +28,18 @@
  *   kompeitō 96×96 (contenu ≤ 84) ; icônes de rayons 128×128 (contenu ≤ 116).
  * - Clés de `categories` = GROCERY_CATEGORIES de @a2/core (home/groceries.ts).
  *
+ * Calendrier (Mon voisin Totoro, V4 — art/pipeline/v4/) : 775 Ko (21 fichiers).
+ * - Bandeaux : arrêt de bus sous la pluie, paysage 1536×1024 px, 252 Ko,
+ *   portrait 1024×1536 px, 309 Ko. Cadrages
+ *   recommandés (object-position ; art/pipeline/v4/totoro.py) : bandeau
+ *   mobile 60 % 40 % (paysage) ou 50 % 36 % (portrait), fond 16:9 50 % 55 %,
+ *   fond téléphone 55 % 50 % (portrait) : Totoro et l'abri restent dans le cadre.
+ * - Totoro 254–416×217–382 px, 59 Ko et Chu / Chibi-Totoro
+ *   (même échelle, hauteur utile 360 pour le plus grand ; les petits restent petits) ;
+ *   Chatbus 363–440×192–255 px, 89 Ko (plus grand côté 420, même échelle).
+ * - Icônes 128×128 (contenu ≤ 116) : `kinds` (clés = CALENDAR_KINDS de
+ *   @a2/core) + `extras` (parapluie rouge, pousse).
+ *
  * Bandeaux de saison (hors précache) : budget autumn 616 Ko · budget winter 683 Ko · courses autumn 704 Ko · courses winter 793 Ko.
  * - Fichiers assets/seasons/season-<thème>-<saison>-<cadre>.webp, émis au build
  *   sous assets/season-*-<hash>.webp : MOTIF À EXCLURE DU PRÉCACHE
@@ -35,7 +47,7 @@
  * - Mêmes formats et mêmes cadrages recommandés que banners (WebP opaque
  *   qualité 82, paysage 1536×1024, portrait 1024×1536).
  */
-import type { BudgetTheme, CoursesTheme } from './types';
+import type { BudgetTheme, CalendarTheme, CoursesTheme } from './types';
 import budgetBannerLandscape from './assets/budget/banner-landscape.webp';
 import budgetBannerPortrait from './assets/budget/banner-portrait.webp';
 import budgetSceneBridge from './assets/budget/scene-bridge.webp';
@@ -108,6 +120,27 @@ import seasonCoursesAutumnLandscape from './assets/seasons/season-courses-autumn
 import seasonCoursesAutumnPortrait from './assets/seasons/season-courses-autumn-portrait.webp';
 import seasonCoursesWinterLandscape from './assets/seasons/season-courses-winter-landscape.webp';
 import seasonCoursesWinterPortrait from './assets/seasons/season-courses-winter-portrait.webp';
+import calendarBannerLandscape from './assets/calendar/banner-landscape.webp';
+import calendarBannerPortrait from './assets/calendar/banner-portrait.webp';
+import calendarTotoroUmbrella from './assets/calendar/totoro-umbrella.webp';
+import calendarTotoroGift from './assets/calendar/totoro-gift.webp';
+import calendarTotoroJoy from './assets/calendar/totoro-joy.webp';
+import calendarTotoroSleeping from './assets/calendar/totoro-sleeping.webp';
+import calendarChuTotoroAcorns from './assets/calendar/chu-totoro-acorns.webp';
+import calendarChibiTotoroPeek from './assets/calendar/chibi-totoro-peek.webp';
+import calendarCatbusRunning from './assets/calendar/catbus-running.webp';
+import calendarCatbusWaiting from './assets/calendar/catbus-waiting.webp';
+import calendarCatbusSign from './assets/calendar/catbus-sign.webp';
+import calendarCatbusLeap from './assets/calendar/catbus-leap.webp';
+import calendarIconRepas from './assets/calendar/icon-repas.webp';
+import calendarIconSortie from './assets/calendar/icon-sortie.webp';
+import calendarIconAnniversaire from './assets/calendar/icon-anniversaire.webp';
+import calendarIconRdv from './assets/calendar/icon-rdv.webp';
+import calendarIconVoyage from './assets/calendar/icon-voyage.webp';
+import calendarIconMaison from './assets/calendar/icon-maison.webp';
+import calendarIconAutre from './assets/calendar/icon-autre.webp';
+import calendarIconParapluie from './assets/calendar/icon-parapluie.webp';
+import calendarIconPousse from './assets/calendar/icon-pousse.webp';
 
 export const budgetTheme: BudgetTheme = {
   banners: {
@@ -209,5 +242,39 @@ export const coursesTheme: CoursesTheme = {
     hygiene: coursesCategoryHygiene,
     maison: coursesCategoryMaison,
     autre: coursesCategoryAutre,
+  },
+};
+
+export const calendarTheme: CalendarTheme = {
+  banners: {
+    landscape: calendarBannerLandscape,
+    portrait: calendarBannerPortrait,
+  },
+  totoro: {
+    umbrella: calendarTotoroUmbrella,
+    gift: calendarTotoroGift,
+    joy: calendarTotoroJoy,
+    sleeping: calendarTotoroSleeping,
+    chuAcorns: calendarChuTotoroAcorns,
+    chibiPeek: calendarChibiTotoroPeek,
+  },
+  catbus: {
+    running: calendarCatbusRunning,
+    waiting: calendarCatbusWaiting,
+    sign: calendarCatbusSign,
+    leap: calendarCatbusLeap,
+  },
+  kinds: {
+    repas: calendarIconRepas,
+    sortie: calendarIconSortie,
+    anniversaire: calendarIconAnniversaire,
+    rdv: calendarIconRdv,
+    voyage: calendarIconVoyage,
+    maison: calendarIconMaison,
+    autre: calendarIconAutre,
+  },
+  extras: {
+    umbrella: calendarIconParapluie,
+    sprout: calendarIconPousse,
   },
 };

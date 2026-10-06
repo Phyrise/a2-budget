@@ -7,10 +7,10 @@
  * Lanterne allumée : jamais de gel (≥ 30 fps, 20 sur appareil lent).
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
-import type { GrowthStage, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
+import type { GrowthStage, PulseOptions, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
+import { playGuardian, pulseLight, releaseGuardian, syncLantern } from './commands';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, type Framing } from './framing';
-import { pulseStart } from './pulse';
 import { loadSlotLut, retargetGrade, type LutSlot } from './grade';
 import { changePainting, GROW_SECONDS, settlePainting, type FadeMode } from './growth';
 import { bindEngineEvents } from './input';
@@ -23,6 +23,7 @@ import { DPR_CAPS, QualityMeter, type EngineStats, type QualitySetting } from '.
 import { Resources, type StageTextures } from './resources';
 import { SeasonFx } from './seasons';
 import { Spirits } from './spirits';
+import { StoneLantern, type LanternArtSource } from './stoneLantern';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
@@ -35,6 +36,8 @@ export interface EngineConfig {
   motion: WorldMotion;
   live: boolean;
   quality?: QualitySetting;
+  /** Peintures des lanternes de pierre (themes/lanterns.ts) ; null = repli procédural. */
+  lanterns?: LanternArtSource | null;
   onFirstFrame?: () => void;
   onContextLost?: () => void;
 }
@@ -51,7 +54,8 @@ export class WorldEngine {
   readonly fx: FxSystem;
   readonly seasons = new SeasonFx();
   readonly lantern: Lantern;
-  cfg: Required<Omit<EngineConfig, 'onFirstFrame' | 'onContextLost'>> & Pick<EngineConfig, 'onFirstFrame' | 'onContextLost'>;
+  readonly stone: StoneLantern;
+  cfg: Required<Omit<EngineConfig, 'onFirstFrame' | 'onContextLost' | 'lanterns'>> & Pick<EngineConfig, 'onFirstFrame' | 'onContextLost'>;
 
   framing: Framing;
   cssW = 1;
@@ -99,7 +103,8 @@ export class WorldEngine {
     readonly canvas: HTMLCanvasElement,
     cfg: EngineConfig,
   ) {
-    this.cfg = { quality: 'auto', ...cfg };
+    const { lanterns = null, ...rest } = cfg;
+    this.cfg = { quality: 'auto', ...rest };
     this.tier = typeof this.cfg.quality === 'number' ? this.cfg.quality : 0;
     this.renderer = new Renderer({
       canvas, alpha: false, depth: false, stencil: false, antialias: false, premultipliedAlpha: false,
@@ -115,6 +120,7 @@ export class WorldEngine {
     this.lights = new DayLights(m.anchors);
     this.fx = new FxSystem(m.size.w / m.size.h, m.lightSource);
     this.lantern = new Lantern(m.size.w / m.size.h);
+    this.stone = new StoneLantern(lanterns, (url) => this.res.sprite(url, 0, false, false), (t) => this.res.free(t), m.size.w / m.size.h);
     this.framing = computeFraming(1, 1, m.size.w, m.size.h);
     bindEngineEvents(this);
   }
@@ -142,6 +148,7 @@ export class WorldEngine {
     this.lights.sync(state.lights, now(), false);
     this.ready = true;
     this.requestFrame(true);
+    syncLantern(this);
     // Non bloquant : sprites, effets peints, LUT restantes.
     void loadSecondary(this).catch(() => {
       /* moteur détruit pendant le chargement */
@@ -161,6 +168,7 @@ export class WorldEngine {
 
   destroy() {
     this.destroyed = true;
+    this.stone.dispose();
     window.clearTimeout(this.retry.timer);
     cancelAnimationFrame(this.raf);
     this.cleanups.forEach((f) => f());
@@ -194,6 +202,7 @@ export class WorldEngine {
     const season = this.wantedSeason;
     if (stage !== this.stage?.stage || season !== this.stage.season) void changePainting(this, stage, season);
     else this.loadingKey = null; // retour à la peinture affichée : chargement en cours abandonné
+    if (old?.lantern?.id !== s.lantern?.id) syncLantern(this);
     if (old?.creatures.join() !== s.creatures.join()) void this.syncCreatures().then(() => this.requestFrame(true));
     this.requestFrame(true);
   }
@@ -225,14 +234,9 @@ export class WorldEngine {
 
   // ------------------------------------------------------------------ commandes
 
-  pulse(opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number; strong?: boolean }) {
-    const from = pulseStart(this.canvas, this.framing, opts.fromClientX, opts.fromClientY);
-    const n = now();
-    // Le vol se joue même si la coquille vient de figer la scène (feuille ouverte,
-    // défilement) : il la réveille jusqu'à l'atterrissage (voir `animated`).
-    if (this.canFly) this.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);
-    else this.lights.sync([...(this.state?.lights ?? []).filter((l) => l.id !== opts.id), { id: opts.id, who: opts.who }], n, this.cfg.motion === 'still');
-    this.requestFrame(true);
+  /** Envol d'une lumière depuis la case cochée (commands.ts). */
+  pulse(opts: PulseOptions) {
+    pulseLight(this, opts);
   }
 
   /** Lanterne : progression 0..1 (null = extinction en fondu). Réveille le rendu. */
@@ -242,24 +246,11 @@ export class WorldEngine {
   }
 
   playGuardian() {
-    if (!this.ready) return;
-    const n = now();
-    this.spirits.startGuardian(n);
-    const url = this.cfg.manifest.sprites.guardian;
-    if (url && !this.spirits.guardian) {
-      void this.res.sprite(url).then((a) => {
-        if (a && !this.destroyed) this.spirits.guardian = a;
-      });
-    }
-    this.requestFrame(true);
+    if (this.ready) playGuardian(this);
   }
 
-  /** Libère le sprite du gardien une fois la séquence terminée. */
   releaseGuardian() {
-    if (this.spirits.guardian) {
-      this.res.free(this.spirits.guardian.tex);
-      this.spirits.guardian = null;
-    }
+    releaseGuardian(this);
   }
 
   configure(p: Partial<Pick<EngineConfig, 'variant' | 'motion' | 'live' | 'quality'>>) {
@@ -356,7 +347,7 @@ export class WorldEngine {
 
   private isBusy(n: number): boolean {
     const transitions =
-      this.growStart >= 0 || this.lutMix(n) < 1 || this.lights.busy(n) || this.gust > 0.02 || this.rayBoost > 0.02 || this.lantern.busy(n);
+      this.growStart >= 0 || this.lutMix(n) < 1 || this.lights.busy(n) || this.gust > 0.02 || this.rayBoost > 0.02 || this.lantern.busy(n) || this.stone.busy(n);
     if (!this.animated) return transitions && this.cfg.motion === 'still' && this.cfg.live;
     return transitions || this.spirits.busy(n) || this.seasons.busy(n) || Math.abs(this.pointer.tx - this.pointer.x) + Math.abs(this.pointer.ty - this.pointer.y) > 1e-4;
   }

@@ -219,15 +219,20 @@ export class Resources {
   }
 
   /** `sheet` : planche non découpée possible (stub kodama) → une seule case. */
-  async sprite(url: string, index = 0, sheet = false): Promise<SpriteAsset | null> {
+  /**
+   * Sprite (cellule d'une planche, ou image entière). `trim: false` garde la
+   * toile entière : les images superposées d'un même modèle (lanterne éteinte
+   * / allumée) restent alignées au pixel et leurs ancres normalisées valent.
+   */
+  async sprite(url: string, index = 0, sheet = false, trim = true): Promise<SpriteAsset | null> {
     if (!url) return null;
     try {
       const img = await decodeImage(url, { kind: 'sprite', maxWidth: 768 });
       const cell: [number, number, number, number] = sheet ? spriteCell(img, index) : [0, 0, 1, 1];
-      const rect = opaqueBounds(img, cell);
+      const rect = trim ? opaqueBounds(img, cell) : cell;
       const s = imageSize(img);
       const aspect = (rect[2] * s.w) / (rect[3] * s.h);
-      return { tex: this.texture(img, { mips: true, premult: true }), rect, aspect };
+      return { tex: this.texture(img, { mips: true, premult: true }), rect, aspect, px: rect[3] * s.h };
     } catch {
       return null;
     }

@@ -35,6 +35,13 @@ export interface WorldState {
   lights: WorldLight[];
   /** Saison réelle (date locale) : particules saisonnières dans la forêt. */
   season: Season;
+  /**
+   * Lanterne de pierre posée au pied du cèdre (V4) : modèle choisi
+   * (`activeLantern(app.focus)` de @a2/core, clé de LANTERN_ART dans
+   * themes/lanterns.ts). Absent ou inconnu : 'kasuga-moss'. Éteinte en temps
+   * normal, allumée par `focus(progress)`.
+   */
+  lantern?: { id: string };
 }
 
 /**
@@ -82,9 +89,12 @@ export interface LivingForestHandle {
   /** Événement rare du gardien (≈10 s, passable au tap). */
   playGuardian(): void;
   /**
-   * Lanterne (minuteur de concentration) : progress 0..1 allume une lanterne
-   * dans la clairière dont la lumière grandit ; null l'éteint en douceur.
-   * À 1, courte floraison de lumière. Sans effet si le moteur n'est pas prêt.
+   * Lanterne (minuteur de concentration) : progress 0..1 allume la lanterne
+   * de pierre posée au pied du cèdre (WorldState.lantern) : la peinture
+   * allumée se fond sur l'éteinte, lueur au foyer, halo, lucioles qui
+   * s'approchent ; null l'éteint en douceur. À 1, courte floraison de
+   * lumière. Demandée avant que le moteur soit prêt : appliquée à son
+   * initialisation.
    */
   focus(progress: number | null, who?: Who): void;
 }

@@ -1,7 +1,8 @@
 /**
  * Labo du monde (dev seulement, servi par le serveur de dev : /a2-budget/world-lab.html).
  * Contrôles : stade, humeur, pause, lumières ±, pulse (fort), gardien,
- * saison (vraies peintures de saison du manifest, fondu au changement ; soir d'été), lanterne (progression, floraison), mouvement,
+ * saison (vraies peintures de saison du manifest, fondu au changement ; soir d'été), lanterne (progression, floraison,
+ * modèle de pierre `model=…`, kodama assis sur le toit), mouvement,
  * variante, qualité, données, LUT de test ; fps et temps par image.
  * Paramètres d'URL identiques aux clés de LabSettings (captures Playwright),
  * `ui=0` masque le panneau ; window.__lab pilote la scène.
@@ -32,6 +33,8 @@ interface LabSettings {
   /** Lanterne : progression 0..1, ou -1 = éteinte. */
   lantern: number;
   lanternWho: Who;
+  /** Lanterne de pierre posée (WorldState.lantern). */
+  model: string;
 }
 
 const WHO: Who[] = ['a', 'b', 'both', 'unassigned'];
@@ -40,6 +43,7 @@ const MOOD_FR: Record<Mood, string> = { quiet: 'calme', peaceful: 'paisible', li
 const SEASONS: (Season | 'auto')[] = ['auto', 'spring', 'summer', 'autumn', 'winter'];
 const SEASON_FR: Record<Season | 'auto', string> = { auto: 'auto', spring: 'printemps', summer: 'été', autumn: 'automne', winter: 'hiver' };
 const WHO_FR: Record<Who, string> = { a: 'AL', b: 'AC', both: 'ensemble', unassigned: '—' };
+const MODELS = ['kasuga-moss', 'yukimi', 'oribe', 'kotoji', 'tachi-carved', 'ancient-shrine', 'spirit-light'];
 
 function readSettings(): LabSettings {
   const q = new URLSearchParams(location.search);
@@ -62,6 +66,7 @@ function readSettings(): LabSettings {
     evening: q.get('evening') === '1',
     lantern: num('lantern', -1),
     lanternWho: (q.get('who') as Who | null) ?? 'b',
+    model: q.get('model') ?? 'kasuga-moss',
   };
 }
 
@@ -74,6 +79,7 @@ declare global {
       pulse: (x?: number, y?: number, strong?: boolean) => void;
       focus: (progress: number | null, who?: Who) => void;
       guardian: () => void;
+      kodama: (pose?: number) => void;
       stats: () => EngineStats | null;
     };
   }
@@ -97,8 +103,9 @@ export function LabApp() {
       season: s.season === 'auto' ? seasonOf(new Date()) : s.season,
       creatures: s.creature ? ['lab-creature'] : [],
       lights: [...lightList(s.lights), ...extra],
+      lantern: { id: s.model },
     }),
-    [s.stage, s.progress, s.mood, s.paused, s.lights, s.creature, s.season, extra],
+    [s.stage, s.progress, s.mood, s.paused, s.lights, s.creature, s.season, extra, s.model],
   );
 
   const debug = () => ref.current as LivingForestDebugHandle | null;
@@ -124,7 +131,7 @@ export function LabApp() {
 
   useEffect(() => {
     const focus = (progress: number | null, who?: Who) => set({ lantern: progress ?? -1, ...(who ? { lanternWho: who } : {}) });
-    window.__lab = { set, pulse, focus, guardian: () => ref.current?.playGuardian(), stats: () => debug()?.stats() ?? null };
+    window.__lab = { set, pulse, focus, guardian: () => ref.current?.playGuardian(), kodama: (pose) => debug()?.lanternKodama(pose), stats: () => debug()?.stats() ?? null };
     const id = window.setInterval(() => setStats(debug()?.stats() ?? null), 500);
     return () => window.clearInterval(id);
   });
@@ -203,6 +210,12 @@ export function LabApp() {
             {(['a', 'b', 'both'] as Who[]).map((w) => (
               <button key={w} style={on(s.lanternWho === w)} onClick={() => set({ lanternWho: w })}>{WHO_FR[w]}</button>
             ))}
+          </div>
+          <div style={row}>
+            {MODELS.map((m) => (
+              <button key={m} style={on(s.model === m)} onClick={() => set({ model: m })}>{m}</button>
+            ))}
+            <button style={btn} onClick={() => debug()?.lanternKodama(Math.floor(Math.random() * 4))}>kodama</button>
           </div>
           <div style={row}>
             {(['full', 'gentle', 'still'] as WorldMotion[]).map((m) => (

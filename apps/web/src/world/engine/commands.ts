@@ -45,9 +45,11 @@ export function releaseGuardian(e: WorldEngine) {
 /** Pose la lanterne de pierre de l'état (modèle choisi ; défaut kasuga-moss). */
 export function syncLantern(e: WorldEngine) {
   void e.stone.want(e.state?.lantern?.id, now).then((changed) => {
-    if (!changed || e.isDestroyed) return;
+    if (e.isDestroyed) return;
+    // Peintures introuvables (hors ligne, fichier manquant) : la lanterne de papier procédurale sert de repli.
+    e.lantern.painted = e.stone.model !== null;
+    if (!changed) return;
     e.lantern.geo = e.stone.geometry();
-    e.lantern.painted = true;
     e.requestFrame(true);
   });
 }

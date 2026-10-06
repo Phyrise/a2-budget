@@ -58,6 +58,7 @@ export class StoneLantern {
   model: Model | null = null;
   private prev: Model | null = null;
   private wanted: string | null = null;
+  private pending: Promise<boolean> = Promise.resolve(false);
   private kodama: RoofKodama[] = [];
   private kodamaLoad: Promise<void> | null = null;
   private visit: { pose: number; start: number; end: number } | null = null;
@@ -84,11 +85,20 @@ export class StoneLantern {
     return id && art[id] ? id : DEFAULT_LANTERN;
   }
 
-  /** Demande le modèle `id` (chargé à la demande ; le précédent s'efface ensuite). */
-  async want(id: string | undefined, now: () => number): Promise<boolean> {
+  /**
+   * Demande le modèle `id` (chargé à la demande ; le précédent s'efface
+   * ensuite). Vrai quand un nouveau modèle vient d'être posé ; une demande
+   * identique à celle en cours attend le même chargement.
+   */
+  want(id: string | undefined, now: () => number): Promise<boolean> {
     const target = this.resolve(id);
-    if (target === this.wanted) return false;
+    if (target === this.wanted) return this.pending.then(() => false);
     this.wanted = target;
+    this.pending = this.loadModel(target, now);
+    return this.pending;
+  }
+
+  private async loadModel(target: string, now: () => number): Promise<boolean> {
     const paint = this.src?.art[target];
     if (!paint) return false;
     const [unlit, lit] = await Promise.all([this.load(paint.unlit), this.load(paint.lit)]);

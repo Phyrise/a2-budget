@@ -46,7 +46,10 @@ export class Lantern {
   bloomEvent = false;
   /** Lanterne de pierre posée (foyer, taille) : réglée par le moteur. */
   geo: LanternGeometry;
-  /** Peinture de la lanterne affichée (sinon repli : lanterne de papier procédurale). */
+  /**
+   * Peinture de la lanterne affichée ou attendue (sinon repli : lanterne de
+   * papier procédurale). Réglé par le moteur.
+   */
   painted = false;
 
   constructor(private readonly aspect: number) {

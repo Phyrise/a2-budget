@@ -121,6 +121,8 @@ export class WorldEngine {
     this.fx = new FxSystem(m.size.w / m.size.h, m.lightSource);
     this.lantern = new Lantern(m.size.w / m.size.h);
     this.stone = new StoneLantern(lanterns, (url) => this.res.sprite(url, 0, false, false), (t) => this.res.free(t), m.size.w / m.size.h);
+    // Peintures attendues : pas de lanterne de papier pendant leur chargement.
+    this.lantern.painted = lanterns !== null;
     this.framing = computeFraming(1, 1, m.size.w, m.size.h);
     bindEngineEvents(this);
   }

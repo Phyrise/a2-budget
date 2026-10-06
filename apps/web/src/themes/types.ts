@@ -1,9 +1,9 @@
 /**
  * Contrat des assets des univers de module (Budget = Le Voyage de Chihiro,
- * Courses = Kiki la petite sorcière). Les valeurs sont des URL (imports Vite)
+ * Courses = Kiki la petite sorcière, Calendrier = Mon voisin Totoro). Les valeurs sont des URL (imports Vite)
  * fournies par ./manifest.ts ; formats et tailles documentés dans son en-tête.
  */
-import type { GroceryCategory } from '@a2/core';
+import type { CalendarEventKind, GroceryCategory } from '@a2/core';
 
 /** Bandeaux opaques : paysage 1536×1024 (desktop, bandeau mobile) et portrait 1024×1536. */
 export interface ThemeBanners {
@@ -54,4 +54,24 @@ export interface CoursesTheme {
   sparkles: string;
   /** Une icône par rayon : clés = GROCERY_CATEGORIES de @a2/core. */
   categories: Record<GroceryCategory, string>;
+}
+
+export type TotoroPose = 'umbrella' | 'gift' | 'joy' | 'sleeping' | 'chuAcorns' | 'chibiPeek';
+export type CatbusPose = 'running' | 'waiting' | 'sign' | 'leap';
+
+/**
+ * Univers du Calendrier (Mon voisin Totoro), V4 — slot facultatif côté
+ * interface : tant qu'il n'est pas branché, la forêt de Maison reste le décor.
+ */
+export interface CalendarTheme {
+  /** Arrêt de bus sous la pluie au crépuscule, Totoro au parapluie. */
+  banners: ThemeBanners;
+  /** Grand Totoro (parapluie-feuille, paquet-feuille offert, joie, endormi), Chu-Totoro bleu aux glands, Chibi-Totoro qui regarde. */
+  totoro: Record<TotoroPose, string>;
+  /** Chatbus : court de profil, arrêté porte ouverte, de trois-quarts face (panneau vide), en saut. */
+  catbus: Record<CatbusPose, string>;
+  /** Une icône par nature d'événement : clés = CALENDAR_KINDS de @a2/core. */
+  kinds: Record<CalendarEventKind, string>;
+  /** Icônes bonus : parapluie rouge, jeune pousse. */
+  extras: { umbrella: string; sprout: string };
 }

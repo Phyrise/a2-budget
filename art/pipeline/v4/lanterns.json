@@ -1,0 +1,179 @@
+{
+ "lanterns": {
+  "kasuga-moss": {
+   "w": 243,
+   "h": 365,
+   "aspect": 0.6658,
+   "fire": {
+    "x": 0.479,
+    "y": 0.415
+   },
+   "roof": {
+    "x": 0.654,
+    "y": 0.154
+   },
+   "align": {
+    "dx": 0.83,
+    "dy": 0.4,
+    "rot_deg": 0.02,
+    "method": "ecc",
+    "response": 0.81,
+    "iou_before": 0.9427,
+    "iou_after": 0.9491
+   },
+   "scale": 0.8258
+  },
+  "yukimi": {
+   "w": 348,
+   "h": 328,
+   "aspect": 1.061,
+   "fire": {
+    "x": 0.498,
+    "y": 0.415
+   },
+   "roof": {
+    "x": 0.695,
+    "y": 0.169
+   },
+   "align": {
+    "dx": 0.66,
+    "dy": 0.57,
+    "rot_deg": 0.0,
+    "method": "phase",
+    "response": 0.723,
+    "iou_before": 0.9551,
+    "iou_after": 0.9615
+   },
+   "scale": 0.7421
+  },
+  "oribe": {
+   "w": 261,
+   "h": 429,
+   "aspect": 0.6084,
+   "fire": {
+    "x": 0.48,
+    "y": 0.338
+   },
+   "roof": {
+    "x": 0.644,
+    "y": 0.141
+   },
+   "align": {
+    "dx": 0.31,
+    "dy": 0.37,
+    "rot_deg": 0.0,
+    "method": "phase",
+    "response": 0.753,
+    "iou_before": 0.9493,
+    "iou_after": 0.9535
+   },
+   "scale": 0.9706
+  },
+  "kotoji": {
+   "w": 316,
+   "h": 368,
+   "aspect": 0.8587,
+   "fire": {
+    "x": 0.499,
+    "y": 0.36
+   },
+   "roof": {
+    "x": 0.709,
+    "y": 0.169
+   },
+   "align": {
+    "dx": 0.2,
+    "dy": 0.52,
+    "rot_deg": 0.0,
+    "method": "phase",
+    "response": 0.726,
+    "iou_before": 0.9449,
+    "iou_after": 0.9488
+   },
+   "scale": 0.8326
+  },
+  "tachi-carved": {
+   "w": 287,
+   "h": 440,
+   "aspect": 0.6523,
+   "fire": {
+    "x": 0.486,
+    "y": 0.337
+   },
+   "roof": {
+    "x": 0.655,
+    "y": 0.177
+   },
+   "align": {
+    "dx": 0.91,
+    "dy": 0.31,
+    "rot_deg": 0.0,
+    "method": "phase",
+    "response": 0.751,
+    "iou_before": 0.9443,
+    "iou_after": 0.9509
+   },
+   "scale": 0.9955
+  },
+  "ancient-shrine": {
+   "w": 378,
+   "h": 433,
+   "aspect": 0.873,
+   "fire": {
+    "x": 0.531,
+    "y": 0.408
+   },
+   "roof": {
+    "x": 0.693,
+    "y": 0.205
+   },
+   "align": {
+    "dx": 0.43,
+    "dy": 0.5,
+    "rot_deg": -0.058,
+    "method": "ecc",
+    "response": 0.681,
+    "iou_before": 0.957,
+    "iou_after": 0.9598
+   },
+   "scale": 0.9796
+  },
+  "spirit-light": {
+   "w": 309,
+   "h": 442,
+   "aspect": 0.6991,
+   "fire": {
+    "x": 0.524,
+    "y": 0.344
+   },
+   "roof": {
+    "x": 0.641,
+    "y": 0.151
+   },
+   "align": {
+    "dx": 0.32,
+    "dy": 0.35,
+    "rot_deg": 0.002,
+    "method": "ecc",
+    "response": 0.758,
+    "iou_before": 0.9504,
+    "iou_after": 0.9532
+   },
+   "scale": 1.0
+  }
+ },
+ "kodama": {
+  "kodama-sit": {
+   "seat": 0.7
+  },
+  "kodama-lying": {
+   "seat": 0.93
+  },
+  "kodama-pair": {
+   "seat": 0.74
+  },
+  "kodama-wave": {
+   "seat": 0.74
+  }
+ }
+}

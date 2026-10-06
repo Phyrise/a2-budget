@@ -1,109 +1,79 @@
 /**
- * Une lanterne de pierre (tōrō) : la peinture si elle existe
- * (themes/lanterns.ts), sinon le dessin au trait de toroShapes.ts.
+ * Une lanterne de pierre (tōrō), d'après ses peintures (themes/lanterns.ts).
  * - `unlit` : pierre au repos ;
- * - `lit` : fenêtres allumées, halo qui respire, lumière au sol ;
- * - `silhouette` : forme seule, ton de brume, sans aucun détail (lanterne
- *   pas encore débloquée).
+ * - `lit` : la version allumée se fond sur l'éteinte (mêmes toiles, au
+ *   pixel près), et une lueur vivante respire autour de la chambre à feu ;
+ * - `silhouette` : forme seule, ton de brume, sans aucun détail — pour un
+ *   modèle pas encore débloqué, SEULE cette image est référencée (la vraie
+ *   peinture n'est jamais chargée avant le déblocage).
+ *
+ * `height` est la hauteur du plus haut modèle : chaque lanterne garde sa
+ * taille relative (`scale`), pied en bas, centrée.
  */
-import { useId, type MouseEvent } from 'react';
-import { lanternArt } from '../../../themes/lanterns';
+import type { CSSProperties, MouseEvent } from 'react';
+import { LANTERN_ART, type LanternArt, type LanternId } from '../../../themes/lanterns';
 import { cx } from '../../../ui';
-import { TORO, ellipse } from './toroShapes';
+import './toro.css';
 
 export type ToroMode = 'unlit' | 'lit' | 'silhouette';
 
 const block = (e: MouseEvent) => e.preventDefault();
 
-export function ToroArt({ id, mode = 'unlit', size = 96, className }: { id: string; mode?: ToroMode; size?: number; className?: string }) {
-  const uid = useId().replace(/:/g, '');
-  const painted = lanternArt[id];
-  const width = Math.round((size * 120) / 160);
-  const cls = cx('toro', `toro--${mode}`, className);
+export function lanternArtOf(id: string): LanternArt {
+  return LANTERN_ART[id as LanternId] ?? LANTERN_ART['kasuga-moss'];
+}
 
-  if (painted && (mode !== 'silhouette' || painted.silhouette)) {
-    const src = mode === 'lit' ? painted.lit : mode === 'silhouette' ? painted.silhouette! : painted.unlit;
-    return (
-      <span className={cls} style={{ width, height: size }} aria-hidden="true">
-        <img src={src} alt="" draggable={false} onContextMenu={block} onDragStart={block} className="toro__img" />
-      </span>
-    );
-  }
+function Img({ src, className }: { src: string; className: string }) {
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      decoding="async"
+      draggable={false}
+      onContextMenu={block}
+      onDragStart={block}
+    />
+  );
+}
 
-  const shape = TORO[id] ?? TORO['kasuga-moss']!;
-  const [gx, gy, gr] = shape.glow;
-  const warm = shape.spirit ? ['#f2fff8', '#9fe3c8', '#4fb79a'] : ['#fff1cf', '#ffc874', '#e0892f'];
-  const silhouette = mode === 'silhouette';
-  const lit = mode === 'lit';
+export function ToroArt({
+  id,
+  mode = 'unlit',
+  height = 96,
+  relative = true,
+  className,
+}: {
+  id: string;
+  mode?: ToroMode;
+  /** Hauteur (px) du plus haut modèle ; les autres en gardent la proportion. */
+  height?: number;
+  /** false : la toile occupe toute la hauteur donnée (vignette). */
+  relative?: boolean;
+  className?: string;
+}) {
+  const art = lanternArtOf(id);
+  const h = Math.round(height * (relative ? art.scale : 1));
+  const w = Math.round(h * art.aspect);
+  const style = {
+    width: w,
+    height: h,
+    '--fire-x': `${(art.fire.x * 100).toFixed(1)}%`,
+    '--fire-y': `${(art.fire.y * 100).toFixed(1)}%`,
+  } as CSSProperties;
+  const spirit = id === 'spirit-light';
 
   return (
-    <svg
-      className={cls}
-      width={width}
-      height={size}
-      viewBox="0 0 120 160"
-      aria-hidden="true"
-      focusable="false"
-      onContextMenu={block}
-    >
-      <defs>
-        <radialGradient id={`${uid}-halo`}>
-          <stop offset="0" stopColor={warm[1]} stopOpacity="0.55" />
-          <stop offset="0.45" stopColor={warm[2]} stopOpacity="0.18" />
-          <stop offset="1" stopColor={warm[2]} stopOpacity="0" />
-        </radialGradient>
-        <radialGradient id={`${uid}-win`} cx="0.5" cy="0.6" r="0.75">
-          <stop offset="0" stopColor={warm[0]} />
-          <stop offset="0.55" stopColor={warm[1]} />
-          <stop offset="1" stopColor={warm[2]} />
-        </radialGradient>
-        {silhouette && (
-          <filter id={`${uid}-mist`} x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="1.1" />
-          </filter>
-        )}
-      </defs>
-
-      {!silhouette && <path className="toro__shadow" d={ellipse(60, 150, 42, 3.6)} />}
-      {lit && (
+    <span className={cx('toro', `toro--${mode}`, spirit && 'toro--spirit', className)} style={style} aria-hidden="true" onContextMenu={block}>
+      {mode === 'silhouette' ? (
+        <Img src={art.silhouette} className="toro__img" />
+      ) : (
         <>
-          <circle className="toro__halo" cx={gx} cy={gy} r={gr * 1.6} fill={`url(#${uid}-halo)`} />
-          <path className="toro__ground" d={ellipse(60, 150, 34, 4)} fill={warm[1]} />
+          <span className="toro__glow" />
+          <Img src={art.unlit} className="toro__img" />
+          <Img src={art.lit} className="toro__img toro__lit" />
         </>
       )}
-
-      <g className="toro__body" filter={silhouette ? `url(#${uid}-mist)` : undefined}>
-        {shape.body.map((d, i) => (
-          <path key={i} d={d} />
-        ))}
-        {silhouette && shape.windows.map((d, i) => <path key={`w${i}`} d={d} />)}
-      </g>
-
-      {!silhouette && (
-        <>
-          <g className="toro__windows" fill={lit ? `url(#${uid}-win)` : undefined}>
-            {shape.windows.map((d, i) => (
-              <path key={i} d={d} />
-            ))}
-          </g>
-          <g className="toro__moss">
-            {shape.moss.map(([x, y, rx, ry], i) => (
-              <path key={i} d={ellipse(x, y, rx, ry)} />
-            ))}
-          </g>
-          <g className="toro__carve">
-            {shape.carve.map((d, i) => (
-              <path key={i} d={d} />
-            ))}
-          </g>
-          {shape.accents.map((a, i) => (
-            <path key={i} d={a.d} className={`toro__accent toro__accent--${a.tone}`} />
-          ))}
-          {shape.orbs?.map(([x, y, r], i) => (
-            <circle key={i} className="toro__orb" cx={x} cy={y} r={r} fill={warm[1]} style={{ animationDelay: `${i * -1.3}s` }} />
-          ))}
-        </>
-      )}
-    </svg>
+    </span>
   );
 }

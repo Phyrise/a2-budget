@@ -1,0 +1,170 @@
+/* Carnet — collection des lanternes de pierre. */
+
+.carnet-lantern-preview {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 14px 16px 12px;
+  border: 1px solid rgba(221, 179, 106, 0.22);
+  border-radius: 22px;
+  background:
+    radial-gradient(60% 80% at 22% 70%, rgba(236, 208, 154, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.75), rgba(15, 26, 21, 0.75));
+}
+
+.carnet-lantern-preview__art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 104px;
+  height: 132px;
+  flex: none;
+}
+
+.carnet-lantern-preview__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 0 6px;
+}
+
+.carnet-lantern-preview__kicker {
+  color: var(--amber-300);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.carnet-lantern-preview__name {
+  color: var(--ivory-50);
+  font-size: 19px;
+  font-weight: 520;
+  line-height: 1.2;
+}
+
+.carnet-lantern-preview__hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.carnet-lanterns__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carnet-lantern {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(147, 173, 124, 0.1), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.7), rgba(19, 33, 26, 0.7));
+}
+
+.carnet-lantern.is-locked,
+.carnet-lantern__pick {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 12px 14px;
+  text-align: left;
+}
+
+.carnet-lantern__pick {
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.carnet-lantern__pick:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.carnet-lantern__art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100px;
+  margin-bottom: 4px;
+  border-radius: 14px;
+  background: radial-gradient(60% 24% at 50% 94%, rgba(7, 13, 10, 0.45), transparent);
+}
+
+.carnet-lantern__name {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  color: var(--ivory-50);
+  font-size: 15px;
+  font-weight: 520;
+  line-height: 1.2;
+}
+
+.carnet-lantern__line {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.carnet-lantern__here {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--amber-300);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.carnet-lantern.is-selected {
+  border-color: rgba(221, 179, 106, 0.6);
+  box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.12), 0 0 22px rgba(236, 208, 154, 0.16);
+}
+
+.carnet-lantern.is-locked {
+  border-style: dashed;
+  background: linear-gradient(180deg, rgba(19, 33, 26, 0.6), rgba(15, 26, 21, 0.6));
+}
+
+.carnet-lantern.is-locked .carnet-lantern__art {
+  background:
+    radial-gradient(closest-side, rgba(185, 198, 189, 0.1), transparent),
+    radial-gradient(60% 24% at 50% 94%, rgba(7, 13, 10, 0.4), transparent);
+}
+
+.carnet-lantern.is-locked .carnet-lantern__name {
+  color: var(--fog-300);
+  font-style: italic;
+  font-size: 14px;
+}
+
+.carnet-lantern.is-locked .carnet-lantern__line {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.carnet-lanterns__foot {
+  margin: 12px 2px 0;
+  color: var(--text-faint);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (min-width: 560px) {
+  .carnet-lanterns__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

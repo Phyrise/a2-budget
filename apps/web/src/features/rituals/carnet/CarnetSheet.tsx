@@ -1,9 +1,13 @@
 /**
- * Carnet de la forêt : créatures rencontrées, stades du cèdre, souvenirs.
+ * Carnet de la forêt : créatures rencontrées, lanternes de pierre, stades
+ * du cèdre, souvenirs. Rien n'y révèle l'avenir : une créature pas encore
+ * rencontrée, une lanterne pas encore débloquée ou un stade à venir n'ont
+ * que leur silhouette (ou la brume) — jamais l'URL de la vraie image.
  * Une mémoire de ce qui a été vécu — jamais un score : pas de pourcentage,
  * pas de « 3/7 », des phrases.
  */
 import { CREATURES, type AppState } from '@a2/core';
+import { useEffect } from 'react';
 import { useShell } from '../../../app/ShellContext';
 import { useApp } from '../../../state/store';
 import { Icon, Sheet, cx, type IconName } from '../../../ui';
@@ -100,9 +104,15 @@ function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName;
   return out;
 }
 
-export function CarnetSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose: () => void; section?: 'lanterns' }) {
   const { appState } = useApp();
   const { prefs } = useShell();
+  // Ouvert depuis « Nouvelle lanterne » : directement sur la collection.
+  useEffect(() => {
+    if (!open || section !== 'lanterns') return;
+    const timer = window.setTimeout(() => document.getElementById('carnet-lanterns')?.scrollIntoView({ block: 'start' }), 320);
+    return () => window.clearTimeout(timer);
+  }, [open, section]);
   if (!appState) return null;
   const met = new Set(appState.forest.unlockedCreatureIds);
   const stage = Math.min(7, Math.max(1, appState.forest.growthStage)) as GrowthStage;

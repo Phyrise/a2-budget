@@ -5,8 +5,10 @@
  * - floraison à la fin (focus(1) puis extinction), carillon si le son est
  *   activé, mémorise la session (addFocusSession) une seule fois ;
  * - ambiance sonore (coupée en arrière-plan) et Wake Lock pendant la lanterne ;
- * - V4 : si la session terminée débloque un nouveau modèle de lanterne de
- *   pierre (nextLantern), le note pour l'annonce du bandeau.
+ * - V4 : la forêt allume la lanterne de pierre choisie (le moteur la lit
+ *   dans focus.selectedLantern) ; si la session terminée débloque un nouveau
+ *   modèle (nextLantern), il est noté pour l'annonce du bandeau ;
+ * - une lanterne arrêtée avant la première minute est simplement oubliée.
  */
 import { nextLantern } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
@@ -63,7 +65,7 @@ function useWakeLock(active: boolean) {
   }, [active]);
 }
 
-export function useLanternController({ onFinished }: { onFinished: () => void }) {
+export function useLanternController({ onFinished }: { onFinished?: () => void } = {}) {
   const s = useLantern();
   const { addFocusSession, appState } = useApp();
   const focusRef = useRef(appState?.focus);
@@ -132,8 +134,15 @@ export function useLanternController({ onFinished }: { onFinished: () => void })
       lantern.markRecorded();
       if (saved && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
     }
-    if (s.completed) onFinishedRef.current();
+    if (s.completed) onFinishedRef.current?.();
   }, [s, focus, addFocusSession]);
+
+  // Arrêtée avant la première minute : rien à mémoriser ni à raconter.
+  useEffect(() => {
+    if (s.phase !== 'done' || s.completed || s.minutesSpent >= 1) return;
+    const timer = window.setTimeout(() => lantern.reset(), 450);
+    return () => window.clearTimeout(timer);
+  }, [s.phase, s.completed, s.minutesSpent]);
 
   // Après la floraison (ou un arrêt), la lanterne de la forêt s'éteint en
   // douceur — quelle que soit la phase suivante. Une nouvelle session annule

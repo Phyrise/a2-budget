@@ -2,7 +2,6 @@
 @import './circle/circle.css';
 @import './circle/circle-read.css';
 @import './lantern/lantern.css';
-@import './lantern/lantern-window.css';
 @import './carnet/carnet.css';
 
 .rituals__invite,
@@ -89,6 +88,11 @@
   border-radius: 14px;
   background: rgba(147, 173, 124, 0.1);
   color: var(--moss-300);
+}
+
+.ritual-card__glyph--toro {
+  place-items: end center;
+  background: radial-gradient(closest-side, rgba(236, 208, 154, 0.12), transparent);
 }
 
 .ritual-card__title {

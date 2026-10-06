@@ -1,0 +1,314 @@
+/*
+ * Bandeau de la lanterne : juste au-dessus de la navigation, compact, la
+ * forêt reste visible. Sa hauteur (--lantern-bar-h, mesurée) soulève la
+ * bulle flottante, les toasts et le bas de la feuille Maison.
+ */
+
+.lantern-bar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 24px);
+  z-index: 41;
+  width: min(440px, calc(100vw - 24px));
+  translate: -50% 0;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid rgba(236, 208, 154, 0.26);
+  border-radius: 22px;
+  background:
+    radial-gradient(80% 140% at 8% 50%, rgba(236, 208, 154, 0.16), transparent 60%),
+    linear-gradient(180deg, rgba(24, 38, 31, 0.94), rgba(14, 24, 19, 0.96));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(245, 240, 225, 0.06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--text);
+  animation: lantern-bar-in 420ms var(--ease-out) both;
+}
+
+@keyframes lantern-bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+html:has(.lantern-bar) .cbubble-region--floating,
+html:has(.lantern-bar) .toast-region {
+  translate: 0 calc(-1 * var(--lantern-bar-h, 72px) - 8px);
+}
+
+html:has(.lantern-bar) .screen-sheet.maison {
+  padding-bottom: calc(var(--dock-space) + var(--lantern-bar-h, 72px) + 12px);
+}
+
+/* Clavier ouvert (téléphone) : le bandeau s'efface avec la navigation. */
+@media (pointer: coarse) {
+  html:has(.app--keyboard) .lantern-bar {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Ordinateur : dans la colonne de droite, comme la navigation. */
+@media (min-width: 1024px) {
+  .lantern-bar {
+    left: auto;
+    right: 20px;
+    width: 440px;
+    translate: none;
+  }
+}
+
+.lantern-bar__main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+}
+
+.lantern-bar__look {
+  display: grid;
+  place-items: end center;
+  width: 44px;
+  height: 52px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: radial-gradient(closest-side, rgba(236, 208, 154, 0.14), transparent);
+  cursor: pointer;
+}
+
+.lantern-bar__look .toro {
+  max-width: 44px;
+}
+
+.lantern-bar__info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: center;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lantern-bar__label {
+  overflow: hidden;
+  color: var(--ivory-50);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lantern-bar__sub {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lantern-bar__time {
+  flex: none;
+  min-width: 3.4ch;
+  color: var(--amber-300);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 520;
+  text-align: right;
+}
+
+.lantern-bar__time.is-paused {
+  color: var(--fog-300);
+  animation: lantern-bar-wait 2.4s ease-in-out infinite;
+}
+
+@keyframes lantern-bar-wait {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.lantern-bar__btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(245, 240, 225, 0.05);
+  color: var(--ivory-100);
+  cursor: pointer;
+}
+
+.lantern-bar__btn.is-accent {
+  border-color: rgba(221, 179, 106, 0.5);
+  background: rgba(221, 179, 106, 0.18);
+  color: var(--amber-300);
+}
+
+.lantern-bar__btn:focus-visible,
+.lantern-bar__look:focus-visible,
+.lantern-bar__info:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.lantern-bar__more {
+  padding: 8px 2px 2px;
+}
+
+.lantern-bar__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Fin de lanterne. */
+.lantern-bar__done {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lantern-bar__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lantern-bar__bloom {
+  display: inline-flex;
+  animation: lantern-bar-bloom 1.6s var(--ease-out) both;
+}
+
+@keyframes lantern-bar-bloom {
+  0% {
+    filter: brightness(1) drop-shadow(0 0 0 rgba(255, 200, 116, 0));
+  }
+  40% {
+    filter: brightness(1.25) drop-shadow(0 0 14px rgba(255, 200, 116, 0.7));
+  }
+  100% {
+    filter: brightness(1) drop-shadow(0 0 6px rgba(255, 200, 116, 0.25));
+  }
+}
+
+.lantern-bar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.lantern-bar__title {
+  margin: 0;
+  color: var(--ivory-50);
+  font-size: 17px;
+  font-weight: 520;
+  line-height: 1.2;
+}
+
+.lantern-bar__text .lantern-bar__sub {
+  white-space: normal;
+}
+
+.lantern-bar__voice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.lantern-bar__unlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(221, 179, 106, 0.32);
+  border-radius: 16px;
+  background: radial-gradient(70% 120% at 10% 50%, rgba(236, 208, 154, 0.16), transparent 70%);
+  animation: lantern-bar-in 520ms var(--ease-out) 200ms both;
+}
+
+.lantern-bar__unlock-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+}
+
+.lantern-bar__kicker {
+  color: var(--amber-300);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lantern-bar__unlock-text strong {
+  color: var(--ivory-50);
+  font-size: 15.5px;
+  font-weight: 520;
+}
+
+.lantern-bar__unlock-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.lantern-bar__placed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--amber-300);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lantern-bar__offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.lantern-bar__q {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--ivory-100);
+  font-size: 14px;
+}
+
+.lantern-bar__checked {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--amber-300);
+  font-size: 13.5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lantern-bar,
+  .lantern-bar__unlock,
+  .lantern-bar__bloom,
+  .lantern-bar__time.is-paused {
+    animation: none;
+  }
+}

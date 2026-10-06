@@ -105,7 +105,14 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       return next;
     });
 
-  const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer) => {
+  /**
+   * Cocher / décocher. La lumière (pulse) part de la case cochée tant que la
+   * ligne est encore là (elle reste LINGER_MS avant de quitter la liste).
+   * Depuis le menu ⋯, `pulse.afterMs` attend que la feuille se soit fermée —
+   * la forêt redevient visible, la case n'est plus sous la feuille — et
+   * `pulse.from` remesure alors la case.
+   */
+  const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer, pulse?: { afterMs: number; from: () => Origin }) => {
     const { actionable, completions, doneTodayCount } = snap.current;
     const planned = nextAssignee(task, completions);
     const result = toggleHomeTask(task, doneBy !== undefined ? { doneBy } : undefined);
@@ -116,7 +123,10 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       return;
     }
     const who = (result.doneBy ?? planned) as Who;
-    world.pulse({ id: completionId, who, fromClientX: origin.x, fromClientY: origin.y, ...(task.effort === 3 ? { strong: true } : {}) });
+    const fly = (o: Origin) =>
+      world.pulse({ id: completionId, who, fromClientX: o.x, fromClientY: o.y, ...(task.effort === 3 ? { strong: true } : {}) });
+    if (pulse) later(() => fly(pulse.from()), pulse.afterMs);
+    else fly(origin);
     setLingering((m) => ({ ...m, [task.id]: completionId }));
     later(() => {
       handOffFocus(task.id);

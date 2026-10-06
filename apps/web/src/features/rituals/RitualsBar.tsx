@@ -4,10 +4,12 @@
  *
  * - Le cercle est mis en avant du vendredi au lundi tant qu'il n'a pas été
  *   tenu ; ensuite il se fait discret (« Tenu », pour le relire).
- * - La lanterne continue de brûler quand on ferme sa feuille : la carte
- *   montre alors le temps restant, et la feuille se rouvre à la floraison.
+ * - Lanterne (V4) : la carte montre la lanterne de pierre posée dans la
+ *   forêt. Toucher prépare une lanterne (petite feuille) ; pendant la
+ *   session, la forêt l'allume et un bandeau compact garde le temps
+ *   (LanternBar, monté ici) ; toucher la carte remonte alors vers la forêt.
  */
-import { circleForWeek } from '@a2/core';
+import { activeLantern, circleForWeek } from '@a2/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
@@ -15,8 +17,11 @@ import { Icon, cx } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
 import { CarnetSheet } from './carnet/CarnetSheet';
 import { CircleSheet } from './circle/CircleSheet';
+import { LanternBar } from './lantern/LanternBar';
+import { revealForest } from './lantern/lanternActions';
 import { LanternSheet } from './lantern/LanternSheet';
-import { remainingMs, useLantern } from './lantern/lanternStore';
+import { lantern, remainingMs, useLantern } from './lantern/lanternStore';
+import { ToroArt } from './lantern/ToroArt';
 import { useLanternController } from './lantern/useLanternController';
 import { RitualGlyph } from './RitualGlyph';
 import { NB, isCircleWindow, ritualWeek, typo, type Names } from './ritualText';
@@ -47,6 +52,7 @@ export function RitualsBar() {
   const { isDesktop, setForegroundSheet } = useShell();
   const lanternState = useLantern();
   const [open, setOpen] = useState<Open>(null);
+  const [carnetSection, setCarnetSection] = useState<'lanterns' | undefined>(undefined);
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
@@ -58,13 +64,22 @@ export function RitualsBar() {
     return () => setForegroundSheet(false);
   }, [open, setForegroundSheet]);
 
-  // Floraison : la feuille de la lanterne se rouvre, sauf si une autre
-  // feuille est ouverte (on n'interrompt pas une saisie) — la carte le dit.
-  const onLanternFinished = useCallback(() => {
-    if (document.querySelector('dialog[open]')) return;
-    setOpen((current) => (current === null ? 'lantern' : current));
+  // La lanterne : horloge, forêt, floraison, mémoire (le bandeau affiche la fin).
+  useLanternController();
+
+  const openCarnet = useCallback((section?: 'lanterns') => {
+    setCarnetSection(section);
+    setOpen('carnet');
   }, []);
-  useLanternController({ onFinished: onLanternFinished });
+
+  const onLanternCard = () => {
+    if (lanternState.phase === 'running' || lanternState.phase === 'paused') {
+      revealForest(isDesktop);
+      return;
+    }
+    if (lanternState.phase === 'done') lantern.reset();
+    setOpen('lantern');
+  };
 
   // Après le cercle : retour vers la forêt, puis deux lumières qui montent.
   const forestMoment = useCallback(
@@ -92,6 +107,7 @@ export function RitualsBar() {
   const highlight = held === null && isCircleWindow(today);
   const lastIntention = held === null ? [...(appState.rituals?.circles ?? [])].reverse().find((c) => c.intentions.length > 0)?.intentions[0] : undefined;
   const lanternLive = lanternState.phase === 'running' || lanternState.phase === 'paused';
+  const chosenLantern = activeLantern(appState.focus);
 
   return (
     <section className="sheet-section rituals" aria-labelledby="rituals-title">
@@ -137,10 +153,11 @@ export function RitualsBar() {
         <button
           type="button"
           className={cx('ritual-card', 'ritual-card--lantern', lanternLive && 'is-live', lanternState.phase === 'done' && 'is-bloom')}
-          onClick={() => setOpen('lantern')}
+          onClick={onLanternCard}
+          aria-label={lanternLive ? 'Lanterne allumée — voir la forêt' : undefined}
         >
-          <span className="ritual-card__glyph">
-            <RitualGlyph name="lantern" />
+          <span className="ritual-card__glyph ritual-card__glyph--toro">
+            <ToroArt id={chosenLantern} mode={lanternLive || lanternState.phase === 'done' ? 'lit' : 'unlit'} height={40} relative={false} />
           </span>
           <span className="ritual-card__title">{lanternLive ? 'Lanterne allumée' : 'Lanterne'}</span>
           <span className="ritual-card__sub">
@@ -148,7 +165,7 @@ export function RitualsBar() {
           </span>
         </button>
 
-        <button type="button" className="ritual-card ritual-card--carnet" onClick={() => setOpen('carnet')}>
+        <button type="button" className="ritual-card ritual-card--carnet" onClick={() => openCarnet()}>
           <span className="ritual-card__glyph">
             <RitualGlyph name="carnet" />
           </span>
@@ -164,7 +181,8 @@ export function RitualsBar() {
         names={names}
       />
       <LanternSheet open={open === 'lantern'} onClose={() => setOpen(null)} names={names} />
-      <CarnetSheet open={open === 'carnet'} onClose={() => setOpen(null)} />
+      <CarnetSheet open={open === 'carnet'} onClose={() => setOpen(null)} section={carnetSection} />
+      <LanternBar names={names} onOpenCarnet={() => openCarnet('lanterns')} />
     </section>
   );
 }

@@ -1,6 +1,7 @@
 /**
  * Feuille d'actions d'une tâche (menu ⋯) : marquer comme fait, par qui
- * (« AL l'a fait », « C'est AC qui l'a fait », « Fait ensemble »), « Pas
+ * (« AL l'a fait », « C'est AC qui l'a fait », « Fait ensemble »), « Allumer
+ * une lanterne · 10 min » (durée au choix : 5, 10, 15, 25), « Pas
  * aujourd'hui » (sans rattrapage ni compteur), « Modifier ».
  *
  * L'app ne sait pas qui tient le téléphone : « je m'en occupe » s'écrit
@@ -8,7 +9,10 @@
  * les libellés sont au passé pour le dire clairement.
  */
 import type { ChoreDoer, HouseholdTask, TaskAssignee } from '@a2/core';
-import { Companion, Icon, Sheet } from '../../ui';
+import { useState } from 'react';
+import { RitualGlyph } from '../rituals/RitualGlyph';
+import { LANTERN_MINUTES, lastLanternMinutes } from '../rituals/lantern/lanternStore';
+import { Companion, Icon, Sheet, cx } from '../../ui';
 import { ActionItem, ActionList } from '../../ui/ActionList';
 import type { Names } from './TaskRow';
 import { assigneeName, recurrenceLabel, turnLabel } from './taskText';
@@ -24,6 +28,10 @@ export interface TaskActionsProps {
   onDone: (task: HouseholdTask, doneBy: ChoreDoer) => void;
   onSkip: (task: HouseholdTask) => void;
   onEdit: (task: HouseholdTask) => void;
+  /** Allumer une lanterne pour cette tâche (minuteur doux). */
+  onLantern: (task: HouseholdTask, minutes: number) => void;
+  /** Une lanterne brûle déjà : on n'en allume pas une seconde. */
+  lanternBusy: boolean;
 }
 
 interface Choice {
@@ -52,7 +60,49 @@ export function doneChoices(task: HouseholdTask, turn: TaskAssignee, names: Name
   return turn === 'both' ? [{ doneBy: 'both', label: 'Fait ensemble', hint: 'comme prévu' }, ...people] : people;
 }
 
-export function TaskActions({ task, open, turn, names, onClose, onDone, onSkip, onEdit }: TaskActionsProps) {
+const NB = '\u202f';
+
+/** « Allumer une lanterne · 10 min », et les durées 5 / 10 / 15 / 25 juste dessous. */
+function LanternChoice({ task, busy, onLantern }: { task: HouseholdTask; busy: boolean; onLantern: TaskActionsProps['onLantern'] }) {
+  const [minutes, setMinutes] = useState(lastLanternMinutes);
+  if (busy) {
+    return (
+      <p className="task-lantern__busy">
+        <RitualGlyph name="lantern" size={22} />
+        <span>Une lanterne brûle déjà — son bandeau est juste au-dessus de la navigation.</span>
+      </p>
+    );
+  }
+  return (
+    <div className="task-lantern">
+      <ActionItem
+        tone="soft"
+        icon={<RitualGlyph name="lantern" size={24} />}
+        label={`Allumer une lanterne · ${minutes}${NB}min`}
+        hint="un minuteur doux, la forêt s’illumine"
+        ariaLabel={`Allumer une lanterne de ${minutes} minutes pour ${task.title}`}
+        onClick={() => onLantern(task, minutes)}
+      />
+      <div className="task-lantern__minutes" role="group" aria-label="Durée de la lanterne">
+        {LANTERN_MINUTES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            className={cx('chip', 'ritual-chip', m === minutes && 'is-selected')}
+            aria-pressed={m === minutes}
+            aria-label={`${m} minutes`}
+            onClick={() => setMinutes(m)}
+          >
+            {m}
+            {NB}min
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TaskActions({ task, open, turn, names, onClose, onDone, onSkip, onEdit, onLantern, lanternBusy }: TaskActionsProps) {
   const week = task?.recurrence === 'weekly' && task.flexible === true;
   const rotating = task?.rotation === true && (turn === 'a' || turn === 'b');
   const description = task
@@ -78,6 +128,7 @@ export function TaskActions({ task, open, turn, names, onClose, onDone, onSkip, 
             ))}
           </ActionList>
           <ActionList label="Autres actions">
+            <LanternChoice key={task.id} task={task} busy={lanternBusy} onLantern={onLantern} />
             <ActionItem
               tone="soft"
               icon={<Icon name="moon" size={20} />}

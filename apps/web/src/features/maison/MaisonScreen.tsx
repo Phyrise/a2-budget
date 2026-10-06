@@ -2,7 +2,9 @@
  * Maison — la clairière. Hero vivant, phrase d'humeur, tâches du jour.
  * Cocher = coche instantanée + lumière qui monte de la case vers la forêt
  * (useWorld().pulse, plus forte pour une corvée) + réaction et réplique du
- * compagnon. Menu ⋯ : qui s'en charge, « pas aujourd'hui », modifier.
+ * compagnon. Menu ⋯ : qui s'en charge, allumer une lanterne (minuteur doux :
+ * la lanterne de pierre s'allume dans la forêt, un bandeau garde le temps),
+ * « pas aujourd'hui », modifier.
  * Les tâches restantes ne sont jamais représentées dans la forêt ; aucun
  * score, aucune compétition : le partage se lit dans une carte qualitative.
  * La pause se met depuis l'en-tête ou les Réglages ; ici, seulement la carte
@@ -31,6 +33,8 @@ import { CompanionBubble } from '../../ui/CompanionBubble';
 import type { CompanionMood } from '../../world/types';
 import { useWorld } from '../../world/WorldContext';
 import { RitualsBar } from '../rituals/RitualsBar';
+import { lanternWhoFor, startLantern } from '../rituals/lantern/lanternActions';
+import { useLantern } from '../rituals/lantern/lanternStore';
 import { BalanceCard } from './BalanceCard';
 import { TaskActions } from './TaskActions';
 import { DoneRow, SkippedList, TaskRow } from './TaskRow';
@@ -54,7 +58,9 @@ function checkCenter(taskId: string): { x: number; y: number } {
 export function MaisonScreen() {
   const { appState, today } = useApp();
   const world = useWorld();
-  const { prefs, updatePrefs, setForegroundSheet } = useShell();
+  const { prefs, updatePrefs, setForegroundSheet, isDesktop } = useShell();
+  const lanternPhase = useLantern().phase;
+  const lanternBusy = lanternPhase === 'running' || lanternPhase === 'paused';
   const [sheet, setSheet] = useState<TaskSheetState>(null);
   const [menu, setMenu] = useState<{ task: HouseholdTask; open: boolean; turn: TaskAssignee } | null>(null);
   const perchRef = useRef<HTMLDivElement>(null);
@@ -128,12 +134,21 @@ export function MaisonScreen() {
   const onMenuDone = (task: HouseholdTask, doneBy: ChoreDoer) => {
     closeMenu();
     // Déjà cochée (menu ouvert pendant l'animation) : ne surtout pas décocher.
-    if (actionableIds.has(task.id)) actions.toggle(task, checkCenter(task.id), doneBy);
+    // La coche est immédiate ; la luciole s'envole de la case une fois la
+    // feuille fermée (sinon elle partirait de sous la feuille, forêt figée).
+    if (actionableIds.has(task.id))
+      actions.toggle(task, checkCenter(task.id), doneBy, { from: () => checkCenter(task.id) });
     focusTitleIfLost();
   };
   const onMenuSkip = (task: HouseholdTask) => {
     closeMenu();
     actions.skip(task);
+    focusTitleIfLost();
+  };
+  const onMenuLantern = (task: HouseholdTask, minutes: number) => {
+    const turn = menu?.turn ?? nextAssignee(task, completions);
+    closeMenu();
+    startLantern({ minutes, who: lanternWhoFor(turn), taskId: task.id, label: task.title }, isDesktop);
     focusTitleIfLost();
   };
   const onMenuEdit = (task: HouseholdTask) => {
@@ -272,6 +287,8 @@ export function MaisonScreen() {
         onDone={onMenuDone}
         onSkip={onMenuSkip}
         onEdit={onMenuEdit}
+        onLantern={onMenuLantern}
+        lanternBusy={lanternBusy}
       />
       <TaskSheet state={sheet} onClose={() => setSheet(null)} />
     </>

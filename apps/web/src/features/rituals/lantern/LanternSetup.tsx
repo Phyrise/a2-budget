@@ -2,21 +2,24 @@
  * Préparer une lanterne : durée, qui, tâche liée (facultative), intention.
  * Le bouton dit simplement ce qui va se passer (« Lancer 10 minutes »).
  */
-import { nextAssignee, type ChoreCompletion, type HouseholdTask } from '@a2/core';
+import { activeLantern, nextAssignee, type ChoreCompletion, type HouseholdTask } from '@a2/core';
 import { useState } from 'react';
+import { useApp } from '../../../state/store';
 import { Button, Companion, Segmented, TextField, cx } from '../../../ui';
 import { NB, type Names } from '../ritualText';
-import { ambience } from './ambience';
-import { lantern, type LanternWho } from './lanternStore';
+import { lanternName } from './lanternData';
+import { LANTERN_MINUTES, lastLanternMinutes, type LanternConfig, type LanternWho } from './lanternStore';
+import { ToroArt } from './ToroArt';
 
-const DURATIONS = ['5', '10', '15', '25'] as const;
-type Duration = (typeof DURATIONS)[number];
+const DURATIONS = LANTERN_MINUTES.map(String) as ReadonlyArray<string>;
+type Duration = string;
 
 export function LanternSetup({
   names,
   tasks,
   completions,
   onHelp,
+  onStart,
 }: {
   names: Names;
   /** Tâches du jour (encore à faire). */
@@ -24,8 +27,11 @@ export function LanternSetup({
   completions: ChoreCompletion[];
   /** Rouvrir l'explication en trois gestes. */
   onHelp: () => void;
+  onStart: (config: LanternConfig) => void;
 }) {
-  const [minutes, setMinutes] = useState<Duration>('10');
+  const { appState } = useApp();
+  const chosen = activeLantern(appState?.focus);
+  const [minutes, setMinutes] = useState<Duration>(() => String(lastLanternMinutes()));
   const [who, setWho] = useState<LanternWho>('both');
   const [taskId, setTaskId] = useState<string>('');
   const [label, setLabel] = useState('');
@@ -40,8 +46,7 @@ export function LanternSetup({
   };
 
   const start = () => {
-    ambience.unlock();
-    lantern.start({
+    onStart({
       minutes: Number(minutes),
       who,
       taskId: task?.id,
@@ -52,7 +57,12 @@ export function LanternSetup({
   return (
     <div className="lantern-card lantern-setup">
       <div className="lantern-setup__intro">
-        <p className="lantern-setup__lead">Un minuteur doux pour s’y mettre. La forêt s’illumine pendant que vous rangez.</p>
+        <p className="lantern-setup__lead">
+          <ToroArt id={chosen} mode="unlit" height={54} relative={false} />
+          <span>
+            Un minuteur doux pour s’y mettre. <em>{lanternName(chosen)}</em> s’allumera dans la forêt pendant que vous rangez.
+          </span>
+        </p>
         <button type="button" className="lantern-setup__help" onClick={onHelp}>
           Comment ça marche{NB}?
         </button>

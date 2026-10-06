@@ -67,9 +67,9 @@ const STEPS: ReadonlyArray<{ step: 1 | 2 | 3; title: string; body: string }> = [
   {
     step: 2,
     title: 'La lanterne s’allume dans la forêt',
-    body: 'Elle se remplit de lumière pendant que vous rangez. Vous pouvez fermer cet écran, elle continue de briller.',
+    body: 'Une lanterne de pierre s’allume au pied du cèdre. Un petit bandeau garde le temps, au-dessus de la navigation.',
   },
-  { step: 3, title: 'À la fin, elle fleurit', body: 'Si elle était liée à une tâche du jour, il ne reste qu’à la cocher. Arrêter plus tôt ne compte jamais contre vous.' },
+  { step: 3, title: 'À la fin, elle fleurit', body: 'Si elle était liée à une tâche du jour, il ne reste qu’à la cocher. Au fil des lanternes, d’autres modèles se dévoilent dans le carnet. Arrêter plus tôt ne compte jamais contre vous.' },
 ];
 
 export function LanternIntro({ onContinue }: { onContinue: () => void }) {

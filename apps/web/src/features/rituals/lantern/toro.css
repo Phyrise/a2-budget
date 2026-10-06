@@ -1,0 +1,88 @@
+/* Lanterne de pierre peinte (ToroArt) : éteinte, allumée (fondu), silhouette. */
+
+.toro {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.toro__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.toro--unlit .toro__img,
+.toro--lit .toro__img {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.42));
+}
+
+/* Allumée : la peinture « lit » se fond sur l'éteinte. */
+.toro__lit {
+  opacity: 0;
+  transition: opacity 900ms var(--ease-soft);
+}
+
+.toro--lit .toro__lit {
+  opacity: 1;
+}
+
+/* Lueur vivante, centrée sur la chambre à feu. */
+.toro__glow {
+  position: absolute;
+  left: var(--fire-x);
+  top: var(--fire-y);
+  width: 150%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 200, 116, 0.42), rgba(224, 137, 47, 0.12) 52%, transparent);
+  opacity: 0;
+  transition: opacity 900ms var(--ease-soft);
+  pointer-events: none;
+}
+
+.toro--spirit .toro__glow {
+  background: radial-gradient(closest-side, rgba(159, 227, 200, 0.42), rgba(79, 183, 154, 0.12) 52%, transparent);
+}
+
+.toro--lit .toro__glow {
+  opacity: 1;
+  animation: toro-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes toro-breathe {
+  0%,
+  100% {
+    scale: 0.92;
+    opacity: 0.78;
+  }
+  50% {
+    scale: 1.06;
+    opacity: 1;
+  }
+}
+
+/* Silhouette : dans la brume. */
+.toro--silhouette .toro__img {
+  opacity: 0.88;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toro--lit .toro__glow {
+    animation: none;
+  }
+
+  .toro__lit,
+  .toro__glow {
+    transition-duration: 1ms;
+  }
+}

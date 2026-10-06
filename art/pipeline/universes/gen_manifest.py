@@ -2,6 +2,9 @@
 s'exécute en local après `remote.sh pull`). Vérifie que chaque fichier attendu
 par le contrat (types.ts) existe dans apps/web/src/themes/assets.
 
+Univers du Calendrier (Totoro, V4) : assets/calendar/*.webp et
+art/pipeline/v4/report.json, produits par art/pipeline/v4/ (totoro.py + sync.py).
+
 Bandeaux de saison (facultatifs) : assets/seasons/season-<budget|courses>-
 <autumn|winter>-<landscape|portrait>.webp, produits par art/pipeline/seasons/
 (remote.sh pull). Une saison n'est déclarée que si ses deux cadres existent."""
@@ -16,10 +19,18 @@ REPO = HERE.parents[2]
 THEMES = REPO / "apps/web/src/themes"
 ASSETS = THEMES / "assets"
 REPORT = json.loads((HERE / "report.json").read_text())
+V4_REPORT = json.loads((HERE.parent / "v4/report.json").read_text())
+CALENDAR = {k: v for k, v in V4_REPORT.items() if k.startswith("calendar/")}
 
 SEASONS = ["autumn", "winter"]
 KONPEITO = ["pink", "yellow", "yellow-2", "green", "green-2", "blue", "blue-2",
             "white", "purple", "purple-2"]
+# Natures d'événement (CALENDAR_KINDS de @a2/core) → icône t05.
+CALENDAR_KINDS = ["repas", "sortie", "anniversaire", "rdv", "voyage", "maison", "autre"]
+TOTORO = {"umbrella": "totoro-umbrella", "gift": "totoro-gift", "joy": "totoro-joy",
+          "sleeping": "totoro-sleeping", "chuAcorns": "chu-totoro-acorns",
+          "chibiPeek": "chibi-totoro-peek"}
+CATBUS = ["running", "waiting", "sign", "leap"]
 CATEGORIES = ["fruits-legumes", "frais", "boulangerie", "epicerie", "boissons",
               "surgeles", "hygiene", "maison", "autre"]
 
@@ -52,9 +63,9 @@ def obj(pairs: dict[str, str], indent: int) -> str:
     return "{\n" + body + pad + "}"
 
 
-def size(prefix: str) -> str:
+def size(prefix: str, report: dict | None = None) -> str:
     """Résumé des tailles (px) d'un groupe de fichiers pour l'en-tête."""
-    hits = sorted((k, v) for k, v in REPORT.items() if k.startswith(prefix))
+    hits = sorted((k, v) for k, v in (report or REPORT).items() if k.startswith(prefix))
     ws = sorted({v["w"] for _, v in hits})
     hs = sorted({v["h"] for _, v in hits})
     kb = sum(v["bytes"] for _, v in hits) / 1024
@@ -119,6 +130,17 @@ def main() -> None:
     if season_c:
         courses = {"banners": courses.pop("banners"), "seasons": season_c, **courses}
     notes = notes_b + notes_c
+    t = "calendar/"
+    calendar = {
+        "banners": obj({"landscape": ref(t + "banner-landscape.webp"),
+                        "portrait": ref(t + "banner-portrait.webp")}, 2),
+        "totoro": obj({k: ref(f"{t}{v}.webp") for k, v in TOTORO.items()}, 2),
+        "catbus": obj({k: ref(f"{t}catbus-{k}.webp") for k in CATBUS}, 2),
+        "kinds": obj({k: ref(f"{t}icon-{k}.webp") for k in CALENDAR_KINDS}, 2),
+        "extras": obj({"umbrella": ref(t + "icon-parapluie.webp"),
+                       "sprout": ref(t + "icon-pousse.webp")}, 2),
+    }
+    cal_kb = sum(v["bytes"] for v in CALENDAR.values()) / 1024
     season_doc = "" if not notes else f""" *
  * Bandeaux de saison (hors précache) : {' · '.join(notes)}.
  * - Fichiers assets/seasons/season-<thème>-<saison>-<cadre>.webp, émis au build
@@ -159,14 +181,28 @@ def main() -> None:
  * - Petits objets sur toile carrée, contenu centré : pépites / pièces /
  *   kompeitō 96×96 (contenu ≤ 84) ; icônes de rayons 128×128 (contenu ≤ 116).
  * - Clés de `categories` = GROCERY_CATEGORIES de @a2/core (home/groceries.ts).
+ *
+ * Calendrier (Mon voisin Totoro, V4 — art/pipeline/v4/) : {cal_kb:.0f} Ko ({len(CALENDAR)} fichiers).
+ * - Bandeaux : arrêt de bus sous la pluie, paysage {size(t + 'banner-landscape', CALENDAR)},
+ *   portrait {size(t + 'banner-portrait', CALENDAR)}. Cadrages
+ *   recommandés (object-position ; art/pipeline/v4/totoro.py) : bandeau
+ *   mobile 60 % 40 % (paysage) ou 50 % 36 % (portrait), fond 16:9 50 % 55 %,
+ *   fond téléphone 55 % 50 % (portrait) : Totoro et l'abri restent dans le cadre.
+ * - Totoro {size(t + 'totoro', CALENDAR)} et Chu / Chibi-Totoro
+ *   (même échelle, hauteur utile 360 pour le plus grand ; les petits restent petits) ;
+ *   Chatbus {size(t + 'catbus', CALENDAR)} (plus grand côté 420, même échelle).
+ * - Icônes 128×128 (contenu ≤ 116) : `kinds` (clés = CALENDAR_KINDS de
+ *   @a2/core) + `extras` (parapluie rouge, pousse).
 {season_doc} */
-import type {{ BudgetTheme, CoursesTheme }} from './types';
+import type {{ BudgetTheme, CalendarTheme, CoursesTheme }} from './types';
 """
 
     def render(name: str, typ: str, d: dict[str, str]) -> str:
         return f"export const {name}: {typ} = " + obj(d, 0) + ";\n"
 
-    body = render("budgetTheme", "BudgetTheme", budget) + "\n" + render("coursesTheme", "CoursesTheme", courses)
+    body = (render("budgetTheme", "BudgetTheme", budget) + "\n"
+            + render("coursesTheme", "CoursesTheme", courses) + "\n"
+            + render("calendarTheme", "CalendarTheme", calendar))
     out = header + "\n".join(imports) + "\n\n" + body
     (THEMES / "manifest.ts").write_text(out)
     print(f"manifest.ts : {len(imports)} imports, {total:.2f} Mo")

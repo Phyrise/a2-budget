@@ -1,0 +1,232 @@
+{
+ "calendar/banner-landscape.webp": {
+  "w": 1536,
+  "h": 1024,
+  "bytes": 258450
+ },
+ "calendar/banner-portrait.webp": {
+  "w": 1024,
+  "h": 1536,
+  "bytes": 316842
+ },
+ "calendar/catbus-leap.webp": {
+  "w": 385,
+  "h": 240,
+  "bytes": 22292
+ },
+ "calendar/catbus-running.webp": {
+  "w": 440,
+  "h": 192,
+  "bytes": 21892
+ },
+ "calendar/catbus-sign.webp": {
+  "w": 379,
+  "h": 255,
+  "bytes": 24050
+ },
+ "calendar/catbus-waiting.webp": {
+  "w": 363,
+  "h": 229,
+  "bytes": 22412
+ },
+ "calendar/chibi-totoro-peek.webp": {
+  "w": 137,
+  "h": 186,
+  "bytes": 7230
+ },
+ "calendar/chu-totoro-acorns.webp": {
+  "w": 232,
+  "h": 257,
+  "bytes": 10936
+ },
+ "calendar/icon-anniversaire.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 6836
+ },
+ "calendar/icon-autre.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5174
+ },
+ "calendar/icon-maison.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5738
+ },
+ "calendar/icon-parapluie.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4410
+ },
+ "calendar/icon-pousse.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5800
+ },
+ "calendar/icon-rdv.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 4338
+ },
+ "calendar/icon-repas.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5508
+ },
+ "calendar/icon-sortie.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 5356
+ },
+ "calendar/icon-voyage.webp": {
+  "w": 128,
+  "h": 128,
+  "bytes": 6060
+ },
+ "calendar/totoro-gift.webp": {
+  "w": 254,
+  "h": 362,
+  "bytes": 14510
+ },
+ "calendar/totoro-joy.webp": {
+  "w": 307,
+  "h": 382,
+  "bytes": 15764
+ },
+ "calendar/totoro-sleeping.webp": {
+  "w": 416,
+  "h": 217,
+  "bytes": 11704
+ },
+ "calendar/totoro-umbrella.webp": {
+  "w": 293,
+  "h": 373,
+  "bytes": 18404
+ },
+ "lanterns/kodama-lying.webp": {
+  "w": 209,
+  "h": 117,
+  "bytes": 4834
+ },
+ "lanterns/kodama-pair.webp": {
+  "w": 177,
+  "h": 198,
+  "bytes": 9608
+ },
+ "lanterns/kodama-sit.webp": {
+  "w": 114,
+  "h": 220,
+  "bytes": 6194
+ },
+ "lanterns/kodama-wave.webp": {
+  "w": 137,
+  "h": 203,
+  "bytes": 6586
+ },
+ "lanterns/lantern-ancient-shrine-lit.webp": {
+  "w": 378,
+  "h": 433,
+  "bytes": 55934
+ },
+ "lanterns/lantern-ancient-shrine-silhouette.webp": {
+  "w": 378,
+  "h": 433,
+  "bytes": 15502
+ },
+ "lanterns/lantern-ancient-shrine-unlit.webp": {
+  "w": 378,
+  "h": 433,
+  "bytes": 52924
+ },
+ "lanterns/lantern-kasuga-moss-lit.webp": {
+  "w": 243,
+  "h": 365,
+  "bytes": 30350
+ },
+ "lanterns/lantern-kasuga-moss-silhouette.webp": {
+  "w": 243,
+  "h": 365,
+  "bytes": 10798
+ },
+ "lanterns/lantern-kasuga-moss-unlit.webp": {
+  "w": 243,
+  "h": 365,
+  "bytes": 29108
+ },
+ "lanterns/lantern-kotoji-lit.webp": {
+  "w": 316,
+  "h": 368,
+  "bytes": 37606
+ },
+ "lanterns/lantern-kotoji-silhouette.webp": {
+  "w": 316,
+  "h": 368,
+  "bytes": 13840
+ },
+ "lanterns/lantern-kotoji-unlit.webp": {
+  "w": 316,
+  "h": 368,
+  "bytes": 38738
+ },
+ "lanterns/lantern-oribe-lit.webp": {
+  "w": 261,
+  "h": 429,
+  "bytes": 34062
+ },
+ "lanterns/lantern-oribe-silhouette.webp": {
+  "w": 261,
+  "h": 429,
+  "bytes": 12066
+ },
+ "lanterns/lantern-oribe-unlit.webp": {
+  "w": 261,
+  "h": 429,
+  "bytes": 33560
+ },
+ "lanterns/lantern-spirit-light-lit.webp": {
+  "w": 309,
+  "h": 442,
+  "bytes": 43372
+ },
+ "lanterns/lantern-spirit-light-silhouette.webp": {
+  "w": 309,
+  "h": 442,
+  "bytes": 14388
+ },
+ "lanterns/lantern-spirit-light-unlit.webp": {
+  "w": 309,
+  "h": 442,
+  "bytes": 43962
+ },
+ "lanterns/lantern-tachi-carved-lit.webp": {
+  "w": 287,
+  "h": 440,
+  "bytes": 37976
+ },
+ "lanterns/lantern-tachi-carved-silhouette.webp": {
+  "w": 287,
+  "h": 440,
+  "bytes": 12806
+ },
+ "lanterns/lantern-tachi-carved-unlit.webp": {
+  "w": 287,
+  "h": 440,
+  "bytes": 36816
+ },
+ "lanterns/lantern-yukimi-lit.webp": {
+  "w": 348,
+  "h": 328,
+  "bytes": 39262
+ },
+ "lanterns/lantern-yukimi-silhouette.webp": {
+  "w": 348,
+  "h": 328,
+  "bytes": 14250
+ },
+ "lanterns/lantern-yukimi-unlit.webp": {
+  "w": 348,
+  "h": 328,
+  "bytes": 38176
+ }
+}

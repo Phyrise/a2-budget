@@ -9,7 +9,8 @@
 import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { FxSystem } from './fx';
-import { computeFraming, framingFor, viewToScene, type Framing } from './framing';
+import { computeFraming, framingFor, type Framing } from './framing';
+import { pulseStart } from './pulse';
 import { loadSlotLut, retargetGrade, type LutSlot } from './grade';
 import { changePainting, GROW_SECONDS, settlePainting, type FadeMode } from './growth';
 import { bindEngineEvents } from './input';
@@ -225,15 +226,11 @@ export class WorldEngine {
   // ------------------------------------------------------------------ commandes
 
   pulse(opts: { id: string; who: Who; fromClientX?: number; fromClientY?: number; strong?: boolean }) {
-    let from: { x: number; y: number } | null = null;
-    if (opts.fromClientX !== undefined && opts.fromClientY !== undefined) {
-      const r = this.canvas.getBoundingClientRect();
-      from = viewToScene(this.framing, opts.fromClientX - r.left, opts.fromClientY - r.top);
-      // Hors du cadre (la case est sous la scène) : on part juste sous le bord bas.
-      from.y = Math.min(from.y, this.framing.cy + this.framing.vh * 0.62);
-    }
+    const from = pulseStart(this.canvas, this.framing, opts.fromClientX, opts.fromClientY);
     const n = now();
-    if (this.animated) this.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);
+    // Le vol se joue même si la coquille vient de figer la scène (feuille ouverte,
+    // défilement) : il la réveille jusqu'à l'atterrissage (voir `animated`).
+    if (this.canFly) this.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);
     else this.lights.sync([...(this.state?.lights ?? []).filter((l) => l.id !== opts.id), { id: opts.id, who: opts.who }], n, this.cfg.motion === 'still');
     this.requestFrame(true);
   }
@@ -301,11 +298,16 @@ export class WorldEngine {
 
   /**
    * Animation continue autorisée (hero / backdrop vivants, mouvement non
-   * immobile). Une lanterne allumée réveille aussi une scène figée par la
-   * coquille (`live: false`), sauf en bandeau.
+   * immobile). Une lanterne allumée ou une lumière en vol réveille aussi une
+   * scène figée par la coquille (`live: false`), sauf en bandeau.
    */
   get animated(): boolean {
-    return (this.cfg.live || this.lantern.active) && this.cfg.variant !== 'banner' && this.cfg.motion !== 'still';
+    return (this.cfg.live || this.lantern.active || this.lights.inFlight) && this.canFly;
+  }
+
+  /** Variante et préférence qui permettent le mouvement (hors bandeau et « immobile »). */
+  get canFly(): boolean {
+    return this.cfg.variant !== 'banner' && this.cfg.motion !== 'still';
   }
 
   get canRun(): boolean {

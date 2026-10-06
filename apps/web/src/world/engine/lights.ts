@@ -2,12 +2,14 @@
  * Lumières du jour : une orbe douce par tâche faite aujourd'hui, posée sur une
  * ancre stable (hachage de l'id → ancre + léger décalage), teintée selon qui.
  * `pulse` fait monter la lumière depuis un point de l'écran jusqu'à son ancre
- * (≈1,6 s, courbe, traînée). Une lumière retirée de l'état s'éteint en fondu.
+ * (≈1,7 s, envol franc puis arc au-dessus de l'ancre, traînée et étincelles :
+ * flight.ts). Une lumière retirée de l'état s'éteint en fondu.
  * Pulse fort (corvée) : lumière plus grande et plus chaude, vol et traînée plus
  * longs, petite pluie de lumière autour de l'ancre à l'atterrissage.
  */
 import type { ScenePoint, WorldLight, Who } from '../types';
 import { GLOW, type BillboardWriter } from './batch';
+import { flightAt, bezierAt, flightEase, makeFlight, type FlightPath } from './flight';
 import { hashString } from './noise';
 
 export const WHO_COLORS: Record<Who, [number, number, number]> = {
@@ -17,8 +19,6 @@ export const WHO_COLORS: Record<Who, [number, number, number]> = {
   unassigned: [0xb6 / 255, 0xc4 / 255, 0xbf / 255],
 };
 
-const FLIGHT = 1.6;
-const FLIGHT_STRONG = 2.0;
 /** Pluie de lumière après l'atterrissage d'un pulse fort. */
 const SHOWER = 2.4;
 const SHOWER_SPARKS = 18;
@@ -39,12 +39,14 @@ interface Light {
   /** Instant de début d'extinction (null = allumée). */
   dying: number | null;
   inState: boolean;
-  flight: { sx: number; sy: number; cx: number; cy: number; start: number; dur: number } | null;
+  flight: FlightPath | null;
   landedFlash: number;
   strong: boolean;
 }
 
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+/** Étincelles semées le long du vol (elles s'attardent puis s'éteignent). */
+const SPARKS = 7;
+const SPARK_LIFE = 0.75;
 
 export interface LandEvent {
   x: number;
@@ -111,11 +113,26 @@ export class DayLights {
     l.strong = strong;
     l.dying = null;
     l.born = Math.min(l.born, now);
-    const sx = from ? from.x : a.x + 0.06;
-    const sy = from ? from.y : Math.min(1.05, a.y + 0.25);
-    const side = (hashString(id) & 1 ? 1 : -1) * 0.08;
-    const arc = strong ? 0.22 : 0.16;
-    l.flight = { sx, sy, cx: (sx + a.x) / 2 + side, cy: Math.min(sy, a.y) - arc, start: now, dur: strong ? FLIGHT_STRONG : FLIGHT };
+    const start = from ?? { x: a.x + 0.06, y: Math.min(1.05, a.y + 0.25) };
+    const side = hashString(id) & 1 ? 1 : -1;
+    l.flight = makeFlight(start, a, side, now, strong);
+  }
+
+  /** Position de la tête des lumières en vol (QA, regards des kodama). */
+  flying(now: number): { id: string; x: number; y: number; k: number }[] {
+    const out: { id: string; x: number; y: number; k: number }[] = [];
+    for (const l of this.lights.values()) {
+      if (!l.flight) continue;
+      const p = flightAt(l.flight, now);
+      out.push({ id: l.id, x: p.x, y: p.y, k: p.k });
+    }
+    return out;
+  }
+
+  /** Un vol est en cours (le moteur garde la scène animée jusqu'à l'atterrissage). */
+  get inFlight(): boolean {
+    for (const l of this.lights.values()) if (l.flight) return true;
+    return false;
   }
 
   /** Vrai si une animation est en cours (vol, fondu). */
@@ -152,22 +169,7 @@ export class DayLights {
       const flick = 0.85 + 0.1 * Math.sin(t * 1.7 + l.phase) + 0.05 * Math.sin(t * 4.3 + l.phase * 2);
       const glowK = (0.75 + 0.35 * night) * intensity;
       if (l.flight) {
-        const f = l.flight;
-        const k = Math.min(1, (now - f.start) / f.dur);
-        // Traînée : positions passées le long de la courbe (plus longue si forte).
-        const segs = l.strong ? 16 : 10;
-        const step = l.strong ? 0.03 : 0.035;
-        for (let i = segs - 1; i >= 0; i--) {
-          const kk = Math.max(0, k - i * step);
-          const e = easeInOut(kk);
-          const u = 1 - e;
-          const x = u * u * f.sx + 2 * u * e * f.cx + e * e * l.x;
-          const y = u * u * f.sy + 2 * u * e * f.cy + e * e * l.y;
-          const d = 1 + (l.depth - 1) * e;
-          const fade = 1 - i / segs;
-          const s = (i === 0 ? 0.075 : 0.05 * fade) * (1.25 - 0.35 * e) * big;
-          out.push(x, y, d, s, s, 0, r, g, b, (i === 0 ? 1 : 0.4 * fade * fade) * glowK, GLOW);
-        }
+        this.emitFlight(out, l, l.flight, now, r, g, b, glowK, big);
         continue;
       }
       const hover = Math.sin(t * 0.6 + l.phase) * 0.004;
@@ -184,6 +186,37 @@ export class DayLights {
         out.push(x, y, l.depth, fs, fs, 0, r, g, b, flash * 0.35 * glowK, GLOW);
       }
       if (l.strong) this.shower(out, l, now, r, g, b, glowK, aspect);
+    }
+  }
+
+  /** Vol : tête lumineuse, traînée le long de la courbe, étincelles semées qui s'attardent. */
+  private emitFlight(out: BillboardWriter, l: Light, f: FlightPath, now: number, r: number, g: number, b: number, glowK: number, big: number) {
+    const k = Math.min(1, (now - f.start) / f.dur);
+    // Traînée : positions passées le long de la courbe (plus longue si forte).
+    const segs = l.strong ? 18 : 13;
+    const step = l.strong ? 0.026 : 0.03;
+    for (let i = segs - 1; i >= 0; i--) {
+      const kk = Math.max(0, k - i * step);
+      const e = flightEase(kk);
+      const p = bezierAt(f, e);
+      const d = 1 + (l.depth - 1) * e;
+      const fade = 1 - i / segs;
+      const s = (i === 0 ? 0.082 : 0.052 * fade) * (1.2 - 0.3 * e) * big;
+      out.push(p.x, p.y, d, s, s, 0, r, g, b, (i === 0 ? 1.15 : 0.5 * fade * fade) * glowK, GLOW);
+      // Cœur blanc de la tête : lisible même sur une peinture claire.
+      if (i === 0) out.push(p.x, p.y, d, s * 0.38, s * 0.38, 0, 1, 0.98, 0.92, 0.9 * glowK, GLOW);
+    }
+    // Étincelles : posées au passage, elles tombent un peu en s'éteignant.
+    const h = hashString(l.id);
+    for (let j = 0; j < SPARKS; j++) {
+      const at = (j + 0.5) / (SPARKS + 1);
+      const age = (k - at) * f.dur;
+      if (age <= 0 || age > SPARK_LIFE) continue;
+      const p = bezierAt(f, flightEase(at));
+      const u = ((h >>> (j * 3)) & 0xff) / 255;
+      const a = (1 - age / SPARK_LIFE) * (0.55 + 0.35 * u);
+      const sz = (0.014 + 0.008 * u) * big;
+      out.push(p.x + (u - 0.5) * 0.02, p.y + age * 0.035, 1 + (l.depth - 1) * at, sz, sz, 0, r * 0.5 + 0.5, g * 0.5 + 0.48, b * 0.5 + 0.4, a * glowK, GLOW);
     }
   }
 

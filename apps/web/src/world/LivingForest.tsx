@@ -147,6 +147,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         await engine.init(cur.state);
         if (cancelled) return;
         engineRef.current = engine;
+        // QA (serveur de dev uniquement) : inspection du moteur par Playwright.
+        if (import.meta.env.DEV) (window as unknown as { __worldEngine?: WorldEngine }).__worldEngine = engine;
         engine.setState(latest.current.state);
         engine.seasons.hourOverride = hourRef.current;
         if (focusRef.current.progress !== null) engine.focus(focusRef.current.progress, focusRef.current.who);

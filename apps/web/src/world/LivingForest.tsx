@@ -198,6 +198,7 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
     ref,
     (): LivingForestDebugHandle => ({
       pulse: (opts) => engineRef.current?.pulse(opts),
+      expectPulse: (id) => engineRef.current?.expectPulse(id),
       playGuardian: () => engineRef.current?.playGuardian(),
       focus: (progress, who) => {
         focusRef.current = { progress, who: who ?? focusRef.current.who };

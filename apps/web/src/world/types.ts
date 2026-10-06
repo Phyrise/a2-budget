@@ -86,6 +86,12 @@ export interface LivingForestHandle {
    * (ex. la case cochée) et se pose sur son ancre. Coordonnées client (px).
    */
   pulse(opts: PulseOptions): void;
+  /**
+   * Annonce un `pulse` différé (coché depuis une feuille, envol à sa
+   * fermeture) : d'ici là, la nouvelle lumière n'est pas posée à son ancre.
+   * À appeler AVANT la mise à jour de l'état.
+   */
+  expectPulse?(id: string): void;
   /** Événement rare du gardien (≈10 s, passable au tap). */
   playGuardian(): void;
   /**

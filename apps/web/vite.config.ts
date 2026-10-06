@@ -67,6 +67,12 @@ export default defineConfig({
           'assets/courses-*.webp',
           'assets/banner-portrait-*.webp',
           'assets/season-*',
+          // Carnet sans triche (V4) : les vraies images des créatures et des
+          // lanternes de pierre à débloquer ne sont téléchargées qu'une fois
+          // rencontrées / débloquées (cache à l'exécution, voir sw.ts). Les
+          // silhouettes et la lanterne de base restent précachées.
+          'assets/{moss-ling,seed-spirit,leaf-sprite,ember-wisp,mushroom-pip,water-drip}-*.webp',
+          'assets/lantern-{yukimi,oribe,kotoji,tachi-carved,ancient-shrine,spirit-light}-{lit,unlit}-*.webp',
         ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },

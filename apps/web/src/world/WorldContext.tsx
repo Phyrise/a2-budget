@@ -43,6 +43,8 @@ interface WorldContextValue {
   presentation: WorldPresentation;
   setPresentation: (p: WorldPresentation) => void;
   pulse: (opts: PulseOptions) => void;
+  /** Annonce un pulse différé (voir LivingForestHandle.expectPulse). */
+  expectPulse: (id: string) => void;
   playGuardian: () => void;
   /** Lanterne : progression 0..1, ou null pour l'éteindre. */
   focus: (progress: number | null, who?: Who) => void;
@@ -70,6 +72,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
     setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion ? prev : p));
   }, []);
   const pulse = useCallback<WorldContextValue['pulse']>((opts) => handleRef.current?.pulse(opts), []);
+  const expectPulse = useCallback((id: string) => handleRef.current?.expectPulse?.(id), []);
   const playGuardian = useCallback(() => handleRef.current?.playGuardian(), []);
   const focus = useCallback((progress: number | null, who?: Who) => handleRef.current?.focus(progress, who), []);
 
@@ -88,8 +91,8 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   }, [previewLantern]);
 
   const value = useMemo(
-    () => ({ state, realState, presentation, setPresentation, pulse, playGuardian, focus, preview, setPreview, previewActive, handleRef }),
-    [state, realState, presentation, setPresentation, pulse, playGuardian, focus, preview, previewActive],
+    () => ({ state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, preview, setPreview, previewActive, handleRef }),
+    [state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, preview, previewActive],
   );
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;
 }

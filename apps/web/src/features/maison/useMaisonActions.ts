@@ -137,7 +137,8 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
    * ligne est encore là (elle reste LINGER_MS avant de quitter la liste).
    * Depuis le menu ⋯, `afterSheet` attend que la feuille se soit vraiment
    * fermée (plus aucun <dialog open>) — la forêt redevient vivante, la case
-   * n'est plus sous la feuille — puis `from` remesure la case.
+   * n'est plus sous la feuille — puis `from` remesure la case. D'ici là, le
+   * vol est réservé (`world.expectPulse`) : pas de lumière posée d'avance.
    */
   const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer, afterSheet?: { from: () => Origin }) => {
     const { actionable, completions, doneTodayCount } = snap.current;
@@ -154,7 +155,13 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       if (import.meta.env.DEV) tracePulse(task.id, o);
       world.pulse({ id: completionId, who, fromClientX: o.x, fromClientY: o.y, ...(task.effort === 3 ? { strong: true } : {}) });
     };
-    if (afterSheet) whenSheetsClosed(() => fly(afterSheet.from()));
+    if (afterSheet) {
+      // L'état change tout de suite mais le vol attend la fermeture de la
+      // feuille : la lumière ne doit pas s'allumer à sa place entre-temps
+      // (synchrone, avant le rendu qui pousse les lumières au moteur).
+      world.expectPulse(completionId);
+      whenSheetsClosed(() => fly(afterSheet.from()));
+    }
     else fly(origin);
     setLingering((m) => ({ ...m, [task.id]: completionId }));
     later(() => {

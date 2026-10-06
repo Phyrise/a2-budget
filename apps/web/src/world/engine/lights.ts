@@ -57,6 +57,29 @@ export interface LandEvent {
 
 export class DayLights {
   private lights = new Map<string, Light>();
+  /**
+   * Lumières attendues en vol (cochées depuis une feuille : le vol part à sa
+   * fermeture) : `sync` ne les pose pas à leur ancre avant `pulse`, sinon on
+   * les verrait s'allumer à leur place puis repartir d'en bas. Valeur :
+   * échéance (secondes, horloge du moteur).
+   */
+  private reserved = new Map<string, number>();
+
+  /** Réserve le vol de `id` jusqu'à `until` (voir `reserved`). */
+  reserve(id: string, until: number) {
+    if (!this.lights.has(id)) this.reserved.set(id, until);
+  }
+
+  /** Libère une réservation ; vrai si elle existait encore. */
+  unreserve(id: string): boolean {
+    return this.reserved.delete(id);
+  }
+
+  /** Vrai si `id` attend son vol (QA, tests). */
+  isReserved(id: string, now: number): boolean {
+    const until = this.reserved.get(id);
+    return until !== undefined && until > now;
+  }
   /** Atterrissages récents (souffle, éclat de rayon, kodama qui tourne la tête). */
   readonly landed: LandEvent[] = [];
 
@@ -88,6 +111,8 @@ export class DayLights {
         if (cur.dying !== null) cur.dying = null;
         continue;
       }
+      if (this.isReserved(l.id, now)) continue;
+      this.reserved.delete(l.id);
       const a = this.anchorFor(l.id);
       this.lights.set(l.id, {
         id: l.id, who: l.who, ...a, phase: (hashString(l.id) % 1000) / 159,
@@ -103,6 +128,7 @@ export class DayLights {
   }
 
   pulse(id: string, who: Who, from: { x: number; y: number } | null, now: number, strong = false) {
+    this.reserved.delete(id);
     const a = this.anchorFor(id);
     let l = this.lights.get(id);
     if (!l) {

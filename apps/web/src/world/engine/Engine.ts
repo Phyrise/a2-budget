@@ -8,7 +8,7 @@
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, PulseOptions, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
-import { playGuardian, pulseLight, releaseGuardian, syncLantern } from './commands';
+import { expectPulse, playGuardian, pulseLight, releaseGuardian, syncLantern } from './commands';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, type Framing } from './framing';
 import { loadSlotLut, retargetGrade, type LutSlot } from './grade';
@@ -239,6 +239,11 @@ export class WorldEngine {
   /** Envol d'une lumière depuis la case cochée (commands.ts). */
   pulse(opts: PulseOptions) {
     pulseLight(this, opts);
+  }
+
+  /** Vol annoncé (coché depuis une feuille) : la lumière attend son envol. */
+  expectPulse(id: string) {
+    expectPulse(this, id);
   }
 
   /** Lanterne : progression 0..1 (null = extinction en fondu). Réveille le rendu. */

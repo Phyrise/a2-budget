@@ -15,11 +15,29 @@ import { pulseStart } from './pulse';
  * « immobile » posent la lumière sans vol (fondu).
  */
 export function pulseLight(e: WorldEngine, opts: PulseOptions) {
+  e.lights.unreserve(opts.id);
   const from = pulseStart(e.canvas, e.framing, opts.fromClientX, opts.fromClientY);
   const n = now();
   if (e.canFly) e.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);
   else e.lights.sync([...(e.state?.lights ?? []).filter((l) => l.id !== opts.id), { id: opts.id, who: opts.who }], n, e.cfg.motion === 'still');
   e.requestFrame(true);
+}
+
+/** Délai maximal d'attente d'un vol réservé (s) : au-delà, la lumière est posée. */
+const RESERVE_S = 2.5;
+
+/**
+ * Cochée depuis une feuille : le vol partira à sa fermeture. D'ici là, la
+ * lumière n'apparaît pas à son ancre (DayLights.reserve). Filet : si le vol
+ * n'arrive jamais (écran quitté), la lumière est posée en fondu.
+ */
+export function expectPulse(e: WorldEngine, id: string) {
+  e.lights.reserve(id, now() + RESERVE_S);
+  window.setTimeout(() => {
+    if (e.isDestroyed || !e.lights.unreserve(id)) return;
+    e.lights.sync(e.state?.lights ?? [], now(), true);
+    e.requestFrame(true);
+  }, RESERVE_S * 1000 + 100);
 }
 
 export function playGuardian(e: WorldEngine) {

@@ -68,6 +68,29 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(portraitFirst(request).catch(() => fetch(request)));
 });
 
+// Carnet sans triche : vraies images des créatures et des lanternes de pierre
+// à débloquer, hors précache (vite.config.ts). Téléchargées seulement quand
+// le moteur ou le Carnet les affiche (créature rencontrée, lanterne
+// débloquée), puis gardées pour le hors-ligne (cache d'abord).
+const DISCOVERIES_CACHE = 'a2-budget-discoveries';
+const DISCOVERY_RE =
+  /\/assets\/(?:(?:moss-ling|seed-spirit|leaf-sprite|ember-wisp|mushroom-pip|water-drip)-[\w-]+|lantern-(?:yukimi|oribe|kotoji|tachi-carved|ancient-shrine|spirit-light)-(?:lit|unlit)-[\w-]+)\.webp$/;
+
+async function discoveryFirst(request: Request): Promise<Response> {
+  const cache = await caches.open(DISCOVERIES_CACHE);
+  const hit = await cache.match(request);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok) await cache.put(request, response.clone());
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET' || !DISCOVERY_RE.test(new URL(request.url).pathname)) return;
+  event.respondWith(discoveryFirst(request).catch(() => fetch(request)));
+});
+
 // Peintures de saison (forêt printemps / automne / hiver, LUT nuit de saison,
 // bandeaux automne / hiver) : hors précache (assets/season-*), cache d'abord
 // dans un cache dédié, rempli à la demande et par le préchargement discret de

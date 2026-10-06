@@ -2,6 +2,7 @@
  * « En une phrase » : en tête de la feuille d'ajout, une phrase
  * (« dîner chez Léa samedi 20h ») remplit le reste au fil de la frappe —
  * titre, jour, heure, genre de moment ; on relit dessous, puis on ajoute.
+ * Entrée referme le clavier sans enregistrer : on relit d'abord.
  */
 import { forwardRef } from 'react';
 import { Icon } from '../../ui';
@@ -24,6 +25,11 @@ export const SentenceField = forwardRef<HTMLInputElement, { value: string; onCha
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            event.currentTarget.blur();
+          }}
           placeholder="dîner chez Léa samedi 20h"
           autoComplete="off"
           autoCapitalize="sentences"

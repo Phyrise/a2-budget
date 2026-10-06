@@ -1,5 +1,6 @@
 /**
- * Calendrier commun (V3.2) : ajouter un dîner par la saisie rapide, un
+ * Calendrier commun (V3.2, V4) : ajouter un dîner en une phrase (dans la
+ * feuille d'ajout, ouverte par l'unique « + »), un
  * anniversaire annuel (âge affiché, retour l'année suivante), naviguer de
  * mois (boutons et clavier), supprimer puis annuler.
  */
@@ -26,10 +27,11 @@ async function dayKey(page: Page, delta: number): Promise<string> {
 }
 
 async function addViaQuick(page: Page, text: string) {
-  await page.locator('#cal-quick-input').fill(text);
-  await page.locator('#cal-quick-input').press('Enter');
+  await page.getByRole('button', { name: /^Ajouter un événement/ }).click();
   const dialog = sheet(page, 'Nouvel événement');
   await expect(dialog).toBeVisible();
+  await dialog.locator('#event-sentence').fill(text);
+  await dialog.locator('#event-sentence').press('Enter');
   return dialog;
 }
 

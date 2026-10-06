@@ -79,7 +79,7 @@
   --cal-rain: #8fb3cf;
 }
 
-/* L'unique « + » : rond, bleu pluie, toujours au même endroit. */
+/* L’unique « + » : rond, ambré, toujours au même endroit (en tête du jour). */
 .cal-add {
   flex: none;
   margin-left: auto;

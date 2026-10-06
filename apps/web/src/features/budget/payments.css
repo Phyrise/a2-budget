@@ -1,0 +1,110 @@
+/* « À payer ce mois » (V4) : cases remises à zéro chaque mois, progression
+   discrète ; une ligne payée s'apaise (montant adouci, jamais barré dur). */
+
+.payments__progress {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: color var(--dur-base) var(--ease-soft);
+}
+
+.payments__progress.is-done {
+  color: var(--chi-gold-300, var(--amber-300));
+}
+
+.payments__bar {
+  height: 3px;
+  margin: -4px 2px 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgba(169, 178, 230, 0.12);
+}
+
+.payments__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(226, 172, 69, 0.55), var(--chi-gold-300, var(--amber-300)));
+  transform-origin: left center;
+  transition: transform 700ms var(--ease-out);
+}
+
+.pay-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pay-row {
+  display: grid;
+  grid-template-columns: 44px 24px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
+  min-height: 48px;
+  padding-right: 4px;
+  border-bottom: 1px solid rgba(169, 178, 230, 0.08);
+}
+
+.pay-row:last-child {
+  border-bottom: 0;
+}
+
+/* Les deux virements, puis les dépenses : un léger séparateur. */
+.pay-row.is-last-transfer {
+  border-bottom-color: rgba(226, 172, 69, 0.22);
+}
+
+.pay-row .check {
+  width: 44px;
+  height: 44px;
+  margin-left: -4px;
+}
+
+.pay-row .konpeito {
+  width: 18px;
+  height: 18px;
+}
+
+.pay-row__dot {
+  justify-self: start;
+  width: 9px;
+  height: 9px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: var(--who-a);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--who-a) 55%, transparent);
+}
+
+.pay-row--transfer:nth-child(2) .pay-row__dot {
+  background: var(--who-b);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--who-b) 55%, transparent);
+}
+
+.pay-row__label {
+  overflow: hidden;
+  color: var(--ivory-100);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-base) var(--ease-soft);
+}
+
+.pay-row__amount {
+  color: var(--ivory-100);
+  font-size: 15.5px;
+  transition:
+    color var(--dur-base) var(--ease-soft),
+    opacity var(--dur-base) var(--ease-soft);
+}
+
+.pay-row.is-paid .pay-row__label {
+  color: var(--text-muted);
+}
+
+.pay-row.is-paid .pay-row__amount {
+  color: var(--chi-gold-300, var(--amber-300));
+  opacity: 0.75;
+}

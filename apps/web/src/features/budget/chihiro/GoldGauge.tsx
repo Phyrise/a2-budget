@@ -1,8 +1,9 @@
 /**
- * Jauge « Reste du mois » : une rigole de bois laqué qui se remplit de pépites
- * d'or, proportionnellement au reste / versements (borné 0..1, voir goldFill).
- * Remplissage doux à l'affichage et à chaque changement ; déficit sobre (terre
- * cuite, pas d'or). Décorative : le reste est déjà écrit juste au-dessus.
+ * Rigole d'or du compte commun (V4) : une rigole de bois laqué qui se remplit
+ * de pépites d'or, proportionnellement au solde estimé (borné 0..1, voir
+ * balanceFill) ; un petit repère marque la fin du mois (`mark`).
+ * Remplissage doux à l'affichage et à chaque changement ; solde négatif
+ * sobre (terre cuite, pas d'or). Décorative : les chiffres sont écrits.
  */
 import { useEffect, useState } from 'react';
 import { budgetTheme } from '../../../themes/manifest';
@@ -24,7 +25,7 @@ const NUGGETS = Array.from({ length: SLOTS }, (_, i) => {
   };
 });
 
-export function GoldGauge({ fill, deficit }: { fill: number; deficit: boolean }) {
+export function GoldGauge({ fill, deficit, mark }: { fill: number; deficit: boolean; mark?: number }) {
   const target = deficit ? 0 : Math.max(0, Math.min(1, fill));
   // Part de 0 au premier rendu pour que l'or « coule » dans la rigole.
   const [shown, setShown] = useState(0);
@@ -38,6 +39,13 @@ export function GoldGauge({ fill, deficit }: { fill: number; deficit: boolean })
   return (
     <div className={cx('gold-gauge', deficit && 'gold-gauge--deficit')} aria-hidden="true" data-fill={target.toFixed(3)}>
       <div className="gold-gauge__track">
+        {mark !== undefined && (
+          <span
+            className="gold-gauge__mark"
+            data-mark={mark.toFixed(3)}
+            style={{ left: `${Math.max(0, Math.min(1, mark)) * 100}%` }}
+          />
+        )}
         <span className="gold-gauge__clip">
           <span className="gold-gauge__fill" style={{ transform: `scaleX(${Math.min(1, Math.max(0, shown))})` }} />
         </span>

@@ -13,35 +13,43 @@ export type NoFaceMood = Extract<NoFacePose, 'offering' | 'calm' | 'content' | '
 
 /** Au-delà de cette part des versements consommée par les dépenses : Sans-Visage repu. */
 export const CONTENT_SPEND_SHARE = 0.95;
-/** Reste supérieur à cette part des versements : Sans-Visage offre ses pépites. */
+/** Versements − dépenses supérieur à cette part des versements : Sans-Visage offre ses pépites. */
 export const OFFERING_REST_SHARE = 0.1;
 /** Réserve couverte « avec de la marge » : loisirs ≥ cette part des versements. */
 export const RESERVE_MARGIN_SHARE = 0.05;
 
 /**
- * - 'shy' : déficit (mains vides, timide — jamais effrayant) ;
- * - 'content' : dépenses > ~95 % des versements, reste ≥ 0 (un peu plus rond) ;
- * - 'offering' : reste > 10 % des versements, ou réserve couverte avec marge ;
- * - 'calm' : reste positif mais modeste (ou mois encore vide).
+ * V4 : le Sans-Visage veille sur le compte commun (plus de « reste »).
+ * - 'shy' : la projection de fin de mois passe sous zéro (mains vides,
+ *   timide — jamais effrayant) ;
+ * - 'content' : dépenses > ~95 % des versements (un peu plus rond) ;
+ * - 'offering' : versements − dépenses > 10 % des versements, ou réserve
+ *   couverte avec marge ;
+ * - 'calm' : sinon (ou mois encore vide).
  */
-export function noFaceMood(summary: MonthSummary, reserveTargetCents: number): NoFaceMood {
+export function noFaceMood(summary: MonthSummary, reserveTargetCents: number, projectionCents: number): NoFaceMood {
   const given = summary.householdContributionCents;
-  const rest = summary.remainingCents;
-  if (rest < 0) return 'shy';
+  const net = summary.remainingCents;
+  if (projectionCents < 0) return 'shy';
   if (given <= 0) return 'calm';
   if (summary.expensesTotalCents > given * CONTENT_SPEND_SHARE) return 'content';
-  if (rest > given * OFFERING_REST_SHARE) return 'offering';
+  if (net > given * OFFERING_REST_SHARE) return 'offering';
   if (reserveTargetCents > 0 && summary.reserveCovered && summary.leisureCents >= given * RESERVE_MARGIN_SHARE) {
     return 'offering';
   }
   return 'calm';
 }
 
-/** Remplissage de la jauge d'or : reste / versements, borné à [0, 1]. */
-export function goldFill(summary: MonthSummary): number {
-  const given = summary.householdContributionCents;
-  if (given <= 0 || summary.remainingCents <= 0) return 0;
-  return Math.min(1, summary.remainingCents / given);
+/**
+ * Remplissage de la rigole d'or : solde du compte commun rapporté à un mois
+ * de flux (le plus grand des versements et des dépenses), borné à [0, 1].
+ * Un solde nul ou négatif laisse la rigole vide (sobre, jamais alarmante).
+ */
+export function balanceFill(balanceCents: number, summary: MonthSummary): number {
+  if (balanceCents <= 0) return 0;
+  const reference = Math.max(summary.householdContributionCents, summary.expensesTotalCents);
+  if (reference <= 0) return 1;
+  return Math.min(1, balanceCents / reference);
 }
 
 /** Teintes de kompeitō (clés de budgetTheme.gold.konpeito, variantes « -2 » en plus). */

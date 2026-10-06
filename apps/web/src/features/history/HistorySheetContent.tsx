@@ -1,12 +1,21 @@
 /**
  * Historique, contextuel au module affiché :
- * - Budget : mois existants (revenus, versé, dépenses, reste) ; toucher un
- *   mois l'ouvre ;
+ * - Budget : mois existants (revenus, versé, dépenses, compte commun en fin
+ *   de mois — V4, euros entiers) ; toucher un mois l'ouvre ;
  * - Maison : gestes faits, par jour (qui, quoi), sans score ;
  * - Courses : derniers articles achetés.
  * Lecture seule (aucune écriture, sauf « Effacer les mois passés » confirmé).
  */
-import { compareMonthKeys, computeMonthSummary, localDateKey, monthIncomeCents, monthKeyToLabel, recentGroceryPurchases } from '@a2/core';
+import {
+  compareMonthKeys,
+  computeMonthSummary,
+  endOfMonthProjection,
+  localDateKey,
+  monthIncomeCents,
+  monthKeyToLabel,
+  recentGroceryPurchases,
+  roundEurosConsistent,
+} from '@a2/core';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
@@ -39,7 +48,7 @@ function groupByDay<T>(items: T[], dateOf: (item: T) => string): Array<{ day: st
 }
 
 function BudgetHistory() {
-  const { state, selectMonth, clearHistory, currentMonth } = useApp();
+  const { state, appState, selectMonth, clearHistory, currentMonth } = useApp();
   const { closeSheet } = useShell();
   const [confirm, setConfirm] = useState(false);
   const months = useMemo(
@@ -56,6 +65,8 @@ function BudgetHistory() {
       <ul className="history-list">
         {months.map((m) => {
           const s = computeMonthSummary(m);
+          const given = roundEurosConsistent(s.contributionACents, s.contributionBCents).totalCents;
+          const balance = appState ? endOfMonthProjection(appState.budget, m.monthKey) : s.remainingCents;
           const selected = m.monthKey === state?.selectedMonth;
           return (
             <li key={m.monthKey}>
@@ -84,17 +95,15 @@ function BudgetHistory() {
                   </span>
                   <span className="history-stat">
                     <span className="history-stat__label">Versé ensemble</span>
-                    <span className="history-stat__value amount">{euro(s.householdContributionCents)}</span>
+                    <span className="history-stat__value amount">{euro(given)}</span>
                   </span>
                   <span className="history-stat">
                     <span className="history-stat__label">Dépenses</span>
                     <span className="history-stat__value amount">{euro(s.expensesTotalCents)}</span>
                   </span>
-                  <span className={cx('history-stat', s.remainingCents < 0 && 'is-deficit')}>
-                    <span className="history-stat__label">{s.remainingCents < 0 ? 'Déficit' : 'Reste'}</span>
-                    <span className="history-stat__value amount">
-                      {s.remainingCents < 0 ? euroMinus(-s.remainingCents) : euro(s.remainingCents)}
-                    </span>
+                  <span className={cx('history-stat', balance < 0 && 'is-deficit')}>
+                    <span className="history-stat__label">Compte en fin de mois</span>
+                    <span className="history-stat__value amount">{balance < 0 ? euroMinus(-balance) : euro(balance)}</span>
                   </span>
                 </span>
               </button>

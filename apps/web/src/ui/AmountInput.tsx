@@ -1,22 +1,22 @@
-import { parseAmountInput, formatCents } from '@a2/core';
+import { formatEuros, parseEurosInput } from '@a2/core';
 import type { KeyboardEvent } from 'react';
 import { useDraftField } from './draftField';
 import { centsToPlain, cx } from './format';
 
 /**
- * Champ de montant (centimes entiers).
+ * Champ de montant en EUROS ENTIERS (V4 : plus aucun centime).
  *
- * - Clavier décimal mobile (`inputmode="decimal"`), virgule ou point.
- * - La chaîne d'édition est locale ; `parseAmountInput` (@a2/core) tranche :
- *   valide → commit ; invalide → message local, aucun changement d'état ;
- *   vide ≠ 0 ; « 0 » valide ; ambiguïtés (« 1,234 ») rejetées.
- * - Hors édition, le montant est formaté fr-FR (`formatCents`).
+ * - Clavier numérique mobile (`inputmode="numeric"`).
+ * - La chaîne d'édition est locale ; `parseEurosInput` (@a2/core) tranche :
+ *   valide → commit (centimes = euros × 100) ; invalide → message local,
+ *   aucun changement d'état ; vide ≠ 0 ; « 0 » valide ; centimes refusés.
+ * - Hors édition, le montant est formaté sans centimes (`formatEuros`).
  */
 
-const ERROR_MESSAGES: Record<string, string> = {
-  'too-many-decimals': 'Deux décimales au maximum.',
+export const EURO_ERROR_MESSAGES: Record<string, string> = {
+  'not-integer': 'En euros entiers, sans centimes.',
   'out-of-range': 'Montant trop élevé.',
-  invalid: 'Montant illisible (ex. 1 234,56).',
+  invalid: 'Montant illisible (ex. 1 234).',
 };
 
 export interface AmountInputProps {
@@ -49,15 +49,15 @@ export function AmountInput({
 }: AmountInputProps) {
   const field = useDraftField({
     plainValue: centsToPlain(valueCents),
-    displayValue: formatCents(valueCents),
+    displayValue: formatEuros(valueCents),
     onValidityChange,
     parse: (raw, final) => {
-      const result = parseAmountInput(raw);
+      const result = parseEurosInput(raw);
       if (result.ok) return { ok: true, commit: () => onCommit(result.cents) };
       if (result.reason === 'empty') return { ok: false, kind: 'empty' };
-      // État transitoire pendant la frappe (« 12, ») : pas d'erreur.
+      // État transitoire pendant la frappe (« 1 2 ») : pas d'erreur.
       if (!final && /[,.\s]$/.test(raw)) return { ok: false, kind: 'transient' };
-      return { ok: false, kind: 'error', message: ERROR_MESSAGES[result.reason] ?? 'Montant illisible.' };
+      return { ok: false, kind: 'error', message: EURO_ERROR_MESSAGES[result.reason] ?? 'Montant illisible.' };
     },
   });
 
@@ -90,7 +90,7 @@ export function AmountInput({
         id={id}
         className="amount-input__field amount"
         type="text"
-        inputMode="decimal"
+        inputMode="numeric"
         enterKeyHint="done"
         autoComplete="off"
         autoCorrect="off"

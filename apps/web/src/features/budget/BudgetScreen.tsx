@@ -1,23 +1,42 @@
 /**
- * Budget — « le Foyer ». Règle d'or : lisible en 2 secondes, rien ne bouge.
- * Premier écran (390 × 844) : mois, salaires des deux (+ compléments
- * repliables : heures sup, astreintes, gardes), à verser (AL, AC, ensemble),
- * dépenses, reste. Tous les chiffres viennent de @a2/core
- * (computeMonthSummary et son détail breakdownA/B) : aucun calcul ici.
+ * Budget — « le Foyer ». Règle d'or : lisible en 2 secondes.
+ * Premier écran (390 × 844) : mois, à verser (AL, AC, ensemble, dépenses),
+ * puis « Sur le compte commun » (solde estimé en ce moment, fin du mois,
+ * recaler). Plus bas : « À payer ce mois » (cases du mois, le Sans-Visage
+ * mange l'argent), revenus au curseur, dépenses en − / +.
+ * V4 : euros entiers partout ; tous les chiffres viennent de @a2/core
+ * (computeMonthSummary, currentBalanceEstimate, endOfMonthProjection…).
  */
 import type { MonthRecord, MonthSummary } from '@a2/core';
-import { currentMonthKey, hasSharedRates, monthKeyToLabel, sharedRates } from '@a2/core';
-import { useRef } from 'react';
+import {
+  currentBalanceEstimate,
+  currentMonthKey,
+  endOfMonthProjection,
+  hasSharedRates,
+  monthKeyToLabel,
+  roundEurosConsistent,
+  sharedRates,
+} from '@a2/core';
+import { useRef, useState } from 'react';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
 import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, percent, shiftMonthKey, useToast } from '../../ui';
+import { BalanceCard } from './BalanceCard';
+import { useFeeding } from './chihiro/feeding';
+import { noFaceMood } from './chihiro/mood';
+import { NoFaceVisitor } from './chihiro/NoFaceVisitor';
 import { SusuwatariRunner } from './chihiro/Susuwatari';
 import { useMonthEdits } from './chihiro/useMonthEdits';
 import { ExpenseList } from './ExpenseList';
-import { Ledger } from './Ledger';
+import { GiveCard } from './GiveCard';
+import { PaymentList } from './PaymentList';
+import { paymentProgress } from './paymentItems';
 import { BreakdownLine, PersonCard } from './PersonCard';
+import { RecalibrateSheet } from './RecalibrateSheet';
 import './budget.css';
+import './balance.css';
 import './chihiro/chihiro.css';
+import './chihiro/eating.css';
 
 export function BudgetScreen() {
   const { currentMonth, currentSummary } = useApp();
@@ -39,10 +58,12 @@ export function BudgetScreen() {
 }
 
 function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthSummary }) {
-  const { state, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, restoreMonthRates, today } = useApp();
+  const { state, appState, selectMonth, selectCurrentMonth, setReserve, setMonthSharedRates, restoreMonthRates, today } = useApp();
   const toast = useToast();
   const sheetRef = useRef<HTMLElement>(null);
   const { bowing, run, endRun } = useMonthEdits(currentMonth);
+  const feeding = useFeeding();
+  const [recalibrating, setRecalibrating] = useState(false);
 
   const key = currentMonth.monthKey;
   const isCurrent = key === currentMonthKey(today);
@@ -60,6 +81,16 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
       monthRates.baseRateBps !== common.baseRateBps ||
       monthRates.variableRateBps !== common.variableRateBps);
   const monthShared = hasSharedRates(currentMonth);
+
+  // Compte commun : estimation en ce moment, projection de fin de mois (core).
+  const budget = appState?.budget;
+  const nowCents = budget ? currentBalanceEstimate(budget, key) : 0;
+  const projectionCents = budget ? endOfMonthProjection(budget, key) : 0;
+  const corrections = budget?.balance?.corrections ?? [];
+  const transfers = roundEurosConsistent(s.contributionACents, s.contributionBCents);
+  const progress = paymentProgress(currentMonth);
+  const paidShare = progress.total === 0 ? 0 : progress.done / progress.total;
+  const greeting = bowing || feeding.bowing;
 
   /** Action explicite, réversible : toast « Annuler » qui remet les taux d'avant. */
   const applyCommonRates = () => {
@@ -114,16 +145,32 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
       <section ref={sheetRef} className="screen-sheet budget" aria-labelledby="budget-title">
         <ShellNotices />
 
+        <div className="sheet-section budget-top">
+          <h2 className="visually-hidden">À verser ce mois</h2>
+          <GiveCard month={currentMonth} summary={s} />
+          <BalanceCard
+            summary={s}
+            reserveTargetCents={reserve}
+            nowCents={nowCents}
+            projectionCents={projectionCents}
+            paidShare={paidShare}
+            bowing={greeting}
+            eating={feeding.eating && feeding.visit === null}
+            noFaceRef={feeding.noFaceRef}
+            onRecalibrate={() => setRecalibrating(true)}
+          />
+        </div>
+
+        <PaymentList month={currentMonth} transferACents={transfers.aCents} transferBCents={transfers.bCents} feed={feeding.feed} />
+
         <div className="sheet-section">
           <div className="section-head">
-            <h2 className="section-title">À verser ce mois</h2>
+            <h2 className="section-title">Revenus du mois</h2>
           </div>
-          <div className="person-grid">
-            <PersonCard key={`${key}-a`} person="A" month={currentMonth} contributionCents={s.contributionACents} />
-            <PersonCard key={`${key}-b`} person="B" month={currentMonth} contributionCents={s.contributionBCents} />
+          <div className="income-grid">
+            <PersonCard key={`${key}-a`} person="A" month={currentMonth} />
+            <PersonCard key={`${key}-b`} person="B" month={currentMonth} />
           </div>
-
-          <Ledger summary={s} reserveTargetCents={reserve} bowing={bowing} />
 
           <Disclosure summary="Détail du calcul" className="breakdown">
             <div className="breakdown__body">
@@ -131,7 +178,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
               <BreakdownLine name={currentMonth.personB.name} breakdown={s.breakdownB} settings={currentMonth.personB} />
               <p className="breakdown__help">
                 Le salaire compte au taux de base, les compléments (heures sup, astreintes, gardes, souvent payés le mois
-                suivant) au taux au-delà.{' '}
+                suivant) au taux au-delà. Chaque mois, ce que vous versez moins les dépenses s’ajoute au compte commun.{' '}
                 {monthShared
                   ? 'Les taux sont communs à vous deux et se règlent dans les Réglages.'
                   : 'Ce mois garde des taux différents pour chacun, comme au moment où il a été créé.'}
@@ -142,12 +189,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
                     {monthShared ? 'Ce mois garde ses taux d’origine. ' : ''}Les taux communs actuels sont {percent(common.baseRateBps)} et{' '}
                     {percent(common.variableRateBps)}.
                   </p>
-                  <Button
-                    variant="quiet"
-                    size="sm"
-                    icon="check"
-                    onClick={applyCommonRates}
-                  >
+                  <Button variant="quiet" size="sm" icon="check" onClick={applyCommonRates}>
                     Appliquer les taux communs à ce mois
                   </Button>
                 </div>
@@ -186,6 +228,21 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
 
         <ExpenseList month={currentMonth} totalCents={s.expensesTotalCents} />
         <SusuwatariRunner run={run} areaRef={sheetRef} onDone={endRun} />
+        <NoFaceVisitor
+          visit={feeding.visit}
+          mouthRef={feeding.visitorRef}
+          mood={noFaceMood(s, reserve, projectionCents)}
+          eating={feeding.eating}
+          bowing={feeding.bowing}
+          fullness={paidShare}
+        />
+        <RecalibrateSheet
+          open={recalibrating}
+          onClose={() => setRecalibrating(false)}
+          monthKey={key}
+          nowCents={nowCents}
+          corrections={corrections}
+        />
       </section>
     </>
   );

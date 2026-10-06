@@ -1,20 +1,28 @@
 /**
- * Budget — univers « Le Voyage de Chihiro » (V3.2) : le Sans-Visage suit
- * l'état du mois sans jamais effrayer, la rigole d'or se remplit avec le
- * reste, une Noiraude traverse après une modification de montant, chaque
+ * Budget — univers « Le Voyage de Chihiro » (V3.2, V4) : le Sans-Visage suit
+ * le compte commun sans jamais effrayer, la rigole d'or suit le solde (un
+ * repère marque la fin du mois), il mange les pépites quand on coche un
+ * paiement, une Noiraude traverse après une modification de montant, chaque
  * dépense a son kompeitō. Les chiffres restent la seule source d'information.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, openApp, setAmount, trackErrors } from './helpers';
+import { PHONE, openApp, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
-const noFace = (page: Page) => page.locator('.ledger .noface');
+const noFace = (page: Page) => page.locator('.balance-card .noface');
+
+/** Montant « toucher pour saisir » des curseurs. */
+async function setEuros(page: Page, id: string, text: string) {
+  await page.locator(`#${id}-value`).click();
+  await page.locator(`#${id}-edit`).fill(text);
+  await page.locator(`#${id}-edit`).press('Enter');
+}
 
 /** Salaires du mois (dépenses par défaut des réglages). */
 async function salaries(page: Page, a: string, b: string) {
-  await setAmount(page, 'salary-a', a);
-  await setAmount(page, 'salary-b', b);
+  await setEuros(page, 'salary-a', a);
+  await setEuros(page, 'salary-b', b);
 }
 
 async function expectPose(page: Page, mood: string) {
@@ -24,13 +32,14 @@ async function expectPose(page: Page, mood: string) {
   await expect(noFace(page).locator(`.noface__img--${mood}`)).toHaveClass(/is-shown/);
 }
 
+/** Repère de fin de mois : projection rapportée au plus grand des versements et des dépenses. */
 async function ratio(page: Page): Promise<number> {
   return page.evaluate(() => {
     const parse = (id: string) => {
       const text = document.querySelector(`[data-testid="${id}"]`)?.textContent ?? '';
-      return Number(text.replace(/[^\d,]/g, '').replace(',', '.'));
+      return Number(text.replace(/[^\d]/g, ''));
     };
-    return parse('remaining') / parse('household-total');
+    return parse('balance-projection') / Math.max(parse('household-total'), parse('expenses-total'));
   });
 }
 
@@ -41,8 +50,11 @@ test.describe('Budget — univers Chihiro', () => {
 
     await salaries(page, '2800', '3600');
     await expectPose(page, 'offering');
-    const fill = Number(await page.locator('.gold-gauge').getAttribute('data-fill'));
-    expect(Math.abs(fill - (await ratio(page)))).toBeLessThan(0.01);
+    const mark = Number(await page.locator('.gold-gauge__mark').getAttribute('data-mark'));
+    expect(Math.abs(mark - (await ratio(page)))).toBeLessThan(0.01);
+    // Rien de coché, premier mois : le compte est à 0, la rigole attend son or.
+    await expect(page.locator('.gold-gauge')).toHaveAttribute('data-fill', '0.000');
+    await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
     await expect(page.locator('.gold-gauge__nugget.is-on').first()).toBeVisible();
 
     await salaries(page, '2000', '3000');
@@ -53,9 +65,8 @@ test.describe('Budget — univers Chihiro', () => {
 
     await salaries(page, '1600', '2700');
     await expectPose(page, 'shy');
-    await expect(page.locator('.gold-gauge--deficit')).toBeVisible();
-    await expect(page.locator('.gold-gauge__nugget.is-on')).toHaveCount(0);
-    await expect(page.locator('.ledger__row--rest .ledger__label')).toHaveText('Déficit');
+    await expect(page.locator('.balance-card--low')).toBeVisible();
+    await expect(page.locator('.gold-gauge__mark')).toHaveAttribute('data-mark', '0.000');
 
     // Décor muet : l'information est déjà dans les chiffres.
     await expect(noFace(page)).toHaveAttribute('aria-hidden', 'true');
@@ -70,7 +81,7 @@ test.describe('Budget — univers Chihiro', () => {
     await salaries(page, '2800', '3600');
     await expectPose(page, 'offering');
 
-    await setAmount(page, 'salary-a', '2900');
+    await setEuros(page, 'salary-a', '2900');
     await expect(noFace(page)).toHaveAttribute('data-pose', 'bow');
     const runner = page.locator('.susu-runner');
     await expect(runner).toBeVisible();
@@ -83,7 +94,7 @@ test.describe('Budget — univers Chihiro', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openApp(page, 'budget');
     await salaries(page, '2800', '3600');
-    await setAmount(page, 'salary-b', '3700');
+    await setEuros(page, 'salary-b', '3700');
     await expect(noFace(page)).toHaveAttribute('data-pose', 'bow');
     await page.waitForTimeout(400);
     await expect(page.locator('.susu-runner')).toHaveCount(0);
@@ -94,17 +105,67 @@ test.describe('Budget — univers Chihiro', () => {
     const rows = page.locator('.expense-list--konpeito .expense-row');
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
-    await expect(page.locator('.expense-list--konpeito .konpeito')).toHaveCount(count);
-    const colors = await page.locator('.konpeito').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
+    const konpeito = page.locator('.expense-list--konpeito .konpeito');
+    await expect(konpeito).toHaveCount(count);
+    const colors = await konpeito.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
     await page.reload();
-    await expect(page.locator('.konpeito')).toHaveCount(count);
-    const again = await page.locator('.konpeito').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
+    await expect(konpeito).toHaveCount(count);
+    const again = await konpeito.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
     expect(again).toEqual(colors);
+    // Même kompeitō dans « À payer ce mois » (dépenses non nulles).
+    const paying = await page
+      .locator('[data-testid="pay-expense-internet"] .konpeito')
+      .evaluate((e) => (e as HTMLElement).dataset.color);
+    expect(colors).toContain(paying);
 
     for (let i = 0; i < count; i += 1) {
       await rows.first().locator('.expense-row__remove').click();
     }
     await expect(page.locator('.susu-empty .susu-empty__img')).toBeVisible();
     await expect(page.getByText('Aucune dépense ce mois-ci')).toBeVisible();
+  });
+
+  test('cocher un paiement : les pépites volent, il mâche, s’arrondit, puis salue quand tout est payé', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openApp(page, 'budget');
+    await salaries(page, '2200', '3000');
+    await page.waitForTimeout(1600);
+
+    const before = await noFace(page).evaluate((e) => getComputedStyle(e).getPropertyValue('--full').trim());
+    await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
+    await expect(page.locator('.nugget-flight')).toHaveCount(1);
+    await expect(page.locator('.nugget-flight img')).not.toHaveCount(0);
+    await expect(noFace(page)).toHaveClass(/is-eating/);
+    await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
+    await expect(page.locator('.nugget-flight')).toHaveCount(0, { timeout: 4_000 });
+    const after = await noFace(page).evaluate((e) => getComputedStyle(e).getPropertyValue('--full').trim());
+    expect(Number(after)).toBeGreaterThan(Number(before));
+
+    // Plus bas dans la liste, il vient manger au bord de l'écran.
+    const last = page.getByRole('checkbox', { name: 'Assurance payé', exact: true });
+    await last.evaluate((e) => e.scrollIntoView({ block: 'start' }));
+    await page.evaluate(() => window.scrollBy(0, -90));
+    await expect(noFace(page)).not.toBeInViewport();
+    await last.click();
+    await expect(page.locator('.noface-visitor.is-in .noface')).toBeVisible();
+    await expect(page.locator('.noface-visitor .noface')).toHaveCount(0, { timeout: 6_000 });
+
+    // Tout payer : il salue.
+    for (let guard = 0; guard < 10 && (await page.locator('.pay-row:not(.is-paid)').count()) > 0; guard += 1) {
+      await page.locator('.pay-row:not(.is-paid)').first().getByRole('checkbox').click();
+    }
+    await expect(page.getByTestId('payments-progress')).toHaveText('Tout est payé');
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator('.noface[data-pose="bow"]')).not.toHaveCount(0, { timeout: 6_000 });
+    expect(errors).toEqual([]);
+  });
+
+  test('mouvement réduit : pas de pépites qui volent, il mange quand même', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openApp(page, 'budget');
+    await salaries(page, '2200', '3000');
+    await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
+    await expect(noFace(page)).toHaveClass(/is-eating/);
+    await expect(page.locator('.nugget-flight')).toHaveCount(0);
   });
 });

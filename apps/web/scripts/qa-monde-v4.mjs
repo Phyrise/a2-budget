@@ -117,15 +117,15 @@ async function flight(name, title, scroll) {
   return live;
 }
 
-async function lab(name, qs, act, wait = 3000) {
-  const page = await browser.newPage({ viewport: VIEW, deviceScaleFactor: 1 });
+async function lab(name, qs, act, wait = 3000, view = VIEW) {
+  const page = await browser.newPage({ viewport: view, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${LAB}&${qs}`);
   await page.waitForFunction(() => window.__worldEngine?.stone?.model);
   if (act) await page.evaluate(act);
   await page.waitForTimeout(wait);
-  await page.screenshot({ path: join(out, `${name}.png`), clip: { x: 0, y: 0, width: 390, height: 456 } });
+  await page.screenshot({ path: join(out, `${name}.png`), clip: view === VIEW ? { x: 0, y: 0, width: 390, height: 456 } : undefined });
   const info = await page.evaluate(() => {
     const e = window.__worldEngine;
     return { model: e.stone.model?.id, visit: !!e.stone.visit, painted: e.lantern.painted };
@@ -153,6 +153,30 @@ if (run('app-lanterne')) {
   await page.screenshot({ path: join(out, 'app-lanterne-yukimi.png') });
   check(b.model === 'yukimi', `app : la lanterne choisie (yukimi) est posée dans la forêt (${b.model})`);
   check(b.bottom < b.sheetTop - 8 && b.top > 40, `app : la lanterne est entière au-dessus de la feuille (${b.top}–${b.bottom} px, feuille ${b.sheetTop})`);
+  check(b.overlap.length === 0, `app : la lanterne ne passe sous aucun texte du héros (${b.overlap.join(', ') || 'aucun'})`);
+  // Phrases les plus longues (taskText.ts) et date la plus longue, posées à la place des vraies.
+  const worst = [];
+  for (const [mood, date] of [['La forêt est silencieuse cet après-midi', 'Mercredi 30 septembre'], ['La forêt resplendit cet après-midi', 'Dimanche 31 décembre'], ['La forêt est paisible cette nuit', 'Samedi 30 novembre']]) {
+    await page.evaluate(([m, d]) => {
+      document.querySelector('.maison-hero__mood').textContent = m;
+      document.querySelector('.maison-hero__date').textContent = d;
+    }, [mood, date]);
+    worst.push(...(await lanternBox(page)).overlap);
+  }
+  // Tous les modèles (le plus large, le plus haut), avec la phrase la plus longue.
+  for (const id of ['kasuga-moss', 'oribe', 'kotoji', 'tachi-carved', 'ancient-shrine', 'spirit-light']) {
+    await page.evaluate((m) => {
+      const e = window.__worldEngine;
+      e.setState({ ...e.state, lantern: { id: m } });
+      document.querySelector('.maison-hero__mood').textContent = 'La forêt est silencieuse cet après-midi';
+    }, id);
+    await page.waitForFunction((m) => window.__worldEngine.stone.model?.id === m, id);
+    const m = await lanternBox(page);
+    worst.push(...m.overlap.map((o) => `${id} : ${o}`));
+    if (m.bottom >= m.sheetTop - 8 || m.top < 40) worst.push(`${id} hors cadre (${m.top}–${m.bottom})`);
+  }
+  await page.screenshot({ path: join(out, 'app-lanterne-phrase-longue.png'), clip: { x: 0, y: 0, width: 390, height: 528 } });
+  check(worst.length === 0, `app : ni sous les phrases les plus longues, pour les 7 modèles (${worst.join(', ') || 'aucune'})`);
   check(errors.length === 0, 'app : aucune erreur console');
   await ctx.close();
 }
@@ -188,6 +212,8 @@ if (run('kodama')) {
 if (run('nuit')) {
   await lab('nuit-eteinte', 'paused=1&model=oribe', () => window.__lab.kodama(1), 3500);
   await lab('nuit-allumee', 'paused=1&model=kotoji', () => window.__lab.focus(0.6, 'b'), 3500);
+  await lab('bureau-allumee', 'variant=backdrop&model=ancient-shrine', () => window.__lab.focus(0.7, 'both'), 3500, { width: 1440, height: 900 });
+  await lab('bandeau-eteinte', 'variant=banner&model=kotoji', null, 2500);
   await lab('immobile-allumee', 'motion=still&model=yukimi', () => window.__lab.focus(0.6, 'a'), 2500);
 }
 

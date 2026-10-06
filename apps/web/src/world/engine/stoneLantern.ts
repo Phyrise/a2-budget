@@ -62,6 +62,8 @@ export class StoneLantern {
   private kodamaLoad: Promise<void> | null = null;
   private visit: { pose: number; start: number; end: number } | null = null;
   private nextVisit = -1;
+  /** Dernière image vue (une scène figée qui reprend : le kodama repart en douceur). */
+  private lastSeen = -1;
   private readonly rand = rng(1717);
   private readonly seeds: [number, number, number][];
   private disposed = false;
@@ -115,6 +117,9 @@ export class StoneLantern {
   update(now: number, animate: boolean, blooming: boolean) {
     if (this.nextVisit < 0) this.nextVisit = now + between(this.rand(), VISIT.first);
     const v = this.visit;
+    // Reprise après un gel : la visite échue se termine en fondu plutôt que de disparaître net.
+    if (v && now - this.lastSeen > 1 && now > v.end) v.end = now;
+    this.lastSeen = now;
     if (v && blooming && v.end > now) v.end = now; // la floraison l'envole doucement
     if (v && now > v.end + VISIT.fade) this.visit = null;
     if (!animate || blooming || this.visit || now < this.nextVisit || !this.model) return;

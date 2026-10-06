@@ -7,8 +7,13 @@
  * `roof` sont normalisés sur la toile entière (sprites chargés sans rognage).
  */
 
-/** Pied de la lanterne : sur la mousse entre les racines du cèdre, visible au-dessus de la feuille (390×844). */
-export const LANTERN_GROUND = { x: 0.548, y: 0.652, depth: 0.24 } as const;
+/**
+ * Pied de la lanterne : sur le tertre moussu de la grande racine droite du
+ * cèdre (profondeur lue dans la carte : 0,2). Au téléphone (390×844), la
+ * pierre est entière au-dessus de la feuille et à droite de la phrase de la
+ * forêt (date + humeur, en bas à gauche du héros), au-dessus des compagnons.
+ */
+export const LANTERN_GROUND = { x: 0.752, y: 0.54, depth: 0.2 } as const;
 
 /** Hauteur (en hauteur d'image) de la toile du plus haut modèle (scale = 1). */
 export const LANTERN_HEIGHT = 0.16;
@@ -75,6 +80,6 @@ export function visitFrame(start: number, end: number, now: number): { vis: numb
   const kOut = now > end ? Math.min(1, (now - end) / VISIT.fade) : 0;
   const vis = kIn * kIn * (3 - 2 * kIn) * (1 - kOut * kOut * (3 - 2 * kOut));
   // Arrivée : il se pose d'un petit bond (parabole) ; départ : il s'élève un peu en s'effaçant.
-  const hop = kIn < 1 ? Math.sin(Math.PI * kIn) * 0.6 : -kOut * 0.5;
+  const hop = kIn < 1 ? Math.sin(Math.PI * kIn) * 0.6 : kOut > 0 ? -kOut * 0.5 : 0;
   return { vis, hop };
 }

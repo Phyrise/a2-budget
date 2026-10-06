@@ -37,7 +37,15 @@ export function lanternBox(page) {
     const g = e.stone.geometry();
     const y = (v) => Math.round(r.top + ((v - f.cy) / f.vh + 0.5) * r.height);
     const sheet = document.querySelector('.screen-sheet')?.getBoundingClientRect();
-    return { model: e.stone.model?.id ?? null, top: y(g.ground.y - g.h), bottom: y(g.ground.y), sheetTop: Math.round(sheet?.top ?? r.bottom) };
+    const x = (v) => Math.round(r.left + ((v - f.cx) / f.vw + 0.5) * r.width);
+    const box = { left: x(g.ground.x - g.w / 2 / (e.cfg.manifest.size.w / e.cfg.manifest.size.h)), right: x(g.ground.x + g.w / 2 / (e.cfg.manifest.size.w / e.cfg.manifest.size.h)), top: y(g.ground.y - g.h), bottom: y(g.ground.y) };
+    // Textes du héros (date, humeur) : la pierre ne doit passer sous aucune ligne de texte.
+    const overlap = [...document.querySelectorAll('.maison-hero__date, .maison-hero__mood')].filter((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return [...range.getClientRects()].some((t) => t.width > 0 && t.left < box.right - 6 && t.right > box.left + 6 && t.top < box.bottom - 6 && t.bottom > box.top + 6);
+    }).map((el) => `${el.className.split(' ')[0]} « ${el.textContent} »`);
+    return { model: e.stone.model?.id ?? null, ...box, overlap, sheetTop: Math.round(sheet?.top ?? r.bottom) };
   });
 }
 

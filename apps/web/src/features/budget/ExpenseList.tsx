@@ -1,13 +1,15 @@
 /**
- * Dépenses communes du mois, éditables en place : renommer, montant,
- * retirer (annulable), ajouter. Une saisie invalide ne touche jamais l'état.
+ * Dépenses communes du mois, éditables en place : renommer, montant
+ * (V4 : − / + à l'euro, appui long qui accélère, toucher pour saisir ; euros
+ * entiers), retirer (annulable), ajouter. Une saisie invalide ne touche
+ * jamais l'état.
  * Univers Chihiro (écran Budget) : chaque dépense porte un kompeitō de
  * couleur stable (d'après son libellé) ; liste vide = Noiraude cachée.
  */
 import type { MonthRecord } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, IconButton, InlineTextField, TextField, cx, euro, fr, useToast } from '../../ui';
+import { AmountInput, Button, EuroStepper, IconButton, InlineTextField, TextField, cx, euro, fr, useToast } from '../../ui';
 import { Konpeito, SusuwatariEmpty } from './chihiro/Susuwatari';
 
 export function ExpenseEditorList({
@@ -38,11 +40,9 @@ export function ExpenseEditorList({
             onCommit={(label) => onRename(e.id, label)}
             className="expense-row__label"
           />
-          <AmountInput
+          <EuroStepper
             id={`${idPrefix}-${e.id}-amount`}
             label={`Montant de ${e.label}`}
-            labelVisible={false}
-            appearance="inline"
             valueCents={e.amountCents}
             onCommit={(cents) => onAmount(e.id, cents)}
             className="expense-row__amount"

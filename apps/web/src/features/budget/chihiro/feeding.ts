@@ -7,8 +7,9 @@
  * - Vol : couche `position: fixed` posée dans <body>, Web Animations API
  *   (transform / opacity seulement), retirée à la fin ; jamais rendu si
  *   prefers-reduced-motion (il mâche quand même, sans voler).
- * - Si le Sans-Visage est hors de l'écran, les pépites filent vers le bord
- *   le plus proche, dans sa direction.
+ * - Si le Sans-Visage du solde est hors de l'écran (on a fait défiler
+ *   jusqu'à la liste), il vient au bord de l'écran, mange, puis repart
+ *   (NoFaceVisitor).
  * Décoratif uniquement : les chiffres restent la seule information.
  */
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
@@ -96,22 +97,39 @@ export function flyNuggets(from: { x: number; y: number }, target: HTMLElement |
   return flights[0] ?? Promise.resolve();
 }
 
+/** Le Sans-Visage du solde est-il visible (hors bandeau du haut et de la navigation) ? */
+function inView(el: HTMLElement | null): boolean {
+  const rect = el?.getBoundingClientRect();
+  if (!rect || rect.width === 0) return false;
+  return rect.bottom > 56 && rect.top < window.innerHeight - 110;
+}
+
+/** Visite : il arrive au bord de l'écran, mange, puis repart. */
+export type Visit = 'in' | 'out' | null;
+const LEAVE_MS = 420;
+
 export interface Feeding {
-  /** Racine du Sans-Visage (cible des pépites). */
+  /** Racine du Sans-Visage du solde (cible des pépites). */
   noFaceRef: RefObject<HTMLDivElement | null>;
+  /** Bouche du Sans-Visage visiteur (s'il faut venir manger hors de l'écran). */
+  visitorRef: RefObject<HTMLSpanElement | null>;
   eating: boolean;
   /** Salut après le dernier paiement du mois. */
   bowing: boolean;
+  visit: Visit;
   /** Une case vient d'être cochée en `origin` ; `allPaid` : c'était la dernière. */
   feed: (origin: { x: number; y: number }, opts: { count: number; allPaid: boolean }) => void;
 }
 
 export function useFeeding(): Feeding {
   const noFaceRef = useRef<HTMLDivElement>(null);
+  const visitorRef = useRef<HTMLSpanElement>(null);
   const [eating, setEating] = useState(false);
   const [bowing, setBowing] = useState(false);
+  const [visit, setVisit] = useState<Visit>(null);
   const chewTimer = useRef<number | undefined>(undefined);
   const bowTimer = useRef<number | undefined>(undefined);
+  const leaveTimer = useRef<number | undefined>(undefined);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -120,11 +138,24 @@ export function useFeeding(): Feeding {
       alive.current = false;
       window.clearTimeout(chewTimer.current);
       window.clearTimeout(bowTimer.current);
+      window.clearTimeout(leaveTimer.current);
     };
   }, []);
 
   const feed = useCallback((origin: { x: number; y: number }, opts: { count: number; allPaid: boolean }) => {
-    void flyNuggets(origin, noFaceRef.current, opts.count).then(() => {
+    window.clearTimeout(leaveTimer.current);
+    // Hors de l'écran, il vient manger au bord, près de la liste.
+    const visiting = !inView(noFaceRef.current);
+    if (visiting) setVisit('in');
+    const target = visiting ? visitorRef.current : noFaceRef.current;
+    const leave = () => {
+      if (!visiting) return;
+      leaveTimer.current = window.setTimeout(() => {
+        setVisit('out');
+        leaveTimer.current = window.setTimeout(() => setVisit(null), LEAVE_MS);
+      }, 260);
+    };
+    void flyNuggets(origin, target, opts.count).then(() => {
       if (!alive.current) return;
       window.clearTimeout(bowTimer.current);
       setBowing(false);
@@ -132,12 +163,18 @@ export function useFeeding(): Feeding {
       window.clearTimeout(chewTimer.current);
       chewTimer.current = window.setTimeout(() => {
         setEating(false);
-        if (!opts.allPaid) return;
+        if (!opts.allPaid) {
+          leave();
+          return;
+        }
         setBowing(true);
-        bowTimer.current = window.setTimeout(() => setBowing(false), BOW_MS);
+        bowTimer.current = window.setTimeout(() => {
+          setBowing(false);
+          leave();
+        }, BOW_MS);
       }, CHEW_MS);
     });
   }, []);
 
-  return { noFaceRef, eating, bowing, feed };
+  return { noFaceRef, visitorRef, eating, bowing, visit, feed };
 }

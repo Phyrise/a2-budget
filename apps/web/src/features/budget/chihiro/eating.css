@@ -1,0 +1,148 @@
+/* V4 — le Sans-Visage mange l'argent : il s'arrondit un peu au fil des
+   paiements cochés (--full, 0..1), mâche à l'arrivée des pépites, et vient
+   en visite au bord de l'écran quand il est hors de vue. Toujours doux. */
+
+.noface {
+  --full: 0;
+  --sx: calc(1 + var(--full) * 0.06);
+  --sy: calc(1 + var(--full) * 0.025);
+}
+
+.noface__img {
+  scale: var(--sx) var(--sy);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 420ms var(--ease-soft),
+    transform 520ms var(--ease-out),
+    scale 900ms var(--ease-out);
+}
+
+/* Il mâche : la silhouette se gonfle et se tasse, doucement. */
+.noface.is-eating .noface__img.is-shown {
+  animation: noface-chew 420ms ease-in-out 3;
+}
+
+.noface.is-eating .noface__glow {
+  animation: noface-glow 1260ms ease-in-out 1;
+}
+
+@keyframes noface-chew {
+  0%,
+  100% {
+    scale: var(--sx) var(--sy);
+  }
+  45% {
+    scale: calc(var(--sx) * 1.07) calc(var(--sy) * 0.95);
+  }
+  70% {
+    scale: calc(var(--sx) * 0.98) calc(var(--sy) * 1.02);
+  }
+}
+
+@keyframes noface-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 1.0;
+    filter: brightness(1.25);
+  }
+}
+
+/* ------------------------------------------------- Pépites qui volent */
+
+.nugget-flight {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nugget-flight__piece {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(242, 211, 134, 0.55)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+  will-change: transform, opacity;
+}
+
+/* ------------------------------------------------------- En visite */
+
+.noface-visitor {
+  position: fixed;
+  right: 6px;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 22px);
+  z-index: 35;
+  width: 92px;
+  height: 116px;
+  pointer-events: none;
+}
+
+/* Cible des pépites : à hauteur de sa bouche. */
+.noface-visitor__mouth {
+  position: absolute;
+  left: 36px;
+  top: 38px;
+  width: 20px;
+  height: 20px;
+}
+
+.noface-visitor__body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 46px 46px 20px 20px;
+  background: radial-gradient(60% 55% at 50% 70%, rgba(17, 20, 42, 0.82), rgba(17, 20, 42, 0) 100%);
+}
+
+.noface-visitor.is-in .noface-visitor__body {
+  animation: noface-visit-in 460ms var(--ease-out) both;
+}
+
+.noface-visitor.is-out .noface-visitor__body {
+  animation: noface-visit-out 400ms ease-in both;
+}
+
+@keyframes noface-visit-in {
+  from {
+    opacity: 0;
+    transform: translateX(70%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes noface-visit-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(70%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noface.is-eating .noface__img.is-shown,
+  .noface.is-eating .noface__glow {
+    animation: none;
+  }
+
+  .noface-visitor.is-in .noface-visitor__body,
+  .noface-visitor.is-out .noface-visitor__body {
+    animation-duration: 1ms;
+  }
+}

@@ -1,51 +1,48 @@
 /**
- * Équilibre du mois, côté maison de bains : à verser ensemble, dépenses,
- * puis le reste — avec le Sans-Visage sous sa lanterne et la rigole d'or qui
- * part de ses mains. Chiffres de @a2/core uniquement ; le Sans-Visage et la
- * jauge ne font que refléter ce qui est écrit.
+ * « À verser ce mois » (V4) : ce que chacun verse au compte commun, le total
+ * et les dépenses du mois, lisibles en 2 secondes. Les deux versements sont
+ * arrondis ensemble (`roundEurosConsistent`) : AL + AC affichés = ensemble.
+ * Chiffres de @a2/core uniquement ; les curseurs sont plus bas (Revenus).
  */
-import type { MonthSummary } from '@a2/core';
-import { cx, euro, euroMinus } from '../../ui';
-import { GoldGauge } from './chihiro/GoldGauge';
-import { goldFill, noFaceMood } from './chihiro/mood';
-import { NoFace } from './chihiro/NoFace';
+import type { MonthRecord, MonthSummary } from '@a2/core';
+import { roundEurosConsistent } from '@a2/core';
+import { Companion, euro, euroMinus } from '../../ui';
 
-export function Ledger({ summary, reserveTargetCents, bowing }: { summary: MonthSummary; reserveTargetCents: number; bowing: boolean }) {
-  const s = summary;
-  const deficit = s.remainingCents < 0;
+export function GiveCard({ month, summary }: { month: MonthRecord; summary: MonthSummary }) {
+  const r = roundEurosConsistent(summary.contributionACents, summary.contributionBCents);
+  const people = [
+    { who: 'a' as const, name: month.personA.name, cents: r.aCents },
+    { who: 'b' as const, name: month.personB.name, cents: r.bCents },
+  ];
   return (
-    <div className={cx('ledger', deficit && 'ledger--deficit')} aria-label="Équilibre du mois">
-      <div className="ledger__row ledger__row--total">
-        <span className="ledger__label">À verser ensemble</span>
-        <strong className="amount ledger__value" data-testid="household-total">
-          {euro(s.householdContributionCents)}
-        </strong>
-      </div>
-      <div className="ledger__row">
-        <span className="ledger__label">Dépenses communes</span>
-        <span className="amount ledger__value ledger__value--minus" data-testid="expenses-total">
-          {euroMinus(s.expensesTotalCents)}
-        </span>
-      </div>
-      <div className="ledger__rule" aria-hidden="true" />
-      <div className="ledger__rest-block">
-        <NoFace mood={noFaceMood(s, reserveTargetCents)} bowing={bowing} scale={0.27} />
-        <div className="ledger__rest-main">
-          <div className="ledger__row ledger__row--rest">
-            <span className="ledger__label">{deficit ? 'Déficit' : 'Reste'}</span>
-            <strong className="amount ledger__value ledger__rest" data-testid="remaining">
-              {deficit ? euroMinus(-s.remainingCents) : euro(s.remainingCents)}
-            </strong>
+    <div className="give-card" aria-label="À verser ce mois">
+      <div className="give-card__people">
+        {people.map((p) => (
+          <div key={p.who} className={`give-person give-person--${p.who}`}>
+            <Companion who={p.who} size={30} />
+            <span className="give-person__text">
+              <span className="give-person__name">{p.name} verse</span>
+              <strong className="amount give-person__value" data-testid={`contribution-${p.who}`}>
+                {euro(p.cents)}
+              </strong>
+            </span>
           </div>
-          <GoldGauge fill={goldFill(s)} deficit={deficit} />
+        ))}
+      </div>
+      <div className="give-card__rows">
+        <div className="give-card__row give-card__row--total">
+          <span>Ensemble</span>
+          <strong className="amount" data-testid="household-total">
+            {euro(r.totalCents)}
+          </strong>
+        </div>
+        <div className="give-card__row">
+          <span>Dépenses communes</span>
+          <span className="amount give-card__minus" data-testid="expenses-total">
+            {euroMinus(summary.expensesTotalCents)}
+          </span>
         </div>
       </div>
-      {deficit && (
-        <p className="ledger__note" role="note">
-          Ce mois-ci, les dépenses dépassent ce que vous versez ensemble. Ajuster un salaire, un taux ou une dépense suffit à
-          retrouver l’équilibre.
-        </p>
-      )}
     </div>
   );
 }

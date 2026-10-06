@@ -40,12 +40,15 @@ export function NoFace({
   mood,
   bowing,
   eating = false,
+  fullness = 0,
   scale = 0.3,
   ref,
 }: {
   mood: NoFaceMood;
   bowing: boolean;
   eating?: boolean;
+  /** 0..1 : part des paiements du mois déjà « mangés » ; il s'arrondit un peu. */
+  fullness?: number;
   scale?: number;
   ref?: Ref<HTMLDivElement>;
 }) {
@@ -69,7 +72,14 @@ export function NoFace({
   const shown: NoFacePose = eating ? 'content' : bowing ? 'bow' : fading ? 'fading' : settled;
 
   return (
-    <div ref={ref} className={cx('noface', eating && 'is-eating')} data-pose={shown} data-mood={mood} aria-hidden="true">
+    <div
+      ref={ref}
+      className={cx('noface', eating && 'is-eating')}
+      data-pose={shown}
+      data-mood={mood}
+      aria-hidden="true"
+      style={{ ['--full' as string]: Math.max(0, Math.min(1, fullness)).toFixed(3) }}
+    >
       <span className="noface__glow" />
       <span className="noface__plank" />
       {POSES.map((pose) => (

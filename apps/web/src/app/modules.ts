@@ -3,19 +3,21 @@
  * - Maison : forêt de Yakushima (scène vivante) ;
  * - Budget : Le Voyage de Chihiro (maison de bains au crépuscule) ;
  * - Courses : Kiki la petite sorcière (Koriko) ;
- * - Calendrier : la forêt, en attendant un univers dédié.
+ * - Calendrier : Mon voisin Totoro (arrêt de bus sous la pluie, V4).
  *
  * Cadrages (object-position) : notes d'art/pipeline/universes/banners.py,
  * rendues dans qa/banner-crops.png — bandeau mobile 390×200 et fond
  * « téléphone » (portrait plein cadre), réutilisé pour la colonne du monde
  * sur ordinateur. En automne et en hiver, Budget et Courses prennent leur
  * variante de saison (themes/manifest.ts `seasons`, même cadrage).
+ * Calendrier : cadrages recommandés par art/pipeline/v4/totoro.py (Totoro et
+ * l'abri restent dans le cadre) — bandeau paysage 60 % 40 %, fond portrait
+ * « téléphone » 55 % 50 %. Pas de variante de saison (il pleut toute l'année).
  */
 import type { IconName } from '../ui';
-import { budgetTheme, coursesTheme } from '../themes/manifest';
+import { budgetTheme, calendarTheme, coursesTheme } from '../themes/manifest';
 import type { ThemeBanners } from '../themes/types';
 import type { Season } from '../world/types';
-import { manifest } from '../world/manifest';
 import type { ModuleId } from './prefs';
 
 export const NAV_ICONS: Record<ModuleId, IconName> = {
@@ -65,7 +67,7 @@ export interface Universe {
   banner: UniverseImage | null;
   /**
    * Peinture portrait en fond fixe sur ordinateur (colonne du monde), à la
-   * place de la forêt vivante. null = la forêt reste (Maison, Calendrier).
+   * place de la forêt vivante. null = la forêt reste (Maison seulement).
    */
   backdrop: UniverseImage | null;
 }
@@ -80,10 +82,10 @@ export const UNIVERSES: Record<ModuleId, Universe> = {
     banner: themed(coursesTheme, 'landscape', '50% 8%'),
     backdrop: themed(coursesTheme, 'portrait', '62% 50%'),
   },
-  // Le vieux cèdre à la corde sacrée : un air de fête, pour les événements.
+  // Mon voisin Totoro : l'arrêt de bus sous la pluie, au crépuscule.
   calendar: {
-    banner: manifest.banners.budget ? { src: manifest.banners.budget, position: '50% 38%' } : null,
-    backdrop: null,
+    banner: { src: calendarTheme.banners.landscape, position: '60% 40%' },
+    backdrop: { src: calendarTheme.banners.portrait, position: '55% 50%' },
   },
 };
 

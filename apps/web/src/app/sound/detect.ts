@@ -235,6 +235,10 @@ const LEAD_MS: Record<SoundCue, number> = {
   broom: 340,
   shopBell: 480,
   woodNote: 300,
+  nom: 420,
+  balanceBell: 480,
+  lanternLit: 700,
+  lanternNew: 640,
 };
 
 /** Importance (mouvement réduit : on ne garde que le plus marquant). */
@@ -253,6 +257,10 @@ const PRIORITY: Record<SoundCue, number> = {
   woodNote: 3,
   coins: 2,
   broom: 2,
+  nom: 3,
+  balanceBell: 3,
+  lanternLit: 4,
+  lanternNew: 6,
 };
 
 /**

@@ -10,6 +10,7 @@
 import type { SoundCue, SoundVoice } from './cues';
 import { broom, coins, konpeito, shopBell, woodNote } from './moduleVoices';
 import { bell, breath, pluck, tone, type Bus } from './synth';
+import { balanceBell, lanternLit, lanternNew, nom } from './v4Voices';
 
 const N = {
   B3: 246.94,
@@ -165,6 +166,18 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
       return;
     case 'woodNote':
       woodNote(bus, t);
+      return;
+    case 'nom':
+      nom(bus, t, gentle);
+      return;
+    case 'balanceBell':
+      balanceBell(bus, t, gentle);
+      return;
+    case 'lanternLit':
+      lanternLit(bus, t, gentle);
+      return;
+    case 'lanternNew':
+      lanternNew(bus, t, gentle);
       return;
   }
 }

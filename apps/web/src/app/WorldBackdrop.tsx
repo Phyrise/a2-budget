@@ -3,10 +3,10 @@
  * module, la peinture de son univers.
  *
  * - Mobile / tablette : bandeau peint en haut (Budget = maison de bains,
- *   Courses = Koriko, Calendrier = le vieux cèdre), fondu à l'arrivée.
+ *   Courses = Koriko, Calendrier = l'arrêt de bus de Totoro), fondu à l'arrivée.
  * - Ordinateur : la colonne du monde (à gauche du carnet) montre la
  *   peinture portrait de l'univers en image fixe, en fondu enchaîné d'un
- *   module à l'autre ; la forêt vivante reste pour Maison et Calendrier.
+ *   module à l'autre ; la forêt vivante ne reste que pour Maison.
  *
  * Une peinture n'est chargée qu'au premier passage sur son module (rien de
  * plus au démarrage sur Maison), puis gardée pour les fondus. En automne et

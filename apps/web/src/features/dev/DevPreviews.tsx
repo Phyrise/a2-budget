@@ -57,6 +57,10 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   broom: 'Coup de balai',
   shopBell: 'Clochette',
   woodNote: 'Note de bois',
+  nom: 'Paiement mangé',
+  balanceBell: 'Solde recalé',
+  lanternLit: 'Lanterne allumée',
+  lanternNew: 'Nouvelle lanterne',
 };
 
 function ChoiceRow<T>({

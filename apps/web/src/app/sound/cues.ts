@@ -22,6 +22,15 @@
  * - `broom`    un article coché → coup de balai de Kiki (souffle filtré) ;
  * - `shopBell` le panier vidé → clochette de la boulangerie d'Osono ;
  * - `woodNote` un événement ajouté au calendrier → note de bois douce.
+ *
+ * V4 :
+ * - `nom`         un paiement du mois coché (virement fait, dépense payée)
+ *                 → des pièces qui tombent dans la bouche du Sans-Visage,
+ *                 un « nom » doux ;
+ * - `balanceBell` le solde recalé sur le compte → petite cloche ;
+ * - `lanternLit`  la lanterne de pierre s'allume (minuteur lancé)
+ *                 → allumette frottée, puis un souffle chaud ;
+ * - `lanternNew`  un nouveau modèle de lanterne débloqué → carillon.
  */
 export type SoundCue =
   | 'done'
@@ -37,7 +46,11 @@ export type SoundCue =
   | 'konpeito'
   | 'broom'
   | 'shopBell'
-  | 'woodNote';
+  | 'woodNote'
+  | 'nom'
+  | 'balanceBell'
+  | 'lanternLit'
+  | 'lanternNew';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -68,4 +81,8 @@ export const ALL_CUES: readonly SoundCue[] = [
   'broom',
   'shopBell',
   'woodNote',
+  'nom',
+  'balanceBell',
+  'lanternLit',
+  'lanternNew',
 ];

@@ -25,11 +25,11 @@
   --module-tint: rgba(104, 160, 214, 0.36);
 }
 
-/* Calendrier : la forêt en fête, mousse et lanterne. */
+/* Mon voisin Totoro : rizières mouillées, réverbère de l'arrêt de bus, pluie bleue. */
 .app--calendar {
-  --module-accent: var(--moss-300);
-  --module-accent-2: rgba(221, 179, 106, 0.6);
-  --module-tint: rgba(147, 173, 124, 0.26);
+  --module-accent: #9fd2b4;
+  --module-accent-2: #efb75e;
+  --module-tint: rgba(62, 104, 122, 0.4);
 }
 
 .brand__sq {

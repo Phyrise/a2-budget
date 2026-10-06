@@ -7,9 +7,7 @@
   isolation: isolate;
 }
 
-/* ------------------------------------------------------------------ */
-/* Monde                                                               */
-/* ------------------------------------------------------------------ */
+/* ——— Monde ——— */
 
 .app-world {
   position: fixed;
@@ -76,6 +74,10 @@
   z-index: 1;
   outline: none;
   pointer-events: none;
+  /* Rien d'un module ne déborde à droite (Kiki qui entre en balayant) : sur
+     téléphone, la page s'élargirait un instant — monde, en-tête et bandeau
+     « zoomés ». clip, pas hidden : aucun conteneur de défilement (sticky). */
+  overflow-x: clip;
 }
 
 .app-main > * {
@@ -83,9 +85,8 @@
 }
 
 .module-view {
-  /* backwards, pas both : une transformation laissée en place (même nulle)
-     ferait de .module-view le repère des éléments position: fixed (bulle
-     flottante des compagnons). */
+  /* backwards : une transformation laissée en place ferait de .module-view
+     le repère des éléments position: fixed (bulle des compagnons). */
   animation: module-in 240ms var(--ease-out) backwards;
 }
 
@@ -100,9 +101,7 @@
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* En-tête                                                             */
-/* ------------------------------------------------------------------ */
+/* ——— En-tête ——— */
 
 .app-header {
   position: fixed;
@@ -231,9 +230,7 @@
   pointer-events: auto;
 }
 
-/* ------------------------------------------------------------------ */
-/* Navigation (pilule flottante)                                       */
-/* ------------------------------------------------------------------ */
+/* ——— Navigation (pilule flottante) ——— */
 
 .app-dock {
   position: fixed;
@@ -282,9 +279,7 @@
   box-shadow: 0 0 18px rgba(221, 179, 106, 0.25);
 }
 
-/* ------------------------------------------------------------------ */
-/* Mise à jour                                                         */
-/* ------------------------------------------------------------------ */
+/* ——— Mise à jour ——— */
 
 .update-prompt {
   position: fixed;
@@ -322,9 +317,7 @@
   margin-left: auto;
 }
 
-/* ------------------------------------------------------------------ */
-/* Bannière de récupération                                            */
-/* ------------------------------------------------------------------ */
+/* ——— Bannière de récupération ——— */
 
 .load-notice {
   margin-bottom: 26px;

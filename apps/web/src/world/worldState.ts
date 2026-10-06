@@ -5,6 +5,8 @@
 import {
   CREATURES,
   GROWTH_THRESHOLDS,
+  activeLantern,
+  isLanternId,
   localDateKey,
   vitalityState,
   type AppState,
@@ -20,7 +22,24 @@ export function seasonOf(now: Date): Season {
   return 'winter';
 }
 
-export function toWorldState(app: AppState, now: Date): WorldState {
+/**
+ * V4 — modèle de la lanterne de pierre (tōrō) posée dans la forêt : id du
+ * catalogue `LANTERNS` de @a2/core, choisi dans le Carnet
+ * (`focus.selectedLantern`), sinon `DEFAULT_LANTERN_ID` ('kasuga-moss').
+ * Champ `lantern` de l'état du monde : la coquille le fournit toujours ; le
+ * contrat `WorldState` (world/types.ts, agent MONDE) peut le déclarer
+ * (`lantern: string`) sans rien changer ici.
+ */
+export interface WorldLanternModel {
+  lantern: string;
+}
+
+/** Modèle de lanterne posé (choix débloqué, sinon la lanterne de base). */
+export function lanternModelOf(app: Pick<AppState, 'focus'>): string {
+  return activeLantern(app.focus);
+}
+
+export function toWorldState(app: AppState, now: Date): WorldState & WorldLanternModel {
   const forest = app.forest;
   const stage = Math.min(7, Math.max(1, forest.growthStage));
   const lo = GROWTH_THRESHOLDS[stage - 1] ?? 0;
@@ -39,13 +58,16 @@ export function toWorldState(app: AppState, now: Date): WorldState {
     creatures: forest.unlockedCreatureIds,
     lights,
     season: seasonOf(now),
+    lantern: lanternModelOf(app),
   };
 }
 
 /**
  * Aperçu du mode développeur : surcharge NON PERSISTANTE de ce que montre la
  * forêt (jamais écrite dans les données). Chaque champ absent garde la
- * valeur réelle. `lantern` (0..1) allume la lanterne de la scène.
+ * valeur réelle. `lantern` (0..1) allume la lanterne de la scène ;
+ * `lanternModel` montre un autre modèle de lanterne de pierre (id connu de
+ * `LANTERNS`, même verrouillé : c'est un aperçu).
  */
 export interface WorldPreview {
   stage?: number;
@@ -53,6 +75,7 @@ export interface WorldPreview {
   season?: Season;
   paused?: boolean;
   lantern?: number;
+  lanternModel?: string;
 }
 
 /** Vrai si l'aperçu change quelque chose (bandeau « Aperçu » visible). */
@@ -65,9 +88,9 @@ export function isPreviewActive(preview: WorldPreview | null): boolean {
  * Applique un aperçu à l'état réel. Un stade forcé montre les créatures de
  * ce stade (et seulement elles), à mi-chemin du stade suivant. Pure.
  */
-export function applyPreview(state: WorldState, preview: WorldPreview | null): WorldState {
+export function applyPreview<T extends WorldState>(state: T, preview: WorldPreview | null): T {
   if (!isPreviewActive(preview) || preview === null) return state;
-  const next: WorldState = { ...state };
+  const next: T = { ...state };
   if (preview.stage !== undefined) {
     const stage = Math.min(7, Math.max(1, Math.round(preview.stage)));
     next.stage = stage;
@@ -77,5 +100,8 @@ export function applyPreview(state: WorldState, preview: WorldPreview | null): W
   if (preview.mood !== undefined) next.mood = preview.mood;
   if (preview.season !== undefined) next.season = preview.season;
   if (preview.paused !== undefined) next.paused = preview.paused;
+  if (preview.lanternModel !== undefined && isLanternId(preview.lanternModel) && 'lantern' in next) {
+    (next as T & WorldLanternModel).lantern = preview.lanternModel;
+  }
   return next;
 }

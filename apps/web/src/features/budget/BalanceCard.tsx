@@ -5,6 +5,10 @@
  * compte » quand on regarde le vrai solde. Le Sans-Visage veille sous sa
  * lanterne ; la rigole d'or suit le solde, un repère marque la fin du mois.
  * Chiffres : `currentBalanceEstimate` / `endOfMonthProjection` (@a2/core).
+ *
+ * Mois non courant : pas de « en ce moment » ni de recalage (le vrai solde
+ * se constate aujourd'hui). Mois passé : le solde à la fin du mois en
+ * grand ; mois à venir : le solde au début du mois.
  */
 import type { MonthSummary } from '@a2/core';
 import type { Ref } from 'react';
@@ -18,8 +22,19 @@ function signed(cents: number): string {
   return cents < 0 ? euroMinus(-cents) : euro(cents);
 }
 
+/** Où l'on se place : le mois courant (en ce moment), un mois passé ou à venir. */
+export type BalanceView = 'now' | 'past' | 'future';
+
 export interface BalanceCardProps {
   summary: MonthSummary;
+  view: BalanceView;
+  /** « octobre 2026 » (minuscule, pour les légendes). */
+  monthLabel: string;
+  openingCents: number;
+  /** Net du mois tel qu'affiché (`monthFlows`) : ce dont le compte bouge. */
+  netCents: number;
+  /** Phrase douce tant que le solde n'a jamais été recalé (mois courant). */
+  unconfirmedHint?: string;
   reserveTargetCents: number;
   nowCents: number;
   projectionCents: number;
@@ -28,11 +43,17 @@ export interface BalanceCardProps {
   bowing: boolean;
   eating: boolean;
   noFaceRef: Ref<HTMLDivElement>;
-  onRecalibrate: () => void;
+  /** Absent : pas de bouton (mois non courant). */
+  onRecalibrate?: () => void;
 }
 
 export function BalanceCard({
   summary: s,
+  view,
+  monthLabel,
+  openingCents,
+  netCents,
+  unconfirmedHint,
   reserveTargetCents,
   nowCents,
   projectionCents,
@@ -43,7 +64,13 @@ export function BalanceCard({
   onRecalibrate,
 }: BalanceCardProps) {
   const low = projectionCents < 0;
-  const monthShort = s.remainingCents < 0;
+  // Chiffre principal et repère selon le mois affiché.
+  const mainCents = view === 'now' ? nowCents : view === 'past' ? projectionCents : openingCents;
+  const markCents = view === 'past' ? openingCents : projectionCents;
+  const caption =
+    view === 'now' ? 'estimé en ce moment' : view === 'past' ? `estimé à la fin de ${monthLabel}` : `estimé au début de ${monthLabel}`;
+  const footLabel = view === 'past' ? 'Début du mois' : 'Fin du mois';
+  const monthShort = netCents < 0;
   return (
     <div className={cx('ledger', 'balance-card', low && 'balance-card--low')} data-testid="balance-card">
       <div className="balance-card__main">
@@ -58,27 +85,36 @@ export function BalanceCard({
         <div className="balance-card__text">
           <h2 className="balance-card__title">Sur le compte commun</h2>
           <strong className="amount balance-card__now" data-testid="balance-now">
-            {signed(nowCents)}
+            {signed(mainCents)}
           </strong>
-          <span className="balance-card__caption">estimé en ce moment</span>
+          <span className="balance-card__caption" data-testid="balance-caption">
+            {caption}
+          </span>
         </div>
       </div>
-      <GoldGauge fill={balanceFill(nowCents, s)} mark={balanceFill(projectionCents, s)} deficit={nowCents < 0} />
+      <GoldGauge fill={balanceFill(mainCents, s)} mark={balanceFill(markCents, s)} deficit={mainCents < 0} />
       <div className="balance-card__foot">
         <span className="balance-card__projection">
-          Fin du mois{' '}:{' '}
+          {footLabel}{' '}:{' '}
           <strong className="amount" data-testid="balance-projection">
-            {signed(projectionCents)}
+            {signed(markCents)}
           </strong>
         </span>
-        <button type="button" className="balance-card__recalibrate" onClick={onRecalibrate}>
-          Recaler sur le compte
-        </button>
+        {onRecalibrate && (
+          <button type="button" className="balance-card__recalibrate" onClick={onRecalibrate}>
+            Recaler sur le compte
+          </button>
+        )}
       </div>
+      {unconfirmedHint && (
+        <p className="balance-card__hint" data-testid="balance-unconfirmed">
+          {unconfirmedHint}
+        </p>
+      )}
       {monthShort && (
         <p className="balance-card__note" role="note">
           Ce mois-ci, les dépenses dépassent ce que vous versez ensemble{' '}: le compte baisse de{' '}
-          {euro(-s.remainingCents)}. Ajuster un salaire, un taux ou une dépense suffit à retrouver l’équilibre.
+          {euro(-netCents)}. Ajuster un salaire, un taux ou une dépense suffit à retrouver l’équilibre.
         </p>
       )}
     </div>

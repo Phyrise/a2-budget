@@ -5,9 +5,11 @@
  * décocher reste possible, sans bruit. Progression discrète « 3 sur 8 ».
  *
  * Lecture : `isTransferPaid` / `isExpensePaid` (@a2/core) ; écriture :
- * `setTransferPaid` / `setExpensePaid` (store). Montants : `formatEuros`.
+ * `setTransferPaid` / `setExpensePaid` (store). Montants : ceux de
+ * `monthFlows` (@a2/core), les mêmes que ceux qu'additionne le solde : cocher
+ * une ligne fait bouger « en ce moment » exactement de son montant.
  */
-import type { MonthRecord } from '@a2/core';
+import type { MonthFlows, MonthRecord } from '@a2/core';
 import { formatEuros, isExpensePaid, isTransferPaid } from '@a2/core';
 import { useApp } from '../../state/store';
 import { Checkbox, NBSP, cx, type CheckTone } from '../../ui';
@@ -30,14 +32,12 @@ interface PayItem {
 
 export function PaymentList({
   month,
-  transferACents,
-  transferBCents,
+  flows,
   feed,
 }: {
   month: MonthRecord;
-  /** Virements arrondis ensemble (roundEurosConsistent) : A + B = total affiché. */
-  transferACents: number;
-  transferBCents: number;
+  /** Montants affichés du mois (euros entiers, totaux cohérents). */
+  flows: MonthFlows;
   feed: Feeding['feed'];
 }) {
   const { setTransferPaid, setExpensePaid } = useApp();
@@ -51,7 +51,7 @@ export function PaymentList({
       kind: 'transfer',
       label: `Virement d’${nameA}`,
       checkLabel: `Virement d’${nameA} fait`,
-      cents: transferACents,
+      cents: flows.transferACents,
       paid: isTransferPaid(month, 'A'),
       tone: 'a',
       toggle: (paid) => setTransferPaid(key, 'A', paid),
@@ -61,7 +61,7 @@ export function PaymentList({
       kind: 'transfer',
       label: `Virement d’${nameB}`,
       checkLabel: `Virement d’${nameB} fait`,
-      cents: transferBCents,
+      cents: flows.transferBCents,
       paid: isTransferPaid(month, 'B'),
       tone: 'b',
       toggle: (paid) => setTransferPaid(key, 'B', paid),
@@ -73,7 +73,7 @@ export function PaymentList({
         kind: 'expense',
         label: e.label,
         checkLabel: `${e.label} payé`,
-        cents: e.amountCents,
+        cents: flows.expenseCents[e.id] ?? e.amountCents,
         paid: isExpensePaid(month, e.id),
         tone: 'neutral',
         toggle: (paid) => setExpensePaid(key, e.id, paid),

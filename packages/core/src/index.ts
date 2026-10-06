@@ -55,8 +55,14 @@ export {
   removeBalanceCorrection,
   balanceCorrectionFor,
   validateBudgetBalance,
+  restoreBalanceCorrection,
+  anchorBalance,
+  balanceStatus,
+  BALANCE_ANCHOR_NOTE,
 } from './accountBalance.js';
 export type { BalanceSource } from './accountBalance.js';
+export { monthFlows, paidFlows } from './monthFlows.js';
+export type { MonthFlows } from './monthFlows.js';
 
 export {
   normalizeMonthIncome,

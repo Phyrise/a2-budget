@@ -6,10 +6,13 @@
  * Historique des recalages replié (Disclosure), chacun retirable.
  *
  * Saisie : `parseEurosInput` (@a2/core) tranche ; seul le signe est lu ici.
- * Écriture : `recordBalanceCorrection(..., { asOf: 'now' })` du store.
+ * Écriture : `recordBalanceCorrection(..., { asOf: 'now' })` du store,
+ * toujours sur le **mois courant** (le solde constaté aujourd'hui) : la
+ * feuille n'est proposée que sur le mois courant. « Annuler » remet la
+ * correction précédente à l'identique (`restoreBalanceCorrection`).
  */
 import type { BalanceCorrection } from '@a2/core';
-import { BALANCE_NOTE_MAX, monthKeyToLabel, roundToEuroCents } from '@a2/core';
+import { BALANCE_ANCHOR_NOTE, BALANCE_NOTE_MAX, monthKeyToLabel, roundToEuroCents } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Disclosure, Sheet, Switch, TextField, euro, euroMinus, fr, useToast } from '../../ui';
@@ -36,7 +39,7 @@ export function RecalibrateSheet({
   nowCents: number;
   corrections: readonly BalanceCorrection[];
 }) {
-  const { recordBalanceCorrection, removeBalanceCorrection } = useApp();
+  const { recordBalanceCorrection, removeBalanceCorrection, restoreBalanceCorrection } = useApp();
   const toast = useToast();
   const [amount, setAmount] = useState('');
   const [overdrawn, setOverdrawn] = useState(false);
@@ -75,7 +78,7 @@ export function RecalibrateSheet({
       action: {
         label: 'Annuler',
         onClick: () => {
-          if (previous) recordBalanceCorrection(monthKey, roundToEuroCents(previous.balanceCents) / 100, previous.note);
+          if (previous) restoreBalanceCorrection(previous);
           else removeBalanceCorrection(monthKey);
         },
       },
@@ -89,7 +92,7 @@ export function RecalibrateSheet({
       icon: 'undo',
       action: {
         label: 'Annuler',
-        onClick: () => recordBalanceCorrection(c.monthKey, roundToEuroCents(c.balanceCents) / 100, c.note),
+        onClick: () => restoreBalanceCorrection(c),
       },
     });
   };
@@ -160,7 +163,7 @@ export function RecalibrateSheet({
                   <span className="recalibrate__item-month">{monthKeyToLabel(c.monthKey)}</span>
                   <span className="recalibrate__item-detail">
                     {fr(`début du mois : ${signed(c.balanceCents)}`)}
-                    {c.note ? ` · ${c.note}` : ''}
+                    {c.note === BALANCE_ANCHOR_NOTE ? ' · point de départ, à confirmer' : c.note ? ` · ${c.note}` : ''}
                   </span>
                   <span className="recalibrate__item-date">noté le {dateFormatter.format(new Date(c.recordedAt))}</span>
                 </span>

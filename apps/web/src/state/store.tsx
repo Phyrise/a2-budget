@@ -38,6 +38,8 @@ import {
   openingBalance,
   recordBalanceCorrection as coreRecordBalanceCorrection,
   balanceCorrectionFor,
+  balanceStatus,
+  BALANCE_ANCHOR_NOTE,
   type AppState,
   type GroceryAuthor,
   type GroceryItem,
@@ -59,6 +61,7 @@ import { useCareActions, type CareActions } from './careActions';
 import { useCalendarActions, type CalendarActions } from './calendarActions';
 import { useBudgetActions, type BudgetActions } from './budgetActions';
 import { newId } from './ids';
+import { mapMonthOrCreate, monthOrVirtual, prepareBudget, selectBudgetMonth } from './budgetMonths';
 
 export type { CareActions, CircleInput, FocusInput } from './careActions';
 export type { CalendarActions, CalendarActionResult, RemovedCalendarEvent } from './calendarActions';
@@ -197,7 +200,10 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
   saveStatus: SaveStatus;
   /** Mode de récupération actif (données illisibles ou stockage indisponible). */
   recovery: Recovery;
-  /** Mois sélectionné, garanti présent dans state.months une fois chargé. */
+  /**
+   * Mois affiché une fois chargé : enregistré dans state.months, ou virtuel
+   * (préparé depuis les réglages) tant qu'il n'a été que consulté.
+   */
   currentMonth: MonthRecord | null;
   currentSummary: MonthSummary | null;
 
@@ -276,21 +282,20 @@ function isRateBps(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_RATE_BPS;
 }
 
+/** Modifie un mois ; un mois virtuel (seulement consulté) est créé à cette première modification. */
 function mapMonth(
   state: PersistedState,
   monthKey: string,
   fn: (m: MonthRecord) => MonthRecord,
 ): PersistedState {
-  return {
-    ...state,
-    months: state.months.map((m) => (m.monthKey === monthKey ? fn(m) : m)),
-  };
+  return mapMonthOrCreate(state, monthKey, fn);
 }
 
 function prepareApp(app: AppState): AppState {
-  const budget = coreEnsureMonth({ schemaVersion: 1, ...app.budget }, app.budget.selectedMonth);
-  // `...app.budget` garde le solde du compte commun (V4, budget.balance).
-  return { ...app, budget: { ...app.budget, settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth }, forest: advanceDay(app.forest, localDateKey(new Date())) };
+  const now = new Date();
+  // Mois courant créé s'il est affiché ; données d'avant le solde ancrées (V4).
+  const budget = prepareBudget(app.budget, now, { id: newId(), recordedAt: now.toISOString() });
+  return { ...app, budget, forest: advanceDay(app.forest, localDateKey(now)) };
 }
 
 export function AppProvider({
@@ -444,7 +449,8 @@ export function AppProvider({
 
   const selectMonth = useCallback(
     (monthKey: string) => {
-      mutate((s) => coreEnsureMonth(s, monthKey));
+      // Consulter n'écrit rien : seul le mois courant est créé (budgetMonths).
+      mutate((s) => selectBudgetMonth(s, monthKey));
     },
     [mutate],
   );
@@ -464,12 +470,18 @@ export function AppProvider({
     const recordedAt = new Date().toISOString();
     transact((s) => {
       const keep = s.budget.selectedMonth;
-      const months = s.budget.months.filter((m) => m.monthKey === keep);
-      if (months.length === s.budget.months.length) return { state: s, result: undefined };
+      if (s.budget.months.every((m) => m.monthKey === keep)) return { state: s, result: undefined };
+      // Le mois affiché (même seulement consulté) est conservé.
+      const months = [monthOrVirtual(s.budget, keep)];
       let budget: AppState['budget'] = { ...s.budget, months };
       const hadEarlier = s.budget.months.some((m) => m.monthKey < keep);
       if (hadEarlier && balanceCorrectionFor(s.budget, keep) === undefined) {
-        budget = coreRecordBalanceCorrection(budget, keep, openingBalance(s.budget, keep), { id, recordedAt });
+        const note = balanceStatus(s.budget).confirmed ? undefined : BALANCE_ANCHOR_NOTE;
+        budget = coreRecordBalanceCorrection(budget, keep, openingBalance(s.budget, keep), {
+          id,
+          recordedAt,
+          ...(note !== undefined ? { note } : {}),
+        });
       }
       return { state: { ...s, budget }, result: undefined };
     }, undefined);
@@ -912,7 +924,8 @@ export function AppProvider({
   // --- Dérivés --------------------------------------------------------------
 
   const currentMonth = useMemo(
-    () => (state ? (state.months.find((m) => m.monthKey === state.selectedMonth) ?? null) : null),
+    // Mois affiché : enregistré, ou virtuel (consulté seulement, jamais écrit).
+    () => (state ? monthOrVirtual(state, state.selectedMonth) : null),
     [state],
   );
 

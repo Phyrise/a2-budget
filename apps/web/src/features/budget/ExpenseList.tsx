@@ -7,6 +7,7 @@
  * couleur stable (d'après son libellé) ; liste vide = Noiraude cachée.
  */
 import type { MonthRecord } from '@a2/core';
+import { isExpensePaid } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { AmountInput, Button, EuroStepper, IconButton, InlineTextField, TextField, cx, euro, fr, useToast } from '../../ui';
@@ -134,19 +135,22 @@ export function ExpenseAddForm({
 }
 
 export function ExpenseList({ month, totalCents }: { month: MonthRecord; totalCents: number }) {
-  const { renameExpense, setExpenseAmount, removeExpense, addExpense } = useApp();
+  const { renameExpense, setExpenseAmount, removeExpense, addExpense, restoreExpense } = useApp();
   const toast = useToast();
   const [adding, setAdding] = useState(false);
   const key = month.monthKey;
 
   const remove = (id: string) => {
-    const expense = month.expenses.find((e) => e.id === id);
+    const index = month.expenses.findIndex((e) => e.id === id);
+    const expense = month.expenses[index];
     if (!expense) return;
+    // Annuler la remet à l'identique : même id, même place, cochée si elle l'était.
+    const paid = isExpensePaid(month, id);
     removeExpense(key, id);
     toast.show({
       message: fr(`Dépense retirée : ${expense.label}`),
       icon: 'trash',
-      action: { label: 'Annuler', onClick: () => addExpense(key, expense.label, expense.amountCents) },
+      action: { label: 'Annuler', onClick: () => restoreExpense(key, expense, index, paid) },
     });
   };
 

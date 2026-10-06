@@ -16,6 +16,9 @@ import {
   openingFromCurrentBalance,
   recordBalanceCorrection as coreRecordBalanceCorrection,
   removeBalanceCorrection as coreRemoveBalanceCorrection,
+  restoreBalanceCorrection as coreRestoreBalanceCorrection,
+  type BalanceCorrection,
+  type Expense,
   selectLantern as coreSelectLantern,
   setExpensePaid as coreSetExpensePaid,
   setTransferPaid as coreSetTransferPaid,
@@ -24,6 +27,7 @@ import {
 } from '@a2/core';
 import type { Transact } from './careActions';
 import { newId } from './ids';
+import { mapMonthOrCreate } from './budgetMonths';
 
 export interface BudgetActions {
   /** Coche / décoche « virement d'AL (A) / d'AC (B) fait » pour ce mois. false si rien n'a changé. */
@@ -45,6 +49,13 @@ export interface BudgetActions {
   ) => boolean;
   /** Retire la correction du mois (annuler un recalage). false si absente. */
   removeBalanceCorrection: (monthKey: string) => boolean;
+  /** Annuler : remet une correction telle qu'elle était (id, montant exact, date, note). */
+  restoreBalanceCorrection: (correction: BalanceCorrection) => boolean;
+  /**
+   * Annuler la suppression d'une dépense : la remet à l'identique (même id,
+   * même place, cochée si elle l'était). false si l'id est déjà présent.
+   */
+  restoreExpense: (monthKey: string, expense: Expense, index: number, paid: boolean) => boolean;
   /** Choisit la lanterne de pierre posée dans la forêt. false si inconnue ou pas encore débloquée. */
   selectLantern: (id: string) => boolean;
 }
@@ -54,14 +65,9 @@ function mapBudgetMonth(
   monthKey: string,
   fn: (m: MonthRecord) => MonthRecord,
 ): AppState {
-  const index = s.budget.months.findIndex((m) => m.monthKey === monthKey);
-  if (index === -1) return s;
-  const current = s.budget.months[index]!;
-  const next = fn(current);
-  if (next === current) return s;
-  const months = s.budget.months.slice();
-  months[index] = next;
-  return { ...s, budget: { ...s.budget, months } };
+  // Un mois seulement consulté (virtuel) est créé à cette première modification.
+  const budget = mapMonthOrCreate(s.budget, monthKey, fn);
+  return budget === s.budget ? s : { ...s, budget };
 }
 
 export function useBudgetActions(transact: Transact): BudgetActions {
@@ -114,6 +120,34 @@ export function useBudgetActions(transact: Transact): BudgetActions {
     [transact],
   );
 
+  const restoreBalanceCorrection = useCallback(
+    (correction: BalanceCorrection): boolean =>
+      transact((s) => {
+        try {
+          const budget = coreRestoreBalanceCorrection(s.budget, correction);
+          return { state: { ...s, budget }, result: true };
+        } catch {
+          return { state: s, result: false };
+        }
+      }, false),
+    [transact],
+  );
+
+  const restoreExpense = useCallback(
+    (monthKey: string, expense: Expense, index: number, paid: boolean): boolean =>
+      transact((s) => {
+        const next = mapBudgetMonth(s, monthKey, (m) => {
+          if (m.expenses.some((e) => e.id === expense.id)) return m;
+          const expenses = m.expenses.slice();
+          expenses.splice(Math.max(0, Math.min(index, expenses.length)), 0, { ...expense });
+          const restored = { ...m, expenses };
+          return paid ? coreSetExpensePaid(restored, expense.id, true) : restored;
+        });
+        return { state: next, result: next !== s };
+      }, false),
+    [transact],
+  );
+
   const selectLantern = useCallback(
     (id: string): boolean =>
       transact((s) => {
@@ -126,7 +160,15 @@ export function useBudgetActions(transact: Transact): BudgetActions {
   );
 
   return useMemo(
-    () => ({ setTransferPaid, setExpensePaid, recordBalanceCorrection, removeBalanceCorrection, selectLantern }),
-    [setTransferPaid, setExpensePaid, recordBalanceCorrection, removeBalanceCorrection, selectLantern],
+    () => ({
+      setTransferPaid,
+      setExpensePaid,
+      recordBalanceCorrection,
+      removeBalanceCorrection,
+      restoreBalanceCorrection,
+      restoreExpense,
+      selectLantern,
+    }),
+    [setTransferPaid, setExpensePaid, recordBalanceCorrection, removeBalanceCorrection, restoreBalanceCorrection, restoreExpense, selectLantern],
   );
 }

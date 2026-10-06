@@ -270,3 +270,11 @@
   color: var(--text-faint);
   font-size: 12.5px;
 }
+
+/* Solde jamais recalé : invitation douce (V4). */
+.balance-card__hint {
+  margin-top: 8px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.45;
+}

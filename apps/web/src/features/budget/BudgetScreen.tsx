@@ -9,12 +9,14 @@
  */
 import type { MonthRecord, MonthSummary } from '@a2/core';
 import {
+  balanceStatus,
   currentBalanceEstimate,
   currentMonthKey,
   endOfMonthProjection,
   hasSharedRates,
+  monthFlows,
   monthKeyToLabel,
-  roundEurosConsistent,
+  openingBalance,
   sharedRates,
 } from '@a2/core';
 import { useRef, useState } from 'react';
@@ -33,6 +35,7 @@ import { PaymentList } from './PaymentList';
 import { paymentProgress } from './paymentItems';
 import { BreakdownLine, PersonCard } from './PersonCard';
 import { RecalibrateSheet } from './RecalibrateSheet';
+import { unconfirmedBalanceHint, withDisplayedMonth } from './balanceView';
 import './budget.css';
 import './balance.css';
 import './chihiro/chihiro.css';
@@ -83,11 +86,17 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
   const monthShared = hasSharedRates(currentMonth);
 
   // Compte commun : estimation en ce moment, projection de fin de mois (core).
-  const budget = appState?.budget;
+  // Le mois affiché peut être virtuel (seulement consulté) : il est ajouté
+  // au calcul sans être écrit ; il ne compte pas dans sa propre ouverture.
+  const budget = appState ? withDisplayedMonth(appState.budget, currentMonth) : undefined;
   const nowCents = budget ? currentBalanceEstimate(budget, key) : 0;
   const projectionCents = budget ? endOfMonthProjection(budget, key) : 0;
+  const openingCents = budget ? openingBalance(budget, key) : 0;
   const corrections = budget?.balance?.corrections ?? [];
-  const transfers = roundEurosConsistent(s.contributionACents, s.contributionBCents);
+  const status = budget ? balanceStatus(budget) : null;
+  const flows = monthFlows(currentMonth);
+  const view = isCurrent ? 'now' : key < currentMonthKey(today) ? 'past' : 'future';
+  const inlineLabel = label.charAt(0).toLowerCase() + label.slice(1);
   const progress = paymentProgress(currentMonth);
   const paidShare = progress.total === 0 ? 0 : progress.done / progress.total;
   const greeting = bowing || feeding.bowing;
@@ -150,6 +159,11 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
           <GiveCard month={currentMonth} summary={s} />
           <BalanceCard
             summary={s}
+            view={view}
+            monthLabel={inlineLabel}
+            openingCents={openingCents}
+            netCents={flows.netCents}
+            unconfirmedHint={isCurrent && status && !status.confirmed ? unconfirmedBalanceHint(status.sinceMonthKey) : undefined}
             reserveTargetCents={reserve}
             nowCents={nowCents}
             projectionCents={projectionCents}
@@ -157,11 +171,11 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
             bowing={greeting}
             eating={feeding.eating && feeding.visit === null}
             noFaceRef={feeding.noFaceRef}
-            onRecalibrate={() => setRecalibrating(true)}
+            onRecalibrate={isCurrent ? () => setRecalibrating(true) : undefined}
           />
         </div>
 
-        <PaymentList month={currentMonth} transferACents={transfers.aCents} transferBCents={transfers.bCents} feed={feeding.feed} />
+        <PaymentList month={currentMonth} flows={flows} feed={feeding.feed} />
 
         <div className="sheet-section">
           <div className="section-head">
@@ -226,7 +240,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
           </div>
         )}
 
-        <ExpenseList month={currentMonth} totalCents={s.expensesTotalCents} />
+        <ExpenseList month={currentMonth} totalCents={flows.expensesTotalCents} />
         <SusuwatariRunner run={run} areaRef={sheetRef} onDone={endRun} />
         <NoFaceVisitor
           visit={feeding.visit}
@@ -236,13 +250,15 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
           bowing={feeding.bowing}
           fullness={paidShare}
         />
-        <RecalibrateSheet
-          open={recalibrating}
-          onClose={() => setRecalibrating(false)}
-          monthKey={key}
-          nowCents={nowCents}
-          corrections={corrections}
-        />
+        {isCurrent && (
+          <RecalibrateSheet
+            open={recalibrating}
+            onClose={() => setRecalibrating(false)}
+            monthKey={key}
+            nowCents={nowCents}
+            corrections={corrections}
+          />
+        )}
       </section>
     </>
   );

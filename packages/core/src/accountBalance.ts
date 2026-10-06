@@ -10,19 +10,22 @@
  *                   + Σ net(M) pour les mois connus C.monthKey ≤ M < K.
  *                   Sans correction : 0 au premier mois connu, puis
  *                   + Σ net(M) pour les mois connus M < K.
- *   net(M)        = contributions A + B − dépenses du mois (remainingCents)
+ *   net(M)        = virements A + B − dépenses du mois, tels qu'affichés
+ *                   (euros entiers, `monthFlows`)
  *   en ce moment  = ouverture(K) + virements cochés − dépenses cochées
  *   fin de mois   = ouverture(K) + net(K)
  *
- * Un mois absent de la liste (jamais ouvert) compte pour 0. Toutes les
- * valeurs sont en centimes exacts (l'affichage arrondit à l'euro).
+ * Un mois absent de la liste (jamais ouvert ni modifié) compte pour 0 : le
+ * store ne crée plus de mois sur une simple consultation. Montants en
+ * centimes, mais toujours des euros entiers (corrections héritées arrondies
+ * à l'euro) : ce qui est affiché s'additionne exactement.
  * Fonctions pures ; `source` = `appState.budget` (mois + balance).
  */
 
 import { MAX_AMOUNT_CENTS } from './amounts.js';
-import { computeMonthSummary } from './calculations.js';
+import { roundToEuroCents } from './euros.js';
 import { isValidMonthKey } from './months.js';
-import { paidTotals } from './payments.js';
+import { monthFlows, paidFlows } from './monthFlows.js';
 import { isIsoTimestamp, isPlainObject, type Fail, type Ok } from './home/validationHelpers.js';
 import type { BalanceCorrection, BudgetBalance, MonthRecordInput } from './types.js';
 
@@ -37,9 +40,16 @@ export interface BalanceSource {
   balance?: BudgetBalance;
 }
 
-/** Net d'un mois : versements − dépenses (peut être négatif). */
+/** Note de l'ancrage automatique (données d'avant le solde, jamais recalées). */
+export const BALANCE_ANCHOR_NOTE = 'Point de départ estimé, à confirmer';
+
+/**
+ * Net d'un mois : virements − dépenses, tels qu'affichés (euros entiers ;
+ * peut être négatif). Diffère de `remainingCents` de moins d'un euro, et
+ * seulement pour des données héritées avec centimes.
+ */
 export function monthNetCents(month: MonthRecordInput): number {
-  return computeMonthSummary(month).remainingCents;
+  return monthFlows(month).netCents;
 }
 
 function latestCorrection(source: BalanceSource, monthKey: string): BalanceCorrection | undefined {
@@ -54,7 +64,7 @@ function latestCorrection(source: BalanceSource, monthKey: string): BalanceCorre
 export function openingBalance(source: BalanceSource, monthKey: string): number {
   if (!isValidMonthKey(monthKey)) throw new RangeError(`invalid month key: ${String(monthKey)}`);
   const correction = latestCorrection(source, monthKey);
-  let balance = correction?.balanceCents ?? 0;
+  let balance = roundToEuroCents(correction?.balanceCents ?? 0);
   const from = correction?.monthKey ?? '';
   for (const month of source.months) {
     if (month.monthKey >= from && month.monthKey < monthKey) balance += monthNetCents(month);
@@ -70,8 +80,7 @@ export function currentBalanceEstimate(source: BalanceSource, monthKey: string):
   const opening = openingBalance(source, monthKey);
   const month = source.months.find((m) => m.monthKey === monthKey);
   if (month === undefined) return opening;
-  const summary = computeMonthSummary(month);
-  const paid = paidTotals(month, { aCents: summary.contributionACents, bCents: summary.contributionBCents });
+  const paid = paidFlows(month);
   return opening + paid.transfersCents - paid.expensesCents;
 }
 
@@ -146,6 +155,59 @@ export function removeBalanceCorrection<T extends BalanceSource>(source: T, mont
   const list = source.balance?.corrections ?? [];
   if (!list.some((c) => c.monthKey === monthKey)) return source;
   return { ...source, balance: { ...source.balance, corrections: list.filter((c) => c.monthKey !== monthKey) } };
+}
+
+/**
+ * Annuler un recalage : réinsère une correction **telle quelle** (id,
+ * montant exact, horodatage, note), à la place de celle du même mois.
+ * RangeError si elle est invalide.
+ */
+export function restoreBalanceCorrection<T extends BalanceSource>(source: T, correction: BalanceCorrection): T {
+  if (!isValidMonthKey(correction.monthKey)) throw new RangeError('invalid month key');
+  if (!isBalanceCents(correction.balanceCents)) throw new RangeError('balanceCents must be a safe integer in range');
+  if (!isIsoTimestamp(correction.recordedAt)) throw new RangeError('recordedAt must be ISO');
+  if (typeof correction.id !== 'string' || correction.id === '') throw new RangeError('correction id required');
+  const copy: BalanceCorrection = { ...correction };
+  const list = (source.balance?.corrections ?? []).filter(
+    (c) => c.monthKey !== correction.monthKey && c.id !== correction.id,
+  );
+  const next = [...list, copy]
+    .sort((a, b) => (a.monthKey < b.monthKey ? -1 : a.monthKey > b.monthKey ? 1 : 0))
+    .slice(-BALANCE_CORRECTIONS_MAX);
+  return { ...source, balance: { ...source.balance, corrections: next } };
+}
+
+/**
+ * Données d'avant le solde (V3) : sans `balance`, le report additionnerait
+ * tous les anciens « restes » (souvent dépensés en loisirs). Pose alors un
+ * point de départ à 0 € au début du mois `monthKey` (note
+ * `BALANCE_ANCHOR_NOTE`), s'il existe des mois antérieurs. Sinon (balance
+ * déjà présente, ou rien d'antérieur) → même référence.
+ */
+export function anchorBalance<T extends BalanceSource>(
+  source: T,
+  monthKey: string,
+  meta: { id: string; recordedAt: string },
+): T {
+  if (source.balance !== undefined) return source;
+  if (!source.months.some((m) => m.monthKey < monthKey)) return source;
+  return recordBalanceCorrection(source, monthKey, 0, { ...meta, note: BALANCE_ANCHOR_NOTE });
+}
+
+/**
+ * Le solde a-t-il déjà été recalé sur le vrai compte ? `sinceMonthKey` :
+ * mois depuis lequel court l'estimation (dernière correction, ou premier
+ * mois connu) — pour « Estimé depuis … : recalez quand vous regardez le
+ * compte ». Un ancrage automatique ne compte pas comme un recalage.
+ */
+export function balanceStatus(source: BalanceSource): { confirmed: boolean; sinceMonthKey: string | null } {
+  const corrections = source.balance?.corrections ?? [];
+  const confirmed = corrections.some((c) => c.note !== BALANCE_ANCHOR_NOTE);
+  let since: string | null = corrections.length > 0 ? corrections[corrections.length - 1]!.monthKey : null;
+  if (since === null) {
+    for (const m of source.months) if (since === null || m.monthKey < since) since = m.monthKey;
+  }
+  return { confirmed, sinceMonthKey: since };
 }
 
 /** Correction posée pour ce mois, s'il y en a une. */

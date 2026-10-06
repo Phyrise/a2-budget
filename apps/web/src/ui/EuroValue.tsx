@@ -32,6 +32,9 @@ export function EuroValue({ id, label, valueCents, onCommit, className, active =
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const refocus = useRef(false);
+  // Texte proposé au toucher : le valider tel quel ne change rien (une
+  // valeur héritée avec centimes n'est pas réécrite à l'euro).
+  const initial = useRef<string | null>(null);
 
   useEffect(() => {
     if (draft !== null) {
@@ -47,6 +50,11 @@ export function EuroValue({ id, label, valueCents, onCommit, className, active =
   const finish = (raw: string | null, keepFocus: boolean) => {
     if (raw === null) return;
     refocus.current = keepFocus;
+    if (raw.trim() === initial.current) {
+      setError(null);
+      setDraft(null);
+      return;
+    }
     const result = parseEurosInput(raw);
     if (result.ok) {
       setError(null);
@@ -83,7 +91,9 @@ export function EuroValue({ id, label, valueCents, onCommit, className, active =
           aria-describedby={error !== null ? errorId : undefined}
           onClick={() => {
             setError(null);
-            setDraft(centsToPlain(valueCents));
+            const text = centsToPlain(valueCents);
+            initial.current = text.trim();
+            setDraft(text);
           }}
         >
           {formatEuros(valueCents)}

@@ -2,7 +2,9 @@
  * Curseur de montant en euros entiers (variante « montant » du Slider) :
  * salaires 0–5 000 €, compléments 0–3 000 €.
  *
- * - Le glissement avance par crans de 10 € (`stepEuros`) ; les boutons − / +
+ * - Le glissement au pointeur avance par crans de 10 € (`stepEuros`) ; hors
+ *   pointeur (gestes des lecteurs d'écran VoiceOver / TalkBack, qui envoient
+ *   un simple événement input), la valeur suit à l'euro près ; les boutons − / +
  *   ajustent à l'euro près (appui long qui accélère, voir holdRepeat) ;
  *   clavier : flèches ±1 €, Page ±100 €, Début / Fin = bornes.
  * - Toucher le montant pour le saisir (EuroValue) : une valeur au-delà du
@@ -18,7 +20,7 @@ import { formatEuros, roundToEuroCents } from '@a2/core';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { EuroValue } from './EuroValue';
 import { cx } from './format';
-import { haptic, nextEuros, useHoldRepeat } from './holdRepeat';
+import { haptic, nextEuros, snapEuros, useHoldRepeat } from './holdRepeat';
 import { Icon } from './Icon';
 import './slider.css';
 import './euroControls.css';
@@ -59,6 +61,8 @@ export function EuroSlider({
   const name = accessibleLabel ?? label;
   const [draft, setDraft] = useState<number | null>(null); // euros
   const [dragging, setDragging] = useState(false);
+  // Synchrone (l'événement input suit le pointerdown dans le même tick).
+  const pointerDown = useRef(false);
   const timer = useRef<number | undefined>(undefined);
   const latest = useRef<number | null>(null);
   const commitRef = useRef(onCommit);
@@ -78,7 +82,9 @@ export function EuroSlider({
     const pending = latest.current;
     latest.current = null;
     setDraft(null);
-    if (pending !== null && pending * 100 !== valueRef.current) commitRef.current(pending * 100);
+    // Revenu à la valeur affichée de départ (ex. + puis −) : rien à écrire,
+    // une valeur héritée avec centimes reste intacte.
+    if (pending !== null && pending * 100 !== roundToEuroCents(valueRef.current)) commitRef.current(pending * 100);
   };
 
   /** Brouillon (euros) ; validation différée si `defer`, sinon au relâché. */
@@ -170,22 +176,28 @@ export function EuroSlider({
           style={{ '--fill': `${fill}%` } as CSSProperties}
           onChange={(event) => {
             const raw = Number(event.target.value);
-            preview(Math.round(raw / stepEuros) * stepEuros, true);
+            preview(snapEuros(raw, pointerDown.current, stepEuros), true);
           }}
           onKeyDown={onKeyDown}
           onKeyUp={() => {
             if (latest.current !== null) flush();
           }}
-          onPointerDown={() => setDragging(true)}
+          onPointerDown={() => {
+            pointerDown.current = true;
+            setDragging(true);
+          }}
           onPointerUp={() => {
+            pointerDown.current = false;
             setDragging(false);
             flush();
           }}
           onPointerCancel={() => {
+            pointerDown.current = false;
             setDragging(false);
             flush();
           }}
           onBlur={() => {
+            pointerDown.current = false;
             setDragging(false);
             if (latest.current !== null) flush();
           }}

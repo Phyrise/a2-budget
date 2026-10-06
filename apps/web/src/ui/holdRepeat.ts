@@ -111,3 +111,10 @@ export function useHoldRepeat(step: (stepEuros: number) => boolean, onRelease: (
     onContextMenu: (event) => event.preventDefault(),
   };
 }
+/**
+ * Valeur de la piste : crans de `step` € pendant un glissement au pointeur ;
+ * sinon (lecteur d'écran, input programmatique) la valeur brute, à l'euro.
+ */
+export function snapEuros(raw: number, byPointer: boolean, step: number): number {
+  return byPointer ? Math.round(raw / step) * step : Math.round(raw);
+}

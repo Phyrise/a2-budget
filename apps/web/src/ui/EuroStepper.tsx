@@ -48,7 +48,8 @@ export function EuroStepper({ id, label, valueCents, onCommit, className }: Euro
     const value = pending.current;
     pending.current = null;
     setDraft(null);
-    if (value !== null && value * 100 !== valueRef.current) commitRef.current(value * 100);
+    // Revenu à la valeur affichée de départ (+ puis −) : rien à écrire.
+    if (value !== null && value * 100 !== roundToEuroCents(valueRef.current)) commitRef.current(value * 100);
   };
 
   const minus = useHoldRepeat(step(-1), release);

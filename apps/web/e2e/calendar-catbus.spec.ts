@@ -107,14 +107,13 @@ test('le Chatbus file à vitesse constante, rebondit, s’incline, puis repart',
 });
 
 test.describe('mouvement réduit', () => {
-  test.use({ reducedMotion: 'reduce' });
-
   test('pas de traversée : une seule image immobile en fondu, puis plus rien', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await openCalendar(page);
     await addEvent(page, 'dîner samedi 20h');
-    await expect(page.getByRole('dialog')).toBeHidden();
     const still = page.locator('.cal-catbus--still');
-    await still.waitFor();
+    await still.waitFor({ state: 'attached' });
+    await expect(page.getByRole('dialog')).toBeHidden();
     await expect(page.locator('.cal-catbus__track')).toHaveCount(0);
     await expect(still.locator('img')).toHaveCount(1);
     const first = (await still.locator('img').boundingBox())!;

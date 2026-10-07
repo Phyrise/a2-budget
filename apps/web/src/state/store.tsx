@@ -17,6 +17,7 @@ import {
   ensureMonth as coreEnsureMonth,
   emptyAppState,
   migrateState,
+  withAnniversaries,
   advanceDay,
   localDateKey,
   createTask,
@@ -281,7 +282,8 @@ function prepareApp(app: AppState): AppState {
   const now = new Date();
   // Mois courant créé s'il est affiché ; données d'avant le solde ancrées (V4).
   const budget = prepareBudget(app.budget, now, { id: newId(), recordedAt: now.toISOString() });
-  return { ...app, budget, forest: advanceDay(app.forest, localDateKey(now)) };
+  // V4.3 : anniversaires préremplis s'ils manquent (idempotent).
+  return withAnniversaries({ ...app, budget, forest: advanceDay(app.forest, localDateKey(now)) });
 }
 
 export function AppProvider({

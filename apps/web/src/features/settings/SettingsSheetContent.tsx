@@ -1,8 +1,9 @@
 /**
  * Réglages (feuille), allégés en V4.2 : vous deux (prénom au crayon, salaire
- * habituel sur une ligne), taux communs au curseur (globaux : mois courant et
- * suivants), dépenses récurrentes (nouveaux mois), préférences (forêt
- * vivante / immobile, sons), sauvegarde, recommencer à zéro, à propos.
+ * habituel sur une ligne), anniversaires (V4.3, au crayon), taux communs au
+ * curseur (globaux : mois courant et suivants), dépenses récurrentes
+ * (nouveaux mois), préférences (forêt vivante / immobile, sons), sauvegarde,
+ * recommencer à zéro, à propos.
  * Plus de réserve, d'« Appliquer au mois affiché » ni de pause ici (la pause
  * reste dans l'en-tête, avec la lune).
  */
@@ -24,6 +25,7 @@ import {
 } from '../../ui';
 import type { WorldMotion } from '../../world/types';
 import { ExpenseAddForm, ExpenseEditorList } from '../budget/ExpenseList';
+import { AnniversariesEditor } from './AnniversariesEditor';
 import { ImportControl } from './ImportControl';
 import { SharedRatesEditor } from './SharedRates';
 import { SoundSetting } from '../../app/sound';
@@ -129,6 +131,10 @@ export function SettingsSheetContent() {
         <PersonSettingsCard person="A" settings={settings.personA} />
         <PersonSettingsCard person="B" settings={settings.personB} />
       </div>
+
+      <Section id="anniversaries" icon="sparkle" title="Anniversaires">
+        <AnniversariesEditor />
+      </Section>
 
       <Section id="rates" icon="budget" title="Taux communs">
         <SharedRatesEditor settings={settings} />

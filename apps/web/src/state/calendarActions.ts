@@ -3,6 +3,7 @@
  * autres actions : transition PURE via `transact` (id et horloge capturés
  * avant, sûr en StrictMode), résultat synchrone, écriture sérialisée par le
  * store. Le calendrier (`appState.calendar`) n'apparaît qu'au premier ajout.
+ * V4.3 : le réglage des anniversaires (`appState.anniversaries`) vit ici aussi.
  */
 import { useCallback, useMemo } from 'react';
 import {
@@ -10,6 +11,8 @@ import {
   removeEvent,
   restoreEvent,
   updateEvent,
+  validateAnniversaries,
+  type Anniversaries,
   type AppState,
   type CalendarEvent,
   type CalendarEventDraft,
@@ -38,6 +41,8 @@ export interface CalendarActions {
   removeCalendarEvent: (id: string) => RemovedCalendarEvent | null;
   /** Annule un retrait (même position). false si rien n'a été remis. */
   restoreCalendarEvent: (removed: RemovedCalendarEvent) => boolean;
+  /** V4.3 — anniversaires (Réglages) : remplace le réglage ; false s'il est invalide. */
+  setAnniversaries: (next: Anniversaries) => boolean;
 }
 
 function withEvents(s: AppState, events: CalendarEvent[]): AppState {
@@ -93,9 +98,18 @@ export function useCalendarActions(transact: Transact): CalendarActions {
     [transact],
   );
 
+  const setAnniversaries = useCallback(
+    (next: Anniversaries): boolean => {
+      const checked = validateAnniversaries(next);
+      if (!checked.ok) return false;
+      return transact((s) => ({ state: { ...s, anniversaries: checked.state }, result: true }), false);
+    },
+    [transact],
+  );
+
   // Objet stable : le contexte du store ne se recalcule pas à chaque rendu.
   return useMemo(
-    () => ({ addCalendarEvent, updateCalendarEvent, removeCalendarEvent, restoreCalendarEvent }),
-    [addCalendarEvent, updateCalendarEvent, removeCalendarEvent, restoreCalendarEvent],
+    () => ({ addCalendarEvent, updateCalendarEvent, removeCalendarEvent, restoreCalendarEvent, setAnniversaries }),
+    [addCalendarEvent, updateCalendarEvent, removeCalendarEvent, restoreCalendarEvent, setAnniversaries],
   );
 }

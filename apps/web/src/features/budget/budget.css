@@ -196,7 +196,7 @@
 .expense-row__label .field__input {
   margin-left: -10px;
   width: calc(100% + 10px);
-  font-size: 15.5px;
+  font-size: 16px; /* ≥ 16 px : pas de zoom iOS au focus */
   color: var(--ivory-100);
 }
 

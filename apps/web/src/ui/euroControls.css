@@ -61,7 +61,8 @@
   border-radius: 12px;
   background: rgba(5, 10, 8, 0.55);
   color: var(--ivory-50);
-  font-size: inherit;
+  /* ≥ 16 px : Safari iOS ne zoome pas au focus. */
+  font-size: max(16px, 1em);
   text-align: right;
   box-shadow: 0 0 0 3px rgba(221, 179, 106, 0.16);
 }

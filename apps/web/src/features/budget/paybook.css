@@ -121,7 +121,7 @@
 .paybook-row__label {
   overflow: hidden;
   color: var(--ivory-100);
-  font-size: 15px;
+  font-size: 16px; /* ≥ 16 px : pas de zoom iOS au focus */
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color var(--dur-base) var(--ease-soft);
@@ -139,7 +139,7 @@
   padding: 0 6px;
   overflow: hidden;
   color: var(--ivory-100);
-  font-size: 15px;
+  font-size: 16px; /* ≥ 16 px : pas de zoom iOS au focus */
   text-overflow: ellipsis;
   transition: color var(--dur-base) var(--ease-soft);
 }

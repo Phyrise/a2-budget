@@ -17,14 +17,6 @@
   color: var(--ivory-100);
 }
 
-.balance__lead {
-  margin-top: 4px;
-  font-size: 13.5px;
-  line-height: 1.45;
-  color: var(--text-muted);
-  text-wrap: pretty;
-}
-
 .balance__visual {
   position: relative;
   margin: 2px -6px 0;
@@ -166,21 +158,14 @@
 }
 
 .balance__title {
-  margin-top: 14px;
+  margin-top: 12px;
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 450;
   line-height: 1.25;
   letter-spacing: -0.005em;
   color: var(--ivory-50);
   text-wrap: balance;
-}
-
-.balance__body {
-  margin-top: 4px;
-  font-size: 14.5px;
-  line-height: 1.45;
-  color: var(--text-muted);
 }
 
 /* Suggestions applicables en un geste */

@@ -287,24 +287,42 @@ button.task-row__body:hover .task-row__title {
   opacity: 0.82;
 }
 
-/* Feuille d'ajout / d'édition */
+/* Feuille d'ajout / d'édition — tient en entier à 390 × 844 (V4.1). */
 .task-form {
   display: grid;
-  gap: 22px;
-  padding-top: 4px;
+  gap: 16px;
+  padding-top: 2px;
+}
+
+.task-form .segmented > legend {
+  margin-bottom: 6px;
+}
+
+.task-sheet .sheet__body {
+  padding-bottom: 14px;
+}
+
+/* Focus initial sur le titre (programmatique) : pas d'anneau au toucher. */
+.task-sheet .sheet__title:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .who-option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 7px 0 6px;
+  gap: 3px;
+  padding: 5px 0 4px;
   font-size: 13px;
 }
 
 .task-form__who .segmented__label {
   padding: 0 2px;
+}
+
+.task-form__when .segmented__label {
+  padding: 0 3px;
+  font-size: 13.5px;
 }
 
 .task-form__days .segmented__label {

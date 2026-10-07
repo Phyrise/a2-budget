@@ -1,13 +1,13 @@
 /**
- * Objectif de la semaine — carte compacte et bienveillante (V3.2).
+ * Objectif de la semaine — carte compacte et bienveillante (V4.1 : trois
+ * blocs de texte au plus).
  *
  * Une lanterne dans un anneau qui se remplit de lumière au fil des soins de
- * la semaine (weeklyCareGoal de @a2/core), un niveau en mots, parfois un
- * encouragement (« la lumière monte », seulement quand ça monte et que la
- * forêt n'est pas déjà épanouie : jamais de comparaison à la baisse avec la
- * semaine passée) et une ligne qui dit ce qui compte. Jamais de chiffre, jamais de sanction,
- * jamais de rouge : le niveau le plus bas est « la forêt se repose », la
- * forêt ne meurt jamais et rien ne se reporte d'une semaine à l'autre.
+ * la semaine (weeklyCareGoal de @a2/core), puis seulement : le titre, le
+ * niveau en mots (« La forêt se repose » / « va bien » / « s'épanouit », ou
+ * « dort » en pause) et une ligne qui explique le principe très simplement.
+ * Jamais de chiffre, jamais de sanction, jamais de rouge ; aucune tendance
+ * affichée ; rien ne se reporte d'une semaine à l'autre.
  */
 import { DAILY_CREDIT_CAP, weeklyCareGoal, type WeeklyGoalLevel } from '@a2/core';
 import { useMemo } from 'react';
@@ -20,15 +20,6 @@ const LEVEL_TITLES: Record<WeeklyGoalLevel, string> = {
   good: 'La forêt va bien',
   flourishing: 'La forêt s’épanouit',
 };
-
-const LEVEL_BODIES: Record<WeeklyGoalLevel, string> = {
-  resting: 'Elle n’attend rien de vous. Un geste, quand vous pourrez, suffira à la réveiller doucement.',
-  good: 'Elle profite de vos soins de la semaine, tranquillement.',
-  flourishing: 'Une semaine bien choyée : la clairière rayonne.',
-};
-
-/** Seule tendance jamais montrée : celle qui monte. */
-const RISING = 'la lumière monte';
 
 const WORDS = ['zéro', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept'];
 const FEM = ['zéro', 'une', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept'];
@@ -80,26 +71,13 @@ export function WeeklyGoalCard() {
   if (!forest || goal === null) return null;
 
   const paused = forest.paused;
-  const weekday = (today.getDay() + 6) % 7; // 0 = lundi
-  const fresh = goal.creditsThisWeek === 0 && weekday === 0;
-  // Début de semaine : « se repose » n'est qu'un « pas encore ».
-  const early = goal.level === 'resting' && weekday <= 1;
   const title = paused ? 'La forêt dort' : LEVEL_TITLES[goal.level];
-  const body = paused
-    ? 'La semaine attendra : rien ne se perd pendant la pause.'
-    : fresh
-      ? 'Une nouvelle semaine commence : chaque geste y posera sa lumière.'
-      : early
-        ? 'La semaine commence à peine : chaque geste y pose déjà sa lumière.'
-        : LEVEL_BODIES[goal.level];
-  // Seulement l'élan qui monte, et pas sur une forêt déjà épanouie : une
-  // tendance stable ou descendante ne serait qu'un « moins que la semaine
-  // dernière » déguisé (V3_BRIEF §1 : jamais de dette visible).
-  const showTrend = !paused && !fresh && goal.trend === 'rising' && goal.level !== 'flourishing';
   const days = Math.max(1, Math.ceil(goal.target / DAILY_CREDIT_CAP));
   const capWord = WORDS[DAILY_CREDIT_CAP] ?? String(DAILY_CREDIT_CAP);
   const daysWord = FEM[days] ?? String(days);
-  const rule = `Ce qui compte\u00a0: les gestes faits, jusqu’à ${capWord}\u00a0soins par jour. ${daysWord.charAt(0).toUpperCase()}${daysWord.slice(1)}\u00a0belles journées font une semaine épanouie.`;
+  const rule = paused
+    ? 'Rien ne se perd pendant la pause.'
+    : `Jusqu’à ${capWord}\u00a0soins par jour · ${daysWord}\u00a0belles journées suffisent.`;
 
   return (
     <section className={cx('weekly-goal card', `weekly-goal--${paused ? 'paused' : goal.level}`)} aria-labelledby="weekly-goal-title">
@@ -108,14 +86,7 @@ export function WeeklyGoalCard() {
         <h2 className="weekly-goal__eyebrow">Objectif de la semaine</h2>
         <p id="weekly-goal-title" className="weekly-goal__title">
           {title}
-          {showTrend && (
-            <span className="weekly-goal__trend" data-trend={goal.trend}>
-              <span className="visually-hidden">, </span>
-              {RISING}
-            </span>
-          )}
         </p>
-        <p className="weekly-goal__body">{body}</p>
         <p className="weekly-goal__rule">{rule}</p>
       </div>
     </section>

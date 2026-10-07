@@ -205,19 +205,18 @@ button.task-row__body:hover .task-row__more {
 }
 
 .task-form__effort .segmented__label {
-  min-height: 92px;
-  padding: 8px 4px 10px;
+  min-height: 60px;
+  padding: 6px 4px 7px;
 }
 
 .effort-option {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .effort-option .effort-art {
-  margin-bottom: 2px;
   color: var(--fog-400);
   transition: color var(--dur-fast) var(--ease-soft);
 }
@@ -236,26 +235,16 @@ button.task-row__body:hover .task-row__more {
 }
 
 .effort-option__label {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-}
-
-.effort-option__hint {
-  font-size: 12px;
-  font-weight: 450;
-  color: var(--text-faint);
-}
-
-.segmented__input:checked + .segmented__label .effort-option__hint {
-  color: var(--fog-300);
 }
 
 .task-form__note {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 2px 4px 0;
-  font-size: 13.5px;
+  padding: 0 4px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--text-muted);
 }

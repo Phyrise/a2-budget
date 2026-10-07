@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/** Port du `vite preview` (E2E_PORT : plusieurs copies de travail en parallèle). */
+const PORT = Number(process.env.E2E_PORT ?? 4173);
+
 /**
  * Smoke tests navigateur (lead).
  *
@@ -22,7 +25,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://127.0.0.1:4173/a2-budget/',
+    baseURL: `http://127.0.0.1:${PORT}/a2-budget/`,
     viewport: { width: 390, height: 844 },
     trace: 'retain-on-failure',
   },
@@ -33,8 +36,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm preview',
-    url: 'http://127.0.0.1:4173/a2-budget/',
+    command: `pnpm preview --port ${PORT} --strictPort`,
+    url: `http://127.0.0.1:${PORT}/a2-budget/`,
     reuseExistingServer: true,
     timeout: 60_000,
   },

@@ -1,25 +1,67 @@
 /* Le partage de la semaine — deux galets sur une branche. */
 
 .balance {
-  padding: 18px 18px 8px;
+  padding: 14px 16px 6px;
   overflow: hidden;
   background:
     radial-gradient(120% 70% at 50% 0%, rgba(147, 173, 124, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
 }
 
+.balance__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -6px -10px 0 0;
+}
+
 .balance__heading {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 520;
   line-height: 1.25;
   color: var(--ivory-100);
 }
 
+/* « ? » : petit rond discret, zone tactile de 44 px. */
+.balance__help {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fog-300);
+  cursor: pointer;
+}
+
+.balance__help > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(185, 198, 189, 0.35);
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.balance__help.is-open > span,
+.balance__help:hover > span {
+  border-color: var(--moss-300);
+  color: var(--ivory-100);
+  background: rgba(147, 173, 124, 0.14);
+}
+
 .balance__visual {
   position: relative;
-  margin: 2px -6px 0;
+  max-width: 300px;
+  margin: 0 auto;
 }
 
 .balance-art {
@@ -136,9 +178,9 @@
 .balance__legend {
   display: flex;
   justify-content: space-between;
-  margin-top: -2px;
+  margin-top: -4px;
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -158,9 +200,9 @@
 }
 
 .balance__title {
-  margin-top: 12px;
+  margin-top: 10px;
   font-family: var(--font-display);
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 450;
   line-height: 1.25;
   letter-spacing: -0.005em;
@@ -214,22 +256,12 @@
 }
 
 /* Détail (repliable) : les gestes, sans total */
-.balance__how {
-  margin: 12px -6px 0;
-}
-
-.balance__how + .balance__detail {
-  margin-top: 0;
-  border-top: 1px solid var(--line);
-}
-
 .balance__detail {
-  margin: 10px -6px 0;
+  margin: 6px -6px 0;
 }
 
-.balance__how .disclosure__toggle,
 .balance__detail .disclosure__toggle {
-  min-height: 48px;
+  min-height: 44px;
   padding-left: 6px;
   font-size: 14.5px;
   color: var(--text-muted);
@@ -281,21 +313,30 @@
   color: var(--text-faint);
 }
 
-/* « Comment ça marche ? » */
+/* « ? » : la bulle d'explication, sous l'en-tête. */
 .balance-how {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 2px 6px 14px;
+  gap: 7px;
+  margin: 2px 0 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(7, 13, 10, 0.5);
+}
+
+.balance-how[hidden] {
+  display: none;
 }
 
 .balance-how li {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 1.45;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
   color: var(--fog-300);
 }
 

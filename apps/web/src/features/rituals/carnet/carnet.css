@@ -1,5 +1,16 @@
 /* Carnet de la forêt. */
 
+/* Fine séparation entre l'en-tête du carnet et les créatures. */
+.carnet-rule {
+  height: 1px;
+  margin: 2px 0 16px;
+  background: linear-gradient(90deg, transparent, rgba(185, 198, 189, 0.28) 18%, rgba(185, 198, 189, 0.28) 82%, transparent);
+}
+
+.carnet-sheet__all[aria-pressed='true'] {
+  color: var(--amber-300);
+}
+
 .carnet-section + .carnet-section {
   margin-top: 30px;
 }
@@ -11,18 +22,35 @@
   color: var(--ivory-50);
 }
 
-.carnet-section__lead {
-  margin: -4px 0 14px;
-  color: var(--text-muted);
-  font-size: 14.5px;
-  line-height: 1.5;
+/* Petite barre d'avancée (lanterne suivante, stade suivant). */
+.carnet-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
 }
 
-.carnet-section__lead strong {
-  font-family: var(--font-display);
-  font-weight: 520;
-  font-style: italic;
-  color: var(--amber-300);
+.carnet-progress__track {
+  position: relative;
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(185, 198, 189, 0.14);
+  overflow: hidden;
+}
+
+.carnet-progress__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--moss-300), var(--amber-300));
+}
+
+.carnet-progress__label {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
 }
 
 /* Images du carnet : ni glisser, ni menu contextuel, ni sélection. */
@@ -199,6 +227,10 @@
 
 .carnet-stage.is-future .carnet-stage__name {
   font-style: italic;
+}
+
+.carnet-stage__progress {
+  padding: 3px 4px 0;
 }
 
 /* Souvenirs : des phrases, jamais des scores. */

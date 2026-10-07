@@ -3,7 +3,7 @@
  * légende. Les ids et les seuils sont ceux de LANTERNS (@a2/core).
  */
 import type { LanternDef } from '@a2/core';
-import { NB, numberWords } from '../ritualText';
+import { NB } from '../ritualText';
 
 export interface LanternEntry {
   name: string;
@@ -59,7 +59,7 @@ export function lanternShortName(id: string): string {
   return short.charAt(0).toUpperCase() + short.slice(1);
 }
 
-/** « après trois lanternes » (jamais un compteur : seulement le seuil). */
-export function unlockWords(def: LanternDef): string {
-  return def.unlockAt <= 1 ? `après une${NB}lanterne` : `après ${numberWords(def.unlockAt, true)} lanternes`;
+/** « 1 sur 3 lanternes » : l'avancée vers un modèle encore verrouillé. */
+export function unlockProgressWords(count: number, def: LanternDef): string {
+  return `${Math.min(count, def.unlockAt)}${NB}sur ${def.unlockAt}${NB}${def.unlockAt > 1 ? 'lanternes' : 'lanterne'}`;
 }

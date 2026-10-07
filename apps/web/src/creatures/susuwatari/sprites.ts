@@ -23,10 +23,10 @@ const EXTENT = 1.32;
 
 /** Palette tirée des peintures : noir de suie chaud, jamais d'un noir pur. */
 export const SOOT = {
-  core: '#130f0e',
-  inner: ['#100c0b', '#171211', '#1f1917'],
-  fringe: ['#0f0b0a', '#16110f', '#1d1715'],
-  fine: '#1a1412',
+  core: '#0f0c0b',
+  inner: ['#0c0908', '#0f0b0a', '#13100e'],
+  fringe: ['#0b0807', '#100c0b', '#16110f'],
+  fine: '#120e0c',
   sheen: '#4a413c',
   rim: '#c9b894',
   limb: '#17110f',
@@ -48,7 +48,7 @@ export interface BodySprites {
 }
 
 /** Proportions des yeux (× R) : partagées avec le dessin en direct. */
-export const EYE = { rx: 0.18, ry: 0.22, gap: 0.265, y: -0.08, pupil: 0.064 } as const;
+export const EYE = { rx: 0.195, ry: 0.235, gap: 0.28, y: -0.08, pupil: 0.068 } as const;
 
 function canvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -123,7 +123,7 @@ function paintFringe(genome: FurGenome, R: number, side: number, frame: number, 
   });
   if (rim > 0) {
     for (const a of ALPHA_STEPS) {
-      fillBatch(ctx, genome, (k, _t, al) => k === Kind.Rim && step(al) === a, SOOT.rim, a * 0.22 * rim, m, R, phi);
+      fillBatch(ctx, genome, (k, _t, al) => k === Kind.Rim && step(al) === a, SOOT.rim, a * 0.15 * rim, m, R, phi);
     }
   }
   return c;

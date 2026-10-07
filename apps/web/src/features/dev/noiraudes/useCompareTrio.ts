@@ -9,9 +9,9 @@ import { createSusuwatariLayer } from '../../../creatures/susuwatari';
 
 /** Pose du trio peint, en fractions de la case (centre du sol, diamètre). */
 const TRIO = [
-  { x: 0.49, y: 0.6, d: 0.4, seed: 3 },
-  { x: 0.28, y: 0.89, d: 0.4, seed: 1 },
-  { x: 0.7, y: 0.9, d: 0.4, seed: 6 },
+  { x: 0.49, y: 0.62, d: 0.36, seed: 3 },
+  { x: 0.28, y: 0.9, d: 0.36, seed: 1 },
+  { x: 0.7, y: 0.91, d: 0.36, seed: 6 },
 ] as const;
 
 export function useCompareTrio(canvasRef: RefObject<HTMLCanvasElement | null>) {

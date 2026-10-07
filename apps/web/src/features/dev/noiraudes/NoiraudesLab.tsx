@@ -50,7 +50,7 @@ export default function NoiraudesLab() {
   const sceneRef = useRef<HTMLCanvasElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
   const [count, setCount] = useState(8);
-  const [size, setSize] = useState(46);
+  const [size, setSize] = useState(54);
   const [night, setNight] = useState(false);
   const [fps, setFps] = useState<string>('');
   useCompareTrio(compareRef);

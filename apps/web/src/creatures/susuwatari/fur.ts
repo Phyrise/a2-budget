@@ -69,9 +69,11 @@ function counts(radiusPx: number) {
   const k = Math.max(0.5, Math.min(2.2, radiusPx / 48));
   return {
     inner: Math.round(460 * k),
-    fringe: Math.round(620 * k),
-    fine: Math.round(80 * k),
-    sheen: Math.round(30 * k),
+    fringe: Math.round(900 * k),
+    fine: Math.round(120 * k),
+    fuzz: Math.round(300 * k),
+    spikes: Math.round(110 * k),
+    sheen: Math.round(26 * k),
     rim: Math.round(70 * k),
   };
 }
@@ -100,7 +102,7 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
   const tufts = Array.from({ length: tuftCount }, (_, i) => ({
     a: ((i + (rand() - 0.5) * 0.7) / tuftCount) * TAU,
     width: (TAU / tuftCount) * (0.55 + rand() * 0.5),
-    strength: 0.55 + rand() * 0.75,
+    strength: 0.3 + rand() * 0.7,
   }));
   const nearestTuft = (a: number) => {
     let best = tufts[0]!;
@@ -144,16 +146,16 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
     const tuft = nearestTuft(a);
     const d = angleDiff(a, tuft.a);
     const q = Math.max(0, 1 - Math.abs(d) / tuft.width);
-    const reach = (0.92 + rand() * 0.1 + 0.2 * q * q * tuft.strength) * lump(a) * sideFactor(a);
-    const r0 = 0.72 + rand() * 0.14;
-    const outer = reach > 1.06;
+    const reach = (0.9 + rand() * rand() * 0.2 + 0.18 * q * q * tuft.strength) * lump(a) * sideFactor(a);
+    const r0 = 0.74 + rand() * 0.14;
+    const outer = reach > 1.04;
     push({
       kind: Kind.Fringe,
       a,
-      pull: -d * (0.35 + 0.3 * q) + (rand() - 0.5) * 0.06,
+      pull: -d * (0.2 + 0.25 * q) + (rand() - 0.5) * 0.08,
       r0,
-      r1: Math.max(r0 + 0.12, reach),
-      w: (outer ? 0.011 : 0.016) + rand() * 0.014,
+      r1: Math.max(r0 + 0.1, reach),
+      w: (outer ? 0.008 : 0.012) + rand() * 0.011,
       bend: (rand() - 0.5) * 0.09,
       phase: tuft.a * 3 + rand() * 1.2,
       wave: 1,
@@ -168,14 +170,53 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
       kind: Kind.Fine,
       a,
       pull: (rand() - 0.5) * 0.2,
-      r0: 0.78 + rand() * 0.1,
-      r1: (1.02 + rand() * 0.22) * lump(a) * sideFactor(a),
+      r0: 0.8 + rand() * 0.08,
+      r1: (1.02 + rand() * rand() * 0.32) * lump(a) * sideFactor(a),
       w: 0.004 + rand() * 0.005,
       bend: (rand() - 0.5) * 0.12,
       phase: rand() * TAU,
       wave: 1.4,
       tone: 0,
-      alpha: 0.25 + rand() * 0.35,
+      alpha: 0.35 + rand() * 0.4,
+    });
+  }
+
+  // Épis : quelques pointes nettes et longues qui hérissent le contour,
+  // surtout en haut et sur les côtés, regroupées autour des touffes.
+  for (let i = 0; i < n.spikes; i++) {
+    const tuft = tufts[Math.floor(rand() * tufts.length)]!;
+    const a = tuft.a + (rand() - 0.5) * tuft.width * 1.2;
+    const up = 0.8 + 0.2 * Math.max(0, -Math.sin(a));
+    push({
+      kind: Kind.Fringe,
+      a,
+      pull: (tuft.a - a) * 0.35 + (rand() - 0.5) * 0.12,
+      r0: 0.76 + rand() * 0.1,
+      r1: (1.06 + rand() * 0.2 * up + 0.08 * tuft.strength) * lump(a) * sideFactor(a),
+      w: 0.009 + rand() * 0.01,
+      bend: (rand() - 0.5) * 0.08,
+      phase: tuft.a * 3 + rand() * 1.2,
+      wave: 1.1,
+      tone: Math.floor(rand() * 3),
+      alpha: 1,
+    });
+  }
+
+  // Duvet : poils très fins et courts entre les épis (le bord doux des peintures).
+  for (let i = 0; i < n.fuzz; i++) {
+    const a = rand() * TAU;
+    push({
+      kind: Kind.Fine,
+      a,
+      pull: (rand() - 0.5) * 0.3,
+      r0: 0.8 + rand() * 0.06,
+      r1: (0.95 + rand() * 0.13) * lump(a) * sideFactor(a),
+      w: 0.005 + rand() * 0.006,
+      bend: (rand() - 0.5) * 0.1,
+      phase: rand() * TAU,
+      wave: 1.2,
+      tone: 0,
+      alpha: 0.25 + rand() * 0.25,
     });
   }
 
@@ -194,7 +235,7 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
       phase: rand() * TAU,
       wave: 0.5,
       tone: 0,
-      alpha: 0.1 + rand() * 0.2,
+      alpha: 0.06 + rand() * 0.12,
     });
   }
 

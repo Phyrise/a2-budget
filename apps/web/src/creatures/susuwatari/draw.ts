@@ -79,14 +79,14 @@ function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame): void 
   const L = 0.2 * S * (0.45 + 0.55 * s.legs);
   const moving = s.state === 'walk' || s.state === 'flee' || Math.hypot(s.vx, s.vy) > 8;
   const air = s.z > 0;
-  ctx.lineWidth = Math.max(0.8, 0.042 * S);
+  ctx.lineWidth = Math.max(0.8, 0.05 * S);
   ctx.lineCap = 'round';
   ctx.strokeStyle = SOOT.limb;
   ctx.fillStyle = SOOT.limb;
   for (const side of [-1, 1] as const) {
-    const hip = apply(m, side * 0.13 * S, 0.3 * S);
+    const hip = apply(m, side * 0.15 * S, 0.3 * S);
     const ground = s.y - s.z;
-    let fx = hip.x + side * 0.035 * S;
+    let fx = hip.x + side * 0.045 * S;
     let fy = ground;
     let toe = 0;
     if (air) {
@@ -118,7 +118,7 @@ function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame): void 
     ctx.stroke();
     // Petit pied arrondi, pointé vers l'avant.
     ctx.beginPath();
-    ctx.ellipse(fx + s.facing * 0.035 * S, fy - 0.012 * S, 0.068 * S, 0.034 * S, s.facing * toe * 0.6, 0, Math.PI * 2);
+    ctx.ellipse(fx + s.facing * 0.04 * S, fy - 0.016 * S, 0.078 * S, 0.04 * S, s.facing * toe * 0.6, 0, Math.PI * 2);
     ctx.fill();
   }
 }

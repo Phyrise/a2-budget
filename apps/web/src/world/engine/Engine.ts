@@ -28,7 +28,7 @@ import { clearOfLantern } from './toro';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
-export { DPR_CAPS, renderDpr, type EngineStats, type QualitySetting } from './quality';
+export { DPR_CAPS, SHARP_DPR, type EngineStats, type QualitySetting } from './quality';
 
 export interface EngineConfig {
   manifest: WorldManifest;
@@ -266,7 +266,7 @@ export class WorldEngine {
     const prevQ = this.cfg.quality;
     const prevV = this.cfg.variant;
     Object.assign(this.cfg, p);
-    if (p.quality !== undefined && p.quality !== prevQ) this.tier = typeof p.quality === 'number' ? p.quality : 0;
+    if (p.quality !== undefined && p.quality !== prevQ) this.tier = this.meter.reset(p.quality);
     if (this.cfg.quality !== prevQ || this.cfg.variant !== prevV) this.applySize();
     this.requestFrame(true);
   }
@@ -280,7 +280,7 @@ export class WorldEngine {
 
   private applySize() {
     const m = this.cfg.manifest;
-    this.dpr = renderDpr(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, this.tier, this.cssW, this.cssH);
+    this.dpr = renderDpr(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, this.tier, this.cssW, this.cssH, this.meter.sharp);
     this.renderer.dpr = this.dpr;
     this.renderer.setSize(this.cssW, this.cssH);
     this.framing = framingFor(this.cfg.variant, this.cssW, this.cssH, m.size);
@@ -376,7 +376,7 @@ export class WorldEngine {
 
   private trackQuality(interval: number) {
     if (this.meter.interval(interval, this.lastNow, this.cfg.quality === 'auto' && this.tier < 2)) {
-      this.tier++;
+      this.tier = this.meter.step(this.tier, this.dpr);
       this.applySize();
     }
   }

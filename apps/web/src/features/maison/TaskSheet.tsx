@@ -3,6 +3,11 @@
  * tour »), quel effort (petit geste · tâche · corvée), quand (jour de
  * semaine ou du mois choisi, ou « dans la semaine » pour une hebdomadaire
  * souple), suppression.
+ *
+ * V4.1 : la feuille tient en entier sur un téléphone (390 × 844) sans
+ * défiler ; à l'ouverture le focus va au titre de la feuille, pas dans le
+ * champ (le clavier ne s'ouvre pas tout seul : on choisit les options, puis
+ * on touche le champ pour écrire) ; « Une fois » par défaut.
  */
 import {
   isoWeekday,
@@ -12,7 +17,7 @@ import {
   type TaskEffort,
   type TaskRecurrence,
 } from '@a2/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Companion, ConfirmDialog, Icon, Segmented, Sheet, TextField, WEEKDAYS, fr, useToast } from '../../ui';
 import { Switch } from '../../ui/Switch';
@@ -27,6 +32,9 @@ const RECURRENCES: ReadonlyArray<{ value: TaskRecurrence; label: string }> = [
   { value: 'monthly', label: 'Chaque mois' },
 ];
 
+/** Récurrence par défaut d'une nouvelle tâche (V4.1 : « Une fois »). */
+const DEFAULT_RECURRENCE: TaskRecurrence = 'none';
+
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 type EffortValue = `${TaskEffort}`;
@@ -36,9 +44,8 @@ const EFFORT_OPTIONS = EFFORTS.map((e) => ({
   ariaLabel: `${e.label} (${e.hint})`,
   label: (
     <span className="effort-option">
-      <EffortArt effort={e.value} size={38} />
+      <EffortArt effort={e.value} size={24} />
       <span className="effort-option__label">{e.label}</span>
-      <span className="effort-option__hint">{e.hint}</span>
     </span>
   ),
 }));
@@ -47,6 +54,25 @@ const WEEK_MODES = [
   { value: 'fixed' as const, label: 'Un jour précis' },
   { value: 'flexible' as const, label: 'Dans la semaine' },
 ];
+
+/**
+ * Focus initial sur le titre de la feuille (« Nouvelle tâche ») : le lecteur
+ * d'écran l'annonce, aucun champ n'est actif, le clavier reste fermé. Le
+ * titre appartient à `Sheet` : on le résout à l'ouverture (lecture paresseuse
+ * de `current`, appelée par `Sheet` une fois la feuille montée).
+ */
+function useSheetHeadingRef(): RefObject<HTMLElement | null> {
+  return useMemo(
+    () => ({
+      get current() {
+        const heading = document.querySelector<HTMLElement>('.task-sheet .sheet__title');
+        if (heading) heading.tabIndex = -1;
+        return heading;
+      },
+    }),
+    [],
+  );
+}
 
 function WhoOption({ who, name, size }: { who: TaskAssignee; name: string; size: number }) {
   return (
@@ -61,11 +87,12 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   const { createHomeTask, updateHomeTask, deleteHomeTask, appState, today } = useApp();
   const toast = useToast();
   const titleRef = useRef<HTMLInputElement>(null);
+  const headingRef = useSheetHeadingRef();
   const editing = state?.mode === 'edit' ? state.task : null;
 
   const [title, setTitle] = useState('');
   const [assignee, setAssignee] = useState<TaskAssignee>('both');
-  const [recurrence, setRecurrence] = useState<TaskRecurrence>('weekly');
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>(DEFAULT_RECURRENCE);
   const [weeklyDay, setWeeklyDay] = useState(1);
   const [monthlyDay, setMonthlyDay] = useState(1);
   const [effort, setEffort] = useState<TaskEffort>(1);
@@ -81,7 +108,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
     const t = state.mode === 'edit' ? state.task : null;
     setTitle(t?.title ?? '');
     setAssignee(t?.assignee ?? 'both');
-    setRecurrence(t?.recurrence ?? 'weekly');
+    setRecurrence(t?.recurrence ?? DEFAULT_RECURRENCE);
     setWeeklyDay(t?.weeklyDay ?? isoWeekday(now));
     setMonthlyDay(t?.monthlyDay ?? now.getDate());
     setEffort(t?.effort ?? 1);
@@ -154,10 +181,10 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   };
 
   const assigneeOptions = [
-    { value: 'a' as const, ariaLabel: names.a, label: <WhoOption who="a" name={names.a} size={26} /> },
-    { value: 'b' as const, ariaLabel: names.b, label: <WhoOption who="b" name={names.b} size={26} /> },
-    { value: 'both' as const, ariaLabel: 'Ensemble', label: <WhoOption who="both" name="Ensemble" size={22} /> },
-    { value: 'unassigned' as const, ariaLabel: 'Libre', label: <WhoOption who="unassigned" name="Libre" size={24} /> },
+    { value: 'a' as const, ariaLabel: names.a, label: <WhoOption who="a" name={names.a} size={22} /> },
+    { value: 'b' as const, ariaLabel: names.b, label: <WhoOption who="b" name={names.b} size={22} /> },
+    { value: 'both' as const, ariaLabel: 'Ensemble', label: <WhoOption who="both" name="Ensemble" size={19} /> },
+    { value: 'unassigned' as const, ariaLabel: 'Libre', label: <WhoOption who="unassigned" name="Libre" size={20} /> },
   ];
 
   return (
@@ -167,7 +194,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
         onClose={onClose}
         title={editing ? 'Modifier la tâche' : 'Nouvelle tâche'}
         size="auto"
-        initialFocusRef={editing ? undefined : titleRef}
+        initialFocusRef={headingRef}
         className="task-sheet"
         footer={
           <>
@@ -228,7 +255,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
             className="task-form__effort"
           />
           <div className="task-form__group">
-            <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={2} />
+            <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={4} className="task-form__when" />
             {recurrence === 'weekly' && (
               <Segmented
                 name="task-weekmode"
@@ -245,7 +272,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
             {recurrence === 'weekly' && flexible && (
               <p className="task-form__note">
                 <Icon name="leaf" size={16} />
-                <span>N’importe quel jour de la semaine, une fois. Pas de jour imposé, pas de retard.</span>
+                <span>Une fois, le jour qui vous arrange. Pas de retard.</span>
               </p>
             )}
             {recurrence === 'weekly' && !flexible && (

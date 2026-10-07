@@ -4,8 +4,9 @@
  * geste (rebalanceSuggestions → applySuggestion, annulable). Jamais de
  * score comparé ni de gagnant (V3_BRIEF §1.2) : les intermédiaires a / b ne
  * servent qu'à incliner la branche ; le détail se limite aux gestes faits,
- * regroupés par tâche, sans décompte. Une ligne d'explication et un
- * « Comment ça marche ? » repliable rendent la carte lisible au premier coup d'œil.
+ * regroupés par tâche, sans décompte. V4.1 : allégée — sous la branche, une
+ * seule phrase courte ; l'explication reste dans « Comment ça marche ? »
+ * (replié).
  */
 import {
   completionsOfWeek,
@@ -25,18 +26,17 @@ import { EffortArt } from './EffortArt';
 import type { Names } from './TaskRow';
 import { assigneeName } from './taskText';
 
-function verdictText(verdict: BalanceVerdict, total: number, names: Names): { title: string; body: string | null } {
+/** Une seule phrase courte sous la branche, selon le verdict. */
+function verdictText(verdict: BalanceVerdict, total: number, names: Names): string {
   switch (verdict) {
     case 'quiet':
-      return total === 0
-        ? { title: 'La semaine commence tout juste.', body: 'Chaque tâche cochée viendra se poser sur la branche.' }
-        : { title: 'La semaine se met en route, doucement.', body: 'Encore trop tôt pour dire de quel côté elle penche.' };
+      return total === 0 ? 'La semaine commence tout juste.' : 'La semaine se met en route, doucement.';
     case 'balanced':
-      return { title: fr(`${names.a} et ${names.b} ont porté la maison à deux.`), body: 'La branche est à l’équilibre. Merci à vous deux.' };
+      return fr(`${names.a} et ${names.b} ont porté la maison à deux. Merci !`);
     case 'a-carried':
-      return { title: fr(`${names.a} a beaucoup porté cette semaine.`), body: fr(`Et si ${names.b} prenait le relais sur une tâche ou deux ?`) };
+      return fr(`${names.a} a beaucoup porté : et si ${names.b} prenait le relais ?`);
     case 'b-carried':
-      return { title: fr(`${names.b} a beaucoup porté cette semaine.`), body: fr(`Et si ${names.a} prenait le relais sur une tâche ou deux ?`) };
+      return fr(`${names.b} a beaucoup porté : et si ${names.a} prenait le relais ?`);
   }
 }
 
@@ -47,19 +47,19 @@ function HowItWorks() {
       <ul className="balance-how">
         <li>
           <EffortArt effort={1} size={26} />
-          <span>Chaque tâche cochée depuis lundi pose un poids du côté de celui ou celle qui l’a faite.</span>
+          <span>Chaque tâche cochée pose un poids du côté de qui l’a faite.</span>
         </li>
         <li>
           <EffortArt effort={3} size={26} />
-          <span>Une corvée pèse plus lourd qu’un petit geste. Une tâche faite ensemble se partage en deux.</span>
+          <span>Une corvée pèse plus qu’un petit geste. Une tâche faite ensemble se partage en deux.</span>
         </li>
         <li>
           <Icon name="repeat" size={22} />
-          <span>Si la branche penche nettement, une idée de relais apparaît (tour à tour, confier une tâche). Rien n’est imposé.</span>
+          <span>Si la branche penche, une idée de relais apparaît. Rien n’est imposé.</span>
         </li>
         <li>
           <Icon name="leaf" size={22} />
-          <span>Pas de score, pas de gagnant&#8239;: juste un miroir pour s’entraider. Tout repart à zéro chaque lundi.</span>
+          <span>Pas de score, pas de gagnant. Tout repart à zéro chaque lundi.</span>
         </li>
       </ul>
     </Disclosure>
@@ -123,9 +123,6 @@ export function BalanceCard({ names }: { names: Names }) {
       <h2 id="balance-title" className="balance__heading">
         Le partage de la semaine
       </h2>
-      <p className="balance__lead">
-        Chaque tâche faite pèse selon son effort — petit geste, tâche, corvée. Les deux galets montrent si la charge est partagée.
-      </p>
       <div className="balance__visual">
         <BalanceStones a={balance.a} b={balance.b} verdict={balance.verdict} />
         <div className="balance__legend" aria-hidden="true">
@@ -140,9 +137,8 @@ export function BalanceCard({ names }: { names: Names }) {
         </div>
       </div>
       <p className="balance__title" data-verdict={balance.verdict}>
-        {text.title}
+        {text}
       </p>
-      {text.body && <p className="balance__body">{text.body}</p>}
 
       {suggestions.length > 0 && (
         <ul className="suggestions" aria-label="Suggestions pour alléger">

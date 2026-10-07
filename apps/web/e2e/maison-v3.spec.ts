@@ -168,8 +168,7 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     // AC a porté une corvée : phrase bienveillante, jamais de chiffre, et une
     // suggestion applicable en un geste (annulable).
     const balance = page.locator('.balance');
-    await expect(balance.locator('.balance__title')).toHaveText('AC a beaucoup porté cette semaine.');
-    await expect(balance.locator('.balance__body')).toHaveText('Et si AL prenait le relais sur une tâche ou deux ?');
+    await expect(balance.locator('.balance__title')).toHaveText('AC a beaucoup porté : et si AL prenait le relais ?');
     await expect(balance).not.toContainText(/\d/);
     const suggestion = balance.locator('.suggestion').filter({ hasText: 'Nettoyer le four' });
     await expect(suggestion).toContainText('tour à tour');

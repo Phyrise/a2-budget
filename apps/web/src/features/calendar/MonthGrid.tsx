@@ -54,6 +54,7 @@ export function MonthGrid({
   byDay,
   tasksByDay,
   coupleDays = NO_DAYS,
+  still = false,
   onSelect,
   labelledBy,
 }: {
@@ -66,6 +67,8 @@ export function MonthGrid({
   tasksByDay: ReadonlyMap<string, TaskItem[]>;
   /** V4.3 — jours de l'anniversaire du couple (petit lampion). */
   coupleDays?: ReadonlySet<string>;
+  /** Forêt « Immobile » : le lampion du jour ne se balance pas. */
+  still?: boolean;
   /** Choisit un jour (le parent change de mois s'il le faut). */
   onSelect: (dateKey: string) => void;
   labelledBy: string;
@@ -168,7 +171,7 @@ export function MonthGrid({
                   <span className="cal-day__num num" aria-hidden="true">
                     {Number(key.slice(8))}
                   </span>
-                  {couple && <Lampion size={13} className="cal-day__lampion" />}
+                  {couple && <Lampion size={13} className={cx('cal-day__lampion', still && 'is-still')} />}
                   <span className="cal-day__dots" aria-hidden="true">
                     {occurrences.slice(0, MAX_DOTS).map((o) => (
                       <KindArt key={`${o.event.id}-${o.date}`} kind={o.event.kind} size={17} className="cal-day__icon" />

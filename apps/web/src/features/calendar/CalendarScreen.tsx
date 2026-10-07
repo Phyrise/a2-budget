@@ -98,7 +98,7 @@ function groupByDay(occurrences: CalendarOccurrence[]): Map<string, CalendarOccu
 
 export function CalendarScreen() {
   const { appState, today, removeCalendarEvent, restoreCalendarEvent } = useApp();
-  const { setForegroundSheet, openSheet } = useShell();
+  const { setForegroundSheet, openSheet, prefs } = useShell();
   const toast = useToast();
   const now = useNow();
   const todayKey = localDateKey(today);
@@ -243,6 +243,7 @@ export function CalendarScreen() {
             byDay={byDay}
             tasksByDay={tasksByDay}
             coupleDays={coupleDays}
+            still={prefs.forestMotion === 'still'}
             onSelect={selectDay}
             labelledBy="cal-grid-label"
           />

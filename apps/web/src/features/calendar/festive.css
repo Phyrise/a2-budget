@@ -14,7 +14,7 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .cal-day.is-couple-day.is-today .cal-day__lampion {
+  .cal-day.is-couple-day.is-today .cal-day__lampion:not(.is-still) {
     animation: cal-lampion-sway 3.6s ease-in-out infinite;
   }
 }

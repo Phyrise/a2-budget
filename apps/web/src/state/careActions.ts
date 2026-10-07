@@ -38,6 +38,8 @@ export interface CircleInput {
 
 /** Saisie d'une session de lanterne terminée. */
 export interface FocusInput {
+  /** Id de la session (celui du minuteur) : un second envoi est ignoré. Défaut : nouvel id. */
+  id?: string;
   /** Minutes entières 1..120. */
   minutes: number;
   who: ChoreDoer;
@@ -152,7 +154,7 @@ export function useCareActions(transact: Transact): CareActions {
   const addFocusSession = useCallback(
     (input: FocusInput): FocusSession | null => {
       const now = new Date();
-      const id = newId();
+      const id = input.id ?? newId();
       const startedAt =
         input.startedAt ?? new Date(now.getTime() - Math.max(0, input.minutes) * 60_000).toISOString();
       return transact<FocusSession | null>((s) => {

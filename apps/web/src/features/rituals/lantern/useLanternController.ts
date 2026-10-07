@@ -8,7 +8,11 @@
  * - V4 : la forêt allume la lanterne de pierre choisie (le moteur la lit
  *   dans focus.selectedLantern) ; si la session terminée débloque un nouveau
  *   modèle (nextLantern), il est noté pour l'annonce du bandeau ;
- * - une lanterne arrêtée avant la première minute est simplement oubliée.
+ * - une lanterne arrêtée avant la première minute est simplement oubliée ;
+ * - V4.2 : la session est mémorisée sous son propre id (sessionId) — un
+ *   second passage (double montage, StrictMode, session restaurée après un
+ *   rechargement) ne la compte jamais deux fois — et seulement une fois les
+ *   données chargées (sinon elle serait marquée mémorisée sans l'être).
  */
 import { completedFocusCount, nextLantern } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
@@ -70,6 +74,7 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
   const { addFocusSession, appState } = useApp();
   const focusRef = useRef(appState?.focus);
   focusRef.current = appState?.focus;
+  const loaded = appState !== null && appState !== undefined;
   const { focus } = useWorld();
   const visible = usePageVisible();
   const onFinishedRef = useRef(onFinished);
@@ -106,7 +111,11 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
   // Fin : floraison, carillon, mémoire (une seule fois par session, même si
   // la lanterne s'est achevée pendant que Maison n'était pas affichée).
   useEffect(() => {
-    if (s.phase !== 'done' || s.config === null || s.celebrated) return;
+    if (s.phase !== 'done' || s.config === null || s.celebrated || !loaded) return;
+    // État vivant, pas l'instantané du rendu : un second passage de l'effet
+    // (StrictMode, double montage) trouve la fête déjà faite.
+    const live = getLantern();
+    if (live.sessionId !== s.sessionId || live.celebrated) return;
     lantern.markCelebrated();
     const config = s.config;
     if (s.completed) {
@@ -122,10 +131,13 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
     }
     if (!s.recorded && s.minutesSpent >= 1) {
       const before = focusRef.current;
+      const id = s.sessionId ?? undefined;
+      const known = id !== undefined && (before?.sessions.some((x) => x.id === id) ?? false);
       const upcoming = nextLantern(before);
       // Seules les sessions menées au bout comptent pour les lanternes de pierre.
       const count = completedFocusCount(before);
       const saved = addFocusSession({
+        id,
         completed: s.completed,
         minutes: Math.min(120, s.minutesSpent),
         who: config.who,
@@ -134,10 +146,10 @@ export function useLanternController({ onFinished }: { onFinished?: () => void }
         startedAt: new Date(s.startedAt).toISOString(),
       });
       lantern.markRecorded();
-      if (saved && s.completed && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
+      if (saved && !known && s.completed && upcoming && upcoming.unlockAt <= count + 1) lantern.markUnlocked(upcoming.id);
     }
     if (s.completed) onFinishedRef.current?.();
-  }, [s, focus, addFocusSession]);
+  }, [s, loaded, focus, addFocusSession]);
 
   // Arrêtée avant la première minute : rien à mémoriser ni à raconter.
   useEffect(() => {

@@ -3,6 +3,11 @@
  * démontage de Maison (changement de module) le temps de la session.
  * Le temps est toujours calculé depuis l'horloge (Date.now), jamais en
  * comptant des ticks : une mise en arrière-plan ne fausse rien.
+ * V4.2 : la session en cours (ou finie mais pas encore mémorisée) est aussi
+ * gardée sous une clé dédiée `a2-budget:lantern:v1` (comme les petits sons) :
+ * un rechargement, une app tuée en arrière-plan ou une mise à jour ne font
+ * plus perdre une lanterne menée au bout. Lecture et écriture protégées ;
+ * rien d'illisible n'est restauré.
  */
 import { useSyncExternalStore } from 'react';
 
@@ -62,11 +67,94 @@ const INITIAL: LanternState = {
 /** Dernière durée choisie (menu ⋯ d'une tâche, préparation) : le temps de la visite. */
 let lastMinutes = 10;
 
-let state: LanternState = INITIAL;
+const KEY = 'a2-budget:lantern:v1';
+
+/** Ce qui est gardé d'une session : de quoi la reprendre, ou la mémoriser. */
+type SavedLantern = Pick<
+  LanternState,
+  'phase' | 'config' | 'sessionId' | 'startedAt' | 'pausedMs' | 'pausedAt' | 'endedAt' | 'completed' | 'minutesSpent'
+>;
+
+/**
+ * À garder : une lanterne qui brûle (ou en pause), ou finie et pas encore
+ * mémorisée (au moins une minute). Sinon null (la clé est effacée).
+ */
+export function savedLantern(s: LanternState): SavedLantern | null {
+  const live = s.phase === 'running' || s.phase === 'paused';
+  const pending = s.phase === 'done' && !s.recorded && s.minutesSpent >= 1;
+  if ((!live && !pending) || s.config === null || s.sessionId === null) return null;
+  const { phase, config, sessionId, startedAt, pausedMs, pausedAt, endedAt, completed, minutesSpent } = s;
+  return { phase, config, sessionId, startedAt, pausedMs, pausedAt, endedAt, completed, minutesSpent };
+}
+
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isInt = (v: unknown, min: number, max: number): v is number => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
+
+/** Relit une session gardée ; null si absente ou illisible. Pur. */
+export function restoreLantern(raw: unknown): LanternState | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const v = raw as Record<string, unknown>;
+  const c = v.config as Record<string, unknown> | null | undefined;
+  if (v.phase !== 'running' && v.phase !== 'paused' && v.phase !== 'done') return null;
+  if (typeof v.sessionId !== 'string' || v.sessionId === '' || typeof c !== 'object' || c === null) return null;
+  if (!isInt(c.minutes, 1, 120) || (c.who !== 'a' && c.who !== 'b' && c.who !== 'both')) return null;
+  if (c.taskId !== undefined && typeof c.taskId !== 'string') return null;
+  if (c.label !== undefined && typeof c.label !== 'string') return null;
+  if (!isNum(v.startedAt) || v.startedAt <= 0 || !isNum(v.pausedMs) || v.pausedMs < 0) return null;
+  if (v.pausedAt !== null && !isNum(v.pausedAt)) return null;
+  if (v.phase === 'paused' && v.pausedAt === null) return null;
+  if (v.phase === 'done' && (!isNum(v.endedAt) || typeof v.completed !== 'boolean' || !isInt(v.minutesSpent, 1, 120))) return null;
+  const config: LanternConfig = { minutes: c.minutes, who: c.who };
+  if (typeof c.taskId === 'string') config.taskId = c.taskId;
+  if (typeof c.label === 'string') config.label = c.label;
+  const done = v.phase === 'done';
+  return {
+    ...INITIAL,
+    phase: v.phase,
+    config,
+    sessionId: v.sessionId,
+    startedAt: v.startedAt,
+    pausedMs: v.pausedMs,
+    pausedAt: v.phase === 'paused' ? (v.pausedAt as number) : null,
+    endedAt: done ? (v.endedAt as number) : null,
+    completed: done ? (v.completed as boolean) : false,
+    minutesSpent: done ? (v.minutesSpent as number) : 0,
+  };
+}
+
+function load(): LanternState {
+  try {
+    if (typeof window === 'undefined') return INITIAL;
+    const raw = window.localStorage.getItem(KEY);
+    return (raw === null ? null : restoreLantern(JSON.parse(raw))) ?? INITIAL;
+  } catch {
+    return INITIAL;
+  }
+}
+
+/** Dernier texte écrit (undefined : rien encore, la première écriture passe toujours). */
+let written: string | null | undefined;
+
+function save(s: LanternState) {
+  const saved = savedLantern(s);
+  const text = saved === null ? null : JSON.stringify(saved);
+  if (text === written) return;
+  written = text;
+  try {
+    if (text === null) window.localStorage.removeItem(KEY);
+    else window.localStorage.setItem(KEY, text);
+  } catch {
+    // Stockage indisponible (navigation privée…) : la lanterne vit en mémoire.
+  }
+}
+
+let state: LanternState = load();
+if (state.config) lastMinutes = state.config.minutes;
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<LanternState>) {
   state = { ...state, ...patch };
+  if (typeof window !== 'undefined') save(state);
   listeners.forEach((l) => l());
 }
 

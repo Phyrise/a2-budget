@@ -5,6 +5,8 @@
  * le mois dernier »). Plus de curseur : faire défiler ne change rien.
  * Les compléments restent repliés derrière « + Compléments » tant qu'ils
  * valent 0 : le bouton ouvre directement le pavé.
+ * V4.2 : la part à verser au compte commun s'affiche en bas de la carte
+ * (montant de `monthFlows`, le même que le virement de « Ce mois-ci »).
  */
 import type { ContributionBreakdown, MonthRecord } from '@a2/core';
 import { monthKeyToLabel } from '@a2/core';
@@ -18,7 +20,18 @@ function elide(name: string): string {
   return /^[aeiouyhâàéèêîïôûAEIOUYHÂÀÉÈÊÎÏÔÛ]/u.test(name) ? `d’${name}` : `de${NBSP}${name}`;
 }
 
-export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month: MonthRecord; source: ShortcutSource }) {
+export function PersonCard({
+  person,
+  month,
+  source,
+  giveCents,
+}: {
+  person: 'A' | 'B';
+  month: MonthRecord;
+  source: ShortcutSource;
+  /** Part à verser au compte commun ce mois (euros entiers, en centimes). */
+  giveCents: number;
+}) {
   const { setSalary, setBonus } = useApp();
   const who = person === 'A' ? 'a' : 'b';
   const settings = person === 'A' ? month.personA : month.personB;
@@ -99,6 +112,12 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
           />
         )}
       </div>
+      <p className="person-card__give">
+        <span>À verser</span>
+        <strong className="amount" data-testid={`contribution-${who}`}>
+          {euro(giveCents)}
+        </strong>
+      </p>
     </article>
   );
 }

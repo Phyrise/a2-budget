@@ -1,8 +1,9 @@
 /**
  * Corrections V4 du budget : consulter un mois n'écrit rien (le solde du
  * mois courant ne bouge pas), recalage seulement sur le mois courant,
- * annuler la suppression d'une dépense cochée la remet à l'identique,
- * invitation douce tant que le solde n'a jamais été recalé.
+ * annuler la suppression d'une dépense cochée la remet à l'identique.
+ * V4.2 : plus de phrase « Estimé depuis… recalez… » ; le recalage reste,
+ * discret, sous le solde.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, monthKey, openApp, persisted, sheet } from './helpers';
@@ -72,14 +73,13 @@ test('annuler le retrait d’une dépense cochée : même place, toujours coché
   await expect.poll(ids).toEqual(order);
 });
 
-test('solde jamais recalé : invitation douce, qui disparaît après un recalage', async ({ page }) => {
+test('solde jamais recalé : aucune phrase d’invitation, le recalage reste à portée', async ({ page }) => {
   await openApp(page, 'budget');
-  const hint = page.getByTestId('balance-unconfirmed');
-  await expect(hint).toContainText('recalez quand vous regardez le vrai compte');
+  await expect(page.getByText(/recalez quand vous regardez/u)).toHaveCount(0);
   await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
   const dialog = sheet(page, 'Recaler sur le compte');
   await page.locator('#recalibrate-amount').fill('1200');
   await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
   await expect(dialog).toBeHidden();
-  await expect(hint).toHaveCount(0);
+  await expect(page.getByTestId('balance-now')).toHaveText(/1\s200\s€/u);
 });

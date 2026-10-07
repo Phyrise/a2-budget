@@ -9,18 +9,6 @@
   background: linear-gradient(180deg, rgba(26, 44, 35, 0.6), rgba(19, 33, 26, 0.6));
 }
 
-.shared-rates__note {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(221, 179, 106, 0.08);
-  color: var(--ivory-200);
-  font-size: 13.5px;
-  line-height: 1.45;
-}
-
 .shared-rates__example {
   padding-top: 12px;
   border-top: 1px dashed rgba(185, 198, 189, 0.16);

@@ -54,13 +54,18 @@ commentaires. Points clés :
   personne (compatibilité) ; `setSharedRates(target, base, variable)` écrit
   les deux personnes (réglages ou règles d'un mois), `sharedRates(settings)`
   lit (la personne A fait foi si elles diffèrent), `hasSharedRates` indique
-  si elles sont déjà alignées. Les données existantes (réglages et mois) ne
-  sont jamais réécrites automatiquement, mais un **nouveau mois**
-  (`createMonthRecord`) et « Appliquer au mois affiché »
-  (`applySettingsToMonth`) prennent toujours les taux communs
-  `sharedRates(settings)` : ce que l'interface affiche comme « Taux communs »
-  est bien ce qui est calculé, même si d'anciens réglages divergent encore
-  (les Réglages le signalent avec « Les rendre communs »).
+  si elles sont déjà alignées. Un **nouveau mois** (`createMonthRecord`)
+  prend toujours les taux communs `sharedRates(settings)`.
+- **V4.2 — taux globaux** : `applySharedRates(state, base, variable,
+  fromMonthKey)` écrit les taux dans les réglages ET dans chaque mois de
+  clé ≥ `fromMonthKey` (le mois courant réel) ; les mois passés gardent les
+  leurs (historique clos : le solde reporté ne bouge jamais). Migration au
+  chargement et à l'import (`alignBudgetRules(state, fromMonthKey)`, pure,
+  idempotente, appelée par `prepareBudget`) : réglages A ≠ B alignés sur A,
+  appliqués au mois courant et aux suivants ; réserve neutralisée (0 dans
+  les réglages et pour le mois courant et les suivants, champs conservés).
+  Plus de taux propres à un mois ni d'« Appliquer au mois affiché » dans
+  l'interface (`applySettingsToMonth` reste dans l'API, inutilisé).
 - **Normalisation des données existantes** (`normalizeMonthIncome`, pure,
   idempotente) : pour une personne sans compléments (ancien modèle),
   `compléments = max(0, salaire − salaireDeBase du mois)` et
@@ -215,6 +220,11 @@ export function setSharedRates<T extends { personA; personB }>(
   target: T, baseRateBps: number, variableRateBps: number,
 ): T;                                           // Settings ou MonthRecord
 export function monthIncomeCents(month: MonthRecordInput, person: 'A' | 'B'): number;
+// V4.2 — taux globaux, réserve retirée (même référence si rien ne change)
+export function applySharedRates<S extends { settings; months }>(
+  state: S, baseRateBps: number, variableRateBps: number, fromMonthKey: string,
+): S;
+export function alignBudgetRules<S extends { settings; months }>(state: S, fromMonthKey: string): S;
 
 // Montants
 export function parseAmountInput(raw: string): ParseAmountResult;
@@ -328,11 +338,11 @@ Sémantique :
     `prepareApp`).
   - Revenus (V3.1) : `setSalary(monthKey, person, cents)`,
     `setBonus(monthKey, person, cents)` (compléments ; invalide ignoré),
-    `setSharedRates(base, variable)` (réglages, les deux personnes ; nouveaux
-    mois), `setMonthSharedRates(monthKey, base, variable)` (règles du mois
-    indiqué, action explicite ; taux invalides ignorés ; le Budget propose
-    « Annuler » via `restoreMonthRates(monthKey, previous)`),
-    `updatePersonSettings` (nom, salaire habituel).
+    `setSharedRates(base, variable)` (V4.2 : globaux, `applySharedRates`
+    depuis le mois courant réel ; taux invalides ignorés),
+    `updatePersonSettings` (nom, salaire habituel). V4.2 : plus de
+    `setMonthSharedRates` / `restoreMonthRates`, `setReserve`,
+    `setDefaultReserve` ni `applySettingsToCurrentMonth`.
   - **Mode de récupération** (`recovery`) : si les données locales sont
     illisibles (JSON corrompu, version inconnue) ou le stockage inaccessible,
     l'état en mémoire reste utilisable (état neuf) mais **aucune écriture n'est

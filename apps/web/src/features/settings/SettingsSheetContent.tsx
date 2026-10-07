@@ -1,11 +1,12 @@
 /**
- * Réglages (feuille) : personnes (prénom, salaire habituel), taux communs au
- * curseur, dépenses récurrentes, réserve par défaut, « Appliquer au mois
- * affiché », maison en pause, préférences (forêt, sons), sauvegarde,
- * recommencer à zéro, à propos. Les valeurs par défaut s'appliquent aux
- * nouveaux mois ; les mois existants ne changent jamais sans action explicite.
+ * Réglages (feuille), allégés en V4.2 : vous deux (prénom au crayon, salaire
+ * habituel sur une ligne), taux communs au curseur (globaux : mois courant et
+ * suivants), dépenses récurrentes (nouveaux mois), préférences (forêt
+ * vivante / immobile, sons), sauvegarde, recommencer à zéro, à propos.
+ * Plus de réserve, d'« Appliquer au mois affiché » ni de pause ici (la pause
+ * reste dans l'en-tête, avec la lune).
  */
-import { monthKeyToLabel, type PersonSettings } from '@a2/core';
+import type { PersonSettings } from '@a2/core';
 import { useState, type ReactNode } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { exportFilename } from '../../state/exportImport';
@@ -19,7 +20,6 @@ import {
   InlineTextField,
   Segmented,
   Switch,
-  useToast,
   type IconName,
 } from '../../ui';
 import type { WorldMotion } from '../../world/types';
@@ -27,7 +27,6 @@ import { ExpenseAddForm, ExpenseEditorList } from '../budget/ExpenseList';
 import { ImportControl } from './ImportControl';
 import { SharedRatesEditor } from './SharedRates';
 import { SoundSetting } from '../../app/sound';
-import { usePauseToggle } from '../../app/usePauseToggle';
 import './settings.css';
 
 function Section({ id, icon, title, children, description }: { id: string; icon: IconName; title: string; description?: ReactNode; children: ReactNode }) {
@@ -57,14 +56,20 @@ function PersonSettingsCard({ person, settings }: { person: 'A' | 'B'; settings:
       <div className="settings-person__head">
         <Companion who={who} size={46} />
         <div className="settings-person__name">
-          <InlineTextField
-            id={`person-name-${who}`}
-            label={`Prénom (compagnon : ${person === 'A' ? 'Jiji' : 'Calcifer'})`}
-            value={settings.name}
-            onCommit={(name) => renamePerson(person, name)}
-            maxLength={24}
-            appearance="large"
-          />
+          <div className="settings-person__edit">
+            <InlineTextField
+              id={`person-name-${who}`}
+              label={`Prénom (compagnon : ${person === 'A' ? 'Jiji' : 'Calcifer'})`}
+              value={settings.name}
+              onCommit={(name) => renamePerson(person, name)}
+              maxLength={24}
+              appearance="large"
+            />
+            {/* Le crayon dit « modifiable » ; le toucher place le curseur dans le prénom. */}
+            <label htmlFor={`person-name-${who}`} className="settings-person__pencil" aria-hidden="true">
+              <Icon name="edit" size={17} />
+            </label>
+          </div>
           <p className="settings-person__companion" aria-hidden="true">
             avec {person === 'A' ? 'Jiji' : 'Calcifer'}
           </p>
@@ -75,48 +80,34 @@ function PersonSettingsCard({ person, settings }: { person: 'A' | 'B'; settings:
         label="Salaire habituel"
         valueCents={settings.baseSalaryCents}
         onCommit={(cents) => updatePersonSettings(person, { baseSalaryCents: cents })}
+        className="settings-person__salary"
       />
     </div>
   );
 }
 
-const MOTION_OPTIONS: ReadonlyArray<{ value: WorldMotion; label: string }> = [
+/** V4.2 : deux choix seulement (l'ancienne « douce » se lit « vivante », app/prefs.ts). */
+type ForestChoice = Extract<WorldMotion, 'full' | 'still'>;
+
+const MOTION_OPTIONS: ReadonlyArray<{ value: ForestChoice; label: string }> = [
   { value: 'full', label: 'Vivante' },
-  { value: 'gentle', label: 'Douce' },
   { value: 'still', label: 'Immobile' },
 ];
 
-const MOTION_HELP: Record<WorldMotion, string> = {
+const MOTION_HELP: Record<ForestChoice, string> = {
   full: 'La brume dérive, l’eau coule, les fougères bougent.',
-  gentle: 'Mouvements réduits de moitié, sans dérive automatique.',
   still: 'Images fixes, en fondu. Idéal pour économiser la batterie.',
 };
 
 export function SettingsSheetContent() {
-  const {
-    state,
-    appState,
-    currentMonth,
-    updateRecurringExpense,
-    removeRecurringExpense,
-    addRecurringExpense,
-    setDefaultReserve,
-    applySettingsToCurrentMonth,
-    exportJson,
-    confirmReset,
-  } = useApp();
+  const { state, updateRecurringExpense, removeRecurringExpense, addRecurringExpense, exportJson, confirmReset } = useApp();
   const { prefs, updatePrefs } = useShell();
-  const toast = useToast();
-  const { toggle: togglePause } = usePauseToggle();
   const [adding, setAdding] = useState(false);
-  const [confirmApply, setConfirmApply] = useState(false);
   const [confirmReset2, setConfirmReset2] = useState(false);
-  const [applied, setApplied] = useState(false);
 
-  if (state === null || appState === null) return null;
+  if (state === null) return null;
   const settings = state.settings;
-  const paused = appState.forest.paused;
-  const monthLabel = currentMonth ? monthKeyToLabel(currentMonth.monthKey) : 'le mois affiché';
+  const motion: ForestChoice = prefs.forestMotion === 'still' ? 'still' : 'full';
 
   const doExport = () => {
     const json = exportJson();
@@ -134,19 +125,12 @@ export function SettingsSheetContent() {
 
   return (
     <div className="settings">
-      <Section id="people" icon="users" title="Vous deux" description="Vos prénoms et votre salaire mensuel habituel.">
-        <div className="settings-people">
-          <PersonSettingsCard person="A" settings={settings.personA} />
-          <PersonSettingsCard person="B" settings={settings.personB} />
-        </div>
-      </Section>
+      <div className="settings-people" role="group" aria-label="Vous deux">
+        <PersonSettingsCard person="A" settings={settings.personA} />
+        <PersonSettingsCard person="B" settings={settings.personB} />
+      </div>
 
-      <Section
-        id="rates"
-        icon="budget"
-        title="Taux communs"
-        description="Les mêmes pour vous deux : la part de chaque revenu versée au pot commun. Ils s’appliquent aux nouveaux mois."
-      >
+      <Section id="rates" icon="budget" title="Taux communs">
         <SharedRatesEditor settings={settings} />
       </Section>
 
@@ -169,56 +153,16 @@ export function SettingsSheetContent() {
         )}
       </Section>
 
-      <Section id="reserve" icon="shield" title="Réserve" description="Ce que vous souhaitez mettre de côté chaque mois. 0 = pas de réserve.">
-        <AmountInput
-          id="default-reserve"
-          label="Réserve par défaut"
-          valueCents={settings.defaultReserveTargetCents}
-          onCommit={setDefaultReserve}
-        />
-      </Section>
-
-      <Section
-        id="apply"
-        icon="calendar"
-        title="Appliquer au mois affiché"
-        description={
-          <>
-            Remplace les taux, dépenses et réserve de <strong>{monthLabel}</strong> par ces réglages. Les salaires et compléments
-            saisis sont conservés.
-          </>
-        }
-      >
-        <Button variant="quiet" icon="check" onClick={() => setConfirmApply(true)}>
-          Appliquer à {monthLabel}
-        </Button>
-        {applied && (
-          <p className="settings__note" role="status">
-            <Icon name="check" size={16} /> Réglages appliqués à {monthLabel}.
-          </p>
-        )}
-      </Section>
-
-      <Section id="pause" icon="moon" title="Maison en pause" description="Vacances, semaine chargée, coup de fatigue : la forêt dort, rien ne se perd.">
-        <Switch
-          id="home-pause"
-          checked={paused}
-          onChange={togglePause}
-          label="Maison en pause"
-          description={paused ? 'La forêt dort. Elle reprendra où vous l’avez laissée.' : 'Aussi d’un geste, avec la lune en haut de Maison.'}
-        />
-      </Section>
-
       <Section id="prefs" icon="leaf" title="Préférences" description="Rien que pour cet appareil.">
         <div className="settings__motion">
           <Segmented
             name="forest-motion"
             legend="Forêt"
             options={MOTION_OPTIONS}
-            value={prefs.forestMotion}
+            value={motion}
             onChange={(forestMotion) => updatePrefs({ forestMotion })}
           />
-          <p className="field__hint">{MOTION_HELP[prefs.forestMotion]}</p>
+          <p className="field__hint">{MOTION_HELP[motion]}</p>
         </div>
         <SoundSetting />
       </Section>
@@ -244,10 +188,6 @@ export function SettingsSheetContent() {
           <Companion who="b" size={38} mood="sleepy" />
         </div>
         <p className="settings-about__name display">A² Home</p>
-        <p className="settings-about__text">
-          Notre quotidien à deux&nbsp;: budget, maison, courses et calendrier. Vos données restent sur cet appareil — aucun
-          compte, aucune connexion.
-        </p>
         <div className="settings-about__dev">
           <Switch
             id="dev-mode"
@@ -262,21 +202,6 @@ export function SettingsSheetContent() {
           />
         </div>
       </section>
-
-      <ConfirmDialog
-        open={confirmApply}
-        title={`Appliquer à ${monthLabel} ?`}
-        confirmLabel="Appliquer"
-        onCancel={() => setConfirmApply(false)}
-        onConfirm={() => {
-          setConfirmApply(false);
-          applySettingsToCurrentMonth();
-          setApplied(true);
-          toast.show({ message: `Réglages appliqués à ${monthLabel}`, icon: 'check' });
-        }}
-      >
-        <p>Les taux, les dépenses et la réserve de ce mois seront remplacés par les réglages actuels. Les salaires et compléments saisis restent.</p>
-      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirmReset2}

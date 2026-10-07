@@ -18,7 +18,7 @@ export const MODULES: ReadonlyArray<{ id: ModuleId; label: string }> = [
 export interface UiPrefs {
   /** Dernier module ouvert. */
   module: ModuleId;
-  /** Préférence « Forêt » : vivante / douce / immobile. */
+  /** Préférence « Forêt » : vivante / immobile (V4.2 : l'ancienne « douce » se lit « vivante »). */
   forestMotion: WorldMotion;
   /** Le gardien a déjà été montré (joué une seule fois). */
   guardianSeen: boolean;
@@ -51,8 +51,9 @@ export function isModuleId(value: unknown): value is ModuleId {
   return value === 'budget' || value === 'maison' || value === 'courses' || value === 'calendar';
 }
 
-function isMotion(value: unknown): value is WorldMotion {
-  return value === 'full' || value === 'gentle' || value === 'still';
+/** V4.2 : « douce » a quitté les Réglages ; une préférence enregistrée 'gentle' se lit 'full'. */
+function readMotion(value: unknown): WorldMotion {
+  return value === 'still' ? 'still' : value === 'full' || value === 'gentle' ? 'full' : DEFAULT_PREFS.forestMotion;
 }
 
 export function readPrefs(): UiPrefs {
@@ -62,7 +63,7 @@ export function readPrefs(): UiPrefs {
     const value = JSON.parse(raw) as Partial<Record<keyof UiPrefs, unknown>>;
     return {
       module: isModuleId(value.module) ? value.module : DEFAULT_PREFS.module,
-      forestMotion: isMotion(value.forestMotion) ? value.forestMotion : DEFAULT_PREFS.forestMotion,
+      forestMotion: readMotion(value.forestMotion),
       guardianSeen: value.guardianSeen === true,
       offlineAnnounced: value.offlineAnnounced === true,
       upcomingOpen: value.upcomingOpen === true,

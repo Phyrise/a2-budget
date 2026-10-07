@@ -5,8 +5,8 @@
  * Sémantique, unités et cas limites : docs/CONTRACTS.md.
  *
  * Ce fichier ne fait que ré-exporter ; les implémentations vivent dans
- * amounts.ts, calculations.ts, income.ts, months.ts, state.ts et (V4)
- * euros.ts, payments.ts, accountBalance.ts.
+ * amounts.ts, calculations.ts, income.ts, months.ts, state.ts, (V4)
+ * euros.ts, payments.ts, accountBalance.ts et (V4.2) sharedRules.ts.
  */
 
 export * from './types.js';
@@ -71,6 +71,9 @@ export {
   setSharedRates,
   monthIncomeCents,
 } from './income.js';
+
+// V4.2 — taux globaux (réglages + mois courant et suivants), réserve retirée.
+export { applySharedRates, alignBudgetRules } from './sharedRules.js';
 
 export {
   currentMonthKey,

@@ -26,7 +26,7 @@ test('la page de production se charge sur Maison', async ({ page }) => {
   expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
 });
 
-test('lune de l’en-tête : pause annulable, soleil pour réveiller ; réglage « Maison en pause »', async ({ page }) => {
+test('lune de l’en-tête : pause annulable, soleil pour réveiller (seul endroit de la pause)', async ({ page }) => {
   await openApp(page);
   const header = page.locator('.app-header');
   await header.getByRole('button', { name: 'Mettre la maison en pause', exact: true }).click();
@@ -43,16 +43,9 @@ test('lune de l’en-tête : pause annulable, soleil pour réveiller ; réglage 
   await header.getByRole('button', { name: 'Réveiller la forêt', exact: true }).click();
   await expect.poll(async () => (await persisted(page)).forest.paused).toBe(false);
 
-  // Le même réglage dans les Réglages.
+  // V4.2 : plus de réglage « Maison en pause » dans les Réglages.
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
-  const settings = sheet(page, 'Réglages');
-  const toggle = settings.getByRole('switch', { name: 'Maison en pause' });
-  await expect(toggle).toHaveAttribute('aria-checked', 'false');
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-checked', 'true');
-  await expect.poll(async () => (await persisted(page)).forest.paused).toBe(true);
-  await toggle.click();
-  await expect.poll(async () => (await persisted(page)).forest.paused).toBe(false);
+  await expect(sheet(page, 'Réglages').getByRole('switch', { name: 'Maison en pause' })).toHaveCount(0);
 });
 
 test.describe('Clavier virtuel (écran tactile)', () => {

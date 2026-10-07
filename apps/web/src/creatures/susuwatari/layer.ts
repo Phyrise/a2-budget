@@ -3,7 +3,8 @@
  * Noiraude), sa boucle d'animation et son cache de sprites.
  *
  * - Densité réelle de l'écran (devicePixelRatio, plafonnée à 3) ; la toile
- *   suit sa taille CSS (ResizeObserver).
+ *   suit sa taille CSS (ResizeObserver). Garde-fou : si l'appareil peine
+ *   (moins de ~45 i/s soutenus), la densité descend à 2 puis 1,5.
  * - Boucle en pause quand l'onglet est caché ou le calque `paused`.
  * - prefers-reduced-motion (suivi en direct) : mouvements calmes.
  * - `night` : seuls les yeux restent visibles.
@@ -22,6 +23,8 @@ import { SpriteCache } from './sprites';
 export interface SusuwatariLayerOptions {
   /** Plafond de densité (défaut 3). */
   maxDpr?: number;
+  /** Baisse la densité si l'appareil peine (défaut true). */
+  adaptive?: boolean;
   /** Lueur des pointes et halo pour les fonds sombres (0–1, défaut 0). */
   rim?: number;
   /** Opacité de l'ombre au sol (défaut 1, 0 : aucune). */
@@ -49,8 +52,8 @@ export interface SusuwatariLayer {
   hitTest(x: number, y: number): Susuwatari | null;
   area(): Rect;
   view(): Rect;
-  /** Images par seconde mesurées et durée moyenne d'une image (ms). */
-  stats(): { fps: number; frameMs: number };
+  /** Images par seconde mesurées, durée moyenne d'une image (ms), densité. */
+  stats(): { fps: number; frameMs: number; dpr: number };
   destroy(): void;
 }
 
@@ -65,7 +68,7 @@ function reducedQuery(): MediaQueryList | null {
 export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: SusuwatariLayerOptions = {}): SusuwatariLayer {
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('Canvas 2D indisponible');
-  const maxDpr = options.maxDpr ?? 3;
+  let maxDpr = options.maxDpr ?? 3;
   const cache = new SpriteCache(options.rim ?? 0);
   const creatures: Susuwatari[] = [];
   const query = reducedQuery();
@@ -82,6 +85,9 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   let fps = 60;
   let frameMs = 0;
   let destroyed = false;
+  // Garde-fou de densité : intervalle moyen sur une fenêtre de 90 images.
+  let slowSum = 0;
+  let slowCount = 0;
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
@@ -105,7 +111,22 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     if (destroyed || paused || document.visibilityState === 'hidden') return;
     const start = performance.now();
     const dt = last === 0 ? 1 / 60 : Math.min(0.05, (now - last) / 1000);
-    if (last !== 0) fps = fps * 0.95 + (1000 / Math.max(1, now - last)) * 0.05;
+    if (last !== 0) {
+      fps = fps * 0.95 + (1000 / Math.max(1, now - last)) * 0.05;
+      // Les images où des sprites ont été peints ne comptent pas.
+      if (options.adaptive !== false && time > 2 && dpr > 1.5 && cache.builtAt < last) {
+        slowSum += now - last;
+        slowCount += 1;
+        if (slowCount >= 90) {
+          if (slowSum / slowCount > 22) {
+            maxDpr = dpr > 2 ? 2 : 1.5;
+            resize();
+          }
+          slowSum = 0;
+          slowCount = 0;
+        }
+      }
+    }
     last = now;
     time += dt;
 
@@ -202,7 +223,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     },
     area,
     view,
-    stats: () => ({ fps, frameMs }),
+    stats: () => ({ fps, frameMs, dpr }),
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);

@@ -1,7 +1,7 @@
 /**
  * Dessin d'une Noiraude à chaque image, sur la toile du calque :
- * ombre → pattes et bras (derrière le corps) → halo → frange (deux images
- * fondues) → cœur → yeux. Seulement des drawImage et quelques traits fins ;
+ * ombre → pattes et bras (derrière le corps) → halo → corps (une ou deux
+ * images de frisottis) → yeux. Seulement des drawImage et quelques traits fins ;
  * tout ce qui est flou ou dense a été pré-rendu (sprites.ts).
  *
  * Le corps est dessiné dans son propre repère (centre du corps, inclinaison,
@@ -9,6 +9,9 @@
  */
 import type { Point, Susuwatari } from './creature';
 import { EYE, FRAMES, SOOT, shadow, type BodySprites } from './sprites';
+
+/** Part de chaque cycle de frisottis où la fourrure reste posée. */
+const HOLD = 0.5;
 
 export interface DrawOptions {
   dpr: number;
@@ -250,19 +253,23 @@ export function drawSusuwatari(ctx: CanvasRenderingContext2D, s: Susuwatari, sp:
   ctx.setTransform(dpr * m.a, dpr * m.b, dpr * m.c, dpr * m.d, dpr * m.e, dpr * m.f);
   if (!o.night) {
     if (sp.halo) ctx.drawImage(sp.halo, -half, -half, half * 2, half * 2);
-    // Frange : deux images voisines (le corps « vit »). Fondu par union :
-    // la suivante apparaît sur la première, puis la première s'efface —
-    // jamais de creux d'opacité au milieu du fondu.
+    // Corps : deux images voisines de frisottis (le corps « vit »). La
+    // fourrure se pose un moment (HOLD) puis ondule vers l'image suivante,
+    // fondue par union (la suivante apparaît, puis la première s'efface :
+    // jamais de creux d'opacité). Pendant la pause, une seule image.
     const phase = ((s.fur % FRAMES) + FRAMES) % FRAMES;
     const i = Math.floor(phase);
-    const k = phase - i;
-    const a = sp.fringe[i]!;
-    const b = sp.fringe[(i + 1) % FRAMES]!;
+    const f = phase - i;
+    const k = f < HOLD ? 0 : (f - HOLD) / (1 - HOLD);
+    const a = sp.frames[i]!;
+    const b = sp.frames[(i + 1) % FRAMES]!;
     ctx.drawImage(k < 0.5 ? a : b, -half, -half, half * 2, half * 2);
-    ctx.globalAlpha = k < 0.5 ? k * 2 : (1 - k) * 2;
-    ctx.drawImage(k < 0.5 ? b : a, -half, -half, half * 2, half * 2);
-    ctx.globalAlpha = 1;
-    ctx.drawImage(sp.core, -half, -half, half * 2, half * 2);
+    const fade = k < 0.5 ? k * 2 : (1 - k) * 2;
+    if (fade > 0.02) {
+      ctx.globalAlpha = fade;
+      ctx.drawImage(k < 0.5 ? b : a, -half, -half, half * 2, half * 2);
+      ctx.globalAlpha = 1;
+    }
   }
   // Yeux : repère du corps, à l'échelle du sprite (px sprite → px CSS).
   ctx.transform(unit, 0, 0, unit, 0, 0);

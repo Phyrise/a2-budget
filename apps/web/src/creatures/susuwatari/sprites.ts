@@ -4,13 +4,14 @@
  * pendant l'animation, seulement des drawImage).
  *
  * Un jeu de sprites par (variante de fourrure, rayon en px appareil, rim) :
- * - `core`   : cœur + poils intérieurs + mèches grises (opaque, fixe) ;
- * - `fringe` : FRAMES images de frange (épis, poils fins, pointes
- *              éclairées) qui ondulent en boucle — fondues à l'affichage ;
+ * - `frames` : FRAMES images du corps entier — frange (épis, poils fins,
+ *              pointes éclairées) qui ondule en boucle, sous le cœur fixe
+ *              (poils intérieurs, mèches grises) — fondues à l'affichage ;
  * - `halo`   : lueur douce derrière le corps (fonds sombres, `rim` > 0) ;
  * - `eye`    : blanc de l'œil légèrement ombré ; `glow` : lueur de nuit.
- * Rayons regroupés par paliers de 12 % : l'affichage n'étire jamais un
- * sprite de plus de ±6 %. Construction étalée (budget de temps par image).
+ * Rayons regroupés par paliers de 20 %, construits au-dessus du besoin :
+ * l'affichage réduit un sprite (17 % au plus), ne l'agrandit jamais. Construction étalée : une toile par pas, dans un
+ * budget de temps par image (`SpriteCache.pump`).
  */
 import { Kind, furGenome, traceStrand, type FurGenome } from './fur';
 
@@ -39,8 +40,8 @@ export interface BodySprites {
   radius: number;
   /** Côté des images carrées (px appareil), centre du corps au milieu. */
   side: number;
-  core: HTMLCanvasElement;
-  fringe: HTMLCanvasElement[];
+  /** Corps entier (frange de l'image f + cœur), une image par frisottis. */
+  frames: HTMLCanvasElement[];
   halo: HTMLCanvasElement | null;
   /** Blanc de l'œil (ellipse EYE.rx × EYE.ry) et sa lueur de nuit. */
   eye: HTMLCanvasElement;
@@ -85,9 +86,8 @@ function step(alpha: number): number {
   return ALPHA_STEPS.reduce((best, a) => (Math.abs(a - alpha) < Math.abs(best - alpha) ? a : best), 1);
 }
 
-function paintCore(genome: FurGenome, R: number, side: number): HTMLCanvasElement {
-  const c = canvas(side, side);
-  const ctx = ctx2d(c);
+/** Le cœur (fixe), peint par-dessus la frange de chaque image. */
+function paintCore(ctx: CanvasRenderingContext2D, genome: FurGenome, R: number, side: number): void {
   const m = side / 2;
   // Cœur bosselé.
   ctx.beginPath();
@@ -105,10 +105,9 @@ function paintCore(genome: FurGenome, R: number, side: number): HTMLCanvasElemen
   for (const a of ALPHA_STEPS) {
     fillBatch(ctx, genome, (k, _t, al) => k === Kind.Sheen && step(al) === a, SOOT.sheen, a, m, R, 0);
   }
-  return c;
 }
 
-function paintFringe(genome: FurGenome, R: number, side: number, frame: number, rim: number): HTMLCanvasElement {
+function paintFrame(genome: FurGenome, R: number, side: number, frame: number, rim: number, core: HTMLCanvasElement): HTMLCanvasElement {
   const c = canvas(side, side);
   const ctx = ctx2d(c);
   const m = side / 2;
@@ -126,6 +125,7 @@ function paintFringe(genome: FurGenome, R: number, side: number, frame: number, 
       fillBatch(ctx, genome, (k, _t, al) => k === Kind.Rim && step(al) === a, SOOT.rim, a * 0.15 * rim, m, R, phi);
     }
   }
+  ctx.drawImage(core, 0, 0);
   return c;
 }
 
@@ -207,43 +207,69 @@ export function shadow(): HTMLCanvasElement {
   return c;
 }
 
-export function buildBody(variant: number, radius: number, rim: number): BodySprites {
+/**
+ * Construction pas à pas : chaque `next()` peint une seule toile (le cœur,
+ * puis chaque image de frisottis, puis halo et yeux), pour étaler le coût
+ * sur plusieurs images d'animation.
+ */
+export function* buildSteps(variant: number, radius: number, rim: number): Generator<void, BodySprites, void> {
   const R = radius;
   const side = Math.ceil(R * EXTENT * 2) + 4;
   const genome = furGenome(variant + 1, R);
-  return {
-    radius: R,
-    side,
-    core: paintCore(genome, R, side),
-    fringe: Array.from({ length: FRAMES }, (_, f) => paintFringe(genome, R, side, f, rim)),
-    halo: rim > 0 ? paintHalo(genome, R, side, rim) : null,
-    eye: paintEye(R),
-    glow: paintGlow(R),
-  };
+  const core = canvas(side, side);
+  paintCore(ctx2d(core), genome, R, side);
+  yield;
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < FRAMES; f++) {
+    frames.push(paintFrame(genome, R, side, f, rim, core));
+    yield;
+  }
+  return { radius: R, side, frames, halo: rim > 0 ? paintHalo(genome, R, side, rim) : null, eye: paintEye(R), glow: paintGlow(R) };
 }
 
-/** Palier de rayon (12 %) : un rayon voulu → rayon du sprite à construire. */
+export function buildBody(variant: number, radius: number, rim: number): BodySprites {
+  const steps = buildSteps(variant, radius, rim);
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+  }
+}
+
+/**
+ * Palier de rayon (20 %) : un rayon voulu → rayon du sprite à construire,
+ * toujours au-dessus (l'affichage ne fait que réduire, de 17 % au plus :
+ * le trait reste net).
+ */
 export function bucketRadius(radius: number): number {
-  const k = Math.round(Math.log(Math.max(4, radius)) / Math.log(1.12));
-  return Math.round(Math.pow(1.12, k));
+  const k = Math.ceil(Math.log(Math.max(4, radius)) / Math.log(1.2) - 1e-9);
+  return Math.ceil(Math.pow(1.2, k));
+}
+
+interface Job {
+  key: string;
+  variant: number;
+  steps: Generator<void, BodySprites, void>;
 }
 
 /**
  * Cache des sprites d'un calque. `get` rend le meilleur sprite DISPONIBLE
  * (le palier exact, sinon le plus proche déjà construit) et met le palier
- * manquant en file ; `pump` construit la file dans un budget de temps.
+ * manquant en chantier ; `pump` avance les chantiers dans un budget de temps
+ * (au moins une toile par appel).
  */
 export class SpriteCache {
   private sets = new Map<string, BodySprites>();
-  private queue: Array<{ key: string; variant: number; radius: number }> = [];
+  private jobs: Job[] = [];
   private used = new Map<string, number>();
+  /** Dernier instant (performance.now) où une toile a été peinte. */
+  builtAt = 0;
   constructor(private rim: number) {}
 
   setRim(rim: number): void {
     if (rim === this.rim) return;
     this.rim = rim;
     this.sets.clear();
-    this.queue = [];
+    this.jobs = [];
   }
 
   get(variant: number, radius: number, now: number): BodySprites | null {
@@ -252,7 +278,7 @@ export class SpriteCache {
     const hit = this.sets.get(key);
     this.used.set(key, now);
     if (hit) return hit;
-    if (!this.queue.some((q) => q.key === key)) this.queue.push({ key, variant, radius: r });
+    if (!this.jobs.some((j) => j.key === key)) this.jobs.push({ key, variant, steps: buildSteps(variant, r, this.rim) });
     // En attendant : le palier le plus proche de la même variante.
     let best: BodySprites | null = null;
     for (const [k, set] of this.sets) {
@@ -262,12 +288,20 @@ export class SpriteCache {
     return best;
   }
 
-  /** Construit des sprites en file tant que le budget (ms) le permet ; au moins un. */
+  private advance(job: Job): boolean {
+    const step = job.steps.next();
+    this.builtAt = performance.now();
+    if (!step.done) return false;
+    this.sets.set(job.key, step.value);
+    this.jobs.splice(this.jobs.indexOf(job), 1);
+    return true;
+  }
+
+  /** Avance les chantiers tant que le budget (ms) le permet. */
   pump(budgetMs: number, now: number): void {
     const start = performance.now();
-    while (this.queue.length > 0) {
-      const next = this.queue.shift()!;
-      this.sets.set(next.key, buildBody(next.variant, next.radius, this.rim));
+    while (this.jobs.length > 0) {
+      this.advance(this.jobs[0]!);
       if (performance.now() - start > budgetMs) break;
     }
     // Les paliers oubliés depuis 10 s (curseur de taille) sont libérés.
@@ -278,9 +312,11 @@ export class SpriteCache {
     }
   }
 
-  /** Construit tout de suite (premier affichage). */
+  /** Premier affichage d'une variante : construite tout de suite (sinon le palier voisin sert). */
   warm(variant: number, radius: number, now: number): void {
-    this.get(variant, radius, now);
-    this.pump(Infinity, now);
+    if (this.get(variant, radius, now) !== null) return;
+    const key = `${variant}:${bucketRadius(radius)}`;
+    const job = this.jobs.find((j) => j.key === key);
+    if (job) while (!this.advance(job));
   }
 }

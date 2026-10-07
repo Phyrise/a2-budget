@@ -60,7 +60,7 @@ export default function NoiraudesLab() {
     document.title = 'Labo Noiraudes — A² Home';
     const timer = window.setInterval(() => {
       const st = layer.current?.stats();
-      if (st) setFps(`${Math.round(st.fps)} i/s · ${st.frameMs.toFixed(1)} ms`);
+      if (st) setFps(`${Math.round(st.fps)} i/s · ${st.frameMs.toFixed(1)} ms · densité ${st.dpr}`);
     }, 1000);
     return () => window.clearInterval(timer);
   }, [layer]);

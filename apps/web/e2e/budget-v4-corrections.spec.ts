@@ -78,7 +78,8 @@ test('solde jamais recalé : aucune phrase d’invitation, le recalage reste à 
   await expect(page.getByText(/recalez quand vous regardez/u)).toHaveCount(0);
   await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
   const dialog = sheet(page, 'Recaler sur le compte');
-  await page.locator('#recalibrate-amount').fill('1200');
+  await expect(page.locator('#recalibrate-pad-display')).toBeFocused();
+  await page.keyboard.type('1200');
   await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByTestId('balance-now')).toHaveText(/1\s200\s€/u);

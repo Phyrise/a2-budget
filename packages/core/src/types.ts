@@ -108,6 +108,8 @@ export interface BalanceCorrection {
   recordedAt: string;
   /** Note libre facultative (≤ 200 caractères). */
   note?: string;
+  /** V4.2.1 — solde réel saisi tel quel (« en ce moment »), en centimes ; facultatif. */
+  observedCents?: number;
 }
 
 /** V4 — solde du compte commun estimé (report automatique + corrections). */

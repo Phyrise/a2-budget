@@ -137,43 +137,71 @@ test.describe('Paiements du mois et compte commun', () => {
     await expect(page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true })).toHaveAttribute('aria-checked', 'false');
   });
 
-  test('recaler sur le compte : solde réel, annulable, négatif permis, historique', async ({ page }) => {
+  test('recaler sur le compte : au pavé, prérempli, annulable, jamais négatif, dernier recalage', async ({ page }) => {
     await openApp(page, 'budget');
     await setEuros(page, 'salary-a', '2200');
     await setEuros(page, 'salary-b', '3000');
     await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
     await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
 
-    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
+    const recalibrate = page.getByRole('button', { name: 'Recaler sur le compte', exact: true });
+    await recalibrate.click();
     const dialog = sheet(page, 'Recaler sur le compte');
-    await expect(page.locator('#recalibrate-amount')).toHaveValue('880');
-    await page.locator('#recalibrate-amount').fill('1500,50');
-    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
-    await expect(dialog.locator('.field__error')).toContainText('sans centimes');
-    await page.locator('#recalibrate-amount').fill('1500');
-    await page.locator('#recalibrate-note').fill('Relevé du jour');
-    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
+    const display = page.locator('#recalibrate-pad-display');
+    const ok = dialog.getByRole('button', { name: 'Recaler', exact: true });
+    // Le pavé, prérempli avec l'estimation : aucun champ, aucun clavier système, rien d'autre.
+    await expect(display).toBeFocused();
+    await expect(display).toHaveText(euros(88_000));
+    await expect(dialog.locator('input, textarea, [role="switch"]')).toHaveCount(0);
+    await expect(dialog.getByText(/Dernier recalage/u)).toHaveCount(0);
+    await page.keyboard.type('1500');
+    await ok.click();
     await expect(dialog).toBeHidden();
     await expect(page.getByTestId('balance-now')).toHaveText(euros(150_000));
     // Fin du mois = 1 500 − 880 (déjà versé) + (880 + 1 200) − 1 845.
     await expect(page.getByTestId('balance-projection')).toHaveText(euros(85_500));
-    await expect.poll(async () => (await persisted(page)).budget.balance.corrections.map((c: { balanceCents: number; note?: string }) => [c.balanceCents, c.note]))
-      .toEqual([[62_000, 'Relevé du jour']]);
+    await expect.poll(async () => (await persisted(page)).budget.balance.corrections.map((c: { balanceCents: number; observedCents?: number }) => [c.balanceCents, c.observedCents]))
+      .toEqual([[62_000, 150_000]]);
 
     // Annuler depuis le toast : l'estimation revient.
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
     await expect(page.getByTestId('balance-now')).toHaveText(euros(88_000));
 
-    // Compte à découvert : signe « − » accepté.
-    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
-    await page.locator('#recalibrate-amount').fill('-120');
-    await dialog.getByRole('button', { name: 'Recaler', exact: true }).click();
-    await expect(page.getByTestId('balance-now')).toHaveText(euros(-12_000));
+    // Jamais en dessous de 0 € : « − 10 » s'éteint à zéro.
+    await recalibrate.click();
+    await page.keyboard.press('Delete');
+    await expect(dialog.getByRole('button', { name: 'Moins 10 €', exact: true })).toBeDisabled();
+    await page.keyboard.press('-');
+    await expect(display).toHaveText(euros(0));
+    await ok.click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(0));
 
-    // Historique des recalages, replié.
-    await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
-    await dialog.getByRole('button', { name: /Recalages précédents/ }).click();
-    await expect(dialog.getByTestId('correction')).toHaveCount(1);
-    await expect(dialog.getByTestId('correction')).toContainText(euros(-100_000));
+    // Seule précision : le dernier recalage. Valider sans rien changer confirme le solde.
+    await recalibrate.click();
+    await expect(dialog).toContainText(/Dernier recalage\s:\s0\s€, aujourd’hui/u);
+    await ok.click();
+    await expect(page.locator('.toast')).toContainText(/Compte recalé\s:\s0\s€/u);
+
+    // Un solde négatif reste lisible ; le pavé repart alors de 0 €.
+    await page.getByRole('checkbox', { name: 'Loyer + charges payé', exact: true }).click();
+    await expect(page.getByTestId('balance-now')).toHaveText(euros(-130_000));
+    await recalibrate.click();
+    await expect(display).toHaveText(euros(0));
   });
+
+  for (const viewport of [PHONE, { width: 375, height: 667 }]) {
+    test.describe(`${viewport.width} × ${viewport.height}`, () => {
+      test.use({ viewport });
+      test('la feuille « Recaler » tient entière à l’écran', async ({ page }) => {
+        await openApp(page, 'budget');
+        await page.getByRole('button', { name: 'Recaler sur le compte', exact: true }).click();
+        const dialog = sheet(page, 'Recaler sur le compte');
+        await expect(dialog.getByRole('button', { name: 'Recaler', exact: true })).toBeInViewport({ ratio: 1 });
+        await expect.poll(async () => {
+          const box = await dialog.locator('.sheet__panel').boundingBox();
+          return box !== null && box.y >= 0 && box.y + box.height <= viewport.height + 0.5;
+        }).toBe(true);
+      });
+    });
+  }
 });

@@ -126,11 +126,14 @@ export function recordBalanceCorrection<T extends BalanceSource>(
   source: T,
   monthKey: string,
   balanceCents: number,
-  meta: { id: string; recordedAt: string; note?: string },
+  meta: { id: string; recordedAt: string; note?: string; observedCents?: number },
 ): T {
   if (!isValidMonthKey(monthKey)) throw new RangeError(`invalid month key: ${String(monthKey)}`);
   if (!isBalanceCents(balanceCents)) throw new RangeError('balanceCents must be a safe integer in range');
   if (!isIsoTimestamp(meta.recordedAt)) throw new RangeError('recordedAt must be ISO');
+  if (meta.observedCents !== undefined && !isBalanceCents(meta.observedCents)) {
+    throw new RangeError('observedCents must be a safe integer in range');
+  }
   const list = source.balance?.corrections ?? [];
   const previous = list.find((c) => c.monthKey === monthKey);
   if (previous === undefined && (typeof meta.id !== 'string' || meta.id === '')) {
@@ -144,6 +147,7 @@ export function recordBalanceCorrection<T extends BalanceSource>(
   };
   const note = cleanNote(meta.note);
   if (note !== undefined) correction.note = note;
+  if (meta.observedCents !== undefined) correction.observedCents = meta.observedCents;
   const next = [...list.filter((c) => c.monthKey !== monthKey), correction]
     .sort((a, b) => (a.monthKey < b.monthKey ? -1 : a.monthKey > b.monthKey ? 1 : 0))
     .slice(-BALANCE_CORRECTIONS_MAX);
@@ -167,6 +171,9 @@ export function restoreBalanceCorrection<T extends BalanceSource>(source: T, cor
   if (!isBalanceCents(correction.balanceCents)) throw new RangeError('balanceCents must be a safe integer in range');
   if (!isIsoTimestamp(correction.recordedAt)) throw new RangeError('recordedAt must be ISO');
   if (typeof correction.id !== 'string' || correction.id === '') throw new RangeError('correction id required');
+  if (correction.observedCents !== undefined && !isBalanceCents(correction.observedCents)) {
+    throw new RangeError('observedCents must be a safe integer in range');
+  }
   const copy: BalanceCorrection = { ...correction };
   const list = (source.balance?.corrections ?? []).filter(
     (c) => c.monthKey !== correction.monthKey && c.id !== correction.id,
@@ -219,7 +226,7 @@ export function balanceCorrectionFor(source: BalanceSource, monthKey: string): B
  * Validation de `budget.balance` (présent → strict) : corrections en
  * tableau (≤ BALANCE_CORRECTIONS_MAX), ids non vides uniques, une
  * correction par mois, montant entier (négatif permis), horodatage ISO,
- * note chaîne. Valeurs recopiées telles quelles (rechargement à l'identique).
+ * note chaîne, solde saisi facultatif (entier). Valeurs recopiées telles quelles (rechargement à l'identique).
  */
 export function validateBudgetBalance(value: unknown): Ok<BudgetBalance> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'balance-not-object' };
@@ -251,6 +258,10 @@ export function validateBudgetBalance(value: unknown): Ok<BudgetBalance> | Fail 
     if (c.note !== undefined) {
       if (typeof c.note !== 'string') return { ok: false, reason: 'balance-invalid-note' };
       out.note = c.note;
+    }
+    if (c.observedCents !== undefined) {
+      if (!isBalanceCents(c.observedCents)) return { ok: false, reason: 'balance-invalid-observed' };
+      out.observedCents = c.observedCents;
     }
     corrections.push(out);
   }

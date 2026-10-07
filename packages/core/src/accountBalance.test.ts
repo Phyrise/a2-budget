@@ -147,6 +147,14 @@ describe('« Recaler sur le compte »', () => {
     expect('note' in blank.balance!.corrections[0]!).toBe(false);
   });
 
+  it('solde saisi gardé tel quel, oublié au recalage suivant s’il manque', () => {
+    let src = recordBalanceCorrection(source([]), '2026-10', 62_000, { id: 'c', recordedAt: AT, observedCents: 150_000 });
+    expect(src.balance!.corrections[0]!.observedCents).toBe(150_000);
+    src = recordBalanceCorrection(src, '2026-10', 1_000, { id: 'c', recordedAt: AT });
+    expect('observedCents' in src.balance!.corrections[0]!).toBe(false);
+    expect(() => recordBalanceCorrection(src, '2026-10', 0, { id: 'c', recordedAt: AT, observedCents: 1.5 })).toThrow(RangeError);
+  });
+
   it('retirer une correction (annuler)', () => {
     const src = recordBalanceCorrection(source(months('2026-10')), '2026-10', 9_900, { id: 'c', recordedAt: AT });
     const back = removeBalanceCorrection(src, '2026-10');
@@ -159,8 +167,8 @@ describe('« Recaler sur le compte »', () => {
 describe('validateBudgetBalance', () => {
   const c = { id: 'c', monthKey: '2026-10', balanceCents: -12_300, recordedAt: AT };
 
-  it('recopie à l’identique (négatif et note compris)', () => {
-    const value = { corrections: [c, { ...c, id: 'd', monthKey: '2026-11', note: 'Relevé' }] };
+  it('recopie à l’identique (négatif, note et solde saisi compris)', () => {
+    const value = { corrections: [c, { ...c, id: 'd', monthKey: '2026-11', note: 'Relevé', observedCents: 150_000 }] };
     expect(validateBudgetBalance(value)).toEqual({ ok: true, state: value });
   });
 
@@ -176,5 +184,6 @@ describe('validateBudgetBalance', () => {
     expect(validateBudgetBalance({ corrections: [{ ...c, balanceCents: -1e12 }] })).toEqual({ ok: false, reason: 'balance-invalid-amount' });
     expect(validateBudgetBalance({ corrections: [{ ...c, recordedAt: 'x' }] })).toEqual({ ok: false, reason: 'balance-invalid-recorded-at' });
     expect(validateBudgetBalance({ corrections: [{ ...c, note: 3 }] })).toEqual({ ok: false, reason: 'balance-invalid-note' });
+    expect(validateBudgetBalance({ corrections: [{ ...c, observedCents: 0.5 }] })).toEqual({ ok: false, reason: 'balance-invalid-observed' });
   });
 });

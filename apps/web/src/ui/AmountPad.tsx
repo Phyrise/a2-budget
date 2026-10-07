@@ -36,11 +36,16 @@ export interface AmountPadProps {
   /** Courte précision sous le titre (« Octobre 2026 »). */
   description?: string;
   valueCents: number;
-  /** Appelé à « Valider » avec des centimes multiples de 100 (seulement si le montant change). */
+  /** Appelé à « Valider » avec des centimes multiples de 100 (seulement si le montant change, sauf `commitUnchanged`). */
   onCommit: (cents: number) => void;
+  /** Valider écrit même un montant inchangé (« Recaler » confirme le solde). */
+  commitUnchanged?: boolean;
+  /** Libellé du bouton de validation (défaut « Valider »). */
+  confirmLabel?: string;
   shortcuts?: readonly AmountShortcut[];
   /** Préfixe des identifiants (`${idPrefix}-pad-…`) pour les tests et l'accessibilité. */
   idPrefix?: string;
+  className?: string;
   /** Feuille entièrement refermée (après l'animation, focus rendu). */
   onClosed?: () => void;
 }
@@ -71,7 +76,20 @@ function BackspaceGlyph() {
   );
 }
 
-export function AmountPad({ open, onClose, title, description, valueCents, onCommit, shortcuts = [], idPrefix = 'amount', onClosed }: AmountPadProps) {
+export function AmountPad({
+  open,
+  onClose,
+  title,
+  description,
+  valueCents,
+  onCommit,
+  commitUnchanged = false,
+  confirmLabel = 'Valider',
+  shortcuts = [],
+  idPrefix = 'amount',
+  className,
+  onClosed,
+}: AmountPadProps) {
   const [pad, setPad] = useState<PadState>(() => padInit(valueCents));
   const [wasOpen, setWasOpen] = useState(open);
   const displayRef = useRef<HTMLDivElement>(null);
@@ -92,7 +110,7 @@ export function AmountPad({ open, onClose, title, description, valueCents, onCom
   const validate = () => {
     const cents = padEuros(padRef.current) * 100;
     // Montant affiché inchangé (même arrondi à l'euro) : rien à écrire.
-    if (cents !== roundToEuroCents(valueCents)) onCommit(cents);
+    if (commitUnchanged || cents !== roundToEuroCents(valueCents)) onCommit(cents);
     onClose();
   };
   const validateRef = useRef(validate);
@@ -137,7 +155,7 @@ export function AmountPad({ open, onClose, title, description, valueCents, onCom
       title={title}
       description={description}
       size="auto"
-      className="amount-pad"
+      className={cx('amount-pad', className)}
       initialFocusRef={displayRef}
       onClosed={onClosed}
       footer={
@@ -146,7 +164,7 @@ export function AmountPad({ open, onClose, title, description, valueCents, onCom
             Annuler
           </Button>
           <Button variant="primary" icon="check" onClick={validate} id={`${idPrefix}-pad-ok`}>
-            Valider
+            {confirmLabel}
           </Button>
         </>
       }

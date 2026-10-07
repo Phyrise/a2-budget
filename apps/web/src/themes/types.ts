@@ -70,6 +70,19 @@ export interface CalendarTheme {
   totoro: Record<TotoroPose, string>;
   /** Chatbus : court de profil, arrêté porte ouverte, de trois-quarts face (panneau vide), en saut. */
   catbus: Record<CatbusPose, string>;
+  /**
+   * Facultatif (V4.1) : frames d'UN cycle de galop du Chatbus, de profil,
+   * tourné vers la DROITE (l'interface le retourne pour filer vers la
+   * gauche), dans l'ordre (6 à 8 conseillées). Toutes sur la même toile
+   * (même taille, même ligne de sol en bas, corps immobile : seules les
+   * pattes bougent), fond transparent, WebP. L'interface les joue en boucle
+   * à 12 images/s pendant la traversée, avec un léger rebond par cycle ; en
+   * mouvement réduit, la première seule apparaît en fondu. Fichiers
+   * assets/calendar/catbus-run-<n>.webp (n = 1, 2…), déclarés par
+   * gen_manifest.py. Absent (ou moins de 2 frames) : alternance
+   * « running » / « leap ».
+   */
+  catbusRun?: string[];
   /** Une icône par nature d'événement : clés = CALENDAR_KINDS de @a2/core. */
   kinds: Record<CalendarEventKind, string>;
   /** Icônes bonus : parapluie rouge, jeune pousse. */

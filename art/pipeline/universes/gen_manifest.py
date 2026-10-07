@@ -31,6 +31,8 @@ TOTORO = {"umbrella": "totoro-umbrella", "gift": "totoro-gift", "joy": "totoro-j
           "sleeping": "totoro-sleeping", "chuAcorns": "chu-totoro-acorns",
           "chibiPeek": "chibi-totoro-peek"}
 CATBUS = ["running", "waiting", "sign", "leap"]
+# Galop du Chatbus (V4.1, facultatif) : calendar/catbus-run-<n>.webp, n = 1, 2…
+# (art/source/catbus-run/, recalées : même toile 301×180, corps immobile).
 CATEGORIES = ["fruits-legumes", "frais", "boulangerie", "epicerie", "boissons",
               "surgeles", "hygiene", "maison", "autre"]
 
@@ -61,6 +63,20 @@ def obj(pairs: dict[str, str], indent: int) -> str:
     pad = " " * indent
     body = "".join(f"{pad}  {key(k)}: {v},\n" for k, v in pairs.items())
     return "{\n" + body + pad + "}"
+
+
+def arr(items: list[str], indent: int) -> str:
+    pad = " " * indent
+    return "[\n" + "".join(f"{pad}  {v},\n" for v in items) + pad + "]"
+
+
+def catbus_run(t: str) -> list[str]:
+    """Frames du galop présentes, dans l'ordre (s'arrête au premier trou)."""
+    frames, n = [], 1
+    while (ASSETS / f"{t}catbus-run-{n}.webp").exists():
+        frames.append(ref(f"{t}catbus-run-{n}.webp"))
+        n += 1
+    return frames
 
 
 def size(prefix: str, report: dict | None = None) -> str:
@@ -136,6 +152,7 @@ def main() -> None:
                         "portrait": ref(t + "banner-portrait.webp")}, 2),
         "totoro": obj({k: ref(f"{t}{v}.webp") for k, v in TOTORO.items()}, 2),
         "catbus": obj({k: ref(f"{t}catbus-{k}.webp") for k in CATBUS}, 2),
+        "catbusRun": arr(catbus_run(t), 2),
         "kinds": obj({k: ref(f"{t}icon-{k}.webp") for k in CALENDAR_KINDS}, 2),
         "extras": obj({"umbrella": ref(t + "icon-parapluie.webp"),
                        "sprout": ref(t + "icon-pousse.webp")}, 2),
@@ -191,6 +208,9 @@ def main() -> None:
  * - Totoro {size(t + 'totoro', CALENDAR)} et Chu / Chibi-Totoro
  *   (même échelle, hauteur utile 360 pour le plus grand ; les petits restent petits) ;
  *   Chatbus {size(t + 'catbus', CALENDAR)} (plus grand côté 420, même échelle).
+ * - Galop du Chatbus (catbusRun, V4.1, art/source/catbus-run/) : {len(catbus_run(t))} frames
+ *   WebP 301×180 sur la même toile (corps immobile, seules les pattes bougent),
+ *   tournées vers la droite ; jouées à 12 i/s pendant la traversée.
  * - Icônes 128×128 (contenu ≤ 116) : `kinds` (clés = CALENDAR_KINDS de
  *   @a2/core) + `extras` (parapluie rouge, pousse).
 {season_doc} */

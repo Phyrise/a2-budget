@@ -220,3 +220,56 @@ test.describe('Courses sur téléphone : cocher sans zoom', () => {
     expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
   });
 });
+
+/**
+ * V4.1 : sous les coins arrondis de la feuille, le fond (bandeau peint ou
+ * forêt) garde l'assombrissement du bandeau. Mesure sur un fond uni (images
+ * masquées, gris moyen) : seuls les voiles de la coquille font varier la
+ * teinte entre le petit triangle de l'arrondi et la bande juste au-dessus.
+ */
+test('coins arrondis de la feuille : même luminosité que le bandeau juste au-dessus, dans les quatre onglets', async ({ page }) => {
+  await openApp(page, 'maison');
+  await page.addStyleTag({
+    content:
+      '.app-world > :not(.app-world__shade) { display: none !important } .app-world { background: rgb(150, 150, 150) !important }' +
+      ' .world-window > *, .perch { visibility: hidden !important }',
+  });
+  for (const name of ['Maison', 'Courses', 'Budget', 'Calendrier'] as const) {
+    if (name !== 'Maison') await goTo(page, name);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
+    const box = (await page.locator('.screen-sheet').first().boundingBox())!;
+    const top = Math.round(box.y);
+    const right = box.x + box.width;
+    const png = await page.screenshot();
+    const [cornerL, aboveL, cornerR, aboveR] = await page.evaluate(
+      async ({ b64, points }) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${b64}`;
+        await img.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const g = canvas.getContext('2d')!;
+        g.drawImage(img, 0, 0);
+        return points.map(([x, y]) => {
+          const d = g.getImageData(Math.round(x! - 1), Math.round(y! - 1), 3, 3).data;
+          let sum = 0;
+          for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+          return sum / (d.length / 4);
+        });
+      },
+      {
+        b64: png.toString('base64'),
+        points: [
+          [box.x + 3, top + 3],
+          [box.x + 3, top - 4],
+          [right - 4, top + 3],
+          [right - 4, top - 4],
+        ],
+      },
+    );
+    expect(Math.abs(cornerL! - aboveL!), `${name}, coin gauche : ${cornerL} / ${aboveL}`).toBeLessThan(8);
+    expect(Math.abs(cornerR! - aboveR!), `${name}, coin droit : ${cornerR} / ${aboveR}`).toBeLessThan(8);
+  }
+});

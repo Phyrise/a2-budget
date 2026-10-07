@@ -37,6 +37,9 @@
  * - Totoro 254–416×217–382 px, 59 Ko et Chu / Chibi-Totoro
  *   (même échelle, hauteur utile 360 pour le plus grand ; les petits restent petits) ;
  *   Chatbus 363–440×192–255 px, 89 Ko (plus grand côté 420, même échelle).
+ * - Galop du Chatbus (catbusRun, V4.1, art/source/catbus-run/) : 8 frames
+ *   WebP 301×180 sur la même toile (corps immobile, seules les pattes bougent),
+ *   tournées vers la droite ; jouées à 12 i/s pendant la traversée.
  * - Icônes 128×128 (contenu ≤ 116) : `kinds` (clés = CALENDAR_KINDS de
  *   @a2/core) + `extras` (parapluie rouge, pousse).
  *
@@ -132,6 +135,14 @@ import calendarCatbusRunning from './assets/calendar/catbus-running.webp';
 import calendarCatbusWaiting from './assets/calendar/catbus-waiting.webp';
 import calendarCatbusSign from './assets/calendar/catbus-sign.webp';
 import calendarCatbusLeap from './assets/calendar/catbus-leap.webp';
+import calendarCatbusRun1 from './assets/calendar/catbus-run-1.webp';
+import calendarCatbusRun2 from './assets/calendar/catbus-run-2.webp';
+import calendarCatbusRun3 from './assets/calendar/catbus-run-3.webp';
+import calendarCatbusRun4 from './assets/calendar/catbus-run-4.webp';
+import calendarCatbusRun5 from './assets/calendar/catbus-run-5.webp';
+import calendarCatbusRun6 from './assets/calendar/catbus-run-6.webp';
+import calendarCatbusRun7 from './assets/calendar/catbus-run-7.webp';
+import calendarCatbusRun8 from './assets/calendar/catbus-run-8.webp';
 import calendarIconRepas from './assets/calendar/icon-repas.webp';
 import calendarIconSortie from './assets/calendar/icon-sortie.webp';
 import calendarIconAnniversaire from './assets/calendar/icon-anniversaire.webp';
@@ -264,6 +275,16 @@ export const calendarTheme: CalendarTheme = {
     sign: calendarCatbusSign,
     leap: calendarCatbusLeap,
   },
+  catbusRun: [
+    calendarCatbusRun1,
+    calendarCatbusRun2,
+    calendarCatbusRun3,
+    calendarCatbusRun4,
+    calendarCatbusRun5,
+    calendarCatbusRun6,
+    calendarCatbusRun7,
+    calendarCatbusRun8,
+  ],
   kinds: {
     repas: calendarIconRepas,
     sortie: calendarIconSortie,

@@ -202,7 +202,8 @@ main[tabindex='-1']:focus {
     0 -24px 48px rgba(3, 7, 5, 0.35);
 }
 
-/* Bord supérieur fondu dans la forêt. */
+/* Bord supérieur fondu dans la forêt (teinte reprise sous les coins
+   arrondis par .world-window::before : garder les deux en accord). */
 .screen-sheet::before {
   content: '';
   position: absolute;
@@ -662,9 +663,24 @@ button.chip:hover {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: min(60%, 220px);
-  background: linear-gradient(to top, rgba(8, 14, 11, 0.62), rgba(8, 14, 11, 0));
+  /* Le voile descend sous la feuille sur la hauteur de son arrondi : les
+     petits triangles laissés par les coins arrondis (V4.1) montrent le fond
+     avec la même luminosité que juste au-dessus. Sous la ligne de jonction,
+     la teinte est celle des deux voiles superposés juste au-dessus : celui-ci
+     (0,62) puis le bord fondu de la feuille (.screen-sheet::before, 0,5),
+     soit ≈ rgba(10, 18, 15, 0.8) — un rien plus clair, l'ombre portée de la
+     feuille fonçant déjà les coins. La première ligne sous la jonction reste
+     à 0,62 : le bord fondu de la feuille y déborde d'un pixel. Ailleurs, la
+     feuille opaque recouvre ce prolongement. */
+  bottom: calc(-1 * var(--radius-sheet));
+  height: calc(min(60%, 220px) + var(--radius-sheet));
+  background: linear-gradient(
+    to top,
+    rgba(10, 18, 15, 0.79) 0,
+    rgba(10, 18, 15, 0.79) calc(var(--radius-sheet) - 1px),
+    rgba(8, 14, 11, 0.62) calc(var(--radius-sheet) - 1px),
+    rgba(8, 14, 11, 0) 100%
+  );
   z-index: -1;
 }
 

@@ -3,7 +3,7 @@
  * (douze derniers mois, anniversaires annuels compris), du plus récent au
  * plus ancien, groupés par jour. Lecture seule.
  */
-import { addDays, eventsBetween, localDateKey, type CalendarEvent, type CalendarOccurrence } from '@a2/core';
+import { activeCalendarKind, addDays, eventsBetween, localDateKey, type ActiveCalendarKind, type CalendarOccurrence } from '@a2/core';
 import { useMemo, type ReactNode } from 'react';
 import { useApp } from '../state/store';
 import { displayTitle, timeRangeLabel } from '../features/calendar/calendarText';
@@ -13,13 +13,11 @@ import '../features/history/history.css';
 /** Au plus autant d'événements montrés (les plus récents). */
 const MAX_SHOWN = 60;
 
-const KIND_LABELS: Record<CalendarEvent['kind'], string> = {
+const KIND_LABELS: Record<ActiveCalendarKind, string> = {
   repas: 'Repas',
   sortie: 'Sortie',
   anniversaire: 'Anniversaire',
   rdv: 'Rendez-vous',
-  voyage: 'Voyage',
-  maison: 'Maison',
   autre: 'Événement',
 };
 
@@ -31,7 +29,7 @@ function timeLabel(o: CalendarOccurrence): string | null {
 }
 
 function meta(o: CalendarOccurrence, names: { a: string; b: string }): ReactNode {
-  const parts = [KIND_LABELS[o.event.kind]];
+  const parts = [KIND_LABELS[activeCalendarKind(o.event.kind)]];
   // Mêmes heures que l'écran Calendrier (« 20 h », « 9 h 30 – 11 h »).
   if (!o.event.allDay && o.event.time !== undefined) parts.push(timeRangeLabel(o.event));
   if (o.event.place) parts.push(o.event.place);

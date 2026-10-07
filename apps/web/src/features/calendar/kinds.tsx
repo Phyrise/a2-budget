@@ -5,13 +5,16 @@
  * feuille ; l'icône au trait (même grammaire que ui/Icon) reste en repli
  * si une peinture manquait. Toujours décoratives : le libellé est porté par
  * le contrôle ou le texte voisin.
+ *
+ * V4.2 : cinq natures (voyage fusionné dans « Sortie », maison retirée) ; un
+ * ancien événement s'affiche sous sa nature actuelle (`activeCalendarKind`).
  */
-import type { CalendarEventKind } from '@a2/core';
+import { activeCalendarKind, type ActiveCalendarKind, type CalendarEventKind } from '@a2/core';
 import type { CSSProperties, ReactNode } from 'react';
 import { calendarTheme } from '../../themes/manifest';
 
 export interface KindMeta {
-  kind: CalendarEventKind;
+  kind: ActiveCalendarKind;
   label: string;
   /** Couleur douce (pastilles, tuiles), lisible sur l'encre. */
   color: string;
@@ -23,15 +26,13 @@ export const KINDS: readonly KindMeta[] = [
   { kind: 'sortie', label: 'Sortie', color: '#9cc58e' },
   { kind: 'anniversaire', label: 'Anniversaire', color: '#eba3b4' },
   { kind: 'rdv', label: 'Rendez-vous', color: '#a9c4ea' },
-  { kind: 'voyage', label: 'Voyage', color: '#7fc8c0' },
-  { kind: 'maison', label: 'Maison', color: '#cf9b78' },
   { kind: 'autre', label: 'Autre', color: '#b9c6bd' },
 ];
 
 const BY_KIND = new Map(KINDS.map((k) => [k.kind, k]));
 
 export function kindMeta(kind: CalendarEventKind): KindMeta {
-  return BY_KIND.get(kind) ?? KINDS[KINDS.length - 1]!;
+  return BY_KIND.get(activeCalendarKind(kind)) ?? KINDS[KINDS.length - 1]!;
 }
 
 /** Variable CSS `--kind` posée sur un élément (pastille, tuile). */
@@ -39,7 +40,7 @@ export function kindStyle(kind: CalendarEventKind): CSSProperties {
   return { '--kind': kindMeta(kind).color } as CSSProperties;
 }
 
-const PATHS: Record<CalendarEventKind, ReactNode> = {
+const PATHS: Record<ActiveCalendarKind, ReactNode> = {
   // Assiette, fourchette et couteau.
   repas: (
     <>
@@ -72,22 +73,6 @@ const PATHS: Record<CalendarEventKind, ReactNode> = {
       <path d="M12 7.8V12l2.8 1.8" />
     </>
   ),
-  // Valise.
-  voyage: (
-    <>
-      <rect x="4.4" y="7.6" width="15.2" height="11.4" rx="2" />
-      <path d="M9.2 7.6V5.8c0-.6.4-1 1-1h3.6c.6 0 1 .4 1 1v1.8" />
-      <path d="M8.6 7.6V19M15.4 7.6V19" />
-    </>
-  ),
-  // Petite maison au toit pentu.
-  maison: (
-    <>
-      <path d="M4.4 11 12 4.8l7.6 6.2" />
-      <path d="M6.4 9.6v8.6c0 .7.5 1.2 1.2 1.2h8.8c.7 0 1.2-.5 1.2-1.2V9.6" />
-      <path d="M10.4 19.4v-4.2h3.2v4.2" />
-    </>
-  ),
   // Étoile douce à quatre branches.
   autre: (
     <path d="M12 4.6c.6 3.9 1.9 5.6 6.4 7.4-4.5 1.8-5.8 3.5-6.4 7.4-.6-3.9-1.9-5.6-6.4-7.4 4.5-1.8 5.8-3.5 6.4-7.4Z" />
@@ -109,14 +94,14 @@ export function KindIcon({ kind, size = 20, strokeWidth = 1.6 }: { kind: Calenda
       aria-hidden="true"
       focusable="false"
     >
-      {PATHS[kind]}
+      {PATHS[activeCalendarKind(kind)]}
     </svg>
   );
 }
 
 /** Icône peinte de la nature (repli : icône au trait). */
 export function KindArt({ kind, size = 20, className }: { kind: CalendarEventKind; size?: number; className?: string }) {
-  const src = calendarTheme.kinds[kind];
+  const src = calendarTheme.kinds[activeCalendarKind(kind)];
   if (!src) return <KindIcon kind={kind} size={size} />;
   return (
     <img
@@ -137,17 +122,18 @@ export function KindArt({ kind, size = 20, className }: { kind: CalendarEventKin
  * Anniversaire : Totoro tend son paquet-feuille, à la place de l'icône.
  */
 export function KindBadge({ kind, size = 40 }: { kind: CalendarEventKind; size?: number }) {
-  const gift = kind === 'anniversaire' ? calendarTheme.totoro.gift : '';
+  const active = activeCalendarKind(kind);
+  const gift = active === 'anniversaire' ? calendarTheme.totoro.gift : '';
   return (
     <span
-      className={`cal-kind-badge cal-kind-badge--${kind}${gift ? ' cal-kind-badge--gift' : ''}`}
+      className={`cal-kind-badge cal-kind-badge--${active}${gift ? ' cal-kind-badge--gift' : ''}`}
       style={{ ...kindStyle(kind), '--badge': `${size}px` } as CSSProperties}
       aria-hidden="true"
     >
       {gift ? (
         <img className="cal-kind-badge__gift" src={gift} alt="" decoding="async" draggable={false} />
       ) : (
-        <KindArt kind={kind} size={Math.round(size * 0.8)} />
+        <KindArt kind={active} size={Math.round(size * 0.8)} />
       )}
     </span>
   );

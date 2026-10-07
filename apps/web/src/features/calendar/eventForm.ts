@@ -4,7 +4,7 @@
  * chaleureux, et construction du brouillon pour le store. La validation
  * stricte reste celle de @a2/core (addEvent / updateEvent).
  */
-import type { CalendarEvent, CalendarEventDraft, CalendarEventKind, CalendarWho } from '@a2/core';
+import { activeCalendarKind, type ActiveCalendarKind, type CalendarEvent, type CalendarEventDraft, type CalendarWho } from '@a2/core';
 import { birthdayOrigin } from './birthdayDate';
 import { originYearKnown } from './calendarText';
 import { quickParse } from './quickParse';
@@ -15,7 +15,7 @@ export interface EventFormValues {
   allDay: boolean;
   time: string;
   endTime: string;
-  kind: CalendarEventKind;
+  kind: ActiveCalendarKind;
   who: CalendarWho;
   place: string;
   note: string;
@@ -34,7 +34,7 @@ export interface EventPrefill {
   date: string;
   time?: string;
   endTime?: string;
-  kind?: CalendarEventKind;
+  kind?: ActiveCalendarKind;
 }
 
 export type EventSheetState =
@@ -73,7 +73,8 @@ export function initialValues(state: Exclude<EventSheetState, null>): EventFormV
     allDay: e.allDay,
     time: e.time ?? '',
     endTime: e.endTime ?? '',
-    kind: e.kind,
+    // Un ancien voyage s'ouvre en « Sortie », une ancienne « Maison » en « Autre ».
+    kind: activeCalendarKind(e.kind),
     who: e.who,
     place: e.place ?? '',
     note: e.note ?? '',

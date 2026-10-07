@@ -17,9 +17,11 @@
  *   n'existe pas reste dans le titre ;
  * - heures : « 20h », « 20 h 30 », « 20:30 », « à midi », plages « de 14h à
  *   16h », « 14h-16h » ;
- * - nature par mots-clés (dîner → repas, ciné → sortie, dentiste → rdv…).
+ * - nature par mots-clés (dîner → repas, ciné ou week-end → sortie,
+ *   dentiste ou plombier → rdv…).
  */
-export type QuickKind = 'repas' | 'sortie' | 'anniversaire' | 'rdv' | 'voyage' | 'maison' | 'autre';
+/** Natures actives de @a2/core (V4.2 : ni voyage, ni maison). */
+export type QuickKind = 'repas' | 'sortie' | 'anniversaire' | 'rdv' | 'autre';
 
 export interface QuickParse {
   /** Titre nettoyé (initiale en capitale), '' si rien ne reste. */
@@ -53,10 +55,8 @@ const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', '
 const KIND_WORDS: ReadonlyArray<readonly [QuickKind, RegExp]> = [
   ['anniversaire', /\banniv/],
   ['repas', /\b(?:diner|dejeuner|dej|petit[- ]dej\w*|brunch|repas|apero|aperitif|resto|restaurant|pique[- ]nique|barbecue|bbq|raclette|fondue|gouter|souper)\b/],
-  ['rdv', /\b(?:rdv|rendez[- ]vous|medecin|docteur|dentiste|kine|osteo|ophtalmo|gyneco|pediatre|veto|veterinaire|coiffeur|banque|notaire|reunion|entretien|vaccin)\b/],
-  ['voyage', /\b(?:voyage|vacances|week[- ]?end|train|vol|avion|aeroport|sejour|depart|gare)\b/],
-  ['sortie', /\b(?:cinema|cine|concert|theatre|expo|exposition|musee|balade|promenade|randonnee|rando|spectacle|match|soiree|fete|bar|festival|opera|karaoke|bowling|piscine|plage)\b/],
-  ['maison', /\b(?:menage|plombier|electricien|livraison|travaux|bricolage|jardinage|demenagement|artisan|chaudiere|ramonage|courses)\b/],
+  ['rdv', /\b(?:rdv|rendez[- ]vous|medecin|docteur|dentiste|kine|osteo|ophtalmo|gyneco|pediatre|veto|veterinaire|coiffeur|banque|notaire|reunion|entretien|vaccin|plombier|electricien|artisan|chaudiere|ramonage)\b/],
+  ['sortie', /\b(?:voyage|vacances|week[- ]?end|train|vol|avion|aeroport|sejour|depart|gare|cinema|cine|concert|theatre|expo|exposition|musee|balade|promenade|randonnee|rando|spectacle|match|soiree|fete|bar|festival|opera|karaoke|bowling|piscine|plage)\b/],
 ];
 
 /** Plie la casse et les accents caractère par caractère (longueur UTF-16 conservée). */

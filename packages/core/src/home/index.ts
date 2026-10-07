@@ -167,6 +167,7 @@ export {
 
 // V3.2 — calendrier commun, progression et objectif de la semaine de la forêt.
 export type {
+  ActiveCalendarKind,
   CalendarEvent,
   CalendarEventKind,
   CalendarOccurrence,
@@ -179,6 +180,8 @@ export {
   CALENDAR_PLACE_MAX,
   CALENDAR_NOTE_MAX,
   CALENDAR_KINDS,
+  ACTIVE_CALENDAR_KINDS,
+  activeCalendarKind,
   isCalendarKind,
   isCalendarWho,
   isTimeKey,

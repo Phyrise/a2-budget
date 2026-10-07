@@ -7,7 +7,7 @@
  * titre, jour, heure et nature au fil de la frappe. Suppression : le parent
  * retire l'événement et propose « Annuler » dans un toast.
  */
-import { parseLocalDateKey, type CalendarEvent, type CalendarEventKind, type CalendarWho } from '@a2/core';
+import { parseLocalDateKey, type ActiveCalendarKind, type CalendarEvent, type CalendarWho } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Companion, Icon, Segmented, Sheet, TextField, cx, longDate } from '../../ui';
@@ -17,7 +17,7 @@ import { KINDS, KindArt, kindStyle } from './kinds';
 import { SentenceField } from './SentenceField';
 import './event-sheet.css';
 
-function KindPicker({ value, onChange }: { value: CalendarEventKind; onChange: (kind: CalendarEventKind) => void }) {
+function KindPicker({ value, onChange }: { value: ActiveCalendarKind; onChange: (kind: ActiveCalendarKind) => void }) {
   return (
     <fieldset className="cal-kinds">
       <legend className="field__label">Quel genre de moment&#8239;?</legend>
@@ -101,7 +101,7 @@ export function EventSheet({
     setFormError(null);
   };
 
-  const setKind = (kind: CalendarEventKind) => {
+  const setKind = (kind: ActiveCalendarKind) => {
     setV((prev) => {
       if (!prev) return prev;
       const next = { ...prev, kind };

@@ -3,8 +3,9 @@
  * pentatonique) : consonants avec tout le reste. Courts (≤ 1,2 s), bas,
  * attaques adoucies — un détail, jamais une sonnerie.
  *
- * - Budget : un paiement coché, les pièces tombent dans la bouche du
- *   Sans-Visage (« nom » doux) ; le solde recalé, une petite cloche ;
+ * - Budget : le compte monte, les pièces tombent dans la bouche du
+ *   Sans-Visage (« nom » doux) ; il descend, elles s'en vont (« oh… ») ;
+ *   on le touche, « ah… » ; le solde recalé, une petite cloche ;
  * - Lanternes de pierre : allumette frottée puis souffle chaud quand la
  *   lanterne s'allume ; carillon pour un nouveau modèle débloqué.
  */
@@ -15,6 +16,7 @@ const N = {
   Gs3: 207.65,
   B3: 246.94,
   E4: 329.63,
+  Gs4: 415.3,
   B4: 493.88,
   E5: 659.25,
   Gs5: 830.61,
@@ -47,6 +49,46 @@ export function nom(bus: Bus, t: number, gentle: boolean): void {
     // Petit « mm » satisfait, plus bas encore.
     tone(bus, m + 0.2, N.Gs3, { peak: 0.028, attack: 0.04, decay: 0.26, glideTo: N.E3, glideTime: 0.22, wet: 0.15 });
   }
+}
+
+/**
+ * Le compte descend : deux pièces qui s'en vont (la seconde plus aiguë et
+ * plus lointaine), puis un petit « oh… » feutré qui descend — un peu
+ * triste, jamais une alarme.
+ */
+export function spend(bus: Bus, t: number, gentle: boolean): void {
+  const lifts: Array<readonly [number, number, number]> = gentle
+    ? [[0, N.Gs6, 0.03]]
+    : [
+        [0, N.Gs6, 0.032],
+        [0.08, N.B6, 0.02],
+      ];
+  for (const [at, f, peak] of lifts) {
+    bell(bus, t + at, f, { peak, decay: 0.26, bright: 0.9, ratio: 2.41, wet: 0.4 });
+  }
+  const o = t + (gentle ? 0.12 : 0.18);
+  tone(bus, o, N.E4, { peak: 0.04, attack: 0.05, decay: 0.34, glideTo: N.B3, glideTime: 0.3, wet: 0.18 });
+  tone(bus, o, N.E4 * 2, { peak: 0.008, attack: 0.06, decay: 0.22, glideTo: N.B3 * 2, glideTime: 0.24, wet: 0.14, type: 'triangle' });
+}
+
+/** On touche le Sans-Visage : un « ah… » feutré qui se pose, un souffle, l'éclat du kompeitō offert. */
+export function ah(bus: Bus, t: number, gentle: boolean): void {
+  tone(bus, t, N.Gs4, { peak: 0.032, attack: 0.07, decay: 0.42, glideTo: N.E4, glideTime: 0.38, wet: 0.3, type: 'triangle' });
+  tone(bus, t, N.B4, { peak: 0.01, attack: 0.09, decay: 0.32, glideTo: N.Gs4, glideTime: 0.3, wet: 0.35 });
+  breath(bus, t, {
+    type: 'bandpass',
+    sweep: [
+      [0, 900],
+      [0.3, 700],
+    ],
+    q: 1.2,
+    shape: [
+      [0.08, 0.02],
+      [0.4, 0],
+    ],
+    wet: 0.3,
+  });
+  if (!gentle) bell(bus, t + 0.32, N.E6, { peak: 0.028, decay: 0.5, bright: 0.6, ratio: 2.76, wet: 0.5 });
 }
 
 /** Le solde recalé : une petite cloche claire, et son écho plus doux. */

@@ -1,6 +1,7 @@
-/* V4 — le Sans-Visage mange l'argent : il s'arrondit un peu au fil des
-   paiements cochés (--full, 0..1), mâche à l'arrivée des pépites, et vient
-   en visite au bord de l'écran quand il est hors de vue. Toujours doux. */
+/* V4 — le Sans-Visage mange l'argent : il s'arrondit ou se tasse un peu
+   selon ce qui est déjà passé sur le compte (--full, −1..1), mâche à
+   l'arrivée des pépites, et vient en visite au bord de l'écran quand il est
+   hors de vue. Toujours doux. */
 
 .noface {
   --full: 0;

@@ -30,6 +30,7 @@ import { useFeeding } from './chihiro/feeding';
 import { noFaceMood } from './chihiro/mood';
 import { NoFaceVisitor } from './chihiro/NoFaceVisitor';
 import { SusuwatariRunner } from './chihiro/Susuwatari';
+import { SusuwatariGame } from './chihiro/SusuwatariGame';
 import { useMonthEdits } from './chihiro/useMonthEdits';
 import { MonthLedger } from './MonthLedger';
 import { paymentProgress } from './paymentItems';
@@ -167,6 +168,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
           </Disclosure>
         </div>
         <SusuwatariRunner run={run} areaRef={sheetRef} onDone={endRun} />
+        <SusuwatariGame />
         <NoFaceVisitor
           visit={feeding.visit}
           mouthRef={feeding.visitorRef}

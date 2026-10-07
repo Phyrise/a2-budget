@@ -1,12 +1,13 @@
 /**
- * Budget — univers « Le Voyage de Chihiro » (V3.2, V4) : le Sans-Visage suit
- * le compte commun sans jamais effrayer, la rigole d'or suit le solde (un
- * repère marque la fin du mois), il mange les pépites quand on coche un
- * paiement, une Noiraude traverse après une modification de montant, chaque
- * dépense a son kompeitō. Les chiffres restent la seule source d'information.
+ * Budget — univers « Le Voyage de Chihiro » (V3.2, V4, V4.2) : le Sans-Visage
+ * suit le compte commun sans jamais effrayer (il reçoit l'argent, content,
+ * quand le compte monte ; il le laisse partir, triste, quand il descend), la
+ * rigole d'or suit le solde, une Noiraude traverse après une modification de
+ * montant, chaque dépense a son kompeitō, et des Noiraudes vagabondes
+ * s'attrapent. Les chiffres restent la seule source d'information.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, openApp, trackErrors } from './helpers';
+import { PHONE, STORAGE_KEY, openApp, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -86,25 +87,33 @@ test.describe('Budget — univers Chihiro', () => {
     await expect(page.locator('.balance-card--low')).toBeVisible();
     await expect(page.locator('.gold-gauge__mark')).toHaveAttribute('data-mark', '0.000');
 
-    // Décor muet : l'information est déjà dans les chiffres.
-    await expect(noFace(page)).toHaveAttribute('aria-hidden', 'true');
+    // Décor muet (seul le toucher est nommé) : l'information est déjà dans les chiffres.
+    await expect(page.getByRole('button', { name: 'Saluer le Sans-Visage', exact: true })).toHaveCount(1);
     await expect(page.locator('.gold-gauge')).toHaveAttribute('aria-hidden', 'true');
     const alts = await page.locator('.budget img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('alt')));
     expect(alts.every((alt) => alt === '')).toBe(true);
     expect(errors).toEqual([]);
   });
 
-  test('une modification : salut du Sans-Visage et Noiraude qui traverse', async ({ page }) => {
+  test('une modification : il suit le compte, et une Noiraude traverse', async ({ page }) => {
     await openApp(page, 'budget');
     await salaries(page, '2800', '3600');
     await expectPose(page, 'offering');
 
+    // Plus versé : il reçoit l'argent, content.
     await setEuros(page, 'salary-a', '2900');
-    await expect(noFace(page)).toHaveAttribute('data-pose', 'bow');
+    await expect(noFace(page)).toHaveAttribute('data-reaction', 'gain');
+    await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
     const runner = page.locator('.susu-runner');
     await expect(runner).toBeVisible();
     await expect(runner).toHaveAttribute('data-carrier', 'carryYellow');
     await expect(runner).toHaveCount(0, { timeout: 4_000 });
+    await expectPose(page, 'offering');
+
+    // Moins versé : un peu triste, puis il revient à son humeur.
+    await setEuros(page, 'salary-a', '2800');
+    await expect(noFace(page)).toHaveAttribute('data-reaction', 'loss');
+    await expect(noFace(page)).toHaveAttribute('data-pose', 'shy');
     await expectPose(page, 'offering');
   });
 
@@ -113,7 +122,7 @@ test.describe('Budget — univers Chihiro', () => {
     await openApp(page, 'budget');
     await salaries(page, '2800', '3600');
     await setEuros(page, 'salary-b', '3700');
-    await expect(noFace(page)).toHaveAttribute('data-pose', 'bow');
+    await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
     await page.waitForTimeout(400);
     await expect(page.locator('.susu-runner')).toHaveCount(0);
   });
@@ -143,13 +152,15 @@ test.describe('Budget — univers Chihiro', () => {
     await expect(page.getByText('Aucune dépense ce mois-ci')).toBeVisible();
   });
 
-  test('cocher un paiement : les pépites volent, il mâche, s’arrondit, puis salue quand tout est payé', async ({ page }) => {
+  test('cocher, décocher : il reçoit l’argent (content) ou le laisse partir (triste)', async ({ page }) => {
     const errors = trackErrors(page);
     await openApp(page, 'budget');
     await salaries(page, '2200', '3000');
     await page.waitForTimeout(1600);
+    const full = () => noFace(page).evaluate((e) => Number(getComputedStyle(e).getPropertyValue('--full').trim()));
 
-    const before = await noFace(page).evaluate((e) => getComputedStyle(e).getPropertyValue('--full').trim());
+    // Un virement : le compte monte, les pépites volent jusqu'à lui, il mâche et s'arrondit.
+    const before = await full();
     await revealNearNoFace(page, 'pay-transfer-a');
     await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
     await expect(page.locator('.nugget-flight')).toHaveCount(1);
@@ -157,26 +168,85 @@ test.describe('Budget — univers Chihiro', () => {
     await expect(noFace(page)).toHaveClass(/is-eating/);
     await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
     await expect(page.locator('.nugget-flight')).toHaveCount(0, { timeout: 4_000 });
-    const after = await noFace(page).evaluate((e) => getComputedStyle(e).getPropertyValue('--full').trim());
-    expect(Number(after)).toBeGreaterThan(Number(before));
+    const fed = await full();
+    expect(fed).toBeGreaterThan(before);
+    await expect(noFace(page)).not.toHaveAttribute('data-reaction', /./, { timeout: 4_000 });
 
-    // Plus bas dans la liste, il vient manger au bord de l'écran.
+    // Une dépense payée plus bas : il vient au bord, les pièces le quittent, triste, il se tasse.
     const last = page.getByRole('checkbox', { name: 'Assurance payé', exact: true });
     await last.evaluate((e) => e.scrollIntoView({ block: 'start' }));
     await page.evaluate(() => window.scrollBy(0, -90));
     await expect(noFace(page)).not.toBeInViewport();
     await last.click();
-    await expect(page.locator('.noface-visitor.is-in .noface')).toBeVisible();
+    const visitor = page.locator('.noface-visitor.is-in .noface');
+    await expect(visitor).toHaveAttribute('data-reaction', 'loss');
+    await expect(visitor).toHaveAttribute('data-pose', 'shy');
+    await expect(page.locator('.nugget-flight')).toHaveCount(1);
+    expect(await full()).toBeLessThan(fed);
     await expect(page.locator('.noface-visitor .noface')).toHaveCount(0, { timeout: 6_000 });
 
-    // Tout payer : il salue.
-    const unpaid = page.locator('.paybook-row:not(.is-paid) [role="checkbox"]');
-    for (let guard = 0; guard < 10 && (await unpaid.count()) > 0; guard += 1) {
-      await unpaid.first().click();
-    }
-    await expect(page.getByTestId('payments-progress')).toHaveText('Tout est payé');
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await expect(page.locator('.noface[data-pose="bow"]')).not.toHaveCount(0, { timeout: 6_000 });
+    // Décocher : l'argent revient, il est content.
+    await last.click();
+    await expect(page.locator('.noface-visitor.is-in .noface')).toHaveAttribute('data-reaction', 'gain');
+    await expect(page.locator('.noface-visitor .noface')).toHaveCount(0, { timeout: 6_000 });
+    expect(await full()).toBeCloseTo(fed, 3);
+    expect(errors).toEqual([]);
+  });
+
+  test('toucher le Sans-Visage : il penche la tête et offre un kompeitō, sans rien changer', async ({ page }) => {
+    await openApp(page, 'budget');
+    await salaries(page, '2200', '3000');
+    await page.waitForTimeout(1600);
+    const state = () => page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    const saved = await state();
+    const touch = page.getByRole('button', { name: 'Saluer le Sans-Visage', exact: true });
+    await touch.click();
+    await expect(noFace(page)).toHaveClass(/is-tapped/);
+    await expect(noFace(page).locator('.noface__gift')).toHaveCount(1);
+    await touch.click();
+    await expect(noFace(page).locator('.noface__gift')).toHaveCount(1);
+    await expect(noFace(page)).not.toHaveClass(/is-tapped/, { timeout: 4_000 });
+    expect(await state()).toBe(saved);
+  });
+
+  test('Noiraudes vagabondes : jamais d’elles-mêmes en test, sur aucun contrôle, attrapées et comptées', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openApp(page, 'budget');
+    const stray = page.locator('.susu-stray');
+    const call = () => page.evaluate(() => window.dispatchEvent(new Event('a2:susuwatari')));
+    await expect(stray).toHaveCount(0);
+
+    // Pas pendant une feuille (le pavé ouvert).
+    await page.locator('#salary-a-value').click();
+    await expect(page.locator('#salary-a-pad-display')).toBeFocused();
+    await call();
+    await expect(stray).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#salary-a-pad-display')).toHaveCount(0);
+
+    await call();
+    await expect(stray).toHaveCount(1);
+    const clear = await stray.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const controls = [...document.querySelectorAll('button, input, [role="checkbox"], a[href]')].filter((c) => c !== el);
+      return controls.every((c) => {
+        const b = c.getBoundingClientRect();
+        return b.right <= r.left || b.left >= r.right || b.bottom <= r.top || b.top >= r.bottom;
+      });
+    });
+    expect(clear).toBe(true);
+
+    const saved = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
+    await stray.dispatchEvent('click');
+    await expect(stray).toHaveClass(/is-caught/);
+    await expect(page.locator('.susu-stray__tally')).toHaveText('Noiraudes attrapées\u00a0: 1');
+    await expect(stray).toHaveCount(0, { timeout: 4_000 });
+    await expect(page.getByTestId('susu-count')).toHaveText('Noiraudes attrapées\u00a0: 1');
+    expect(await page.evaluate(() => localStorage.getItem('a2-budget:susuwatari:v1'))).toBe('{"caught":1}');
+    expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(saved);
+
+    await page.reload();
+    await expect(page.getByTestId('susu-count')).toHaveText('Noiraudes attrapées\u00a0: 1');
     expect(errors).toEqual([]);
   });
 

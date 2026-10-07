@@ -1,0 +1,237 @@
+/* V4.2 — Noiraudes vagabondes : une petite boule de suie se pose au bord
+   d'un bloc, trottine, puis repart. Seule la Noiraude reçoit les touchers. */
+
+.susu-strays {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.susu-stray {
+  position: absolute;
+  width: 34px;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation-name: susu-stray-walk;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+.susu-stray__body {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.susu-stray.is-left .susu-stray__body {
+  scale: -1 1;
+}
+
+.susu-stray__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  transform-origin: 50% 100%;
+  animation: susu-trot 200ms ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 1.5px rgba(236, 230, 211, 0.4)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  user-select: none;
+}
+
+@keyframes susu-trot {
+  from {
+    transform: translateY(0) scale(1.04, 0.94);
+  }
+  to {
+    transform: translateY(-4px) scale(0.98, 1.03);
+  }
+}
+
+/* Elle arrive, regarde un instant, trottine, puis file. */
+@keyframes susu-stray-walk {
+  0% {
+    opacity: 0;
+    transform: translate(0, 10px) scale(0.6);
+  }
+  8%,
+  20% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(var(--dx), 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) * 1.8), 6px) scale(0.7);
+  }
+}
+
+/* Attrapée : elle se tasse, bondit et s'efface ; un kompeitō reste un instant. */
+.susu-stray.is-caught {
+  animation-play-state: paused;
+  cursor: default;
+}
+
+.susu-stray.is-caught .susu-stray__img {
+  animation: susu-caught 700ms var(--ease-out) forwards;
+}
+
+@keyframes susu-caught {
+  0% {
+    transform: none;
+  }
+  25% {
+    transform: scale(1.25, 0.72);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-16px) scale(0.9, 1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-22px) scale(0.2);
+  }
+}
+
+.susu-stray__gift {
+  position: absolute;
+  left: 50%;
+  bottom: 50%;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255, 214, 150, 0.55));
+  animation: susu-gift 1300ms var(--ease-out) both;
+}
+
+@keyframes susu-gift {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.4);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.15) rotate(-12deg);
+  }
+  75% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1) rotate(10deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-28px) scale(0.8);
+  }
+}
+
+.susu-stray__tally {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(11, 20, 16, 0.88);
+  box-shadow: 0 0 0 1px rgba(242, 211, 134, 0.25);
+  color: var(--text);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: susu-tally 1600ms var(--ease-soft) both;
+}
+
+.susu-stray__tally.is-start {
+  left: 0;
+  translate: 0 0;
+}
+
+.susu-stray__tally.is-end {
+  left: auto;
+  right: 0;
+  translate: 0 0;
+}
+
+@keyframes susu-tally {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Immobile (mouvement réduit, forêt « immobile ») : elle apparaît, reste, s'efface. */
+.susu-stray.is-calm {
+  animation-name: susu-stray-still;
+}
+
+.susu-stray.is-calm .susu-stray__img {
+  animation: none;
+}
+
+.susu-stray.is-calm.is-caught .susu-stray__img {
+  animation: susu-fade-out 500ms linear forwards;
+}
+
+.susu-stray.is-calm .susu-stray__gift,
+.susu-stray.is-calm .susu-stray__tally {
+  animation-name: susu-fade;
+}
+
+@keyframes susu-stray-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  88% {
+    opacity: 1;
+  }
+}
+
+@keyframes susu-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes susu-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+}
+
+/* Compteur discret, en bas de la feuille. */
+.susu-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 26px 0 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.susu-count img {
+  opacity: 0.75;
+}

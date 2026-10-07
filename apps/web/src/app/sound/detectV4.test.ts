@@ -41,19 +41,26 @@ function addSessions(s: AppState, n: number, from = 0): AppState {
 const cues = (prev: AppState | null, next: AppState | null) => detectV4SoundEvents(prev, next).map((e) => e.cue);
 
 describe('sons V4 : paiements du mois', () => {
-  it('virement coché → « nom » ; décoché → rien', () => {
+  it('le compte monte : virement coché → « nom » ; décoché → « spend »', () => {
     const a = withMonth();
     const b = editMonth(a, (m) => setTransferPaid(m, 'A', true));
     expect(cues(a, b)).toEqual(['nom']);
-    expect(cues(b, editMonth(b, (m) => setTransferPaid(m, 'A', false)))).toEqual([]);
+    expect(cues(b, editMonth(b, (m) => setTransferPaid(m, 'A', false)))).toEqual(['spend']);
   });
 
-  it('dépense payée → « nom » ; jamais au premier rendu', () => {
+  it('le compte descend : dépense payée → « spend » ; décochée → « nom » ; jamais au premier rendu', () => {
     const a = withMonth();
     const b = editMonth(a, (m) => setExpensePaid(m, 'loyer', true));
-    expect(cues(a, b)).toEqual(['nom']);
+    expect(cues(a, b)).toEqual(['spend']);
+    expect(cues(b, editMonth(b, (m) => setExpensePaid(m, 'loyer', false)))).toEqual(['nom']);
     expect(cues(null, b)).toEqual([]);
     expect(cues(b, b)).toEqual([]);
+  });
+
+  it('retirer une dépense payée n’est pas un décochage', () => {
+    const a = editMonth(withMonth(), (m) => setExpensePaid(m, 'elec', true));
+    const b = editMonth(a, (m) => ({ ...m, expenses: m.expenses.filter((e) => e.id !== 'elec') }));
+    expect(cues(a, b)).toEqual([]);
   });
 
   it('un nouveau mois (rien de coché) ne sonne pas', () => {

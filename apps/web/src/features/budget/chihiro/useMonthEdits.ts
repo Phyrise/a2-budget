@@ -1,14 +1,18 @@
 /**
  * Repère les modifications enregistrées du mois affiché (salaire, compléments,
  * réserve, dépenses, libellés, taux) pour les petites réactions de l'univers :
- * - `bowing` : le Sans-Visage salue brièvement après toute modification ;
+ * - le Sans-Visage suit le compte (V4.2) : le net du mois monte → il reçoit
+ *   l'argent, content ; il descend → il s'attriste (`react`, voir reaction.ts) ;
+ * - `bowing` : salut bref pour une modification sans effet sur le compte
+ *   (libellé, réserve) ;
  * - `run` : une Noiraude traverse en portant un kompeitō quand un MONTANT
  *   change (couleur de la dépense touchée, or pour les revenus et la réserve).
  * Changer de mois ou recharger le même état ne déclenche rien.
  */
 import type { MonthRecord } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
-import { carrierFor, konpeitoColorFor, type SusuwatariCarrier } from './mood';
+import { carrierFor, editReaction, konpeitoColorFor, type SusuwatariCarrier } from './mood';
+import { react } from './reaction';
 
 export const BOW_MS = 1500;
 
@@ -21,7 +25,7 @@ interface Snapshot {
   key: string;
   amounts: string;
   full: string;
-  expenses: MonthRecord['expenses'];
+  month: MonthRecord;
 }
 
 function snapshot(month: MonthRecord): Snapshot {
@@ -41,7 +45,7 @@ function snapshot(month: MonthRecord): Snapshot {
     month.personB.baseRateBps,
     month.personB.variableRateBps,
   ].join('#');
-  return { key: month.monthKey, amounts, full, expenses: month.expenses };
+  return { key: month.monthKey, amounts, full, month };
 }
 
 /** Dépense ajoutée, retirée ou dont le montant a changé (sinon : revenus / réserve). */
@@ -82,12 +86,17 @@ export function useMonthEdits(month: MonthRecord): { bowing: boolean; run: Susuw
     }
     if (prev.full === next.full) return;
 
-    setBowing(true);
-    window.clearTimeout(bowTimer.current);
-    bowTimer.current = window.setTimeout(() => setBowing(false), BOW_MS);
+    const reaction = editReaction(prev.month, next.month);
+    if (reaction !== null) {
+      react(reaction);
+    } else {
+      setBowing(true);
+      window.clearTimeout(bowTimer.current);
+      bowTimer.current = window.setTimeout(() => setBowing(false), BOW_MS);
+    }
 
     if (prev.amounts !== next.amounts && !prefersReducedMotion()) {
-      const label = touchedExpenseLabel(prev.expenses, next.expenses);
+      const label = touchedExpenseLabel(prev.month.expenses, next.month.expenses);
       runId.current += 1;
       setRun({ id: runId.current, carrier: label === null ? 'carryYellow' : carrierFor(konpeitoColorFor(label)) });
     }

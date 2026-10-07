@@ -154,14 +154,15 @@ await step('catbus', async () => {
       new Promise((resolve) => {
         const out = [];
         const t0 = performance.now();
-        const tick = () => {
+        // Horodatage de l'image (argument de rAF) : celui des animations.
+        const tick = (now = performance.now()) => {
           const track = document.querySelector('.cal-catbus__track');
           const body = document.querySelector('.cal-catbus__body');
           const tilt = document.querySelector('.cal-catbus__tilt');
           if (!track || !body || !tilt) return resolve(out);
           const r = { left: track.getBoundingClientRect().left, top: body.getBoundingClientRect().top };
           const m = new DOMMatrix(getComputedStyle(tilt).transform);
-          out.push({ t: performance.now() - t0, x: r.left, y: r.top, angle: (Math.atan2(m.b, m.a) * 180) / Math.PI });
+          out.push({ t: now - t0, x: r.left, y: r.top, angle: (Math.atan2(m.b, m.a) * 180) / Math.PI });
           requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
@@ -201,28 +202,52 @@ await step('catbus', async () => {
 });
 
 await step('catbus-frames', async () => {
-  // Contrat `catbusRun` : la QA ne peut pas injecter d'images dans le
-  // manifeste ; elle vérifie que la pose courante est bien unique à tout instant.
+  // Galop (calendarTheme.catbusRun) : une seule frame opaque à tout instant,
+  // les 8 frames parcourues, cadence ≈ 12 i/s.
   const { context, page } = await open('calendar');
   await page.locator('.cal-add').click();
   await page.waitForTimeout(400);
   await page.locator('#event-sentence').fill('balade lundi 10h');
   await page.getByRole('dialog').getByRole('button', { name: 'Ajouter', exact: true }).click();
   await page.waitForSelector('.cal-catbus');
-  const visible = await page.evaluate(
+  const seen = await page.evaluate(
     () =>
       new Promise((resolve) => {
-        const counts = [];
-        const tick = () => {
+        const out = [];
+        const t0 = performance.now();
+        // Horodatage de l'image (argument de rAF) : celui des animations.
+        const tick = (now = performance.now()) => {
           const imgs = [...document.querySelectorAll('.cal-catbus__bus')];
-          if (imgs.length === 0) return resolve(counts);
-          counts.push(imgs.filter((el) => Number(getComputedStyle(el).opacity) > 0.5).length);
+          if (imgs.length === 0) return resolve(out);
+          const on = imgs.filter((el) => Number(getComputedStyle(el).opacity) > 0.5);
+          out.push({ t: now - t0, n: on.length, src: on[0]?.getAttribute('src') ?? '' });
           requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       }),
   );
-  check('Chatbus : une seule pose visible à la fois', visible.every((n) => n === 1), JSON.stringify([...new Set(visible)]));
+  check('Chatbus : une seule frame visible à la fois', seen.every((s) => s.n === 1), JSON.stringify([...new Set(seen.map((s) => s.n))]));
+  const distinct = new Set(seen.map((s) => s.src)).size;
+  check('Chatbus : les 8 frames du galop défilent', distinct === 8, `${distinct} frames`);
+  const changes = seen.slice(1).filter((s, i) => s.src !== seen[i].src).length;
+  const fps = changes / ((seen.at(-1).t - seen[0].t) / 1000);
+  check('Chatbus : cadence ≈ 12 i/s', fps > 10 && fps < 13.5, `${fps.toFixed(1)} i/s`);
+  await context.close();
+});
+
+await step('catbus-reduit', async () => {
+  const { context, page } = await open('calendar', { reducedMotion: 'reduce' });
+  await page.locator('.cal-add').click();
+  await page.waitForTimeout(400);
+  await page.locator('#event-sentence').fill('thé dimanche 15h');
+  await page.getByRole('dialog').getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await page.waitForSelector('.cal-catbus--still');
+  await page.waitForTimeout(600);
+  const y = await page.locator('.cal-catbus').evaluate((el) => el.getBoundingClientRect().top);
+  await shot(page, 'catbus-reduit', { clip: { x: 0, y: y - 20, width: 390, height: 170 } });
+  const imgs = await page.locator('.cal-catbus img').count();
+  const track = await page.locator('.cal-catbus__track').count();
+  check('Chatbus (mouvement réduit) : une image immobile en fondu', imgs === 1 && track === 0, `${imgs} image(s), ${track} piste`);
   await context.close();
 });
 

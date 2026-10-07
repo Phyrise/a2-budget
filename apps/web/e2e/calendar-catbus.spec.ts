@@ -1,9 +1,10 @@
 /**
  * Calendrier V4.1 : le Chatbus traverse sans à-coups quand on ajoute un
  * moment — vitesse constante (positions image par image proches d'une
- * droite, jamais de recul), rebond et inclinaison de course, une seule
- * pose visible à la fois, page jamais élargie, parti à la fin. Mouvement
- * réduit : pas de traversée.
+ * droite, jamais de recul), rebond et inclinaison de course, galop en
+ * frames à ~12 i/s avec une seule image opaque à la fois, page jamais
+ * élargie, parti à la fin. Mouvement réduit : pas de traversée, une seule
+ * image immobile en fondu.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { APP, PHONE, UI_KEY, trackErrors } from './helpers';
@@ -33,6 +34,7 @@ interface Sample {
   y: number;
   angle: number;
   visible: number;
+  frame: string;
 }
 
 test('le Chatbus file à vitesse constante, rebondit, s’incline, puis repart', async ({ page }) => {
@@ -46,28 +48,31 @@ test('le Chatbus file à vitesse constante, rebondit, s’incline, puis repart',
       new Promise<Sample[]>((resolve) => {
         const out: Sample[] = [];
         const t0 = performance.now();
-        const tick = () => {
+        // Horodatage de l'image (argument de rAF) : celui des animations.
+        const tick = (now: number = performance.now()) => {
           const track = document.querySelector('.cal-catbus__track');
           const body = document.querySelector('.cal-catbus__body');
           const tilt = document.querySelector('.cal-catbus__tilt');
           if (!track || !body || !tilt) return resolve(out);
           const m = new DOMMatrix(getComputedStyle(tilt).transform);
-          const visible = [...document.querySelectorAll('.cal-catbus__bus')].filter((el) => Number(getComputedStyle(el).opacity) > 0.5).length;
+          const shown = [...document.querySelectorAll<HTMLImageElement>('.cal-catbus__bus')].filter((el) => Number(getComputedStyle(el).opacity) > 0.5);
+          const visible = shown.length;
           out.push({
-            t: performance.now() - t0,
+            t: now - t0,
             x: track.getBoundingClientRect().left,
             y: body.getBoundingClientRect().top - track.getBoundingClientRect().top,
             angle: (Math.atan2(m.b, m.a) * 180) / Math.PI,
             visible,
+            frame: shown[0]?.getAttribute('src') ?? '',
           });
-          if (document.documentElement.scrollWidth > window.innerWidth) out.push({ t: -1, x: 0, y: 0, angle: 0, visible: -1 });
+          if (document.documentElement.scrollWidth > window.innerWidth) out.push({ t: -1, x: 0, y: 0, angle: 0, visible: -1, frame: '' });
           requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
       }),
   );
 
-  expect(samples.some((s) => s.t < 0), 'la page ne s’élargit jamais').toBe(false);
+  expect(samples.some((s) => s.visible < 0), 'la page ne s’élargit jamais').toBe(false);
   const mid = samples.filter((s) => s.x < 390 && s.x > -190);
   expect(mid.length).toBeGreaterThan(20);
   // Jamais de recul, et des positions alignées sur une droite x(t).
@@ -88,6 +93,13 @@ test('le Chatbus file à vitesse constante, rebondit, s’incline, puis repart',
   expect(Math.max(...angles.map(Math.abs))).toBeLessThanOrEqual(4);
   // Une seule pose à l'écran à chaque image.
   expect(new Set(samples.map((s) => s.visible))).toEqual(new Set([1]));
+  // Galop : les 8 frames du thème défilent, à ~12 i/s (≈ 83 ms par frame).
+  const frames = new Set(samples.map((s) => s.frame));
+  expect(frames.size).toBe(8);
+  const changes = samples.slice(1).filter((s, i) => s.frame !== samples[i]!.frame).length;
+  const perSecond = changes / ((samples.at(-1)!.t - samples[0]!.t) / 1000);
+  expect(perSecond, `cadence du galop : ${perSecond.toFixed(1)} i/s`).toBeGreaterThan(9);
+  expect(perSecond).toBeLessThan(14);
   // Traversée complète en moins de 2,5 s, puis plus rien.
   expect(samples.at(-1)!.t).toBeLessThan(2500);
   await expect(page.locator('.cal-catbus')).toHaveCount(0);
@@ -97,11 +109,20 @@ test('le Chatbus file à vitesse constante, rebondit, s’incline, puis repart',
 test.describe('mouvement réduit', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('pas de Chatbus, le moment est bien ajouté', async ({ page }) => {
+  test('pas de traversée : une seule image immobile en fondu, puis plus rien', async ({ page }) => {
     await openCalendar(page);
     await addEvent(page, 'dîner samedi 20h');
     await expect(page.getByRole('dialog')).toBeHidden();
-    await page.waitForTimeout(500);
-    await expect(page.locator('.cal-catbus')).toHaveCount(0);
+    const still = page.locator('.cal-catbus--still');
+    await still.waitFor();
+    await expect(page.locator('.cal-catbus__track')).toHaveCount(0);
+    await expect(still.locator('img')).toHaveCount(1);
+    const first = (await still.locator('img').boundingBox())!;
+    await page.waitForTimeout(600);
+    const later = (await still.locator('img').boundingBox())!;
+    expect(later.x).toBeCloseTo(first.x, 0);
+    expect(later.y).toBeCloseTo(first.y, 0);
+    expect(Number(await still.locator('img').evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.5);
+    await expect(page.locator('.cal-catbus')).toHaveCount(0, { timeout: 3000 });
   });
 });

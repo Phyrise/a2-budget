@@ -74,8 +74,17 @@ test.describe('Corrections V3.1', () => {
     await expect(settings.getByRole('note').filter({ hasText: 'encore des taux différents' })).toBeVisible();
     await closeSheet(page, 'Réglages');
 
-    // Mois suivant (créé à l'instant) : B au taux commun de 40 %.
+    // Mois suivant : depuis la V4, le consulter ne l'écrit pas (le solde
+    // reporté ne doit pas bouger) ; il est créé au premier geste, ici un
+    // virement coché — et il l'est alors aux taux communs (B à 40 %).
     await page.getByRole('button', { name: 'Mois suivant' }).click();
+    await expect
+      .poll(async () => {
+        const s = await persisted(page);
+        return s.budget.months.some((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
+      })
+      .toBe(false);
+    await page.getByRole('checkbox', { name: /^Virement d’.+ fait$/ }).first().click();
     await expect.poll(async () => {
       const s = await persisted(page);
       const m = s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);

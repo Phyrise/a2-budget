@@ -71,13 +71,13 @@ node apps/web/scripts/qa-saisons-assets.mjs <port>   # avec un serveur Vite sur 
 
 ## Formats livrés
 
-- **Couleur** : `world/assets/seasons/<s>/season-<s>-stage-<n>.webp`, 1024×1536.
-  La qualité WebP vaut 84 par défaut et descend par pas de 2 jusqu'à 76 au
-  plus bas, tant que l'image dépasse 320 Ko. Les peintures de saison (neige,
-  feuilles rousses, fleurs) sont plus détaillées que la base : à q84, elles
-  pèsent environ 450 Ko contre 310 Ko pour la base. À q76, la différence est
-  invisible à 1:1. Moyenne obtenue : 328 Ko par image, environ 2,3 Mo par
-  saison.
+- **Couleur** : `world/assets/seasons/<s>/season-<s>-stage-<n>.webp`,
+  1536×2304 : la peinture recalée est agrandie comme la base
+  (`../upscale.py`, cache `work/upscaled/`). La qualité WebP vaut 80 par
+  défaut et descend par pas de 2 jusqu'à 76 au plus bas, tant que l'image
+  dépasse 600 Ko (saisons plus détaillées que la base : ≈ 640 Ko à q80).
+  Moyenne obtenue : 575 Ko par image, environ 4 Mo par saison (chargée à la
+  demande, stade par stade).
 - **Profondeur** : la carte du stade de base est réutilisée (même import,
   donc même URL) quand trois conditions sont réunies :
   - dérive ≤ 2 px ;
@@ -128,7 +128,7 @@ communs. Le seuil de décision porte sur max(résidu, locale).
 | winter-stage-7 | 05-growth-6 | 1194 (1120) | 0,52 | 0,76 | 0,39 / 0,71 | oui (1,07) | 0,015 / 0,8 % | base | q76 · 311 Ko |
 | winter-night | 04-pause-night | 675 (595) | 0,55 | 1,02 | 0,67 / 1,12 | non (0,57) | — | — | cible LUT |
 
-Toutes les distances sont en pixels de l'image 1024×1536.
+Toutes les distances sont en pixels de l'image 1024×1536 (sources, avant agrandissement).
 
 LUT nuit : écart moyen à la cible (0..1). Le saut maximal entre nœuds voisins
 vaut de 0,06 à 0,18 pour les LUT de base.

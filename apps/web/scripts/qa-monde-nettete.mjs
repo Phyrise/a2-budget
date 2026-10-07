@@ -61,8 +61,12 @@ const probe = () =>
 const info = { base: await probe() };
 console.log(JSON.stringify(info.base, null, 1));
 
-// Gros plans (px CSS) : corde du cèdre, fougères et rochers du bas.
-const crops = { cedre: { x: 120, y: 250, width: 150, height: 150 }, fougeres: { x: 20, y: 560, width: 150, height: 150 } };
+// Gros plans (px CSS) : racines du cèdre, lanterne de pierre, fougères du bas.
+const crops = {
+  cedre: { x: 120, y: 250, width: 150, height: 150 },
+  lanterne: { x: 255, y: 210, width: 130, height: 130 },
+  fougeres: { x: 20, y: 300, width: 150, height: 150 },
+};
 for (const [name, clip] of Object.entries(crops)) await page.screenshot({ path: join(out, `${season}-${name}.png`), clip });
 await page.screenshot({ path: join(out, `${season}-vue.png`), scale: 'css' });
 

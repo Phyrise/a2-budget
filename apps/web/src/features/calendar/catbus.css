@@ -9,7 +9,7 @@
  *                         (le museau se lève en montant, plonge en retombant) ;
  *   .cal-catbus__bus    : les poses — « course » au sol, « saut » en l'air
  *                         (calées sur le rebond), ou les frames d'un cycle
- *                         de course (calendarTheme.catbusRun, ~12 i/s).
+ *                         de galop (calendarTheme.catbusRun, 12 i/s).
  * La durée et la distance viennent du composant (largeur de l'écran).
  */
 
@@ -136,11 +136,62 @@
   }
 }
 
-/* Frames d'un cycle de course : une seule visible, choisie par le composant. */
+/* Frames d'un cycle de galop (calendarTheme.catbusRun) : empilées, une
+   seule opaque à la fois (choisie par le composant). Livrées tournées vers
+   la droite, retournées ici pour filer vers la gauche ; calées sur leur
+   bord bas (ligne de sol commune) quel que soit leur format. */
+.cal-catbus--frames {
+  --catbus-w: 200px;
+  height: 150px;
+}
+
+.cal-catbus--frames .cal-catbus__track {
+  bottom: 14px;
+  height: calc(var(--catbus-w) * 180 / 301);
+}
+
 .cal-catbus--frames .cal-catbus__bus {
+  top: auto;
+  bottom: 0;
   opacity: 0;
+  transform: scaleX(-1);
 }
 
 .cal-catbus--frames .cal-catbus__bus.is-on {
   opacity: 1;
+}
+
+/* Mouvement réduit : une seule image, immobile, en fondu. */
+.cal-catbus--still .cal-catbus__bus {
+  top: auto;
+  bottom: 18px;
+  left: calc(50% - var(--catbus-w) / 2);
+  width: var(--catbus-w);
+  opacity: 0;
+  animation: cal-catbus-fade var(--catbus-ms, 1600ms) ease-in-out forwards;
+}
+
+.cal-catbus--still.cal-catbus--frames .cal-catbus__bus {
+  bottom: 14px;
+}
+
+@keyframes cal-catbus-fade {
+  0% {
+    opacity: 0;
+  }
+  25%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Le fondu n'est pas un mouvement : il échappe à la règle globale qui
+   écourte toutes les animations en mouvement réduit (base.css). */
+@media (prefers-reduced-motion: reduce) {
+  .cal-catbus--still .cal-catbus__bus {
+    animation-duration: var(--catbus-ms, 1600ms) !important;
+  }
 }

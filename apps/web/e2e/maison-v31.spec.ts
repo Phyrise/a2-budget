@@ -100,23 +100,63 @@ test.describe('Maison V3.1', () => {
     expect(errors).toEqual([]);
   });
 
-  test('le partage de la semaine s’explique, sans chiffre', async ({ page }) => {
+  test('le partage de la semaine s’explique au dos de la carte, sans chiffre', async ({ page }) => {
     await openSeeded(page, busyState());
     const balance = page.locator('.balance');
+    const front = balance.locator('.balance__front');
+    const back = balance.locator('.balance__back');
     await expect(balance.getByRole('heading', { name: 'Le partage de la semaine' })).toBeVisible();
-    // V4.2 : plus de paragraphe ; l'explication derrière un « ? » en haut à droite.
     await expect(balance.locator('.balance__lead')).toHaveCount(0);
+    // V4.2.1 : le « ? » en haut à droite retourne la carte ; l'explication est au dos.
     const how = balance.getByRole('button', { name: /Comment ça marche/ });
     await expect(how).toHaveText('?');
     await expect(how).toHaveAttribute('aria-expanded', 'false');
-    await expect(balance.locator('.balance-how')).toBeHidden();
+    await expect(back).toBeHidden();
+    await expect(back).toHaveAttribute('aria-hidden', 'true');
+    const size = async () => balance.evaluate((el) => [el.offsetWidth, el.offsetHeight]);
+    const before = await size();
+
     await how.click();
-    await expect(how).toHaveAttribute('aria-expanded', 'true');
-    await expect(balance.locator('.balance-how')).toContainText('Faite ensemble, elle se partage en deux');
+    await expect(back).toBeVisible();
+    await expect(front).toBeHidden();
+    await expect(front).toHaveAttribute('inert', '');
+    await expect(balance.locator('.balance__front .balance__help')).toHaveAttribute('aria-expanded', 'true');
+    await expect(back.locator('.balance-how')).toContainText('Faites ensemble, elles se partagent en deux');
     await expect(balance).not.toContainText(/\d/);
-    // Toucher ailleurs la referme.
-    await balance.locator('.balance__visual').click();
-    await expect(balance.locator('.balance-how')).toBeHidden();
+    const turn = back.getByRole('button', { name: 'Retourner la carte' });
+    await expect(turn).toBeFocused();
+    // Même taille, rien ne se décale ; le dos tient sans défilement.
+    expect(await size()).toEqual(before);
+    expect(await back.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+
+    // Un toucher sur le dos la remet à l'endroit, le focus revient au « ? ».
+    await back.locator('.balance-how').click();
+    await expect(front).toBeVisible();
+    await expect(back).toBeHidden();
+    await expect(how).toBeFocused();
+    await expect(how).toHaveAttribute('aria-expanded', 'false');
+
+    // Le bouton du coin, puis Échap, font de même.
+    await how.click();
+    await turn.click();
+    await expect(front).toBeVisible();
+    await how.click();
+    await expect(turn).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(front).toBeVisible();
+    await expect(back).toBeHidden();
+  });
+
+  test('mouvement réduit : la carte se retourne en fondu', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openSeeded(page, busyState());
+    const balance = page.locator('.balance');
+    const back = balance.locator('.balance__back');
+    expect(await back.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
+    await balance.getByRole('button', { name: /Comment ça marche/ }).click();
+    await expect(back).toBeVisible();
+    await expect(back).toHaveCSS('opacity', '1');
+    expect(await back.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
   });
 
   test('pause : plus de bouton en bas de Maison ; la carte réveille la forêt', async ({ page }) => {

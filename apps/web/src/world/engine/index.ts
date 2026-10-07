@@ -4,3 +4,4 @@
  */
 export type { EngineConfig, EngineStats, QualitySetting } from './Engine';
 export { WorldEngine } from './Engine';
+export { bindKodamaTouch, previewKodama } from './kodamaTouch';

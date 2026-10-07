@@ -20,6 +20,10 @@ import { manifest } from '../world/manifest';
 import { WorldStage, useWorld } from '../world/WorldContext';
 import { UNIVERSES, imageForSeason, type UniverseImage } from './modules';
 import { MODULES, type ModuleId } from './prefs';
+import { playCue } from './sound';
+
+/** Un kodama touché secoue la tête : cliquetis de bois (si les petits sons sont permis). */
+const kodamaSound = () => playCue('karakara');
 
 /** Après le fondu de la nouvelle peinture, la précédente (ou l'image d'attente) quitte le DOM. */
 const RELEASE_MS = 900;
@@ -135,7 +139,7 @@ export function WorldBackdrop({ module, isDesktop }: { module: ModuleId; isDeskt
   return (
     <div className="app-world" aria-hidden="true">
       {manifest.placeholder && <img className="app-world__placeholder" src={manifest.placeholder} alt="" />}
-      <WorldStage className="app-world__stage" />
+      <WorldStage className="app-world__stage" onKodama={kodamaSound} />
       {MODULES.map(({ id }) => {
         const universe = UNIVERSES[id];
         if (!visited.has(id)) return null;

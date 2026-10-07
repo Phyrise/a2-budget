@@ -1,6 +1,7 @@
 /**
  * Esprits de la forêt : kodama (selon l'humeur, luisants la nuit, petit
- * hochement de tête), créatures débloquées (discrètes) et gardien (≈10 s :
+ * hochement de tête, « karakara » quand on les touche : karakara.ts),
+ * créatures débloquées (discrètes) et gardien (≈10 s :
  * le vent tombe, la brume s'illumine, dévoilement lumineux, dissolution en
  * lucioles). Ce module ne fait que calculer ; le moteur dessine.
  */
@@ -8,6 +9,7 @@ import type { Texture } from 'ogl';
 import type { ScenePoint } from '../types';
 import { GLOW, type BillboardWriter, type Rect } from './batch';
 import type { FxAtlasMap } from './atlas';
+import { imitators, rattlePose, rattling, RATTLE_S, type HeadPose, type HeadRig, type Rattle } from './karakara';
 import { rng } from './noise';
 
 export interface SpriteAsset {
@@ -17,6 +19,8 @@ export interface SpriteAsset {
   aspect: number;
   /** Hauteur (px) de la partie utile, à la taille décodée. */
   px?: number;
+  /** Kodama : tête et cou de la peinture (karakara.ts). */
+  head?: HeadRig;
 }
 
 export interface SpriteDraw {
@@ -38,6 +42,8 @@ export interface SpriteDraw {
    * atmosphère de la scène (glsl/stone.ts). Absent : sprite simple.
    */
   stone?: StonePlacement;
+  /** Tête qui secoue (kodama « karakara ») : rotation autour du cou dans le shader. */
+  head?: HeadPose & { rig: HeadRig };
 }
 
 export interface StonePlacement {
@@ -58,6 +64,8 @@ interface KodamaState {
   nodAmp: number;
   /** Un pulse fort fait sortir le kodama le plus proche, même caché (jusqu'à). */
   peekUntil: number;
+  /** Karakara : secousse de la tête (en cours ou prévue pour un voisin). */
+  rattle: Rattle | null;
 }
 
 /** Durée d'un hochement spontané / pour un pulse fort (s). */
@@ -95,7 +103,7 @@ export class Spirits {
     private readonly creatureSpots: Record<string, ScenePoint>,
     private readonly guardianSpot: ScenePoint,
   ) {
-    this.k = spots.map((_, i) => ({ vis: 0, nodAt: -10, nodDir: 1, nextNod: 4 + i * 3.3, nodAmp: 0.09, peekUntil: -10 }));
+    this.k = spots.map((_, i) => ({ vis: 0, nodAt: -10, nodDir: 1, nextNod: 4 + i * 3.3, nodAmp: 0.09, peekUntil: -10, rattle: null }));
   }
 
   /** Visibilité du kodama i (0..1). */
@@ -125,6 +133,39 @@ export class Spirits {
       st.nodAmp = strong ? 0.17 : 0.09;
       if (strong && this.kodama.length > 0) st.peekUntil = now + 5;
     }
+  }
+
+  /**
+   * Karakara : le kodama i secoue la tête ; ses voisins visibles l'imitent
+   * avec un léger décalage. Sans voisin visible, le plus proche sort un
+   * instant pour lui répondre. Faux si sa tête claque déjà (anti-rafale).
+   */
+  rattle(i: number, now: number, amp: number): boolean {
+    const st = this.k[i];
+    if (!st || this.kodama.length === 0 || rattling(st.rattle, now)) return false;
+    st.rattle = { at: now, amp };
+    let echo = imitators(this.spots, i, (j) => this.k[j]!.vis > 0.3);
+    if (echo.length === 0) {
+      // Le voisin caché sort (≈ 0,8 s), puis répond.
+      echo = imitators(this.spots, i, () => true, 1).map((o) => ({ ...o, delay: o.delay + 0.75 }));
+      for (const o of echo) this.k[o.index]!.peekUntil = Math.max(this.k[o.index]!.peekUntil, now + 3.4);
+    }
+    for (const o of echo) {
+      const nb = this.k[o.index]!;
+      if (!rattling(nb.rattle, now + o.delay)) nb.rattle = { at: now + o.delay, amp: amp * o.amp };
+    }
+    return true;
+  }
+
+  /** Premier kodama visible (aperçu du mode développeur) ; -1 si aucun. */
+  firstVisible(): number {
+    return this.k.findIndex((s) => s.vis > 0.3);
+  }
+
+  /** Aperçu : le kodama i et ses voisins sortent un instant (même cachés). */
+  peekAround(i: number, now: number, seconds: number) {
+    const near = imitators(this.spots, i, () => true, 2).map((o) => o.index);
+    for (const j of [i, ...near]) this.k[j]!.peekUntil = Math.max(this.k[j]!.peekUntil, now + seconds);
   }
 
   startGuardian(now: number) {
@@ -194,7 +235,10 @@ export class Spirits {
     // Les hochements spontanés suivent la cadence courante (lents : 15–30 fps
     // suffisent) ; seuls un regard vers un pulse fort, une sortie ou le gardien
     // demandent 60 fps.
-    return this.k.some((s) => (s.nodAmp > 0.1 && now - s.nodAt < NOD_STRONG) || now < s.peekUntil + 2) || this.guardianActive(now);
+    return (
+      this.k.some((s) => (s.nodAmp > 0.1 && now - s.nodAt < NOD_STRONG) || now < s.peekUntil + 2 || (s.rattle !== null && now - s.rattle.at < RATTLE_S)) ||
+      this.guardianActive(now)
+    );
   }
 
   draws(now: number, night: number, fog: number, guardian: GuardianFrame): SpriteDraw[] {
@@ -206,10 +250,12 @@ export class Spirits {
       const na = now - st.nodAt;
       const dur = st.nodAmp > 0.1 ? NOD_STRONG : NOD;
       const nod = na < dur ? Math.sin((na / dur) * Math.PI) * st.nodAmp * st.nodDir : 0;
+      const pose = rattlePose(st.rattle, now);
       out.push({
         asset, x: s.x, y: s.y, depth: s.depth, h: s.scale ?? 0.05, rot: nod,
         alpha: st.vis, reveal: 1, glow: night * 0.55 * st.vis, glowColor: [0.75, 0.95, 0.85],
         fogMix: fog * (1 - s.depth) * 0.35,
+        ...(pose && asset.head ? { head: { ...pose, rig: asset.head } } : {}),
       });
     });
     for (const [id, vis] of this.creatureVis) {

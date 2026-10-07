@@ -6,7 +6,8 @@
  *
  * Vie autour de la pierre :
  * - de temps en temps (tirage doux), un kodama vient s'asseoir sur le toit,
- *   puis repart ; jamais pendant la floraison ;
+ *   puis repart ; jamais pendant la floraison ; il imite (ou lance) le
+ *   « karakara » des kodama de la forêt — tout le sprite oscille ;
  * - la nuit (Maison en pause), quelques lucioles tournent autour.
  * Rien de tout cela en mouvement « immobile » ni en bandeau (images fixes).
  *
@@ -15,6 +16,7 @@
  */
 import type { Texture } from 'ogl';
 import { GLOW, type BillboardWriter } from './batch';
+import { rattlePose, rattling, RATTLE_S, type Rattle, type TouchTarget } from './karakara';
 import { rng } from './noise';
 import type { SpriteAsset, SpriteDraw } from './spirits';
 import {
@@ -71,6 +73,8 @@ export class StoneLantern {
   private kodamaLoad: Promise<void> | null = null;
   private visit: { pose: number; start: number; end: number } | null = null;
   private nextVisit = -1;
+  /** Karakara du kodama assis (tout le sprite oscille). */
+  private rattleState: Rattle | null = null;
   /** Dernière image vue (une scène figée qui reprend : le kodama repart en douceur). */
   private lastSeen = -1;
   private readonly rand = rng(1717);
@@ -131,6 +135,24 @@ export class StoneLantern {
     this.visit = { pose, start: now, end: now + stay };
   }
 
+  /** Le kodama assis secoue la tête (s'il est là) ; faux s'il secoue déjà. */
+  rattle(at: number, amp: number): boolean {
+    if (!this.visit || rattling(this.rattleState, at)) return false;
+    this.rattleState = { at, amp };
+    return true;
+  }
+
+  /** Le kodama assis, pour le test de toucher (null : personne sur le toit). */
+  roofTarget(now: number): TouchTarget | null {
+    const v = this.visit;
+    const kd = v ? this.kodama[v.pose % Math.max(1, this.kodama.length)] : undefined;
+    if (!v || !kd) return null;
+    const vis = visitFrame(v.start, v.end, now).vis;
+    const g = this.geometry();
+    const h = KODAMA_ON_ROOF * LANTERN_HEIGHT * kd.rel;
+    return { x: g.roof.x, y: g.roof.y + (1 - kd.seat) * h, depth: g.ground.depth, h, aspect: kd.aspect, pivot: [0.5, 0.42], vis };
+  }
+
   /** Avance les visites (`animate` : scène vivante ; `blooming` : floraison en cours). */
   update(now: number, animate: boolean, blooming: boolean) {
     if (this.nextVisit < 0) this.nextVisit = now + between(this.rand(), VISIT.first);
@@ -154,6 +176,7 @@ export class StoneLantern {
   busy(now: number): boolean {
     if (this.model && now - this.model.since < SWAP) return true;
     const v = this.visit;
+    if (v && this.rattleState && now - this.rattleState.at < RATTLE_S) return true;
     return !!v && (now - v.start < VISIT.fade || (now > v.end && now < v.end + VISIT.fade));
   }
 
@@ -186,7 +209,7 @@ export class StoneLantern {
       if (vis > 0.01) {
         const g = this.geometry();
         const h = KODAMA_ON_ROOF * LANTERN_HEIGHT * kd.rel;
-        const sway = animate ? Math.sin(t * 0.7 + v.pose) * 0.035 : 0;
+        const sway = animate ? Math.sin(t * 0.7 + v.pose) * 0.035 + (rattlePose(this.rattleState, now)?.angle ?? 0) * 0.55 : 0;
         out.push({
           asset: kd, x: g.roof.x, y: g.roof.y + (1 - kd.seat) * h - hop * h * 0.45, depth: g.ground.depth + 0.002, h, rot: sway,
           alpha: vis, reveal: 1, glow: night * 0.55 * vis, glowColor: [0.75, 0.95, 0.85], fogMix, stone: ON_ROOF,

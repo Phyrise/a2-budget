@@ -63,6 +63,10 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   balanceBell: 'Solde recalé',
   lanternLit: 'Lanterne allumée',
   lanternNew: 'Nouvelle lanterne',
+  karakara: 'Karakara des kodama',
+  crackle: 'Calcifer crépite',
+  grumble: 'Calcifer grogne',
+  yawn: 'Totoro bâille',
 };
 
 function ChoiceRow<T>({

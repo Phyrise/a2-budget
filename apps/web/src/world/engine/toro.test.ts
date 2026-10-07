@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { LANTERNS } from '@a2/core';
 import { LANTERN_ART } from '../../themes/lanterns';
 import { computeFraming } from './framing';
-import { DEFAULT_LANTERN, LANTERN_GROUND, LANTERN_HEIGHT, VISIT, lanternGeometry, visitFrame } from './toro';
+import { DEFAULT_LANTERN, LANTERN_GROUND, LANTERN_HEIGHT, VISIT, clearOfLantern, lanternGeometry, visitFrame } from './toro';
 
 const ASPECT = 1024 / 1536;
 
@@ -52,5 +52,18 @@ describe('visitFrame (kodama sur le toit)', () => {
     expect(leaving.vis).toBeLessThan(1);
     expect(leaving.hop).toBeLessThan(0);
     expect(visitFrame(10, 30, 30 + VISIT.fade + 0.01).vis).toBe(0);
+  });
+});
+
+describe('clearOfLantern', () => {
+  it('écarte un kodama posé dans la pierre, laisse les autres en place', () => {
+    const inStone = { x: LANTERN_GROUND.x - 0.01, y: LANTERN_GROUND.y - 0.03, depth: 0.2, scale: 0.048 };
+    const away = { x: 0.2, y: 0.5, depth: 0.1, scale: 0.05 };
+    const [moved, kept] = clearOfLantern([inStone, away], ASPECT);
+    expect(kept).toBe(away);
+    expect(moved!.x).toBeLessThan(inStone.x);
+    expect(moved!.y).toBe(inStone.y);
+    // Une fois écarté, il ne chevauche plus : un second passage ne le bouge plus.
+    expect(clearOfLantern([moved!], ASPECT)[0]).toBe(moved);
   });
 });

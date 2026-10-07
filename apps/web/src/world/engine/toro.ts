@@ -5,6 +5,7 @@
  * hauteur de la toile / celle du plus haut modèle. Le pied de la toile est
  * posé sur LANTERN_GROUND (mousse entre les racines du cèdre) ; `fire` et
  * `roof` sont normalisés sur la toile entière (sprites chargés sans rognage).
+ * Les kodama de la forêt s’écartent de la pierre (clearOfLantern).
  */
 
 /**
@@ -49,7 +50,7 @@ export interface LanternGeometry {
 export const FALLBACK_SHAPE: LanternShape = { aspect: 0.67, scale: 0.83, fire: { x: 0.48, y: 0.42 }, roof: { x: 0.65, y: 0.15 } };
 
 /** Point (u, v) de la toile → scène, toile posée par son pied sur `ground`. */
-export function lanternGeometry(shape: LanternShape, sceneAspect: number, ground = LANTERN_GROUND): LanternGeometry {
+export function lanternGeometry(shape: LanternShape, sceneAspect: number, ground: { x: number; y: number; depth: number } = LANTERN_GROUND): LanternGeometry {
   const h = LANTERN_HEIGHT * shape.scale;
   const w = h * shape.aspect;
   const at = (u: number, v: number) => ({ x: ground.x + ((u - 0.5) * w) / sceneAspect, y: ground.y - (1 - v) * h });
@@ -85,4 +86,32 @@ export function visitFrame(start: number, end: number, now: number): { vis: numb
   // Arrivée : il se pose d'un petit bond (parabole) ; départ : il s'élève un peu en s'effaçant.
   const hop = kIn < 1 ? Math.sin(Math.PI * kIn) * 0.6 : kOut > 0 ? -kOut * 0.5 : 0;
   return { vis, hop };
+}
+
+interface Spot {
+  x: number;
+  y: number;
+  depth: number;
+  scale?: number;
+}
+
+/**
+ * Les kodama de la forêt ne se posent pas DANS la lanterne : un emplacement
+ * peint qui chevauche la pierre (hauteur du plus haut modèle, largeur d'une
+ * kasuga) est poussé sur le côté le plus proche, sur la même ligne de sol.
+ */
+export function clearOfLantern<T extends Spot>(spots: readonly T[], sceneAspect: number, ground: { x: number; y: number } = LANTERN_GROUND): T[] {
+  const g = lanternGeometry(FALLBACK_SHAPE, sceneAspect, { ...ground, depth: 0 });
+  // Corps de la pierre : ~80 % de la largeur de sa toile.
+  const half = (g.w * 0.8) / 2 / sceneAspect;
+  const top = ground.y - LANTERN_HEIGHT;
+  return spots.map((s) => {
+    const h = s.scale ?? 0.05;
+    const kHalf = (h * 0.7) / 2 / sceneAspect;
+    const overlapsY = s.y > top && s.y - h < ground.y + 0.01;
+    const overlapsX = Math.abs(s.x - ground.x) < half + kHalf;
+    if (!overlapsY || !overlapsX) return s;
+    const side = s.x < ground.x ? -1 : 1;
+    return { ...s, x: ground.x + side * (half + kHalf + 0.005) };
+  });
 }

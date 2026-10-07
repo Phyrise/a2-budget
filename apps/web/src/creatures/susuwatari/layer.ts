@@ -9,6 +9,8 @@
  * - prefers-reduced-motion (suivi en direct) : mouvements calmes.
  * - `night` : seuls les yeux restent visibles.
  * - Profondeur : `depth(y)` réduit un peu celles qui sont loin (haut de zone).
+ * - Apparence : `params` (SootSpriteParams) ; `setParams` la change en direct
+ *   (sprites reconstruits à l'image suivante, les anciens servent en attendant).
  *
  * Usage :
  *   const layer = createSusuwatariLayer(canvas, { rim: 1 });
@@ -16,9 +18,10 @@
  *   s.walkTo(220, 320); layer.setGaze({ x, y }); layer.hitTest(x, y)?.bounce();
  */
 import { live } from './behavior';
+import { SpriteCache } from './cache';
 import { Susuwatari, type Point, type Rect, type SusuwatariEnv, type SusuwatariInit } from './creature';
 import { drawSusuwatari } from './draw';
-import { SpriteCache } from './sprites';
+import { DEFAULT_SOOT_PARAMS, rigOf, type SootSpriteParams } from './params';
 
 export interface SusuwatariLayerOptions {
   /** Plafond de densité (défaut 3). */
@@ -35,6 +38,8 @@ export interface SusuwatariLayerOptions {
   depth?: (y: number, height: number) => number;
   /** Appelé à chaque image après la mise à jour (chef d'orchestre). */
   onFrame?: (dt: number, time: number) => void;
+  /** Apparence (défaut : le modèle visé, DEFAULT_SOOT_PARAMS). */
+  params?: SootSpriteParams;
 }
 
 export interface SusuwatariLayer {
@@ -48,6 +53,9 @@ export interface SusuwatariLayer {
   setNight(on: boolean): void;
   setPaused(on: boolean): void;
   setRim(rim: number): void;
+  /** Change l'apparence de toutes les Noiraudes du calque. */
+  setParams(params: SootSpriteParams): void;
+  readonly params: SootSpriteParams;
   /** La Noiraude visible sous ce point (la plus en avant), sinon null. */
   hitTest(x: number, y: number): Susuwatari | null;
   area(): Rect;
@@ -70,7 +78,9 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   if (ctx === null) throw new Error('Canvas 2D indisponible');
   let maxDpr = options.maxDpr ?? 3;
   let rim = options.rim ?? 0;
-  const cache = new SpriteCache(rim);
+  let params = options.params ?? DEFAULT_SOOT_PARAMS;
+  let rig = rigOf(params);
+  const cache = new SpriteCache(rim, params);
   const creatures: Susuwatari[] = [];
   const query = reducedQuery();
   let reduced = query?.matches ?? false;
@@ -147,7 +157,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     const order = creatures.filter((s) => s.state !== 'gone').sort((a, b) => a.y - b.y);
     for (const s of order) {
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
-      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim });
+      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
     }
     cache.pump(4, time);
     frameMs = frameMs * 0.9 + (performance.now() - start) * 0.1;
@@ -186,6 +196,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     },
     spawn(init) {
       const s = new Susuwatari(init);
+      s.rig = rig;
       s.k = options.depth?.(s.y, height) ?? 1;
       // Premier affichage net : le palier exact est construit tout de suite.
       cache.warm(s.variant, (s.scale / 2) * dpr, time);
@@ -213,6 +224,15 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     setRim(value) {
       rim = value;
       cache.setRim(value);
+    },
+    get params() {
+      return params;
+    },
+    setParams(value) {
+      params = value;
+      rig = rigOf(value);
+      for (const s of creatures) s.rig = rig;
+      cache.setParams(value);
     },
     hitTest(x, y) {
       let hit: Susuwatari | null = null;

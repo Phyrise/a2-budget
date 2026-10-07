@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bucketRadius } from './sprites';
+import { bucketRadius } from './cache';
 
 describe('paliers de rayon des sprites', () => {
   it('construit toujours au-dessus du besoin, de 20 % au plus (au pixel près)', () => {

@@ -6,54 +6,17 @@
  * dormir / se réveiller, se tenir debout, lever les bras (porter). Le calque
  * appelle `update` à chaque image ; le dessin lit les champs publics.
  */
+import { rng } from '../../world/engine/noise';
+import { DEFAULT_RIG, type SootRig } from './params';
 import { VARIANTS } from './sprites';
+import type { ArmPose, EyeMood, Point, Rect, SusuwatariEnv, SusuwatariInit, SusuwatariState } from './types';
 
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface Rect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-export type SusuwatariState = 'idle' | 'walk' | 'shiver' | 'flee' | 'sleep' | 'gone';
-export type ArmPose = 'none' | 'up' | 'wave' | 'flail';
-export type EyeMood = 'open' | 'happy' | 'closed' | 'wide';
-
-export interface SusuwatariEnv {
-  /** Horloge du calque (s). */
-  time: number;
-  reduced: boolean;
-  /** Ce que tout le monde regarde (doigt, souris), sinon null. */
-  gaze: Point | null;
-  /** Zone visible du calque : au-delà, une Noiraude en fuite a disparu. */
-  view: Rect;
-}
-
-export interface SusuwatariInit {
-  x: number;
-  y: number;
-  /** Diamètre de la boule (px CSS, bout des poils). Défaut 44. */
-  size?: number;
-  seed?: number;
-}
+export type { ArmPose, EyeMood, Point, Rect, SusuwatariEnv, SusuwatariInit, SusuwatariState } from './types';
 
 const GRAVITY = 2600;
 let nextId = 1;
 
-function hash(n: number): () => number {
-  let a = (n * 2654435761) >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = Math.imul(a ^ (a >>> 15), a | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const hash = (n: number) => rng((n * 2654435761) >>> 0);
 
 const approach = (v: number, target: number, rate: number, dt: number) => v + (target - v) * Math.min(1, rate * dt);
 
@@ -96,6 +59,8 @@ export class Susuwatari {
   fur: number;
   /** Debout sans marcher (pattes sorties). */
   standing = false;
+  /** Proportions et tempo tirés de l'apparence (`rigOf`, posés par le calque). */
+  rig: SootRig = DEFAULT_RIG;
   /** Vit seule (promenades, sautillements) : voir behavior.ts. */
   autonomous = false;
   restUntil = 0;
@@ -139,7 +104,7 @@ export class Susuwatari {
   body(): Point {
     const S = this.scale;
     const bob = this.state === 'walk' || this.state === 'flee' ? 0.035 * S * (0.5 - 0.5 * Math.cos(this.step * Math.PI * 4)) * this.legs : 0;
-    return { x: this.x + this.jitterX, y: this.y - this.z - (0.42 + 0.22 * this.legs) * S - bob + this.jitterY };
+    return { x: this.x + this.jitterX, y: this.y - this.z - (this.rig.rest + this.rig.lift * this.legs) * S - bob + this.jitterY };
   }
 
   place(x: number, y: number): this {
@@ -173,7 +138,7 @@ export class Susuwatari {
     this.wakeQuietly();
     this.hopAt = this.clock + 0.09;
     this.hopPower = power;
-    this.squashV += 2.2;
+    this.squashV += 2.2 * Math.min(1.6, this.rig.bounce);
     this.armPose = 'up';
     return this;
   }
@@ -268,10 +233,10 @@ export class Susuwatari {
 
     // Bond : élan puis envol ; atterrissage → écrasement, pattes rentrées.
     if (this.hopAt >= 0 && t >= this.hopAt) {
-      const h = S * (env.reduced ? 0.22 : 0.7) * this.hopPower;
+      const h = S * (env.reduced ? 0.22 : 0.7) * this.hopPower * Math.max(0.03, this.rig.bounce);
       this.vz = Math.sqrt(2 * GRAVITY * h);
       this.hopAt = -1;
-      this.squashV -= 3.5;
+      this.squashV -= 3.5 * Math.min(1.6, this.rig.bounce);
       if (!env.reduced) this.eyes = 'happy';
     }
     if (this.z > 0 || this.vz > 0) {
@@ -342,7 +307,7 @@ export class Susuwatari {
     const legsOut = moving || this.z > 0 || this.hopAt >= 0 || this.standing || t < this.settleAt;
     this.legs = approach(this.legs, legsOut ? 1 : 0, legsOut ? 10 : 5, dt);
     this.arms = approach(this.arms, this.armPose === 'none' ? 0 : 1, 9, dt);
-    const stride = 0.22 * S;
+    const stride = this.rig.stride * S;
     this.step += (dt * Math.max(speedNow, moving ? 20 : 0)) / (stride * 2);
 
     // Inclinaison vers l'avant en marchant, plus franche en fuite.
@@ -379,7 +344,7 @@ export class Susuwatari {
 
     // Frisottis : lent au repos, vif en marche, électrique quand elle a peur.
     const furRate = this.state === 'shiver' ? 9 : this.state === 'flee' ? 3 : moving ? 1.2 : 0.4;
-    this.fur += dt * furRate * (env.reduced ? 0.5 : 1);
+    this.fur += dt * furRate * this.rig.furSpeed * (env.reduced ? 0.5 : 1);
 
     this.updateEyes(dt, env);
   }
@@ -405,10 +370,10 @@ export class Susuwatari {
     this.look.y = approach(this.look.y, this.lookGoal.y, 16, dt);
 
     // Clignements (parfois deux de suite).
-    if (this.eyes === 'open' && this.blinkStart < 0 && t >= this.blinkAt) {
+    if (this.eyes === 'open' && this.blinkStart < 0 && t >= this.blinkAt && this.rig.blink > 0) {
       this.blinkStart = t;
       this.blinkTwice = this.rand() < 0.22;
-      this.blinkAt = t + 1.8 + this.rand() * 4.5;
+      this.blinkAt = t + (1.8 + this.rand() * 4.5) / this.rig.blink;
     }
     if (this.blinkStart >= 0) {
       const u = (t - this.blinkStart) / 0.15;

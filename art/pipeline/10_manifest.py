@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import re
 
+from PIL import Image
+
 from common import ASSETS, OUT, PIPE, STAGE_SOURCES, WORK, read_json
 
 FX_COUNTS = {"fog": 3, "rays": 3, "drips": 6, "needles": 4, "motes": 6, "halos": 2}
@@ -27,6 +29,7 @@ SEASONS = ["spring", "autumn", "winter"]
 
 imports: list[tuple[str, str]] = []
 sizes: dict[str, int] = {}
+painting: set[tuple[int, int]] = set()
 
 
 def ident(rel: str) -> str:
@@ -57,6 +60,16 @@ def asset(rel: str) -> str:
     if (rel, name) not in imports:
         imports.append((rel, name))
         sizes[rel] = p.stat().st_size
+    return name
+
+
+def paint(rel: str) -> str:
+    """Peinture (stade de base ou de saison) : toutes à la même taille, celle de `size`."""
+    name = asset(rel)
+    with Image.open(ASSETS / rel) as im:
+        painting.add(im.size)
+    if len(painting) > 1:
+        raise SystemExit(f"peintures de tailles différentes : {sorted(painting)} ({rel})")
     return name
 
 
@@ -93,7 +106,7 @@ def season_sets(base_depth: dict[int, str]) -> tuple[str, str]:
             continue
         lines, own = [], 0
         for s in sorted(STAGE_SOURCES):
-            c = asset(f"{d}/season-{name}-stage-{s}.webp")
+            c = paint(f"{d}/season-{name}-stage-{s}.webp")
             cands = [f"{d}/season-{name}-depth-{s}.{e}" for e in ("webp", "png")]
             hit = [x for x in cands if (ASSETS / x).exists()]
             depth = asset(hit[0]) if hit else base_depth[s]
@@ -107,6 +120,7 @@ def season_sets(base_depth: dict[int, str]) -> tuple[str, str]:
                       + f"\n      }},\n      nightLut: {night},\n    }},")
     if not blocks:
         return "", ""
+    pw, ph = next(iter(painting))
     body = "  seasons: {\n" + "\n".join(blocks) + "\n  },\n"
     note = f""" *
  * Saisons (hors précache) : {' · '.join(notes)}.
@@ -114,9 +128,10 @@ def season_sets(base_depth: dict[int, str]) -> tuple[str, str]:
  *   donc émis au build sous assets/season-*-<hash>.<ext> : MOTIF À EXCLURE DU
  *   PRÉCACHE (globIgnores: 'assets/season-*') et à servir par le cache à
  *   l'exécution (la saison en cours, puis la suivante ~14 jours avant).
- * - seasons.<s>.stages[n].color : peinture de saison, WebP 1024×1536 (qualité
- *   84 → 76 pour tenir ≈ 0,32 Mo), recalée sur le stade de base n
- *   (art/pipeline/seasons/s01_align.py, dérive résiduelle ≤ 1,2 px).
+ * - seasons.<s>.stages[n].color : peinture de saison, WebP {pw}×{ph} (qualité
+ *   80 → 76 pour tenir ≈ 0,6 Mo), recalée sur le stade de base n
+ *   (art/pipeline/seasons/s01_align.py, dérive résiduelle ≤ 1,2 px), agrandie
+ *   comme la base.
  * - seasons.<s>.stages[n].depth : profondeur du stade de base (même import, même
  *   URL) quand la dérive résiduelle ≤ 2 px et que la silhouette ne change pas ;
  *   sinon season-<s>-depth-<n> (même format et même échelle que la base).
@@ -135,7 +150,7 @@ def main() -> None:
     stages = []
     base_depth: dict[int, str] = {}
     for s in sorted(STAGE_SOURCES):
-        c = asset(f"stages/stage-{s}.webp")
+        c = paint(f"stages/stage-{s}.webp")
         d = first(f"depth/stage-{s}.webp", f"depth/stage-{s}.png")
         base_depth[s] = d
         stages.append(f"    {s}: {{ color: {c}, depth: {d} }},")
@@ -166,6 +181,7 @@ def main() -> None:
     placeholder = asset("placeholder.webp")
 
     seasons, season_note = season_sets(base_depth)
+    pw, ph = next(iter(painting))
 
     total = sum(b for rel, b in sizes.items() if not rel.startswith("seasons/"))
     count = sum(1 for rel in sizes if not rel.startswith("seasons/"))
@@ -190,7 +206,9 @@ def main() -> None:
  * Poids total : {total / 1024 / 1024:.2f} Mo ({count} fichiers) — {breakdown}.
 {season_note} *
  * Formats :
- * - stages[n].color : peinture du stade, WebP 1024×1536 (recalée sur le stade 6).
+ * - stages[n].color : peinture du stade, WebP {pw}×{ph} q80 (recalée sur le stade 6 ;
+ *   sources 1024×1536 agrandies par art/pipeline/upscale.py). Cadrage portrait
+ *   identique quelle que soit la taille : tout le reste est en coordonnées normalisées.
  * - stages[n].depth : profondeur 512×768 en niveaux de gris (R = G = B), sans
  *   perte, blanc = près ; même échelle pour tous les stades (calée sur le stade 6).
  * - masks : PNG RGB opaque 512×768 : R = eau (écoulement), G = feuillage /
@@ -217,7 +235,7 @@ import type {{ WorldManifest }} from './types';
     imp = "\n".join(f"import {name} from './assets/{rel}';" for rel, name in imports)
     body = f'''
 export const manifest: WorldManifest = {{
-  size: {{ w: 1024, h: 1536 }},
+  size: {{ w: {pw}, h: {ph} }},
   stages: {{
 {chr(10).join(stages)}
   }},

@@ -1,7 +1,8 @@
 """Couches de scène : couleur par stade, profondeur, cadre de premier plan,
 bandeaux fixes et image d'attente.
 
-  - stages/stage-<n>.webp : peinture recalée (01_align.py), 1024×1536, WebP q84 ;
+  - stages/stage-<n>.webp : peinture recalée (01_align.py) agrandie en
+    1536×2304 (upscale.py : Real-ESRGAN + Lanczos, cache work/upscaled/), WebP q80 ;
   - depth/stage-<n>.(png|webp) : carte 512×768 de 02_depth.py, sans perte
     (le plus léger des deux formats) ;
   - foreground.webp : 07-foreground-frame, alpha vérifié, bords décontaminés
@@ -24,12 +25,14 @@ import numpy as np
 from PIL import Image
 
 from common import ASSETS, QA, SRC, STAGE_SOURCES, WORK, grid, label, write_json
+from upscale import PH, PW, cached
 
 sprites = importlib.import_module("05_sprites")
 
 COURSES_SRC = "03-vitality-lively"
 # Bande (x0, y0, largeur, hauteur) en pixels source 1024×1536 — choisie sur la planche 07-banner-candidates.
 COURSES_CROP = (0, 853, 1024, 683)
+STAGE_Q = 80
 
 
 def webp_bytes(im: Image.Image, **kw) -> bytes:
@@ -42,10 +45,10 @@ def main() -> None:
     report: dict = {"stages": {}, "depth": {}}
     (ASSETS / "stages").mkdir(parents=True, exist_ok=True)
     for s, name in STAGE_SOURCES.items():
-        im = Image.open(WORK / "aligned" / f"{name}.png").convert("RGB")
-        assert im.size == (1024, 1536), im.size
+        im = cached(WORK / "aligned" / f"{name}.png", WORK / "upscaled" / f"{name}.png")
+        assert im.size == (PW, PH), im.size
         p = ASSETS / "stages" / f"stage-{s}.webp"
-        im.save(p, "WEBP", quality=84, method=6)
+        im.save(p, "WEBP", quality=STAGE_Q, method=6)
         report["stages"][s] = {"file": f"stages/stage-{s}.webp", "bytes": p.stat().st_size}
         print("stage", s, report["stages"][s])
 

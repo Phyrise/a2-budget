@@ -19,7 +19,7 @@ import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
 import { cloneLook, paintSeason, seasonLook, type SeasonLook } from './paint';
 import { Pipeline } from './pipeline';
-import { DPR_CAPS, QualityMeter, type EngineStats, type QualitySetting } from './quality';
+import { QualityMeter, renderDpr, type EngineStats, type QualitySetting } from './quality';
 import { Resources, type StageTextures } from './resources';
 import { SeasonFx } from './seasons';
 import { Spirits } from './spirits';
@@ -28,7 +28,7 @@ import { clearOfLantern } from './toro';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
-export { DPR_CAPS, type EngineStats, type QualitySetting } from './quality';
+export { DPR_CAPS, SHARP_DPR, type EngineStats, type QualitySetting } from './quality';
 
 export interface EngineConfig {
   manifest: WorldManifest;
@@ -116,7 +116,7 @@ export class WorldEngine {
     const m = cfg.manifest;
     this.res = new Resources(this.gl, m);
     const blank = this.res.texture(new Uint8Array([0, 0, 0, 0]), { w: 1, h: 1 });
-    this.pipe = new Pipeline(this.gl, this.res.noise, blank, m.size.w / m.size.h, 1 / m.size.w);
+    this.pipe = new Pipeline(this.gl, this.res.noise, blank, m.size.w / m.size.h);
     this.kodamaSpots = lanterns ? clearOfLantern(m.kodamaSpots, m.size.w / m.size.h) : m.kodamaSpots;
     this.spirits = new Spirits(this.kodamaSpots, m.creatureSpots, m.guardianSpot);
     this.lights = new DayLights(m.anchors);
@@ -266,7 +266,7 @@ export class WorldEngine {
     const prevQ = this.cfg.quality;
     const prevV = this.cfg.variant;
     Object.assign(this.cfg, p);
-    if (p.quality !== undefined && p.quality !== prevQ) this.tier = typeof p.quality === 'number' ? p.quality : 0;
+    if (p.quality !== undefined && p.quality !== prevQ) this.tier = this.meter.reset(p.quality);
     if (this.cfg.quality !== prevQ || this.cfg.variant !== prevV) this.applySize();
     this.requestFrame(true);
   }
@@ -280,12 +280,12 @@ export class WorldEngine {
 
   private applySize() {
     const m = this.cfg.manifest;
-    const dev = typeof devicePixelRatio === 'number' ? devicePixelRatio : 1;
-    this.dpr = Math.min(dev, DPR_CAPS[this.tier] ?? 1);
+    this.dpr = renderDpr(typeof devicePixelRatio === 'number' ? devicePixelRatio : 1, this.tier, this.cssW, this.cssH, this.meter.sharp);
     this.renderer.dpr = this.dpr;
     this.renderer.setSize(this.cssW, this.cssH);
     this.framing = framingFor(this.cfg.variant, this.cssW, this.cssH, m.size);
-    this.pipe.resizeTarget(Math.round(this.cssW * this.dpr), Math.round(this.cssH * this.dpr));
+    // Cible = tampon réel du canvas (largeur tronquée) : étalonnage au pixel près, sans rééchantillonnage.
+    this.pipe.resizeTarget(this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
   }
 
   setVisible(v: boolean) {
@@ -376,7 +376,7 @@ export class WorldEngine {
 
   private trackQuality(interval: number) {
     if (this.meter.interval(interval, this.lastNow, this.cfg.quality === 'auto' && this.tier < 2)) {
-      this.tier++;
+      this.tier = this.meter.step(this.tier, this.dpr);
       this.applySize();
     }
   }

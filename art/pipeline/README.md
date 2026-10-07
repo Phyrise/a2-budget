@@ -14,7 +14,8 @@ réservés à d'autres services), dans `~/a2art` :
   source/     les peintures (copie de art/source/, mêmes tailles)
   pipeline/   ces scripts (copiés par remote.sh push)
   env/        Python 3.11 : torch CPU, transformers, numpy, pillow, scipy,
-              opencv-python-headless, fonttools, brotli
+              opencv-python-headless, fonttools, brotli, spandrel
+  models/     poids Real-ESRGAN (téléchargés par upscale.py au premier lancement)
   fonts/      Fraunces-full.ttf (converti depuis @fontsource-variable/fraunces)
   out/work/   intermédiaires (alignements, profondeurs, SAM 3, journaux, JSON)
   out/assets/ assets finaux        → apps/web/src/world/assets/
@@ -57,16 +58,19 @@ SAM 3 : dépôt `~/sam3_official`, environnement `~/miniconda3/envs/sam3_local`.
 | `04_luts.py` | LUT 3D 33³ par humeur et nuit : régression couleur par paires de pixels (master → cible recalée, images réduites et floutées), lissage laplacien dans l'espace LUT, rappel vers un repli affine global là où la peinture n'a pas de données, moindres carrés repondérés (Huber). | `assets/luts/*.png`, `work/luts.json`, `qa/04-*` |
 | `05_sprites.py` | Kodama ×8, créatures ×6, gardien, compagnons (planches V3 uniquement) : découpe en grille recalée sur les creux de l'alpha, décontamination des bords, redimensionnement prémultiplié, couleurs propagées sous l'alpha nul. | `assets/sprites/*.webp`, `qa/05-*` |
 | `06_fx.py` | Planche d'effets (fond noir) : plancher de bruit soustrait avec genou doux, découpe par rangées/colonnes, WebP RGBA (RGB sur noir + A = luminance normalisée). | `assets/fx/*.webp`, `qa/06-*` |
-| `07_scene.py` | Couleur par stade (WebP q84), profondeur (sans perte), cadre de premier plan (alpha vérifié, liseré nettoyé), bandeaux Budget (paysage) et Courses (recadrage 3:2 de « lively »), image d'attente ≤ 3 Ko. | `assets/stages/`, `assets/depth/`, `assets/foreground.webp`, `assets/banners/`, `assets/placeholder.webp`, `qa/07-*` |
+| `upscale.py` | Agrandissement ×1,5 des peintures livrées (stades, saisons) : Real-ESRGAN `realesr-general-x4v3` (spandrel, CPU, ≈ 12 s par image) ramené en 1536×2304 par Lanczos, mélangé à 50 % avec un Lanczos direct (le modèle seul rend le feuillage « plastique »). Module appelé par `07_scene.py` et `seasons/s04_export.py`. | `work/upscaled/*.png` (cache) |
+| `07_scene.py` | Couleur par stade (agrandie, WebP q80), profondeur (sans perte), cadre de premier plan (alpha vérifié, liseré nettoyé), bandeaux Budget (paysage) et Courses (recadrage 3:2 de « lively »), image d'attente ≤ 3 Ko. | `assets/stages/`, `assets/depth/`, `assets/foreground.webp`, `assets/banners/`, `assets/placeholder.webp`, `qa/07-*` |
 | `08_placements.py` | `grid` : peinture quadrillée pour choisir les points à l'œil ; sans argument : lit `placements.json`, ajoute la profondeur (carte du stade 6), avertit si un point tombe sur l'eau ou le ciel, dessine la planche de contrôle (sprites posés). | `work/placements.resolved.json`, `qa/08-*` |
 | `09_icons.py` | Icônes PWA (192, 512, maskable 512 avec marge de sécurité, apple-touch 180) et favicon SVG (PNG 64 px embarqué) : recadrage du cèdre + « A² » ivoire en Fraunces. | `icons/*.png`, `favicon.svg`, `qa/09-icons.jpg` |
 | `10_manifest.py` | Écrit `manifest.ts` : imports Vite de chaque asset, placements, formats documentés, poids total. | `out/manifest.ts` |
 
 ## Formats livrés
 
-- **Stades** : `stages/stage-N.webp`, 1024×1536, même cadrage pour les 7
+- **Stades** : `stages/stage-N.webp`, 1536×2304 (sources 1024×1536 agrandies
+  par `upscale.py`, WebP q80, ≈ 3 Mo les 7), même cadrage pour les 7
   stades (growthStage 1..7 = 05-growth-0, -1, -2, -3, -4, 01-master-portrait,
-  05-growth-6).
+  05-growth-6). Tout le reste (profondeur, masques, placements) est en
+  coordonnées normalisées : la taille des peintures n'y change rien.
 - **Profondeur** : `depth/stage-N.webp` (ou `.png`), 512×768, gris, sans
   perte, blanc = près.
 - **Masques** : `masks.png`, RGBA 512×768 **non prémultiplié** (R eau, G

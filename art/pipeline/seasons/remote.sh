@@ -33,8 +33,8 @@ src() {
 push() {
   ssh "$HOST" "mkdir -p ~/$REMOTE/pipeline/base ~/$REMOTE/base"
   scp -q "$HERE"/*.py "$HOST:$REMOTE/pipeline/"
-  # Fonctions de base réutilisées telles quelles (profondeur, LUT, manifest).
-  scp -q "$PIPE"/common.py "$PIPE"/02_depth.py "$PIPE"/04_luts.py "$PIPE"/10_manifest.py \
+  # Fonctions de base réutilisées telles quelles (profondeur, LUT, agrandissement, manifest).
+  scp -q "$PIPE"/common.py "$PIPE"/02_depth.py "$PIPE"/04_luts.py "$PIPE"/10_manifest.py "$PIPE"/upscale.py \
     "$PIPE"/placements.json "$HOST:$REMOTE/pipeline/base/"
   # Masques livrés (référence des planches de contrôle).
   scp -q "$WORLD"/masks.png "$WORLD"/masks-light.png "$HOST:$REMOTE/base/"

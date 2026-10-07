@@ -3,15 +3,17 @@
  * Ne pas éditer à la main : modifier le pipeline (art/pipeline/README.md) puis
  * régénérer (`art/pipeline/remote.sh all`).
  *
- * Poids total : 4.28 Mo (74 fichiers) — stages 2174 Ko · sprites 597 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · foreground 164 Ko · masks 146 Ko · luts 54 Ko · masks-light 34 Ko · placeholder 1 Ko.
+ * Poids total : 5.14 Mo (74 fichiers) — stages 3059 Ko · sprites 597 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · foreground 164 Ko · masks 146 Ko · luts 54 Ko · masks-light 34 Ko · placeholder 1 Ko.
  *
- * Saisons (hors précache) : spring 2413 Ko (0/7 profondeurs propres) · autumn 2302 Ko (0/7 profondeurs propres) · winter 2204 Ko (0/7 profondeurs propres).
+ * Saisons (hors précache) : spring 4104 Ko (0/7 profondeurs propres) · autumn 4129 Ko (0/7 profondeurs propres) · winter 3887 Ko (0/7 profondeurs propres).
  * - Fichiers sous assets/seasons/<saison>/, nom de fichier « season-<saison>-… »,
  *   donc émis au build sous assets/season-*-<hash>.<ext> : MOTIF À EXCLURE DU
  *   PRÉCACHE (globIgnores: 'assets/season-*') et à servir par le cache à
  *   l'exécution (la saison en cours, puis la suivante ~14 jours avant).
- * - seasons.<s>.stages[n].color : peinture de saison, WebP q84 1024×1536,
- *   recalée sur le stade de base n (art/pipeline/seasons/s01_align.py).
+ * - seasons.<s>.stages[n].color : peinture de saison, WebP 1536×2304 (qualité
+ *   80 → 76 pour tenir ≈ 0,6 Mo), recalée sur le stade de base n
+ *   (art/pipeline/seasons/s01_align.py, dérive résiduelle ≤ 1,2 px), agrandie
+ *   comme la base.
  * - seasons.<s>.stages[n].depth : profondeur du stade de base (même import, même
  *   URL) quand la dérive résiduelle ≤ 2 px et que la silhouette ne change pas ;
  *   sinon season-<s>-depth-<n> (même format et même échelle que la base).
@@ -21,7 +23,9 @@
  *   les saisons (cadrage identique).
  *
  * Formats :
- * - stages[n].color : peinture du stade, WebP 1024×1536 (recalée sur le stade 6).
+ * - stages[n].color : peinture du stade, WebP 1536×2304 q80 (recalée sur le stade 6 ;
+ *   sources 1024×1536 agrandies par art/pipeline/upscale.py). Cadrage portrait
+ *   identique quelle que soit la taille : tout le reste est en coordonnées normalisées.
  * - stages[n].depth : profondeur 512×768 en niveaux de gris (R = G = B), sans
  *   perte, blanc = près ; même échelle pour tous les stades (calée sur le stade 6).
  * - masks : PNG RGB opaque 512×768 : R = eau (écoulement), G = feuillage /
@@ -144,7 +148,7 @@ import seasonWinterStage7 from './assets/seasons/winter/season-winter-stage-7.we
 import seasonWinterLutNight from './assets/seasons/winter/season-winter-lut-night.png';
 
 export const manifest: WorldManifest = {
-  size: { w: 1024, h: 1536 },
+  size: { w: 1536, h: 2304 },
   stages: {
     1: { color: stage1, depth: depth1 },
     2: { color: stage2, depth: depth2 },

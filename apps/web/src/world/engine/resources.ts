@@ -1,6 +1,6 @@
 /**
  * Ressources GPU du monde : chargement paresseux, replis, comptabilité mémoire.
- * Budget visé < 60 MB : un seul stade résident (deux pendant la croissance),
+ * Budget visé < 64 MB : un seul stade résident (deux pendant la croissance),
  * profondeur et masques réduits, gardien chargé à la demande puis libéré.
  */
 import { Texture, type OGLRenderingContext } from 'ogl';
@@ -13,6 +13,9 @@ import { stageImage } from './paint';
 import type { SpriteAsset } from './spirits';
 
 type TexImage = Decoded | Uint8Array;
+
+/** Peintures décodées en pleine définition (1536×2304 : ≈ 19 Mo GPU avec mipmaps, deux pendant un fondu). */
+const COLOR_MAX_W = 1536;
 
 /** Pixels d'une image OPAQUE (lecture canvas sans perte : alpha = 255 partout). */
 function opaquePixels(img: Decoded, w: number, h: number): Uint8ClampedArray {
@@ -131,10 +134,10 @@ export class Resources {
     let colorImg: Decoded;
     let painted = season;
     try {
-      colorImg = await decodeImage(img.color, { kind: 'color', maxWidth: 1280 });
+      colorImg = await decodeImage(img.color, { kind: 'color', maxWidth: COLOR_MAX_W });
     } catch (err) {
       if (img.color === base.color || this.disposed) throw err;
-      colorImg = await decodeImage(base.color, { kind: 'color', maxWidth: 1280 });
+      colorImg = await decodeImage(base.color, { kind: 'color', maxWidth: COLOR_MAX_W });
       painted = 'summer';
     }
     return this.stageFrom(stage, painted, colorImg, painted === season ? img.depth : base.depth);

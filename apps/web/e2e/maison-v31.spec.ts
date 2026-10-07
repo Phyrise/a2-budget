@@ -104,15 +104,19 @@ test.describe('Maison V3.1', () => {
     await openSeeded(page, busyState());
     const balance = page.locator('.balance');
     await expect(balance.getByRole('heading', { name: 'Le partage de la semaine' })).toBeVisible();
-    // V4.1 : allégée — plus de paragraphe d'introduction, une phrase sous la branche.
+    // V4.2 : plus de paragraphe ; l'explication derrière un « ? » en haut à droite.
     await expect(balance.locator('.balance__lead')).toHaveCount(0);
-    await expect(balance.locator('.balance__title')).toHaveCount(1);
     const how = balance.getByRole('button', { name: /Comment ça marche/ });
+    await expect(how).toHaveText('?');
     await expect(how).toHaveAttribute('aria-expanded', 'false');
+    await expect(balance.locator('.balance-how')).toBeHidden();
     await how.click();
     await expect(how).toHaveAttribute('aria-expanded', 'true');
-    await expect(balance.locator('.balance-how')).toContainText('Une tâche faite ensemble se partage en deux');
+    await expect(balance.locator('.balance-how')).toContainText('Faite ensemble, elle se partage en deux');
     await expect(balance).not.toContainText(/\d/);
+    // Toucher ailleurs la referme.
+    await balance.locator('.balance__visual').click();
+    await expect(balance.locator('.balance-how')).toBeHidden();
   });
 
   test('pause : plus de bouton en bas de Maison ; la carte réveille la forêt', async ({ page }) => {

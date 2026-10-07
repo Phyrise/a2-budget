@@ -58,7 +58,8 @@ test.describe('Maison — parcours', () => {
     const done = page.getByRole('button', { name: /Fait aujourd’hui/ });
     await expect(done).toContainText('1');
     await expect.poll(async () => (await persisted(page)).chores.completions.length).toBe(1);
-    await expect(page.locator('.balance__title')).toHaveText('La semaine se met en route, doucement.');
+    // V4.2 : pas de phrase sous la branche tant qu'elle ne penche pas.
+    await expect(page.locator('.balance__title')).toHaveCount(0);
 
     // Annuler depuis « Fait aujourd’hui ».
     await done.click();

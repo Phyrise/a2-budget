@@ -3,14 +3,16 @@
  * du cèdre, souvenirs. Rien n'y révèle l'avenir : une créature pas encore
  * rencontrée, une lanterne pas encore débloquée ou un stade à venir n'ont
  * que leur silhouette (ou la brume) — jamais l'URL de la vraie image.
- * Une mémoire de ce qui a été vécu — jamais un score : pas de pourcentage,
- * pas de « 3/7 », des phrases.
+ * L'avancée se lit en petites barres (prochaine lanterne, stade suivant),
+ * jamais en score.
+ * Mode développeur : « Tout voir » montre tout le carnet comme débloqué —
+ * état local, rien n'est écrit, une lanterne verrouillée ne se pose pas.
  */
-import { CREATURES, type AppState } from '@a2/core';
-import { useEffect } from 'react';
+import { CREATURES, forestProgress, type AppState } from '@a2/core';
+import { useEffect, useState } from 'react';
 import { useShell } from '../../../app/ShellContext';
 import { useApp } from '../../../state/store';
-import { Icon, Sheet, cx, type IconName } from '../../../ui';
+import { Button, Icon, Sheet, cx, type IconName } from '../../../ui';
 import { manifest } from '../../../world/manifest';
 import type { GrowthStage } from '../../../world/types';
 import { ofName } from '../../maison/taskText';
@@ -18,6 +20,7 @@ import { NB, capitalizeFirst, countWords, durationWords, numberWords, typo } fro
 import { silhouettes } from '../../../themes/silhouettes';
 import { CarnetImage } from './CarnetImage';
 import { CarnetLanterns } from './CarnetLanterns';
+import { CarnetProgress } from './CarnetProgress';
 import { CREATURE_ENTRIES, KODAMA, STAGE_NAMES } from './carnetData';
 
 /**
@@ -105,8 +108,14 @@ function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName;
 }
 
 export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose: () => void; section?: 'lanterns' }) {
-  const { appState } = useApp();
+  const { appState, today } = useApp();
   const { prefs } = useShell();
+  // « Tout voir » (mode développeur) : local, oublié à la fermeture.
+  const [seeAll, setSeeAll] = useState(false);
+  const revealAll = prefs.devMode && seeAll;
+  useEffect(() => {
+    if (!open) setSeeAll(false);
+  }, [open]);
   // Ouvert depuis « Nouvelle lanterne » : directement sur la collection.
   useEffect(() => {
     if (!open || section !== 'lanterns') return;
@@ -115,11 +124,18 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
   }, [open, section]);
   if (!appState) return null;
   const met = new Set(appState.forest.unlockedCreatureIds);
-  const stage = Math.min(7, Math.max(1, appState.forest.growthStage)) as GrowthStage;
+  const growth = forestProgress(appState.forest, today);
+  const stage = growth.stage as GrowthStage;
   const kodama = manifest.sprites.kodama[0];
+  const devToggle = prefs.devMode ? (
+    <Button size="sm" variant="ghost" className="carnet-sheet__all" aria-pressed={seeAll} onClick={() => setSeeAll((v) => !v)}>
+      Tout voir
+    </Button>
+  ) : undefined;
 
   return (
-    <Sheet open={open} onClose={onClose} title="Carnet de la forêt" description="Ce que la forêt a vu, et garde en mémoire." size="full" className="carnet-sheet">
+    <Sheet open={open} onClose={onClose} title="Carnet de la forêt" size="full" className="carnet-sheet" headerExtra={devToggle}>
+      <div className="carnet-rule" aria-hidden="true" />
       <section className="carnet-section" aria-labelledby="carnet-creatures">
         <h3 id="carnet-creatures" className="carnet-section__title display">
           Créatures
@@ -133,7 +149,7 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
                 key={c.id}
                 name={entry?.name ?? c.id}
                 legend={entry?.legend ?? ''}
-                met={met.has(c.id)}
+                met={revealAll || met.has(c.id)}
                 sprite={() => manifest.sprites.creatures[c.id]}
                 silhouette={silhouettes.creatures[c.id]}
               />
@@ -142,25 +158,26 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
         </ul>
       </section>
 
-      <CarnetLanterns />
+      <CarnetLanterns revealAll={revealAll} />
 
       <section className="carnet-section" aria-labelledby="carnet-cedar">
         <h3 id="carnet-cedar" className="carnet-section__title display">
           Le cèdre
         </h3>
-        <p className="carnet-section__lead">
-          Aujourd’hui{NB}: <strong>{STAGE_NAMES[stage]}</strong>. Il grandit au rythme de vos gestes, et ne rapetisse jamais.
-        </p>
         <ol className="carnet-stages">
           {([1, 2, 3, 4, 5, 6, 7] as const).map((n) => {
             const future = n > stage;
+            const hidden = future && !revealAll;
             return (
-              <li key={n} className={cx('carnet-stage', future && 'is-future', n === stage && 'is-current')} aria-current={n === stage ? 'step' : undefined}>
+              <li key={n} className={cx('carnet-stage', hidden && 'is-future', n === stage && 'is-current')} aria-current={n === stage ? 'step' : undefined}>
                 <span className="carnet-stage__img" aria-hidden="true">
                   {/* Les stades à venir restent dans la brume : leur peinture n'est pas chargée. */}
-                  {future ? <span className="carnet-stage__mist" /> : <CarnetImage src={manifest.stages[n].color} />}
+                  {hidden ? <span className="carnet-stage__mist" /> : <CarnetImage src={manifest.stages[n].color} />}
                 </span>
-                <span className="carnet-stage__name">{future ? 'À venir' : STAGE_NAMES[n]}</span>
+                {!hidden && <span className="carnet-stage__name">{STAGE_NAMES[n]}</span>}
+                {n === stage + 1 && (
+                  <CarnetProgress className="carnet-stage__progress" value={growth.progressToNext} srLabel={`Vers le stade ${numberWords(n)}`} />
+                )}
                 <span className="visually-hidden">{future ? `Stade ${numberWords(n)}, à venir` : `Stade ${numberWords(n)}`}</span>
               </li>
             );
@@ -173,7 +190,7 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
           Souvenirs
         </h3>
         <ul className="carnet-memories">
-          {memories(appState, prefs.guardianSeen).map((m) => (
+          {memories(appState, revealAll || prefs.guardianSeen).map((m) => (
             <li key={m.text} className="carnet-memory">
               <span className="carnet-memory__icon" aria-hidden="true">
                 <Icon name={m.icon} size={18} />

@@ -152,7 +152,7 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
 
   test('corvée : badge discret, célébration fière, carte d’équilibre bienveillante', async ({ page }) => {
     await openApp(page, 'maison');
-    await expect(page.locator('.balance__title')).toHaveText('La semaine commence tout juste.');
+    await expect(page.locator('.balance__title')).toHaveCount(0);
     await addTask(page, 'Nettoyer le four', 'b', 'daily', { effort: 3 });
     await addTask(page, 'Arroser les plantes', 'a', 'daily');
     const row = todayRow(page, 'Nettoyer le four');

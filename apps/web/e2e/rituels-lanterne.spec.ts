@@ -3,7 +3,8 @@
  * bandeau compact au-dessus de la navigation pendant que la forêt reste
  * visible. Lancement depuis la carte Lanterne et depuis le menu ⋯ d'une
  * tâche ; pause, floraison, tâche cochée ; nouvelle lanterne débloquée,
- * posée dans la forêt, retrouvée dans le carnet.
+ * posée dans la forêt, retrouvée dans le carnet ; V4.2 : une lanterne finie
+ * hors de Maison puis l'app rechargée compte toujours, une seule fois.
  * L'état de départ est construit avec @a2/core (valide pour validateAppState).
  */
 import {
@@ -17,7 +18,7 @@ import {
   type FocusState,
 } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
-import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, trackErrors } from './helpers';
+import { APP, PHONE, STORAGE_KEY, UI_KEY, goTo, persisted, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -190,6 +191,40 @@ test.describe('Lanterne de pierre', () => {
     await carnet.getByRole('button', { name: 'Poser La Kasuga moussue dans la forêt' }).click();
     await expect.poll(async () => (await persisted(page)).focus?.selectedLantern).toBe('kasuga-moss');
     await expect(carnet.locator('.carnet-lantern-preview')).toContainText('La Kasuga moussue');
+    expect(errors).toEqual([]);
+  });
+
+  test('finie hors de Maison, app rechargée : la lanterne compte, une seule fois', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.clock.install();
+    await openSeeded(page, 2, true);
+    await rituals(page).getByRole('button', { name: /^Lanterne/ }).click();
+    const setup = page.getByRole('dialog', { name: 'Allumer une lanterne', exact: true });
+    await setup.locator('#lantern-minutes-5').check();
+    await setup.getByRole('button', { name: /^Lancer 5\s+minutes$/ }).click();
+    await expect(page.getByRole('region', { name: 'Lanterne allumée' })).toBeVisible();
+
+    // Maison quittée, le temps passe, l'app est rechargée (tuée en arrière-plan).
+    await goTo(page, 'Budget');
+    await page.clock.fastForward('06:00');
+    await page.reload();
+    await expect(page.locator('.screen-sheet')).toBeVisible();
+    expect((await persisted(page)).focus.sessions).toHaveLength(2);
+    await goTo(page, 'Maison');
+
+    const done = page.getByRole('region', { name: 'Fin de la lanterne' });
+    await expect(done).toContainText('La lanterne a fleuri');
+    await expect(done).toContainText('Yukimi, la lanterne à neige');
+    await expect.poll(async () => (await persisted(page)).focus?.sessions?.length ?? 0).toBe(3);
+    const last = (await persisted(page)).focus.sessions[2];
+    expect(last.minutes).toBe(5);
+    expect(last.completed).toBeUndefined();
+
+    // Encore un rechargement : rien n'est compté deux fois, le bandeau ne revient pas.
+    await page.reload();
+    await expect(page.locator('.screen-sheet')).toBeVisible();
+    await expect(bar(page)).toHaveCount(0);
+    expect((await persisted(page)).focus.sessions).toHaveLength(3);
     expect(errors).toEqual([]);
   });
 });

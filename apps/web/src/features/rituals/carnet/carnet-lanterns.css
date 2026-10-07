@@ -161,11 +161,16 @@
   font-style: italic;
 }
 
-.carnet-lanterns__foot {
-  margin: 12px 2px 0;
-  color: var(--text-faint);
-  font-size: 13px;
-  line-height: 1.45;
+/* Avancée vers un modèle verrouillé, en bas de la vignette. */
+.carnet-lantern.is-locked .carnet-progress {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+/* « Tout voir » (mode développeur) : la vraie lanterne, encore verrouillée. */
+.carnet-lantern.is-revealed .toro__img {
+  filter: none;
+  opacity: 0.85;
 }
 
 @media (min-width: 560px) {

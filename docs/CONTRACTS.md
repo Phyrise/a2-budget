@@ -1,4 +1,4 @@
-# A² Budget — Contrats (V1, revenus V3.1, solde et euros entiers V4)
+# A² Budget — Contrats (V1, revenus V3.1, solde et euros entiers V4, saisie au pavé V4.1)
 
 Ce document est la référence des agents. En cas de divergence avec le code,
 **ce document fait foi** ; toute modification de contrat est coordonnée avec le
@@ -370,15 +370,14 @@ Sémantique :
 ### 5bis. Interface V4 (intégrée sur main)
 
 - **Montants** : jamais de centimes à l'écran (`formatEuros`, `EuroValue`).
-  Salaires : `EuroSlider` 0–5 000 € (cran 10 €, −/+ 1 €, appui long qui
-  accélère, toucher le montant pour saisir) ; compléments 0–3 000 € ;
-  dépenses : `EuroStepper` (−/+ et saisie). Les deux virements sont arrondis
-  ensemble (`roundEurosConsistent`) : AL + AC affichés = « Ensemble ».
+  Saisie : voir §5ter (pavé `AmountPad` depuis la V4.1, plus de curseur).
+  Les deux virements sont arrondis ensemble (`roundEurosConsistent`) :
+  AL + AC affichés = « Ensemble ».
 - **Solde du compte commun** (`BalanceCard`) : « en ce moment » en grand,
   fin du mois dessous ; « Recaler sur le compte » →
-  `recordBalanceCorrection(…, { asOf: 'now' })`. « À payer ce mois »
-  (`PaymentList`) : cocher → le Sans-Visage mange (animation seulement ; le
-  son « nom » est joué par la coquille, `app/sound`).
+  `recordBalanceCorrection(…, { asOf: 'now' })`. Bloc « Ce mois-ci »
+  (`MonthLedger`, V4.1) : cocher → le Sans-Visage mange (animation
+  seulement ; le son « nom » est joué par la coquille, `app/sound`).
 - **Monde** : `WorldState.lantern?: { id }` (world/types.ts), toujours
   rempli par `toWorldState` via `lanternModelOf(app) = activeLantern(focus)` ;
   l'aperçu DEV `lanternModel` le remplace. `focus(progress, who)` allume la
@@ -393,6 +392,38 @@ Sémantique :
   et `.screen-sheet.courses { overflow-x: clip }` : aucune animation ne doit
   élargir la page (sinon le bandeau peint « zoome »).
 - QA d'intégration : `apps/web/scripts/qa-integration-v4.mjs [port]`.
+
+### 5ter. Interface V4.1 (intégrée sur main)
+
+- **Saisie des montants** : aucun curseur dans le Budget (le défilement ne
+  doit jamais changer un montant). Toucher un montant (`AmountField`) ouvre
+  la feuille `AmountPad` (pavé maison 0–9 / 00 / effacer, −100 / −10 / +10 /
+  +100, raccourcis de `budget/amountShortcuts.ts`, Annuler / Valider) ; rien
+  n'est enregistré avant « Valider ». Pas de clavier système. `Slider` reste
+  pour les taux des Réglages ; `EuroSlider` est supprimé.
+- **Budget, ordre** : cartes « À verser » et « Sur le compte commun »,
+  « Revenus du mois », puis un bloc unique « Ce mois-ci » (`MonthLedger` :
+  les deux virements cochables, puis une ligne par dépense — payé, libellé,
+  montant, retirer —, « Ajouter une dépense » en bas), détail du calcul replié.
+- **Nouvelle tâche** (`TaskSheet`) : tient entière à 390 × 844 ; le focus
+  initial va au titre de la feuille (jamais au champ : pas de clavier) ;
+  récurrence par défaut « Une fois ».
+- **Lanterne de pierre** : dessinée dans la passe de scène (`glsl/stone.ts`),
+  masquée par la profondeur de la peinture (les branches et fougères proches
+  passent devant), atmosphère partagée (`glsl/atmosphere.ts`), posée en
+  `LANTERN_GROUND` (x 0,8 ; y 0,585 ; profondeur 0,205). Les kodama de la
+  forêt s'en écartent (`clearOfLantern`, `Engine.kodamaSpots`).
+- **Coins arrondis** : `.world-window::before` déborde sous la feuille de
+  `--radius-sheet` avec la teinte combinée du voile ; si l'un des deux
+  dégradés (`.world-window::before`, `.screen-sheet::before`) change,
+  ajuster l'autre (e2e `smoke.spec.ts` le vérifie).
+- **Chatbus** (contrat de frames) : `calendarTheme.catbusRun?: string[]`
+  (`themes/types.ts`), frames `themes/assets/calendar/catbus-run-<n>.webp`
+  orientées vers la droite, même toile, ligne de sol en bas, 6 à 8 conseillées ;
+  ajouter les fichiers puis relancer `python3 art/pipeline/universes/gen_manifest.py`.
+  Traversée linéaire `translate3d`, une frame opaque à la fois à 12 i/s,
+  fondu immobile en mouvement réduit.
+- QA d'intégration : `apps/web/scripts/qa-integration-v41.mjs [port]`.
 
 ## 6. Propriété des fichiers (chemins exacts)
 

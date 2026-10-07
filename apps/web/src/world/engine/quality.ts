@@ -1,7 +1,7 @@
 /**
  * Mesures du moteur : temps CPU par image, intervalle entre images à 60 fps,
  * décision de descendre d'un palier de qualité (intervalle > 24 ms pendant
- * 1,5 s, après 3 s de chauffe).
+ * 1,5 s, après 3 s de chauffe), densité de rendu par palier.
  */
 
 export type QualitySetting = 'auto' | 0 | 1 | 2;
@@ -21,7 +21,19 @@ export interface EngineStats {
   fading: boolean;
 }
 
-export const DPR_CAPS = [1.5, 1.25, 1] as const;
+/**
+ * Densité de rendu par palier. Palier haut : 2,5 ≈ densité de la peinture
+ * 1536 px dans un héros de téléphone (au-delà, rien de plus à montrer).
+ */
+export const DPR_CAPS = [2.5, 1.5, 1] as const;
+/** Pixels rendus par image au plus (grands écrans de bureau à haute densité). */
+export const MAX_PIXELS = 4.2e6;
+
+/** Densité de rendu : écran, palier, plafond de pixels (jamais sous 1 px CSS). */
+export function renderDpr(device: number, tier: number, cssW: number, cssH: number): number {
+  const budget = Math.sqrt(MAX_PIXELS / Math.max(1, cssW * cssH));
+  return Math.min(device, DPR_CAPS[tier] ?? 1, Math.max(1, budget));
+}
 
 export class QualityMeter {
   frames = 0;

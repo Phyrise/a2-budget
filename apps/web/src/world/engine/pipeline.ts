@@ -19,6 +19,8 @@ type U = { value: unknown };
 const u = (value: unknown): U => ({ value });
 
 export const MOTES = 72;
+/** Réglages en « px image » (vent, fougères) : peinture de référence 1024 px de large, quelle que soit la définition livrée. */
+const TEXEL = 1 / 1024;
 export const BURST = 56;
 export const RAIN = 110;
 
@@ -55,7 +57,6 @@ export class Pipeline {
     noise: Texture,
     blank: Texture,
     aspect: number,
-    texel: number,
   ) {
     const f = this.frame;
     const tri = new Triangle(gl);
@@ -77,7 +78,7 @@ export class Pipeline {
       fragment: SCENE_FRAG,
       uniforms: {
         ...f, ...atmo, ...paint,
-        uPrev: u(blank), uTexel: u(texel), uGrow: u(1), uFadeMode: u(0), uWind: u(1), uWater: u(1), uSparkle: u(0), uMoss: u(0),
+        uPrev: u(blank), uTexel: u(TEXEL), uGrow: u(1), uFadeMode: u(0), uWind: u(1), uWater: u(1), uSparkle: u(0), uMoss: u(0),
       },
     });
     this.scene = new Mesh(gl, { geometry: tri, program: sceneProgram, frustumCulled: false });
@@ -100,7 +101,7 @@ export class Pipeline {
       vertex: FULLSCREEN_VERT,
       fragment: FOREGROUND_FRAG,
       uniforms: {
-        ...f, uFg: u(blank), uTime: u(0), uSway: u(1), uTexel: u(texel), uFgDepth: u(1.3),
+        ...f, uFg: u(blank), uTime: u(0), uSway: u(1), uTexel: u(TEXEL), uFgDepth: u(1.3),
         uFogColor: u([0.6, 0.66, 0.64]), uFogMix: u(0), uFgSeason: u([0, 0, 0]),
       },
     });

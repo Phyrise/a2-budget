@@ -153,3 +153,15 @@ export function lanternNew(bus: Bus, t: number, gentle: boolean): void {
   );
   if (!gentle) bell(bus, t + 0.62, N.B6, { peak: 0.022, decay: 0.6, bright: 0.4, wet: 0.7 });
 }
+
+/**
+ * Une Noiraude touchée : petit cri « kyu ! » — un sinus aigu qui monte d'un
+ * coup puis retombe, doublé d'un triangle très bas en niveau ; un second plus
+ * petit répond (sauf mouvement réduit). Bref (≤ 0,25 s), jamais strident.
+ */
+export function squeak(bus: Bus, t: number, gentle: boolean): void {
+  tone(bus, t, N.Gs5, { peak: 0.05, attack: 0.008, decay: 0.12, glideTo: N.E6, glideTime: 0.045, wet: 0.2 });
+  tone(bus, t + 0.05, N.E6, { peak: 0.03, attack: 0.006, decay: 0.09, glideTo: N.B5, glideTime: 0.06, wet: 0.2 });
+  tone(bus, t, N.Gs5, { peak: 0.008, attack: 0.01, decay: 0.1, glideTo: N.E6, glideTime: 0.05, wet: 0.15, type: 'triangle' });
+  if (!gentle) tone(bus, t + 0.13, N.B5, { peak: 0.026, attack: 0.008, decay: 0.09, glideTo: N.Gs6, glideTime: 0.04, wet: 0.25 });
+}

@@ -34,6 +34,9 @@
  * - `lanternLit`  la lanterne de pierre s'allume (minuteur lancé)
  *                 → allumette frottée, puis un souffle chaud ;
  * - `lanternNew`  un nouveau modèle de lanterne débloqué → carillon.
+ *
+ * V4.3 :
+ * - `squeak`      on touche une Noiraude → petit cri aigu « kyu ! ».
  */
 export type SoundCue =
   | 'done'
@@ -55,7 +58,8 @@ export type SoundCue =
   | 'ah'
   | 'balanceBell'
   | 'lanternLit'
-  | 'lanternNew';
+  | 'lanternNew'
+  | 'squeak';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -92,4 +96,5 @@ export const ALL_CUES: readonly SoundCue[] = [
   'balanceBell',
   'lanternLit',
   'lanternNew',
+  'squeak',
 ];

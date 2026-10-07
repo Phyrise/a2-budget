@@ -241,6 +241,7 @@ const LEAD_MS: Record<SoundCue, number> = {
   balanceBell: 480,
   lanternLit: 700,
   lanternNew: 640,
+  squeak: 200,
 };
 
 /** Importance (mouvement réduit : on ne garde que le plus marquant). */
@@ -265,6 +266,7 @@ const PRIORITY: Record<SoundCue, number> = {
   balanceBell: 3,
   lanternLit: 4,
   lanternNew: 6,
+  squeak: 1,
 };
 
 /**

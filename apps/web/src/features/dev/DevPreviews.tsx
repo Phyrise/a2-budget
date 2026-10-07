@@ -63,6 +63,7 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   balanceBell: 'Solde recalé',
   lanternLit: 'Lanterne allumée',
   lanternNew: 'Nouvelle lanterne',
+  squeak: 'Cri de Noiraude',
 };
 
 function ChoiceRow<T>({

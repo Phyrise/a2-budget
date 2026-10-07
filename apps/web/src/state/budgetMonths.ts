@@ -14,6 +14,7 @@
  * Fonctions pures (état de `@a2/core`), utilisées par le store.
  */
 import {
+  alignBudgetRules,
   anchorBalance,
   createMonthRecord,
   currentMonthKey,
@@ -63,19 +64,23 @@ export function selectBudgetMonth(state: PersistedState, monthKey: string, now: 
 }
 
 /**
- * Préparation du budget au chargement : crée le mois courant s'il est
- * affiché, et ancre le solde des données d'avant V4 (0 € au début du mois
- * courant, à confirmer : `anchorBalance`).
+ * Préparation du budget au chargement : aligne les règles communes (V4.2 :
+ * taux globaux appliqués au mois courant et aux suivants, réserve
+ * neutralisée — `alignBudgetRules`), crée le mois courant s'il est affiché, et
+ * ancre le solde des données d'avant V4 (0 € au début du mois courant, à
+ * confirmer : `anchorBalance`).
  */
 export function prepareBudget(
   budget: AppState['budget'],
   now: Date,
   anchor: { id: string; recordedAt: string },
 ): AppState['budget'] {
-  const persisted = selectBudgetMonth({ schemaVersion: 1, ...budget }, budget.selectedMonth, now);
+  const key = currentMonthKey(now);
+  const aligned = alignBudgetRules(budget, key);
+  const persisted = selectBudgetMonth({ schemaVersion: 1, ...aligned }, aligned.selectedMonth, now);
   const next: AppState['budget'] =
-    persisted.months === budget.months && persisted.selectedMonth === budget.selectedMonth
-      ? budget
-      : { ...budget, months: persisted.months, selectedMonth: persisted.selectedMonth };
-  return anchorBalance(next, currentMonthKey(now), anchor);
+    persisted.months === aligned.months && persisted.selectedMonth === aligned.selectedMonth
+      ? aligned
+      : { ...aligned, months: persisted.months, selectedMonth: persisted.selectedMonth };
+  return anchorBalance(next, key, anchor);
 }

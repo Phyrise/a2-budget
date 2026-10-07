@@ -1,6 +1,6 @@
 /**
- * Ligne de réglage « Petits sons » : interrupteur + bouton « Écouter », qui
- * fait entendre, à chaque appui, un exemple différent (tâche d'AL, d'AC,
+ * Ligne de réglage « Petits sons » (aide courte, V4.2) : interrupteur + bouton
+ * « Écouter », qui fait entendre, à chaque appui, un exemple différent (tâche d'AL, d'AC,
  * corvée à deux, créature, forêt qui grandit, pièces d'or, coup de balai…). Le gardien garde son secret.
  */
 import { useRef, useState } from 'react';
@@ -81,7 +81,7 @@ export function SoundSetting() {
         label="Petits sons"
         description={
           supported
-            ? 'Une note légère quand une tâche est faite, qu’une créature apparaît ou que la forêt grandit.'
+            ? 'Une note légère à chaque tâche faite.'
             : 'Les sons ne sont pas disponibles sur ce navigateur.'
         }
       />
@@ -91,7 +91,7 @@ export function SoundSetting() {
             Écouter
           </Button>
           <span className="sound-setting__sample" aria-live="polite">
-            {heard ?? 'Un exemple à chaque appui, tout en douceur.'}
+            {heard}
           </span>
         </div>
       )}

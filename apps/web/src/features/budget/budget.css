@@ -155,27 +155,6 @@
   font-size: 13px;
 }
 
-/* Réserve */
-.reserve {
-  display: grid;
-  gap: 12px;
-}
-
-.reserve__status {
-  color: var(--moss-300);
-  font-size: 14.5px;
-}
-
-.reserve__status strong {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 560;
-}
-
-.reserve__status.is-short {
-  color: var(--danger);
-}
-
 /* Dépenses */
 .expense-list {
   display: flex;

@@ -1,8 +1,9 @@
 /**
- * « Sur le compte commun » (V4, remplace le « reste ») : le solde estimé en
- * ce moment en grand (ouverture du mois + virements cochés − dépenses
- * cochées), la projection de fin de mois en dessous, et « Recaler sur le
- * compte » quand on regarde le vrai solde. Le Sans-Visage veille sous sa
+ * « Sur le compte commun » (V4, remplace le « reste » ; V4.2 : premier bloc
+ * du Budget) : le solde estimé en ce moment en grand (ouverture du mois +
+ * virements cochés − dépenses cochées), la projection de fin de mois en
+ * dessous, et un discret « Recaler sur le compte » quand on regarde le vrai
+ * solde. Le Sans-Visage veille sous sa
  * lanterne ; la rigole d'or suit le solde, un repère marque la fin du mois.
  * Chiffres : `currentBalanceEstimate` / `endOfMonthProjection` (@a2/core).
  *
@@ -13,6 +14,7 @@
 import type { MonthSummary } from '@a2/core';
 import type { Ref } from 'react';
 import { cx, euro, euroMinus } from '../../ui';
+import { NO_RESERVE } from './balanceView';
 import { GoldGauge } from './chihiro/GoldGauge';
 import { balanceFill, noFaceMood } from './chihiro/mood';
 import { NoFace } from './chihiro/NoFace';
@@ -33,9 +35,6 @@ export interface BalanceCardProps {
   openingCents: number;
   /** Net du mois tel qu'affiché (`monthFlows`) : ce dont le compte bouge. */
   netCents: number;
-  /** Phrase douce tant que le solde n'a jamais été recalé (mois courant). */
-  unconfirmedHint?: string;
-  reserveTargetCents: number;
   nowCents: number;
   projectionCents: number;
   /** Part des paiements du mois déjà cochés (0..1) : il s'arrondit un peu. */
@@ -53,8 +52,6 @@ export function BalanceCard({
   monthLabel,
   openingCents,
   netCents,
-  unconfirmedHint,
-  reserveTargetCents,
   nowCents,
   projectionCents,
   paidShare,
@@ -76,7 +73,7 @@ export function BalanceCard({
       <div className="balance-card__main">
         <NoFace
           ref={noFaceRef}
-          mood={noFaceMood(s, reserveTargetCents, projectionCents)}
+          mood={noFaceMood(s, NO_RESERVE, projectionCents)}
           bowing={bowing}
           eating={eating}
           fullness={paidShare}
@@ -106,11 +103,6 @@ export function BalanceCard({
           </button>
         )}
       </div>
-      {unconfirmedHint && (
-        <p className="balance-card__hint" data-testid="balance-unconfirmed">
-          {unconfirmedHint}
-        </p>
-      )}
       {monthShort && (
         <p className="balance-card__note" role="note">
           Ce mois-ci, les dépenses dépassent ce que vous versez ensemble{' '}: le compte baisse de{' '}

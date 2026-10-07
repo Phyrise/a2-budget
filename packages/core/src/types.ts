@@ -21,6 +21,7 @@ export interface PersonSettings {
   /**
    * Taux appliqué au salaire du mois, en bps (40 % = 4000). Commun au couple :
    * écrit pour les deux personnes par `setSharedRates` (A fait foi à la lecture).
+   * V4.2 : global, `applySharedRates` l'écrit aussi dans le mois courant et les suivants.
    */
   baseRateBps: number;
   /** Taux appliqué aux compléments (heures sup, astreintes, gardes), en bps (20 % = 2000). Commun au couple. */
@@ -39,7 +40,8 @@ export interface Expense {
  * Un mois du budget commun.
  *
  * Chaque mois conserve **sa propre copie** des règles : modifier les réglages
- * plus tard ne doit jamais recalculer silencieusement les mois existants.
+ * plus tard ne recalcule jamais les mois passés. V4.2 : les taux sont
+ * globaux — le mois courant et les suivants les suivent (`applySharedRates`).
  */
 export interface MonthRecord {
   /** Clé du mois "YYYY-MM", déterminée dans le fuseau local de l'utilisateur. */
@@ -69,6 +71,8 @@ export interface MonthRecord {
   /**
    * Réserve que le couple souhaite mettre de côté CE MOIS, en centimes.
    * Ce n'est pas un solde bancaire existant. 0 = pas de réserve.
+   * V4.2 : retirée de l'interface, neutralisée (0) pour le mois courant et
+   * les suivants (`alignBudgetRules`) ; conservée pour la compatibilité.
    */
   reserveTargetCents: number;
   /**
@@ -128,7 +132,7 @@ export interface Settings {
   personB: PersonSettings;
   /** Dépenses récurrentes, copiées dans les mois nouvellement créés. */
   recurringExpenses: Expense[];
-  /** Réserve mensuelle par défaut, appliquée aux mois nouvellement créés. */
+  /** Réserve mensuelle par défaut (V4.2 : retirée de l'interface, toujours 0 après `alignBudgetRules`). */
   defaultReserveTargetCents: number;
 }
 

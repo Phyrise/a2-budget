@@ -9,9 +9,9 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  applySettingsToMonth as coreApplySettingsToMonth,
-  setSharedRates as coreSetSharedRates,
+  applySharedRates as coreApplySharedRates,
   computeMonthSummary,
+  currentMonthKey,
   MAX_AMOUNT_CENTS,
   MAX_RATE_BPS,
   ensureMonth as coreEnsureMonth,
@@ -227,42 +227,28 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
   setSalary: (monthKey: string, person: 'A' | 'B', cents: number) => void;
   /** Compléments du mois (heures sup, astreintes, gardes), au taux au-delà. */
   setBonus: (monthKey: string, person: 'A' | 'B', cents: number) => void;
-  /**
-   * Taux communs du couple appliqués aux règles du mois indiqué (les deux
-   * personnes). Action explicite : les autres mois ne changent pas.
-   */
-  setMonthSharedRates: (monthKey: string, baseRateBps: number, variableRateBps: number) => void;
-  /** Annule `setMonthSharedRates` : remet les taux (par personne) relevés avant. */
-  restoreMonthRates: (monthKey: string, previous: MonthRates) => void;
-  setReserve: (monthKey: string, cents: number) => void;
   setExpenseAmount: (monthKey: string, expenseId: string, cents: number) => void;
   renameExpense: (monthKey: string, expenseId: string, label: string) => void;
   addExpense: (monthKey: string, label: string, cents: number) => void;
   removeExpense: (monthKey: string, expenseId: string) => void;
 
-  // Réglages (s'appliquent aux NOUVEAUX mois, jamais aux mois existants)
+  // Réglages (s'appliquent aux NOUVEAUX mois ; les taux, eux, sont globaux)
   /** Nom, salaire habituel (préremplit un nouveau mois)… Les taux : `setSharedRates`. */
   updatePersonSettings: (person: 'A' | 'B', patch: Partial<Omit<PersonSettings, 'id'>>) => void;
-  /** Taux communs du couple (réglages : écrits pour les deux personnes). */
+  /**
+   * Taux communs du couple, globaux (V4.2) : réglages ET mois courant réel et
+   * suivants ; les mois passés gardent les leurs (le solde reporté ne bouge pas).
+   */
   setSharedRates: (baseRateBps: number, variableRateBps: number) => void;
   /** Renomme une personne (nom nettoyé, vide ignoré → false) ; household.people suit. */
   renamePerson: (person: 'A' | 'B', name: string) => boolean;
   updateRecurringExpense: (expenseId: string, patch: Partial<Omit<Expense, 'id'>>) => void;
   addRecurringExpense: (label: string, amountCents: number) => void;
   removeRecurringExpense: (expenseId: string) => void;
-  setDefaultReserve: (cents: number) => void;
-  /** Action explicite « Appliquer au mois affiché ». */
-  applySettingsToCurrentMonth: () => void;
 
   // Sauvegarde / transfert manuel
   exportJson: () => string;
   importJson: (text: string) => { ok: true; summary: ImportSummary } | { ok: false; reason: string };
-}
-
-/** Taux d'un mois relevés par personne (pour annuler un alignement). */
-export interface MonthRates {
-  a: { baseRateBps: number; variableRateBps: number };
-  b: { baseRateBps: number; variableRateBps: number };
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -512,36 +498,6 @@ export function AppProvider({
     [mutate],
   );
 
-  const setMonthSharedRates = useCallback(
-    (monthKey: string, baseRateBps: number, variableRateBps: number) => {
-      if (!isRateBps(baseRateBps) || !isRateBps(variableRateBps)) return;
-      mutate((s) => mapMonth(s, monthKey, (m) => coreSetSharedRates(m, baseRateBps, variableRateBps)));
-    },
-    [mutate],
-  );
-
-  const restoreMonthRates = useCallback(
-    (monthKey: string, previous: MonthRates) => {
-      const rates = [previous.a.baseRateBps, previous.a.variableRateBps, previous.b.baseRateBps, previous.b.variableRateBps];
-      if (!rates.every(isRateBps)) return;
-      mutate((s) =>
-        mapMonth(s, monthKey, (m) => ({
-          ...m,
-          personA: { ...m.personA, ...previous.a },
-          personB: { ...m.personB, ...previous.b },
-        })),
-      );
-    },
-    [mutate],
-  );
-
-  const setReserve = useCallback(
-    (monthKey: string, cents: number) => {
-      mutate((s) => mapMonth(s, monthKey, (m) => ({ ...m, reserveTargetCents: cents })));
-    },
-    [mutate],
-  );
-
   const setExpenseAmount = useCallback(
     (monthKey: string, expenseId: string, cents: number) => {
       mutate((s) =>
@@ -611,7 +567,9 @@ export function AppProvider({
   const setSharedRates = useCallback(
     (baseRateBps: number, variableRateBps: number) => {
       if (!isRateBps(baseRateBps) || !isRateBps(variableRateBps)) return;
-      mutate((s) => ({ ...s, settings: coreSetSharedRates(s.settings, baseRateBps, variableRateBps) }));
+      // Mois courant réel capturé ici (et non dans l'updater, rejoué en StrictMode).
+      const from = currentMonthKey(new Date());
+      mutate((s) => coreApplySharedRates(s, baseRateBps, variableRateBps, from));
     },
     [mutate],
   );
@@ -670,20 +628,6 @@ export function AppProvider({
     },
     [mutate],
   );
-
-  const setDefaultReserve = useCallback(
-    (cents: number) => {
-      mutate((s) => ({
-        ...s,
-        settings: { ...s.settings, defaultReserveTargetCents: cents },
-      }));
-    },
-    [mutate],
-  );
-
-  const applySettingsToCurrentMonth = useCallback(() => {
-    mutate((s) => coreApplySettingsToMonth(s, s.selectedMonth));
-  }, [mutate]);
 
   // --- Sauvegarde / transfert manuel ---------------------------------------
 
@@ -964,9 +908,6 @@ export function AppProvider({
       clearHistory,
       setSalary,
       setBonus,
-      setMonthSharedRates,
-      restoreMonthRates,
-      setReserve,
       setExpenseAmount,
       renameExpense,
       addExpense,
@@ -977,8 +918,6 @@ export function AppProvider({
       updateRecurringExpense,
       addRecurringExpense,
       removeRecurringExpense,
-      setDefaultReserve,
-      applySettingsToCurrentMonth,
       exportJson,
       importJson,
     }),
@@ -1011,9 +950,6 @@ export function AppProvider({
       clearHistory,
       setSalary,
       setBonus,
-      setMonthSharedRates,
-      restoreMonthRates,
-      setReserve,
       setExpenseAmount,
       renameExpense,
       addExpense,
@@ -1024,8 +960,6 @@ export function AppProvider({
       updateRecurringExpense,
       addRecurringExpense,
       removeRecurringExpense,
-      setDefaultReserve,
-      applySettingsToCurrentMonth,
       exportJson,
       importJson,
     ],

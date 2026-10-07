@@ -35,14 +35,29 @@ async function expectPose(page: Page, mood: string) {
   await expect(noFace(page).locator(`.noface__img--${mood}`)).toHaveClass(/is-shown/);
 }
 
-/** Repère de fin de mois : projection rapportée au plus grand des versements et des dépenses. */
+/**
+ * V4.2 : le compte commun est en haut, « Ce mois-ci » plus bas. On fait
+ * défiler juste assez pour voir la case au-dessus de la navigation : le
+ * Sans-Visage du solde reste à l'écran et mange sur place (sinon il vient
+ * en visiteur, voir plus bas).
+ */
+async function revealNearNoFace(page: Page, testId: string) {
+  await page.evaluate((id) => {
+    const box = document.querySelector(`[data-testid="${id}"]`)!.getBoundingClientRect();
+    window.scrollBy(0, Math.max(0, box.bottom - (window.innerHeight - 130)));
+  }, testId);
+  await expect(noFace(page)).toBeInViewport();
+}
+
+/** Repère de fin de mois : projection rapportée au plus grand des versements (AL + AC) et des dépenses. */
 async function ratio(page: Page): Promise<number> {
   return page.evaluate(() => {
     const parse = (id: string) => {
       const text = document.querySelector(`[data-testid="${id}"]`)?.textContent ?? '';
       return Number(text.replace(/[^\d]/g, ''));
     };
-    return parse('balance-projection') / Math.max(parse('household-total'), parse('expenses-total'));
+    const given = parse('contribution-a') + parse('contribution-b');
+    return parse('balance-projection') / Math.max(given, parse('ledger-expenses-total'));
   });
 }
 
@@ -135,6 +150,7 @@ test.describe('Budget — univers Chihiro', () => {
     await page.waitForTimeout(1600);
 
     const before = await noFace(page).evaluate((e) => getComputedStyle(e).getPropertyValue('--full').trim());
+    await revealNearNoFace(page, 'pay-transfer-a');
     await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
     await expect(page.locator('.nugget-flight')).toHaveCount(1);
     await expect(page.locator('.nugget-flight img')).not.toHaveCount(0);
@@ -168,6 +184,7 @@ test.describe('Budget — univers Chihiro', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openApp(page, 'budget');
     await salaries(page, '2200', '3000');
+    await revealNearNoFace(page, 'pay-transfer-a');
     await page.getByRole('checkbox', { name: 'Virement d’AL fait', exact: true }).click();
     await expect(noFace(page)).toHaveClass(/is-eating/);
     await expect(page.locator('.nugget-flight')).toHaveCount(0);

@@ -57,10 +57,3 @@ export function expenseShortcuts(source: ShortcutSource, month: MonthRecord, exp
     prev ? { label: 'Comme le mois dernier', cents: prev.amountCents } : null,
   ]);
 }
-
-export function reserveShortcuts(source: ShortcutSource): AmountShortcut[] {
-  return dedupe([
-    source.settings ? { label: 'Réserve habituelle', cents: source.settings.defaultReserveTargetCents } : null,
-    { label: 'Aucune', cents: 0 },
-  ]);
-}

@@ -58,16 +58,16 @@ test.describe('Budget — critère de réussite', () => {
 
     await expect(page.getByTestId('contribution-a')).toHaveText(euros(88_000));
     await expect(page.getByTestId('contribution-b')).toHaveText(euros(133_500));
-    await expect(page.getByTestId('household-total')).toHaveText(euros(221_500));
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
+    await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(184_500));
     // Premier mois, rien de coché : 0 € sur le compte maintenant, +370 € en fin de mois.
     await expect(page.getByTestId('balance-now')).toHaveText(euros(0));
     await expect(page.getByTestId('balance-projection')).toHaveText(euros(37_000));
     await expect(page.getByText(/\bReste\b/u)).toHaveCount(0);
 
-    // Règle des 2 secondes : versements, total et solde tiennent dans le premier écran (390 × 844).
+    // Règle des 2 secondes (V4.2) : le compte commun en haut, puis la part à
+    // verser de chacun dans sa carte, tout dans le premier écran (390 × 844).
     await page.evaluate(() => window.scrollTo(0, 0));
-    for (const id of ['contribution-a', 'contribution-b', 'household-total', 'expenses-total', 'balance-now', 'balance-projection']) {
+    for (const id of ['balance-now', 'balance-projection', 'contribution-a', 'contribution-b']) {
       await expect(page.getByTestId(id)).toBeInViewport();
     }
     // Aucun centime, nulle part dans le Budget.
@@ -79,7 +79,7 @@ test.describe('Budget — critère de réussite', () => {
     await expect(page.locator('#salary-b-value')).toHaveText(euros(300_000));
     await expect(page.locator('#bonus-b-value')).toHaveText(euros(67_500));
     await expect(page.locator('#bonus-a')).toHaveCount(0);
-    await expect(page.getByTestId('household-total')).toHaveText(euros(221_500));
+    await expect(page.getByTestId('contribution-b')).toHaveText(euros(133_500));
     await expect(page.getByTestId('balance-projection')).toHaveText(euros(37_000));
     await expect.poll(async () => {
       const m = await currentMonthOf(page);
@@ -124,7 +124,7 @@ test.describe('Budget — critère de réussite', () => {
 });
 
 test.describe('Taux communs au curseur', () => {
-  test('un seul couple de taux, réglé au clavier et aux boutons, écrit pour les deux', async ({ page }) => {
+  test('un seul couple de taux, réglé au clavier et aux boutons, écrit pour les deux et pour le mois courant', async ({ page }) => {
     await openApp(page, 'budget');
     await page.getByRole('button', { name: 'Réglages', exact: true }).click();
     const settings = sheet(page, 'Réglages');
@@ -143,6 +143,8 @@ test.describe('Taux communs au curseur', () => {
       const s = (await persisted(page)).budget.settings;
       return [s.personA.baseRateBps, s.personB.baseRateBps, s.personA.variableRateBps, s.personB.variableRateBps];
     }).toEqual([3500, 3500, 2100, 2100]);
+    // L'exemple suit les taux : 35 % × 3 000 € + 21 % × 500 € = 1 155 €.
+    await expect(settings.getByTestId('rates-example')).toContainText(/1\s155\s€/u);
 
     await variable.focus();
     await page.keyboard.press('End');
@@ -156,15 +158,13 @@ test.describe('Taux communs au curseur', () => {
     await expect.poll(async () => (await persisted(page)).budget.settings.personB.variableRateBps).toBe(2000);
     await closeSheet(page, 'Réglages');
 
-    // Le mois affiché garde ses taux : l'application aux règles du mois est explicite.
-    await page.getByRole('button', { name: 'Détail du calcul' }).click();
-    await page.getByRole('button', { name: 'Appliquer les taux communs à ce mois', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Appliquer les taux communs à ce mois', exact: true })).toHaveCount(0);
+    // V4.2 : taux globaux — le mois courant les prend aussitôt (35 % × 2 200 € = 770 €).
+    await expect(page.getByTestId('contribution-a')).toHaveText(euros(77_000));
     await expect.poll(async () => {
-      const s = await persisted(page);
-      const m = s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
-      return [m.personA.baseRateBps, m.personB.baseRateBps];
-    }).toEqual([3500, 3500]);
+      const m = await currentMonthOf(page);
+      return [m.personA.baseRateBps, m.personB.baseRateBps, m.personA.variableRateBps, m.personB.variableRateBps];
+    }).toEqual([3500, 3500, 2000, 2000]);
+    await expect(page.getByText(/taux communs à ce mois|taux différents/u)).toHaveCount(0);
   });
 });
 
@@ -203,14 +203,13 @@ test.describe('Saisie des montants', () => {
     await expect(page.locator(`#m-${key}-add-amount-pad-display`)).toHaveCount(0);
     await submit.click();
     await expect(ledger.locator('.paybook-row--expense')).toHaveCount(before + 1);
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
+    await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(184_500));
   });
 
   test('renommer, régler au pavé, retirer une dépense (annulable)', async ({ page }) => {
     await openApp(page, 'budget');
     const key = await monthKey(page);
     await setEuros(page, `m-${key}-internet-amount`, '45');
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));
     await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(186_000));
     await expect(page.getByRole('checkbox', { name: 'Internet payé', exact: true })).toBeVisible();
     await expect(page.locator(`#m-${key}-internet-amount-value`)).toHaveText(euros(4_500));
@@ -221,9 +220,9 @@ test.describe('Saisie des montants', () => {
     await expect.poll(async () => (await currentMonthOf(page)).expenses.find((e: { id: string }) => e.id === 'internet')?.label).toBe('Box internet');
 
     await page.getByRole('button', { name: 'Retirer Box internet', exact: true }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(181_500));
+    await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(181_500));
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));
+    await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(186_000));
   });
 });
 

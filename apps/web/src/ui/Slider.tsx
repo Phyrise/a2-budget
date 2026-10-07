@@ -23,6 +23,8 @@ export interface SliderProps {
   /** Valeur en points de base (40 % = 4000). */
   valueBps: number;
   onCommit: (bps: number) => void;
+  /** Valeur suivie pendant le geste (null quand elle est validée), pour un aperçu en direct. */
+  onDraft?: (bps: number | null) => void;
   minBps?: number;
   maxBps?: number;
   /** Pas du curseur et des boutons (défaut : 1 % = 100). */
@@ -46,6 +48,7 @@ export function Slider({
   hint,
   valueBps,
   onCommit,
+  onDraft,
   minBps = 0,
   maxBps = 10_000,
   stepBps = 100,
@@ -58,6 +61,8 @@ export function Slider({
   const timer = useRef<number | undefined>(undefined);
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
+  const draftRef = useRef(onDraft);
+  draftRef.current = onDraft;
   const latest = useRef<number | null>(null);
 
   const shown = draft ?? valueBps;
@@ -69,6 +74,7 @@ export function Slider({
     const pending = latest.current;
     latest.current = null;
     setDraft(null);
+    draftRef.current?.(null);
     if (pending !== null && pending !== valueBps) commitRef.current(pending);
   };
 
@@ -76,6 +82,7 @@ export function Slider({
   const schedule = (bps: number) => {
     latest.current = bps;
     setDraft(bps);
+    draftRef.current?.(bps);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(flush, COMMIT_DELAY_MS);
   };

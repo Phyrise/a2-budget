@@ -19,8 +19,9 @@
  *   les états vides, Totoro au paquet-feuille pour les anniversaires, le
  *   Chatbus traverse quand on ajoute un moment.
  * - V4.3 : les anniversaires d'AL et d'AC (Réglages) s'ajoutent en annuels
- *   virtuels (jamais écrits ; les toucher ouvre les Réglages) ; le jour de
- *   l'anniversaire du couple porte un petit lampion dans la grille.
+ *   virtuels (jamais écrits ; les toucher ouvre les Réglages), annoncés dans
+ *   « À venir » un mois avant ; le jour de l'anniversaire du couple porte un
+ *   petit lampion dans la grille.
  * Occurrences, tris et répétitions : @a2/core uniquement.
  */
 import {
@@ -57,6 +58,8 @@ import './calendar.css';
 const UPCOMING_COUNT = 8;
 /** « À venir » montre les tâches des sept prochains jours. */
 const UPCOMING_TASK_DAYS = 7;
+/** « À venir » annonce un anniversaire d'AL ou d'AC un mois avant (V4.3). */
+const BIRTHDAY_SOON_DAYS = 30;
 const NO_TASKS: TaskItem[] = [];
 const NO_EVENTS: CalendarEvent[] = [];
 
@@ -144,14 +147,20 @@ export function CalendarScreen() {
 
   // Quand le jour présent est montré juste au-dessus, « À venir » commence après lui.
   const hideToday = selected === todayKey;
+  const birthdaysTo = localDateKey(addDays(today, BIRTHDAY_SOON_DAYS));
   const upcoming = useMemo(() => {
     const todayCount = hideToday ? eventsOn(events, todayKey).length : 0;
-    const next = nextEvents(events, now, UPCOMING_COUNT + todayCount)
+    const next = nextEvents(events, now, UPCOMING_COUNT + todayCount + 2);
+    // Anniversaires d'AL et d'AC (virtuels) : s'ils approchent, ou parmi les moments déjà annoncés.
+    const lastReal = next.filter((o) => !isAnniversaryEventId(o.event.id)).at(-1)?.date ?? '';
+    const horizon = lastReal > birthdaysTo ? lastReal : birthdaysTo;
+    const shown = next
+      .filter((o) => !(isAnniversaryEventId(o.event.id) && o.date > horizon))
       .filter((o) => !(hideToday && o.date === todayKey))
       .slice(0, UPCOMING_COUNT);
     const tasks = taskItems.filter((t) => t.date >= todayKey && t.date <= upcomingTo && !(hideToday && t.date === todayKey));
-    return agendaDays(next, tasks);
-  }, [events, now, hideToday, todayKey, taskItems, upcomingTo]);
+    return agendaDays(shown, tasks);
+  }, [events, now, hideToday, todayKey, taskItems, upcomingTo, birthdaysTo]);
   const dayOccurrences = useMemo(() => (selected ? eventsOn(events, selected) : []), [events, selected]);
   const dayTasks = selected ? (tasksByDay.get(selected) ?? NO_TASKS) : NO_TASKS;
   const monthDays = useMemo(() => {

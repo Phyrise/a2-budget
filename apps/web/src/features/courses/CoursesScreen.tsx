@@ -71,16 +71,16 @@ export function CoursesScreen() {
   }, [bagUntil]);
 
   // Première ouverture du jour : Kiki salue, à l'arrivée sur l'écran et
-  // seulement s'il y a une liste (jamais au milieu d'un ajout).
+  // seulement s'il reste à prendre (jamais au milieu d'un ajout).
   const greetChecked = useRef(false);
   useEffect(() => {
     if (greetChecked.current || appState === null) return;
     greetChecked.current = true;
-    if (total > 0 && shouldGreet(today)) {
+    if (items.some((i) => !i.done) && shouldGreet(today)) {
       setGreeting(true);
       markGreeted(today);
     }
-  }, [appState, total, today]);
+  }, [appState, items, today]);
 
   // Pendant le coup de balai, l'article coché reste dessiné dans son rayon.
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
@@ -96,6 +96,11 @@ export function CoursesScreen() {
   const inBasket = basket.length;
   const fill = basketFill(inBasket, total);
   const pose = jijiPose(total, inBasket, bagUntil > Date.now());
+
+  // Tout est au panier : « Tout est dans le panier » suffit, le salut s'efface.
+  useEffect(() => {
+    if (greeting && toBuyCount === 0) setGreeting(false);
+  }, [greeting, toBuyCount]);
 
   const nudgeJiji = () => setBagUntil(Date.now() + JIJI_BAG_MS);
 
@@ -235,7 +240,7 @@ export function CoursesScreen() {
           </Button>
         </form>
 
-        {greeting && total > 0 && <KikiGreeting toBuy={toBuyCount} now={today} onClose={() => setGreeting(false)} />}
+        {greeting && toBuyCount > 0 && <KikiGreeting toBuy={toBuyCount} now={today} onClose={() => setGreeting(false)} />}
 
         {suggestions.length > 0 && (
           <div className="suggestions">

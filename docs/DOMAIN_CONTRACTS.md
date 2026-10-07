@@ -894,3 +894,54 @@ suivent la sémantique commune : transition pure via `transact`, ids et
 horloge capturés hors de l'updater, résultat synchrone (`boolean`),
 écriture sérialisée, objet d'actions mémoïsé.
 
+
+## 15. V5 — Synchronisation à deux : domaine pur (`packages/core/src/sync/`)
+
+Conception : `docs/SYNC_DESIGN.md` §2, §3, §10. Aucune dépendance réseau ;
+le mode local (invité) n'utilise rien de cette section.
+
+### 15.1 Faits annulables (`facts.ts`)
+
+- `CompletionFact` = `ChoreCompletion` + `localDay` (jour local de l'auteur,
+  figé) + `creditKey` (+ `imported` à la migration) ; `SkipFact`,
+  `FocusFact`, `PurchaseFact`, `ForestEventFact` (`pause` / `resume`).
+- Annulation douce `undoneAt` / `undoneDay` / `undoneBy` (`'a' | 'b'`) /
+  `devOverride` : `undoFact` (déjà annulé → même référence), `mergeFact`
+  (l'annulée gagne, puis la plus ancienne : commutatif), `dedupeFacts`.
+- Projection : `liveCompletions` (une par occurrence, la première par
+  `(completedAt, id)` ; « fait ensemble » `doneBy: 'both'` si A et B l'ont
+  faite), `liveSkips` (le premier par `(at, id)`), `liveFacts`,
+  `liveFactsOfOccurrence` (décocher annule toutes les versions).
+
+### 15.2 Rejeu de la forêt (`replay.ts`)
+
+- `replayForest(checkpoint | null, { completions, forestEvents }, today)` :
+  étapes triées `(jour, horodatage, id, nature)`, rejouées avec les briques de
+  `toggleTaskToday` / pause du store, puis `advanceDay(today)`. Mêmes faits ⇒
+  même forêt, quel que soit l'ordre d'arrivée (testé sur toutes les
+  permutations). Plafond, tombstone, recomplétion, pause : inchangés.
+- Une annulation passe toujours après sa complétion (jour et heure au moins
+  ceux de la complétion). Un fait daté de plus d'un jour après `today`
+  (horloge fausse) attend son jour.
+- Points de reprise `ForestCheckpoint { day, forest, genesis? }` : ordinaire
+  = faits de jour ≤ `day` déjà comptés ; genèse = seuls les faits `imported`.
+  `buildCheckpoint`, `latestCheckpoint` (à jour égal, l'ordinaire),
+  `checkpointDayFor(today)` (dernier jour du mois d'il y a deux mois),
+  `checkpointsToKeep` (genèse + 3).
+
+### 15.3 Jalons (`milestones.ts`)
+
+`ForestMilestones` (stade, soins, plus longue série, déblocages, événements
+rares) : `milestonesOf`, `mergeMilestones` (maximum / union triée),
+`milestonesAtLeast` (règle « jamais en baisse »), `raisesMilestones`,
+`applyMilestones(forest, m)` (stade et déblocages relevés ; `lifetimeCare`
+reste celui du rejeu pour garder le registre cohérent), `validateMilestones`.
+
+### 15.4 Maps et rangs (`monthMaps.ts`, `order.ts`)
+
+- Dépenses (mois et récurrentes) en map `{ [id]: { label, amountCents,
+  order } }` ; paiements en map. Entrée incomplète ignorée (la suppression
+  gagne) ; map vide = absente. `monthToDoc` / `monthFromDoc`,
+  `settingsToDoc` / `settingsFromDoc`, `expensesToMap` / `expensesFromMap`.
+- `allocateOrders(ids, known)` : rangs gardés tant qu'ils restent croissants,
+  nouveaux placés entre voisins ; tri `(order, id)` identique partout.

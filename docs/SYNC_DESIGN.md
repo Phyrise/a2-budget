@@ -486,3 +486,34 @@ trace dans les données.
 | Forêt différente sur les deux téléphones | rejeu déterministe testé par permutations, jalons monotones |
 | Ancien build en cache | `minApp`, lecture seule, invite de mise à jour |
 | Dépôt public GitHub Pages | aucune donnée dans le dépôt ; config web publique par nature |
+
+## 14. Implémentation — étapes 1 et 2 (domaine et pont, sans Firebase)
+
+Domaine : `packages/core/src/sync/` (`DOMAIN_CONTRACTS.md` §15). Pont :
+`apps/web/src/sync/`, jamais importé par l'app en mode local (invité).
+
+- **Documents** (`docs.ts`, `entities.ts`) : une collection par liste de
+  l'état, ids existants, rang `order` sur chaque document de liste (tri
+  `(order, id)`, aller-retour exact). Documents uniques `settings/budget`
+  (+ `balanceTracked` : le solde existe même sans correction),
+  `settings/focus`, `settings/groceryMemory` (`memory: { clé: { category,
+  order } }` : l'ordre de récence survit au tri des clés de Firestore),
+  `settings/anniversaries`. Une liste facultative vide vaut « absente ».
+- **Écritures** (`WriteOp`) : `create` (créer si absent : nouveaux objets,
+  mois du 1er), `set` (restauration après suppression douce, recalage du
+  solde : le dernier gagne), `update` (champs feuille par feuille, chemins en
+  segments, `DELETE_FIELD`), `merge` (documents uniques), `raise` (jalons).
+  Le transport Firestore devra traduire `create` par une transaction « créer
+  si absent » (en ligne) et `raise` par une transaction max.
+- **Faits** : `undoneBy` porte le rôle (`'a'|'b'`) ; l'UID de l'auteur est
+  posé par le transport (`updatedBy`). Les règles permettent de réécrire
+  l'annulation (un lot n'échoue pas si l'autre a déjà annulé).
+- **Projection** (`project.ts`) : un cercle par semaine (le plus récent),
+  plafonds de `@a2/core`, validation complète ; en cas d'échec chaque
+  document est éprouvé seul, l'invalide est ignoré et signalé.
+- **Tests** : aller-retour (y compris clés triées comme Firestore),
+  `diffToOps` minimal et « projection = état local » pour chaque geste,
+  deux téléphones sur un faux serveur (`MemoryServer` / `MemoryTransport`,
+  règles essentielles, hors ligne, deux ordres de reconnexion).
+- Copie locale du mode synchronisé : `a2-budget:sync:v1` (`syncCache.ts`),
+  jamais `a2-budget:state:v1`.

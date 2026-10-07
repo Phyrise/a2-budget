@@ -97,3 +97,9 @@ export {
 // Sémantique et cas limites : docs/DOMAIN_CONTRACTS.md.
 // ---------------------------------------------------------------------------
 export * from './home/index.js';
+
+// ---------------------------------------------------------------------------
+// V5 — synchronisation à deux (domaine pur) : faits annulables, rejeu de la
+// forêt, jalons monotones, mois en maps. Conception : docs/SYNC_DESIGN.md.
+// ---------------------------------------------------------------------------
+export * from './sync/index.js';

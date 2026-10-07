@@ -7,7 +7,11 @@ async function createTask(page: Page, title: string, who: 'a' | 'b' | 'both' | '
   await page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first().click();
   const dialog = sheet(page, 'Nouvelle tâche');
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator('#task-title')).toBeFocused();
+  // V4.1 : le focus va au titre de la feuille, pas dans le champ (pas de clavier) ;
+  // « Une fois » par défaut.
+  await expect(dialog.getByRole('heading', { name: 'Nouvelle tâche' })).toBeFocused();
+  await expect(dialog.locator('#task-title')).not.toBeFocused();
+  await expect(dialog.locator('#task-recurrence-none')).toBeChecked();
   await dialog.locator('#task-title').fill(title);
   await dialog.locator(`#task-who-${who}`).check();
   await dialog.locator(`#task-recurrence-${recurrence}`).check();

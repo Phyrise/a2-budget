@@ -104,7 +104,9 @@ test.describe('Maison V3.1', () => {
     await openSeeded(page, busyState());
     const balance = page.locator('.balance');
     await expect(balance.getByRole('heading', { name: 'Le partage de la semaine' })).toBeVisible();
-    await expect(balance.locator('.balance__lead')).toContainText('Chaque tâche faite pèse selon son effort');
+    // V4.1 : allégée — plus de paragraphe d'introduction, une phrase sous la branche.
+    await expect(balance.locator('.balance__lead')).toHaveCount(0);
+    await expect(balance.locator('.balance__title')).toHaveCount(1);
     const how = balance.getByRole('button', { name: /Comment ça marche/ });
     await expect(how).toHaveAttribute('aria-expanded', 'false');
     await how.click();

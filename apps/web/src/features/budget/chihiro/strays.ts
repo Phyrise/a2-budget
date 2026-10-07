@@ -11,7 +11,7 @@ export const WARMUP_MS = 20_000;
 /** Une apparition « au défilement » attend au moins ceci depuis la précédente. */
 export const SCROLL_GAP_MS = 18_000;
 /** Taille de la Noiraude à l'écran (px). */
-export const STRAY_SIZE = { w: 30, h: 40 } as const;
+export const STRAY_SIZE = { w: 34, h: 46 } as const;
 
 /** Prochaine apparition : 25–60 s ; plus rare quand tout est immobile (60–120 s). */
 export function nextDelayMs(calm: boolean, rand: () => number): number {

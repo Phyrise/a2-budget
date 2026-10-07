@@ -134,14 +134,18 @@ function replaySteps(start: ForestState, steps: readonly ReplayStep[], today: st
 /**
  * Forêt = point de reprise (ou forêt neuve) + faits postérieurs, avancée à
  * `today` (« YYYY-MM-DD », jour local du téléphone). Indépendante de l'ordre
- * des faits. Pur.
+ * des faits. Un fait daté de plus d'un jour après `today` (horloge fausse ;
+ * un jour de marge couvre deux fuseaux) attend que son jour arrive : il ne
+ * bloque jamais les soins d'aujourd'hui. Pur.
  */
 export function replayForest(
   checkpoint: ForestCheckpoint | null,
   facts: ReplayFacts,
   today: string,
 ): ForestState {
-  return replaySteps(checkpoint?.forest ?? emptyForest(), forestTimeline(checkpoint, facts), today);
+  const horizon = isValidLocalDateKey(today) ? localDateKey(addDays(parseLocalDateKey(today), 1)) : today;
+  const steps = forestTimeline(checkpoint, facts).filter((step) => step.day <= horizon);
+  return replaySteps(checkpoint?.forest ?? emptyForest(), steps, today);
 }
 
 /**

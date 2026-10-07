@@ -31,7 +31,12 @@ export function migrationDocs(state: AppState, now: Date): Map<DocKey, DocData> 
   const day = localDateKey(now);
   const docs = entityDocs(state);
   for (const [key, data] of docs) {
-    if (splitDocKey(key)[0] === 'completions') docs.set(key, { ...data, imported: true });
+    if (splitDocKey(key)[0] !== 'completions') continue;
+    // Clé sous laquelle le crédit a vraiment été enregistré (tâche passée de
+    // jour fixe à souple depuis) : celle du registre si elle y est.
+    const exact = `${String(data.taskId)}|${String(data.dueDate)}`;
+    const creditKey = state.forest.creditLedger[exact] !== undefined ? exact : data.creditKey;
+    docs.set(key, { ...data, creditKey, imported: true });
   }
   docs.set(docKey('checkpoints', day), clean({ day, forest: state.forest, genesis: true }));
   docs.set(docKey('meta', META_MILESTONES), { ...milestonesOf(state.forest) });

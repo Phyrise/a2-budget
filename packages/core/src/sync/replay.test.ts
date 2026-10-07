@@ -199,6 +199,17 @@ describe('replayForest — ordre d’arrivée', () => {
     expect(forest.lifetimeCare).toBe(0);
   });
 
+  it('un fait daté loin dans le futur (horloge fausse) attend son jour, sans bloquer aujourd’hui', () => {
+    const wrong = done('w', 't9', new Date(2027, 0, 1, 9), { by: 'b' });
+    const today = done('c1', 't1', at(2, 9));
+    const forest = replayForest(null, { completions: [wrong, today] }, dayKey(2));
+    expect(forest.creditLedger['t1|2026-10-02']?.status).toBe('active');
+    expect(forest.creditLedger['t9|2027-01-01']).toBeUndefined();
+    // Un jour d’avance (autre fuseau) est accepté.
+    const tomorrow = done('c2', 't2', at(3, 1), { by: 'b' });
+    expect(replayForest(null, { completions: [tomorrow] }, dayKey(2)).lifetimeCare).toBe(1);
+  });
+
   it('sans aucun fait : forêt neuve avancée au jour', () => {
     expect(replayForest(null, { completions: [] }, dayKey(3))).toEqual(advanceDay(emptyForest(), dayKey(3)));
   });

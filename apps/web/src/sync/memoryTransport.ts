@@ -40,11 +40,12 @@ export class MemoryServer {
 
   /** Applique un lot (règles comprises) et le diffuse aux téléphones en ligne. */
   commit(ops: readonly WriteOp[], author: Role): boolean {
-    const r = applyBatch(this.docs, ops, { rules: true, stamp: { syncedAt: (this.clock += 1), updatedBy: author } });
+    const r = applyBatch(this.docs, ops, { rules: true, stamp: { syncedAt: this.clock + 1, updatedBy: author } });
     if (!r.ok) {
       this.rejected.push(r.reason);
       return false;
     }
+    this.clock += 1;
     this.docs = r.docs;
     this.commits += 1;
     const changes = r.changed.map((key) => ({ key, data: this.docs.get(key) ?? null }));

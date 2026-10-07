@@ -8,12 +8,19 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "@firebase/util",
+      "protobufjs",
+      "re2"
     ]
   },
   "scripts": {
     "dev": "pnpm --filter @a2/web dev",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc -p tests/rules",
     "test": "pnpm -r test",
+    "test:rules": "scripts/with-java.sh firebase emulators:exec --only firestore --project demo-a2home \"vitest run -c vitest.rules.config.ts\"",
+    "emulators": "scripts/with-java.sh firebase emulators:start --only auth,firestore --project demo-a2home",
     "build": "pnpm --filter @a2/web build",
     "preview": "pnpm --filter @a2/web preview"
   },

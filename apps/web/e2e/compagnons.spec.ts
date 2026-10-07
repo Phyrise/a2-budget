@@ -31,9 +31,13 @@ test.describe('Compagnons V4.3', () => {
     await ownsItsCenter(page, page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first());
     await ownsItsCenter(page, calcifer);
 
-    await calcifer.click();
-    await expect(calcifer).toHaveClass(/is-poke/);
+    // Sous charge, le bouton peut être re-rendu pendant le premier clic : on réessaie.
+    await expect(async () => {
+      await calcifer.click();
+      await expect(calcifer).toHaveClass(/is-poke/, { timeout: 1500 });
+    }).toPass({ timeout: 10_000 });
     await expect(calcifer).not.toHaveClass(/is-poke/, { timeout: 3000 });
+    await page.waitForTimeout(2100); // la rafale suivante part d'un compteur vide
 
     // Quatre touchers rapides (moins de 2 s).
     const box = (await calcifer.boundingBox())!;

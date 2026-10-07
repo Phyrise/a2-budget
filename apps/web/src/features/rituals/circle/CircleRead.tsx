@@ -110,9 +110,9 @@ export function CircleClosing({ circle, names }: { circle: Circle; names: Names 
   const lines = circleClosingLine(circle.id);
   return (
     <div className="circle-closing">
-      <div className="circle-closing__pair" aria-hidden="true">
-        <Companion who="a" size={72} mood="proud" reactKey="close-a" />
-        <Companion who="b" size={68} mood="happy" reactKey="close-b" />
+      <div className="circle-closing__pair">
+        <Companion who="a" size={72} mood="proud" reactKey="close-a" touchable />
+        <Companion who="b" size={68} mood="happy" reactKey="close-b" touchable />
       </div>
       <h3 className="circle-closing__title display">Merci d’avoir pris ce moment.</h3>
       <p className="circle-closing__sub">Le cercle de la semaine est gardé dans le carnet de la forêt.</p>

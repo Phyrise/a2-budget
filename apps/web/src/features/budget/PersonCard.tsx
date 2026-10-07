@@ -62,7 +62,7 @@ export function PersonCard({
   return (
     <article className={cx('person-card', `person-card--${who}`)} aria-label={`Revenus ${of}`}>
       <header className="person-card__head">
-        <Companion who={who} size={30} />
+        <Companion who={who} size={30} touchable />
         <h3 className="person-card__name">{settings.name}</h3>
         {!bonusShown && (
           <button

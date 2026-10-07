@@ -44,8 +44,8 @@ export function rigFor(url: string): HeadRig {
 export const RATTLE_S = 1.25;
 /** Cadence de la secousse (allers-retours par seconde). */
 const RATTLE_HZ = 6.5;
-/** Amplitude d'une secousse franche (rad, ≈ 19°). */
-export const RATTLE_AMP = 0.33;
+/** Amplitude d’une secousse franche (rad, ≈ 22°). */
+export const RATTLE_AMP = 0.38;
 
 export interface Rattle {
   /** Début (horloge du moteur, s) ; dans le futur pour un voisin qui va imiter. */

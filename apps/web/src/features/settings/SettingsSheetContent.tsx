@@ -54,7 +54,7 @@ function PersonSettingsCard({ person, settings }: { person: 'A' | 'B'; settings:
   return (
     <div className={`settings-person settings-person--${who}`}>
       <div className="settings-person__head">
-        <Companion who={who} size={46} />
+        <Companion who={who} size={46} touchable />
         <div className="settings-person__name">
           <div className="settings-person__edit">
             <InlineTextField
@@ -183,9 +183,9 @@ export function SettingsSheetContent() {
       </Section>
 
       <section className="settings-about" aria-label="À propos">
-        <div className="settings-about__pair" aria-hidden="true">
-          <Companion who="a" size={40} mood="sleepy" />
-          <Companion who="b" size={38} mood="sleepy" />
+        <div className="settings-about__pair">
+          <Companion who="a" size={40} mood="sleepy" touchable />
+          <Companion who="b" size={38} mood="sleepy" touchable />
         </div>
         <p className="settings-about__name display">A² Home</p>
         <div className="settings-about__dev">

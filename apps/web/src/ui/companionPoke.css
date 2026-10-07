@@ -1,0 +1,294 @@
+/* Compagnons touchables (V4.3) : Calcifer crépite, Jiji penche la tête ;
+   touchés trop souvent, Calcifer s'énerve et Jiji boude (companionPoke.ts).
+   Calme (mouvement réduit, Forêt « Immobile ») : pose et couleur seulement. */
+
+.companion--touch {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Zone de toucher d'au moins 44 px, même pour un petit compagnon. */
+.companion--touch::before {
+  content: '';
+  position: absolute;
+  inset: calc(min(0px, (var(--cmp-size) - 44px) / 2));
+  border-radius: 50%;
+}
+
+.companion__poke {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 94%;
+  transition: filter 320ms var(--ease-soft);
+}
+
+/* Bouffée de fumée de Calcifer agacé. */
+.companion__smoke {
+  position: absolute;
+  left: 50%;
+  top: -6%;
+  width: 62%;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
+.companion__smoke::before,
+.companion__smoke::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 55%, rgba(150, 140, 132, 0.55), rgba(110, 102, 96, 0.28) 46%, transparent 70%);
+  opacity: 0;
+  transform: translate(-50%, 0) scale(0.4);
+  animation: cmp-smoke 1.5s var(--ease-out) 0.5s forwards;
+}
+
+.companion__smoke::after {
+  background: radial-gradient(circle at 50% 50%, rgba(170, 160, 150, 0.42), transparent 66%);
+  animation-delay: 0.85s;
+  animation-duration: 1.3s;
+}
+
+/* Calcifer : réaction et colère. */
+.companion--b.is-upset .companion__poke {
+  filter: hue-rotate(-16deg) saturate(1.55) brightness(1.06);
+}
+
+.companion--a.is-upset .companion__poke {
+  filter: brightness(0.82);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .companion--touch:not(.is-calm):active .companion__poke {
+    transform: scale(0.96);
+  }
+
+  .companion--b.is-poke:not(.is-calm) .companion__poke {
+    animation: cmp-crackle 760ms var(--ease-out);
+  }
+
+  .companion--b.is-poke:not(.is-calm) .companion__poke::after {
+    content: '';
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    top: -4%;
+    height: 40%;
+    background:
+      radial-gradient(circle at 20% 80%, #ffd27a 0 3%, transparent 4%),
+      radial-gradient(circle at 70% 60%, #ffb347 0 2.5%, transparent 3.5%),
+      radial-gradient(circle at 45% 90%, #fff0b8 0 2%, transparent 3%);
+    pointer-events: none;
+    animation: cmp-sparks 760ms ease-out forwards;
+  }
+
+  .companion--b.is-upset:not(.is-calm) {
+    animation: cmp-shake 2.8s linear;
+  }
+
+  .companion--b.is-upset:not(.is-calm) .companion__poke {
+    animation: cmp-flare 2.8s var(--ease-soft) forwards;
+  }
+
+  .companion--a.is-poke:not(.is-calm) .companion__poke {
+    animation: cmp-curious 760ms var(--ease-out);
+  }
+
+  .companion--a.is-upset:not(.is-calm) .companion__poke {
+    animation: cmp-sulk 2.8s var(--ease-soft) forwards;
+  }
+}
+
+/* Calme : la pose change, rien ne bouge (Jiji se détourne d'un coup). */
+.companion--a.is-upset.is-calm .companion__poke {
+  transform: scaleX(-1);
+}
+
+.companion--touch.is-calm .companion__smoke::before,
+.companion--touch.is-calm .companion__smoke::after {
+  transform: translate(-50%, -30%) scale(1);
+  animation-name: cmp-smoke-still;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .companion__smoke::before,
+  .companion__smoke::after {
+    transform: translate(-50%, -30%) scale(1);
+    animation-name: cmp-smoke-still;
+  }
+
+  .companion--a.is-upset .companion__poke {
+    transform: scaleX(-1);
+  }
+}
+
+@keyframes cmp-crackle {
+  0% {
+    transform: none;
+    filter: none;
+  }
+  14% {
+    transform: scale(1.07, 0.9);
+  }
+  38% {
+    transform: translateY(-16%) scale(0.95, 1.12);
+    filter: brightness(1.18) saturate(1.15);
+  }
+  52% {
+    transform: translateY(-12%) scale(1.03, 1.04) rotate(-2deg);
+  }
+  66% {
+    transform: translateY(-14%) scale(0.98, 1.08) rotate(2deg);
+    filter: brightness(1.1);
+  }
+  86% {
+    transform: translateY(-2%) scale(1.02, 0.98);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes cmp-sparks {
+  0% {
+    opacity: 0;
+    transform: translateY(20%) scale(0.8);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-70%) scale(1.15);
+  }
+}
+
+@keyframes cmp-flare {
+  0% {
+    transform: none;
+    filter: none;
+  }
+  10% {
+    transform: scale(1.1, 1.34);
+    filter: hue-rotate(-18deg) saturate(1.7) brightness(1.1);
+  }
+  62% {
+    transform: scale(1.06, 1.26);
+    filter: hue-rotate(-16deg) saturate(1.6) brightness(1.08);
+  }
+  82% {
+    transform: scale(1.02, 1.08);
+    filter: hue-rotate(-8deg) saturate(1.25);
+  }
+  100% {
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes cmp-shake {
+  0%,
+  6%,
+  62%,
+  100% {
+    transform: none;
+  }
+  9%,
+  17%,
+  25%,
+  33%,
+  41%,
+  49%,
+  57% {
+    transform: translateX(-3%);
+  }
+  13%,
+  21%,
+  29%,
+  37%,
+  45%,
+  53% {
+    transform: translateX(3%);
+  }
+}
+
+@keyframes cmp-smoke {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -90%) scale(1.5);
+  }
+}
+
+@keyframes cmp-smoke-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes cmp-curious {
+  0% {
+    transform: none;
+  }
+  24% {
+    transform: rotate(-11deg) translateY(-4%);
+  }
+  42% {
+    transform: rotate(-7deg) translateY(-3%) skewX(4deg);
+  }
+  58% {
+    transform: rotate(-10deg) translateY(-3%) skewX(-4deg);
+  }
+  74% {
+    transform: rotate(-6deg) translateY(-2%) skewX(2deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes cmp-sulk {
+  0% {
+    transform: none;
+  }
+  14% {
+    transform: translateX(8%) scale(-0.95, 0.95);
+  }
+  50% {
+    transform: translateX(8%) scale(-0.95, 0.93);
+  }
+  78% {
+    transform: translateX(8%) scale(-0.95, 0.95);
+  }
+  92% {
+    transform: translateX(2%) scale(1.02, 0.99);
+  }
+  100% {
+    transform: none;
+  }
+}

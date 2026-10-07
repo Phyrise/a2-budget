@@ -1,11 +1,14 @@
 /**
  * En-tête de « Dans le panier » : le panier en osier (vide, à moitié, plein)
  * et Jiji à côté, dans une petite fenêtre de ciel. Décoratif (aria-hidden) :
- * le titre et la phrase portent l'information.
+ * le titre et la phrase portent l'information. Un article coché file vers le
+ * panier : Jiji lui donne un petit coup de patte curieux (jijiPaw.ts).
  */
+import { useEffect, useRef } from 'react';
 import { coursesTheme } from '../../themes/manifest';
 import type { BasketFill, JijiPose } from '../../themes/types';
 import { cx, plural } from '../../ui';
+import { jijiPaw } from './jijiPaw';
 
 /** Phrase douce sous le titre, selon l'avancée des courses. */
 function basketLine(done: number, total: number): string {
@@ -21,6 +24,7 @@ export function BasketStage({
   done,
   total,
   bump,
+  paw = 0,
 }: {
   fill: BasketFill;
   pose: JijiPose;
@@ -28,7 +32,14 @@ export function BasketStage({
   total: number;
   /** Change à chaque article déposé : le panier sautille. */
   bump: number;
+  /** Change à chaque article coché (en vol vers le panier) : coup de patte de Jiji. */
+  paw?: number;
 }) {
+  const jijiRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    if (paw > 0) jijiPaw(jijiRef.current);
+  }, [paw]);
+
   return (
     <div className="basket-head">
       <div className={cx('basket-stage', `basket-stage--${fill}`)} data-fill={fill} data-pose={pose} aria-hidden="true">
@@ -40,7 +51,14 @@ export function BasketStage({
           alt=""
           draggable={false}
         />
-        <img key={pose} className={cx('basket-stage__jiji', `basket-stage__jiji--${pose}`)} src={coursesTheme.jiji[pose]} alt="" draggable={false} />
+        <img
+          key={pose}
+          ref={jijiRef}
+          className={cx('basket-stage__jiji', `basket-stage__jiji--${pose}`)}
+          src={coursesTheme.jiji[pose]}
+          alt=""
+          draggable={false}
+        />
       </div>
       <div className="basket-head__text">
         <div className="section-head">

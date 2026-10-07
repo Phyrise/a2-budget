@@ -7,12 +7,20 @@
  * - Réactions : changer `reactKey` rejoue l'animation de l'humeur (sautille
  *   pour happy, gonfle pour proud, penche la tête pour curious, respire pour
  *   sleepy). Rien ne bouge si prefers-reduced-motion.
+ * - `touchable` (Jiji ou Calcifer seuls, jamais dans un autre contrôle) : un
+ *   vrai bouton ; le toucher fait réagir le compagnon, et l'agace s'il est
+ *   touché trop souvent (companionPoke.ts).
  */
-import type { CSSProperties } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import type { CompanionMood, Who } from '../world/types';
 import { manifest } from '../world/manifest';
 import { CalciferArt, JijiArt, KodamaArt } from './companionArt';
+import { pokeMood, useCompanionPoke, type PokeWho } from './companionPoke';
 import { cx } from './format';
+import './companionPoke.css';
+
+/** Libellés des compagnons touchables. */
+const TOUCH_LABEL: Record<PokeWho, string> = { a: 'Caresser Jiji', b: 'Taquiner Calcifer' };
 
 export type CompanionWho = Who;
 
@@ -38,6 +46,7 @@ export function Companion({
   label,
   className,
   perched = false,
+  touchable = false,
 }: {
   who: CompanionWho;
   mood?: CompanionMood;
@@ -50,12 +59,52 @@ export function Companion({
   className?: string;
   /** Posé sur le bord de la feuille (ombre portée douce). */
   perched?: boolean;
+  /** Bouton : le toucher fait réagir Jiji ou Calcifer (jamais à l'intérieur d'un autre contrôle). */
+  touchable?: boolean;
 }) {
+  const pokeWho: PokeWho | null = touchable && (who === 'a' || who === 'b') ? who : null;
+  const poke = useCompanionPoke(pokeWho);
+  // Poses des réactions prêtes avant le premier toucher (aucun blanc au changement de sprite).
+  useEffect(() => {
+    if (!pokeWho) return;
+    for (const m of ['idle', 'happy', 'curious', 'proud'] as const) {
+      const src = sprite(pokeWho, m);
+      if (src) new Image().src = src;
+    }
+  }, [pokeWho]);
   const a11y = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true as const };
   const style = { '--cmp-size': `${size}px` } as CSSProperties;
   // Petites tailles : Jiji (chat noir) reçoit un liseré clair pour rester
   // aussi présent que Calcifer sur les fonds sombres.
   const small = size < 40 && 'companion--small';
+
+  if (pokeWho) {
+    return (
+      <button
+        type="button"
+        className={cx(
+          'companion',
+          `companion--${pokeWho}`,
+          'companion--touch',
+          small,
+          perched && 'companion--perched',
+          poke.kind && `is-${poke.kind}`,
+          poke.calm && 'is-calm',
+          className,
+        )}
+        style={style}
+        aria-label={label ?? TOUCH_LABEL[pokeWho]}
+        onClick={poke.poke}
+      >
+        <span className="companion__poke">
+          <span key={reactKey ?? 'still'} className="companion__figure" data-mood={mood}>
+            <Figure who={pokeWho} mood={pokeMood(pokeWho, poke.kind) ?? mood} />
+          </span>
+        </span>
+        {poke.kind === 'upset' && pokeWho === 'b' && <span key={poke.n} className="companion__smoke" />}
+      </button>
+    );
+  }
 
   if (who === 'both') {
     return (

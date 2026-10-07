@@ -1,12 +1,14 @@
 /**
  * Toucher un kodama (karakara.ts) : un vrai toucher bref posé SUR la forêt
- * (cible dans la scène elle-même, jamais un bouton par-dessus), sans
- * glissement — un défilement, une parallaxe au doigt ou un appui long ne
- * comptent pas. Écoute passive : aucun geste de la forêt n'est intercepté
- * (gardien passé au toucher, lanterne, défilement de la feuille).
+ * visible — la cible est la scène ou un conteneur transparent au-dessus
+ * d'elle, jamais un bouton, un champ, la feuille, l'en-tête ou la barre de
+ * navigation — sans glissement : un défilement, une parallaxe au doigt ou un
+ * appui long ne comptent pas. Écoute passive : aucun geste de la forêt n'est
+ * intercepté (gardien passé au toucher, lanterne, défilement de la feuille).
  *
- * Mouvement « immobile » ou bandeau : rien ne bouge, seul le petit son
- * répond (s'il est permis).
+ * Forêt figée ou recouverte (bandeau, peinture d'univers, feuille ouverte) :
+ * aucun kodama ne répond. Mouvement « immobile » : rien ne bouge, seul le
+ * petit son répond (s'il est permis).
  */
 import type { WorldEngine } from './Engine';
 import { now } from './Engine';
@@ -15,6 +17,16 @@ import { DEFAULT_RIG, kodamaAt, RATTLE_AMP, type TouchTarget } from './karakara'
 /** Glissement maximal (px) et durée maximale (ms) d'un toucher. */
 const TAP_SLOP = 10;
 const TAP_MS = 600;
+/** Ce qui garde ses touchers : contrôles, feuilles, en-tête, navigation. */
+const NOT_FOREST =
+  'button, a, input, textarea, select, label, summary, [role="button"], [role="dialog"], [contenteditable="true"], .screen-sheet, .app-header, .app-dock';
+
+/** Le toucher tombe sur la forêt (la scène, ou un conteneur transparent par-dessus). */
+export function onForest(canvas: HTMLCanvasElement, target: EventTarget | null): boolean {
+  const root = canvas.closest('.living-forest');
+  if (!root || !(target instanceof Element)) return false;
+  return root.contains(target) || target.closest(NOT_FOREST) === null;
+}
 
 function targets(e: WorldEngine, n: number): (TouchTarget | null)[] {
   const sp = e.spirits;
@@ -71,7 +83,7 @@ function nearestTo(e: WorldEngine, x: number): number {
 
 /** Point client → kodama touché (indice, toit = nombre d'emplacements) ou -1. */
 export function kodamaAtClient(e: WorldEngine, clientX: number, clientY: number): number {
-  if (e.spirits.guardianActive(now()) || e.cfg.variant === 'banner') return -1;
+  if (!e.cfg.live || e.cfg.variant === 'banner' || e.spirits.guardianActive(now())) return -1;
   const r = e.canvas.getBoundingClientRect();
   if (r.width < 1 || r.height < 1) return -1;
   const par = e.pipe.frame.uPar.value as [number, number];
@@ -100,13 +112,9 @@ export function previewKodama(e: WorldEngine, onRattle: () => void) {
 /** Écoute les touchers brefs sur la forêt ; retourne la désinstallation. */
 export function bindKodamaTouch(e: WorldEngine, onTouch: () => void): () => void {
   let down: { id: number; x: number; y: number; t: number } | null = null;
-  const onForest = (target: EventTarget | null) => {
-    const root = e.canvas.closest('.living-forest');
-    return !!root && target instanceof Node && (root.contains(target) || target.contains(root));
-  };
   const onDown = (ev: PointerEvent) => {
     const primary = ev.isPrimary && (ev.pointerType !== 'mouse' || ev.button === 0);
-    down = primary && onForest(ev.target) ? { id: ev.pointerId, x: ev.clientX, y: ev.clientY, t: performance.now() } : null;
+    down = primary && onForest(e.canvas, ev.target) ? { id: ev.pointerId, x: ev.clientX, y: ev.clientY, t: performance.now() } : null;
   };
   const onUp = (ev: PointerEvent) => {
     const d = down;

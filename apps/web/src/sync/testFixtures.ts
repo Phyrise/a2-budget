@@ -37,6 +37,10 @@ export const NOW = at(8, 20);
 
 let seq = 0;
 export const testId = (prefix = 'id') => `${prefix}-${String((seq += 1)).padStart(4, '0')}`;
+/** Repart des mêmes ids (deux scénarios rejoués à l'identique se comparent). */
+export function resetTestIds(): void {
+  seq = 0;
+}
 
 /** Bascule de tâche du jour (comme toggleHomeTask). */
 export function toggle(s: AppState, taskId: string, when: Date, doneBy?: ChoreDoer): AppState {

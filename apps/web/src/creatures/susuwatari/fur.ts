@@ -92,7 +92,8 @@ export function furGenome(seed: number, p: SootSpriteParams): FurGenome {
   const make = (a: number, fine: boolean) => {
     const r0 = hair.rootOut - hair.depth * rand();
     let len = hair.lenMin + (hair.lenMax - hair.lenMin) * rand();
-    len *= 1 - hair.under * Math.max(0, Math.sin(a)) ** 2;
+    // Dessous tassé (elle est posée), sans passer sous la longueur minimale.
+    len = Math.max(Math.min(hair.lenMin, len), len * (1 - hair.under * Math.max(0, Math.sin(a)) ** 2));
     let tilt = (rand() - 0.5) * 2 * hair.jitter;
     if (hair.tufts > 0) {
       const t = nearestTuft(a);

@@ -48,7 +48,7 @@ export interface SootSpriteParams {
     bend: number;
     /** Épis : les pointes convergent en touffes (0 : aucune touffe). */
     tufts: number;
-    /** Dessous tassé : poils plus courts sous le corps (0–1). */
+    /** Dessous tassé : poils plus courts sous le corps (0–1), jamais sous lenMin. */
     under: number;
     /** Duvet : poils fins translucides entre les poils (× count). */
     fuzz: number;

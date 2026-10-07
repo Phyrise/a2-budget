@@ -4,11 +4,13 @@
  * - toucher bref : rebond + petit cri (si les petits sons sont activés) ;
  * - appui long : elle tremble, puis s'enfuit hors de l'écran ; elle revient
  *   un peu plus tard en trottinant depuis un bord ;
- * - nombre (1–50), taille, nuit (seuls les yeux restent visibles).
+ * - nombre (1–50), taille, nuit (seuls les yeux restent visibles) ;
+ * - l'apparence réglée dans le panneau (`params`). Panneau ouvert, la scène
+ *   n'est plus qu'une bande en bas de l'écran : la zone de promenade suit.
  */
 import { useEffect, useRef, type RefObject } from 'react';
 import { playCue } from '../../../app/sound';
-import { createSusuwatariLayer, type Point, type Susuwatari, type SusuwatariLayer } from '../../../creatures/susuwatari';
+import { createSusuwatariLayer, type Point, type SootSpriteParams, type Susuwatari, type SusuwatariLayer } from '../../../creatures/susuwatari';
 
 const LONG_PRESS_MS = 420;
 const SHIVER_MS = 650;
@@ -20,6 +22,7 @@ export interface LabSceneSettings {
   count: number;
   size: number;
   night: boolean;
+  params: SootSpriteParams;
 }
 
 /**
@@ -49,12 +52,16 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
     const canvas = canvasRef.current;
     if (!canvas) return;
     let deckTop = measureDeck(bgRef.current, canvas);
+    // Le plancher du pont ; dans une bande basse, au moins la hauteur d'une Noiraude.
     const deck = (width: number, height: number) => {
-      const top = Math.max(20, Math.min(height - 60, deckTop));
-      return { left: 28, top, right: Math.max(29, width - 28), bottom: Math.max(top + 1, height - 26) };
+      const tall = Math.max(20, settingsRef.current.size * 0.95);
+      const bottom = Math.max(tall + 1, height - (height < 200 ? 12 : 26));
+      const top = Math.min(bottom - 1, Math.max(tall, Math.min(height - 60, deckTop)));
+      return { left: 28, top, right: Math.max(29, width - 28), bottom };
     };
     const layer = createSusuwatariLayer(canvas, {
       rim: 1,
+      params: settingsRef.current.params,
       area: deck,
       depth: (y, h) => {
         const d = deck(canvas.clientWidth, h);
@@ -66,6 +73,20 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
     };
     window.addEventListener('resize', remeasure);
     bgRef.current?.addEventListener('load', remeasure);
+    // La toile change de taille (panneau ouvert ou replié) : celles qui sont
+    // hors de la nouvelle zone y sont replacées.
+    const refit = () => {
+      remeasure();
+      const z = layer.area();
+      for (const s of layer.creatures) {
+        if (s.state === 'gone' || s.state === 'flee') continue;
+        if (s.y < z.top || s.y > z.bottom || s.x < z.left || s.x > z.right) {
+          s.place(Math.max(z.left, Math.min(z.right, s.x)), z.top + Math.random() * (z.bottom - z.top));
+        }
+      }
+    };
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => requestAnimationFrame(refit)) : null;
+    observer?.observe(canvas);
     layerRef.current = layer;
     // Accès pour les tests et les captures (où sont les Noiraudes sur la toile).
     (canvas as LabCanvas).noiraudes = layer;
@@ -147,6 +168,7 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
       canvas.removeEventListener('pointerleave', onLeave);
       window.removeEventListener('resize', remeasure);
       bgRef.current?.removeEventListener('load', remeasure);
+      observer?.disconnect();
       window.clearTimeout(release);
       if (press) window.clearTimeout(press.id);
       timers.forEach((t) => window.clearTimeout(t));
@@ -183,6 +205,10 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
   useEffect(() => {
     layerRef.current?.setNight(settings.night);
   }, [settings.night]);
+
+  useEffect(() => {
+    layerRef.current?.setParams(settings.params);
+  }, [settings.params]);
 
   return layerRef;
 }

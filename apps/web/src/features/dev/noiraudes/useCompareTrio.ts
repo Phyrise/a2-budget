@@ -1,11 +1,12 @@
 /**
  * Labo Noiraudes — la comparaison : le trio peint (susuwatari-trio.webp)
  * reproduit par le code, à la même taille et dans la même pose (trois
- * Noiraudes debout, celle de droite salue). Elles regardent le doigt ou la
- * souris où qu'il soit sur la page, sinon alentour.
+ * Noiraudes debout, celle de droite salue), avec l'apparence réglée dans le
+ * panneau. Elles regardent le doigt ou la souris où qu'il soit sur la page.
  */
-import { useEffect, type RefObject } from 'react';
-import { createSusuwatariLayer } from '../../../creatures/susuwatari';
+import { useEffect, useRef, type RefObject } from 'react';
+import { createSusuwatariLayer, type SootSpriteParams, type SusuwatariLayer } from '../../../creatures/susuwatari';
+import { followPointer } from './followPointer';
 
 /** Pose du trio peint, en fractions de la case (centre du sol, diamètre). */
 const TRIO = [
@@ -14,11 +15,16 @@ const TRIO = [
   { x: 0.7, y: 0.91, d: 0.36, seed: 6 },
 ] as const;
 
-export function useCompareTrio(canvasRef: RefObject<HTMLCanvasElement | null>) {
+export function useCompareTrio(canvasRef: RefObject<HTMLCanvasElement | null>, params: SootSpriteParams) {
+  const layerRef = useRef<SusuwatariLayer | null>(null);
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const layer = createSusuwatariLayer(canvas, { rim: 0, shadow: 0.45 });
+    const layer = createSusuwatariLayer(canvas, { rim: 0, shadow: 0.45, params: paramsRef.current });
+    layerRef.current = layer;
     const place = () => {
       const w = layer.width;
       const h = layer.height;
@@ -39,26 +45,16 @@ export function useCompareTrio(canvasRef: RefObject<HTMLCanvasElement | null>) {
     place();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => requestAnimationFrame(place)) : null;
     observer?.observe(canvas);
-    let release = 0;
-    const onMove = (e: PointerEvent) => {
-      const r = canvas.getBoundingClientRect();
-      layer.setGaze({ x: e.clientX - r.left, y: e.clientY - r.top });
-      window.clearTimeout(release);
-      if (e.pointerType !== 'mouse') release = window.setTimeout(() => layer.setGaze(null), 1600);
-    };
-    const onOut = (e: PointerEvent) => {
-      if (e.relatedTarget === null && e.pointerType === 'mouse') layer.setGaze(null);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerdown', onMove);
-    document.addEventListener('pointerout', onOut);
+    const unfollow = followPointer(layer, canvas);
     return () => {
       observer?.disconnect();
-      window.clearTimeout(release);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerdown', onMove);
-      document.removeEventListener('pointerout', onOut);
+      unfollow();
       layer.destroy();
+      layerRef.current = null;
     };
   }, [canvasRef]);
+
+  useEffect(() => {
+    layerRef.current?.setParams(params);
+  }, [params]);
 }

@@ -69,7 +69,8 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('Canvas 2D indisponible');
   let maxDpr = options.maxDpr ?? 3;
-  const cache = new SpriteCache(options.rim ?? 0);
+  let rim = options.rim ?? 0;
+  const cache = new SpriteCache(rim);
   const creatures: Susuwatari[] = [];
   const query = reducedQuery();
   let reduced = query?.matches ?? false;
@@ -146,7 +147,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     const order = creatures.filter((s) => s.state !== 'gone').sort((a, b) => a.y - b.y);
     for (const s of order) {
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
-      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1 });
+      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim });
     }
     cache.pump(4, time);
     frameMs = frameMs * 0.9 + (performance.now() - start) * 0.1;
@@ -209,8 +210,9 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       last = 0;
       schedule();
     },
-    setRim(rim) {
-      cache.setRim(rim);
+    setRim(value) {
+      rim = value;
+      cache.setRim(value);
     },
     hitTest(x, y) {
       let hit: Susuwatari | null = null;

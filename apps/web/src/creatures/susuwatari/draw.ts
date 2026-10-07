@@ -19,6 +19,8 @@ export interface DrawOptions {
   time: number;
   /** Opacité de l'ombre au sol (0 : aucune). */
   shadow: number;
+  /** Liseré clair des membres sur fond sombre (0–1). */
+  rim: number;
 }
 
 /** Repère du corps : centre, inclinaison, écrasement (pivot sous le corps). */
@@ -69,23 +71,59 @@ function joint(from: Point, to: Point, len: number, bend: number): Point {
 }
 
 /** Membre fin et courbe passant par l'articulation. */
-function limb(ctx: CanvasRenderingContext2D, from: Point, knee: Point, to: Point): void {
+function limb(path: Path2D, from: Point, knee: Point, to: Point): void {
   const cx = 2 * knee.x - (from.x + to.x) / 2;
   const cy = 2 * knee.y - (from.y + to.y) / 2;
-  ctx.moveTo(from.x, from.y);
-  ctx.quadraticCurveTo((cx + knee.x) / 2, (cy + knee.y) / 2, to.x, to.y);
+  path.moveTo(from.x, from.y);
+  path.quadraticCurveTo((cx + knee.x) / 2, (cy + knee.y) / 2, to.x, to.y);
 }
 
-function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame): void {
+/** Pattes ou bras d'une Noiraude : traits, doigts, pieds et paumes. */
+interface Limbs {
+  lines: Path2D;
+  fine: Path2D;
+  blobs: Path2D;
+  width: number;
+  fineWidth: number;
+}
+
+function limbs(width: number, fineWidth: number): Limbs {
+  return { lines: new Path2D(), fine: new Path2D(), blobs: new Path2D(), width, fineWidth };
+}
+
+/**
+ * Encre les membres. Sur fond sombre (`rim`), un liseré clair les détache
+ * d'abord, comme le halo du corps ; puis le trait noir par-dessus.
+ */
+function ink(ctx: CanvasRenderingContext2D, p: Limbs, rim: number): void {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (rim > 0) {
+    const halo = 1.2;
+    ctx.strokeStyle = `rgba(236, 222, 190, ${0.24 * rim})`;
+    ctx.lineWidth = p.width + halo * 2;
+    ctx.stroke(p.lines);
+    ctx.lineWidth = p.fineWidth + halo * 2;
+    ctx.stroke(p.fine);
+    ctx.lineWidth = halo * 2;
+    ctx.stroke(p.blobs);
+  }
+  ctx.strokeStyle = SOOT.limb;
+  ctx.fillStyle = SOOT.limb;
+  ctx.lineWidth = p.width;
+  ctx.stroke(p.lines);
+  ctx.lineWidth = p.fineWidth;
+  ctx.stroke(p.fine);
+  ctx.fill(p.blobs);
+}
+
+function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame, rim: number): void {
   if (s.legs < 0.04) return;
   const S = s.scale;
   const L = 0.2 * S * (0.45 + 0.55 * s.legs);
   const moving = s.state === 'walk' || s.state === 'flee' || Math.hypot(s.vx, s.vy) > 8;
   const air = s.z > 0;
-  ctx.lineWidth = Math.max(0.8, 0.05 * S);
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = SOOT.limb;
-  ctx.fillStyle = SOOT.limb;
+  const p = limbs(Math.max(0.8, 0.05 * S), 0);
   for (const side of [-1, 1] as const) {
     const hip = apply(m, side * 0.15 * S, 0.3 * S);
     const ground = s.y - s.z;
@@ -115,15 +153,14 @@ function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame): void 
     // Si la patte est rentrée, le pied remonte sous la fourrure.
     fy = hip.y + (fy - hip.y) * (0.35 + 0.65 * s.legs);
     const foot = { x: fx, y: fy };
-    const knee = joint(hip, foot, L, -s.facing);
-    ctx.beginPath();
-    limb(ctx, hip, knee, foot);
-    ctx.stroke();
+    limb(p.lines, hip, joint(hip, foot, L, -s.facing), foot);
     // Petit pied arrondi, pointé vers l'avant.
-    ctx.beginPath();
-    ctx.ellipse(fx + s.facing * 0.04 * S, fy - 0.016 * S, 0.078 * S, 0.04 * S, s.facing * toe * 0.6, 0, Math.PI * 2);
-    ctx.fill();
+    const ex = fx + s.facing * 0.04 * S;
+    const ey = fy - 0.016 * S;
+    p.blobs.moveTo(ex + 0.078 * S, ey);
+    p.blobs.ellipse(ex, ey, 0.078 * S, 0.04 * S, s.facing * toe * 0.6, 0, Math.PI * 2);
   }
+  ink(ctx, p, rim);
 }
 
 function armTarget(s: Susuwatari, side: -1 | 1, time: number): { x: number; y: number } {
@@ -143,14 +180,11 @@ function armTarget(s: Susuwatari, side: -1 | 1, time: number): { x: number; y: n
   }
 }
 
-function drawArms(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame, time: number): void {
+function drawArms(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame, time: number, rim: number): void {
   if (s.arms < 0.04) return;
   const S = s.scale;
   const L = 0.24 * S;
-  ctx.lineWidth = Math.max(0.7, 0.038 * S);
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = SOOT.limb;
-  ctx.fillStyle = SOOT.limb;
+  const p = limbs(Math.max(0.7, 0.038 * S), Math.max(0.6, 0.022 * S));
   for (const side of [-1, 1] as const) {
     const sh = { x: side * 0.36 * S, y: -0.06 * S };
     const goal = armTarget(s, side, time);
@@ -158,27 +192,21 @@ function drawArms(ctx: CanvasRenderingContext2D, s: Susuwatari, m: Frame, time: 
     const from = apply(m, sh.x, sh.y);
     const hand = apply(m, local.x, local.y);
     const elbow = joint(from, hand, L, side);
-    ctx.beginPath();
-    limb(ctx, from, elbow, hand);
-    ctx.stroke();
-    // Petite main : une paume et trois doigts.
+    limb(p.lines, from, elbow, hand);
+    // Petite main : une paume et quatre doigts.
     const dir = Math.atan2(hand.y - elbow.y, hand.x - elbow.x);
-    ctx.beginPath();
-    ctx.ellipse(hand.x, hand.y, 0.04 * S, 0.034 * S, dir, 0, Math.PI * 2);
-    ctx.fill();
+    p.blobs.moveTo(hand.x + Math.cos(dir) * 0.04 * S, hand.y + Math.sin(dir) * 0.04 * S);
+    p.blobs.ellipse(hand.x, hand.y, 0.04 * S, 0.034 * S, dir, 0, Math.PI * 2);
     if (S > 26) {
-      ctx.lineWidth = Math.max(0.6, 0.022 * S);
-      ctx.beginPath();
       for (const f of [-0.85, -0.28, 0.28, 0.85]) {
         const fx = hand.x + Math.cos(dir + f) * 0.03 * S;
         const fy = hand.y + Math.sin(dir + f) * 0.03 * S;
-        ctx.moveTo(fx, fy);
-        ctx.lineTo(fx + Math.cos(dir + f * 1.15) * 0.04 * S, fy + Math.sin(dir + f * 1.15) * 0.04 * S);
+        p.fine.moveTo(fx, fy);
+        p.fine.lineTo(fx + Math.cos(dir + f * 1.15) * 0.04 * S, fy + Math.sin(dir + f * 1.15) * 0.04 * S);
       }
-      ctx.stroke();
-      ctx.lineWidth = Math.max(0.7, 0.038 * S);
     }
   }
+  ink(ctx, p, rim);
 }
 
 function drawEyes(ctx: CanvasRenderingContext2D, s: Susuwatari, sp: BodySprites, R: number, night: boolean): void {
@@ -246,8 +274,8 @@ export function drawSusuwatari(ctx: CanvasRenderingContext2D, s: Susuwatari, sp:
       ctx.drawImage(shadow(), s.x + s.jitterX - sw / 2, s.y - sw * 0.11, sw, sw * 0.22);
       ctx.globalAlpha = 1;
     }
-    drawLegs(ctx, s, m);
-    drawArms(ctx, s, m, o.time);
+    drawLegs(ctx, s, m, o.rim);
+    drawArms(ctx, s, m, o.time, o.rim);
   }
 
   ctx.setTransform(dpr * m.a, dpr * m.b, dpr * m.c, dpr * m.d, dpr * m.e, dpr * m.f);

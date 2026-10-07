@@ -67,6 +67,7 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   crackle: 'Calcifer crépite',
   grumble: 'Calcifer grogne',
   yawn: 'Totoro bâille',
+  squeak: 'Cri de Noiraude',
 };
 
 function ChoiceRow<T>({

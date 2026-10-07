@@ -11,6 +11,7 @@
  * (V4.3 : matsuri du couple, AL, AC, train) et montre la saison réelle /
  * affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
+ * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part).
  */
 import { useMemo } from 'react';
 import { useShell } from '../../app/ShellContext';
@@ -24,6 +25,11 @@ import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevSeasons } from './DevSeasons';
 import './dev.css';
+
+/** Labo Noiraudes : page plein écran à part (retour par sa croix). */
+function openNoiraudesLab(): void {
+  window.location.assign(`${import.meta.env.BASE_URL}?lab=noiraudes`);
+}
 
 /** Le temps que la feuille se ferme avant de montrer la forêt. */
 const CLOSE_MS = 280;
@@ -68,6 +74,17 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevCompanions onKodama={() => showForest(rattleKodama)} />
           <DevFetes onClose={onClose} />
           <DevSeasons />
+          <section className="dev-section" aria-labelledby="dev-labs">
+            <h3 id="dev-labs" className="dev-section__title">
+              Labos
+            </h3>
+            <p className="dev-section__lead">Les Noiraudes dessinées par le code : comparaison avec les peintures, scène vivante, réglages de l’apparence.</p>
+            <div className="dev-actions">
+              <Button size="sm" variant="quiet" icon="sparkle" onClick={openNoiraudesLab}>
+                Labo Noiraudes
+              </Button>
+            </div>
+          </section>
         </div>
       )}
     </Sheet>

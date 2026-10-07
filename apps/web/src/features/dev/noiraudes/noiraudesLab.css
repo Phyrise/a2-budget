@@ -1,0 +1,354 @@
+/* Labo Noiraudes : plein écran sur le pont du Budget (peinture portrait). */
+
+.nlab {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #070a14;
+  color: var(--ivory-100);
+  font-family: var(--font-sans);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Peinture agrandie, calée en bas : le plancher du pont occupe le bas de l'écran. */
+.nlab__bg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 145%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 100%;
+  pointer-events: none;
+}
+
+.nlab__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(7, 10, 20, 0.82) 0%, rgba(7, 10, 20, 0.55) 42%, rgba(7, 10, 20, 0.08) 62%, rgba(7, 10, 20, 0.22) 100%);
+  transition: background 600ms var(--ease-soft);
+}
+
+.nlab.is-night .nlab__veil {
+  background: rgba(2, 4, 10, 0.9);
+}
+
+.nlab__head,
+.nlab__compare,
+.nlab__sizes,
+.nlab__controls,
+.nlab-tune,
+.nlab__scene {
+  position: relative;
+}
+
+.nlab__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 8px;
+}
+
+.nlab__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 540;
+  color: var(--ivory-50);
+}
+
+.nlab__tune-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 12px 0 14px;
+  border: 1px solid rgba(236, 230, 211, 0.22);
+  border-radius: 999px;
+  background: rgba(10, 16, 24, 0.6);
+  color: var(--ivory-100);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.nlab__tune-toggle svg:last-child {
+  transition: transform 200ms var(--ease-soft);
+}
+
+.nlab__tune-toggle[aria-expanded='true'] {
+  border-color: rgba(239, 201, 111, 0.6);
+  background: rgba(239, 201, 111, 0.16);
+  color: #efc96f;
+}
+
+.nlab__tune-toggle[aria-expanded='true'] svg:last-child {
+  transform: rotate(180deg);
+}
+
+.nlab__close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(236, 230, 211, 0.18);
+  border-radius: 50%;
+  background: rgba(10, 16, 24, 0.55);
+  color: var(--ivory-100);
+  cursor: pointer;
+}
+
+/* Comparaison : deux cases de même taille, sur le papier des peintures. */
+.nlab__compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.nlab-cell {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 185 / 157;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 30% 20%, #f6ead2, #ecdcbd 70%, #e4d1ae);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.nlab-cell__art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.nlab-cell figcaption {
+  position: absolute;
+  left: 10px;
+  top: 7px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(60, 44, 28, 0.62);
+}
+
+/* Aperçu : la même Noiraude à 30, 50, 80 et 140 px, sur le papier des peintures. */
+.nlab__sizes {
+  width: 100%;
+  max-width: 640px;
+  margin: 8px auto 0;
+  padding: 0 16px;
+}
+
+.nlab-sizes {
+  position: relative;
+  height: 160px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 30% 20%, #f6ead2, #ecdcbd 70%, #e4d1ae);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.nlab-sizes__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+}
+
+.nlab-sizes__labels {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  display: flex;
+  justify-content: space-evenly;
+  pointer-events: none;
+}
+
+.nlab-sizes__labels span {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  color: rgba(60, 44, 28, 0.62);
+}
+
+/* Scène : nuit, nombre, taille (panneau replié). */
+.nlab__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  width: 100%;
+  max-width: 640px;
+  margin: 10px auto 0;
+  padding: 0 16px;
+}
+
+.nlab__night {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(236, 230, 211, 0.2);
+  border-radius: 999px;
+  background: rgba(10, 16, 24, 0.6);
+  color: var(--ivory-100);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nlab__night[aria-pressed='true'] {
+  border-color: rgba(239, 201, 111, 0.6);
+  background: rgba(239, 201, 111, 0.16);
+  color: #efc96f;
+}
+
+.nlab-range {
+  display: flex;
+  flex: 1 1 120px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nlab-range__label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fog-300);
+}
+
+.nlab-range__value {
+  font-variant-numeric: tabular-nums;
+  color: var(--ivory-100);
+}
+
+.nlab-range input {
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.nlab-range input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #efc96f var(--fill), rgba(236, 230, 211, 0.22) var(--fill));
+}
+
+.nlab-range input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #efc96f var(--fill), rgba(236, 230, 211, 0.22) var(--fill));
+}
+
+.nlab-range input::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  margin-top: -10px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ivory-50);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.nlab-range input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ivory-50);
+}
+
+.nlab__fps {
+  flex-basis: 100%;
+  min-height: 14px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fog-500);
+}
+
+/* Scène : le plancher du pont, toute la place restante. */
+.nlab__scene {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.nlab__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.nlab__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  margin: 0;
+  font-size: 11.5px;
+  text-align: center;
+  color: rgba(236, 230, 211, 0.55);
+  pointer-events: none;
+}
+
+/* Panneau « Réglages » ouvert : comparaison et aperçu restent en haut (un
+   peu réduits), le panneau prend le milieu, la scène une bande sur le pont. */
+.nlab.is-tuning .nlab__compare {
+  grid-template-columns: auto auto;
+  justify-content: center;
+}
+
+.nlab.is-tuning .nlab-cell {
+  height: clamp(84px, 14dvh, 150px);
+}
+
+.nlab.is-tuning .nlab-sizes {
+  height: clamp(124px, 19dvh, 160px);
+}
+
+.nlab.is-tuning .nlab__scene {
+  flex: 0 0 clamp(92px, 15dvh, 150px);
+}
+
+.nlab.is-tuning .nlab__hint {
+  display: none;
+}

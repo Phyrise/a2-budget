@@ -245,6 +245,7 @@ const LEAD_MS: Record<SoundCue, number> = {
   crackle: 320,
   grumble: 560,
   yawn: 900,
+  squeak: 200,
 };
 
 /** Importance (mouvement réduit : on ne garde que le plus marquant). */
@@ -273,6 +274,7 @@ const PRIORITY: Record<SoundCue, number> = {
   crackle: 1,
   grumble: 2,
   yawn: 2,
+  squeak: 1,
 };
 
 /**

@@ -41,6 +41,7 @@
  * - `crackle`     Calcifer touché → la flamme crépite et s'élève ;
  * - `grumble`     Calcifer agacé (touché trop souvent) → grognement de braise ;
  * - `yawn`        Totoro bâille et s'étire → long souffle grave et doux.
+ * - `squeak`      on touche une Noiraude → petit cri aigu « kyu ! ».
  */
 export type SoundCue =
   | 'done'
@@ -66,7 +67,8 @@ export type SoundCue =
   | 'karakara'
   | 'crackle'
   | 'grumble'
-  | 'yawn';
+  | 'yawn'
+  | 'squeak';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -107,4 +109,5 @@ export const ALL_CUES: readonly SoundCue[] = [
   'crackle',
   'grumble',
   'yawn',
+  'squeak',
 ];

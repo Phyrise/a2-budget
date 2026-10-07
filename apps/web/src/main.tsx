@@ -1,8 +1,19 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { AppProvider } from './state/store';
 import './styles/tokens.css';
+
+/** Labo Noiraudes (mode développeur) : `?lab=noiraudes`, chargé à part. */
+const NoiraudesLab = lazy(() => import('./features/dev/noiraudes/NoiraudesLab'));
+
+function requestedLab(): string | null {
+  try {
+    return new URLSearchParams(window.location.search).get('lab');
+  } catch {
+    return null;
+  }
+}
 
 const rootElement = document.getElementById('root');
 if (rootElement === null) {
@@ -11,8 +22,14 @@ if (rootElement === null) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <AppProvider>
-      <App />
-    </AppProvider>
+    {requestedLab() === 'noiraudes' ? (
+      <Suspense fallback={null}>
+        <NoiraudesLab />
+      </Suspense>
+    ) : (
+      <AppProvider>
+        <App />
+      </AppProvider>
+    )}
   </StrictMode>,
 );

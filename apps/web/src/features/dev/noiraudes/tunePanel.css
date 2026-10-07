@@ -1,0 +1,257 @@
+/* Labo Noiraudes — panneau « Réglages » (au doigt, 390 px de large). */
+
+.nlab-tune {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  width: 100%;
+  max-width: 640px;
+  min-height: 190px;
+  margin: 8px auto 0;
+  padding: 0 12px;
+}
+
+.nlab-tune__card {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(236, 230, 211, 0.14);
+  border-radius: 16px;
+  background: rgba(9, 13, 21, 0.92);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* Onglets : une rangée de pastilles, défilante si l'écran est étroit. */
+.nlab-tune__tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(236, 230, 211, 0.1);
+  scrollbar-width: none;
+}
+
+.nlab-tune__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nlab-tune__tab {
+  flex: 1 0 auto;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fog-300);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.nlab-tune__tab[aria-selected='true'] {
+  background: rgba(239, 201, 111, 0.16);
+  color: #efc96f;
+}
+
+/* Curseurs : défilent seuls, sans entraîner la page. */
+.nlab-tune__list {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 2px 18px;
+  min-height: 0;
+  padding: 6px 14px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 560px) {
+  .nlab-tune__list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.nlab-tune__scene {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  grid-column: 1 / -1;
+}
+
+.nlab-tune__presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  grid-column: 1 / -1;
+  margin-top: 8px;
+}
+
+.nlab-tune__presets-title {
+  margin-right: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fog-300);
+}
+
+/* Actions : copier, coller, réinitialiser ; mémoires A / B / C. */
+.nlab-tune__actions {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid rgba(236, 230, 211, 0.1);
+}
+
+.nlab-tune__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.3fr;
+  gap: 6px;
+}
+
+.nlab-tune__row--end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nlab-btn,
+.nlab-slot__recall,
+.nlab-slot__save {
+  min-height: 38px;
+  padding: 0 8px;
+  border: 1px solid rgba(236, 230, 211, 0.18);
+  border-radius: 10px;
+  background: rgba(236, 230, 211, 0.07);
+  color: var(--ivory-100);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nlab-btn:active,
+.nlab-slot__recall:active,
+.nlab-slot__save:active {
+  background: rgba(236, 230, 211, 0.16);
+}
+
+.nlab-btn--main {
+  border-color: rgba(239, 201, 111, 0.55);
+  background: rgba(239, 201, 111, 0.16);
+  color: #efc96f;
+}
+
+.nlab-btn--chip {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
+.nlab-tune__slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.nlab-slot {
+  display: flex;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nlab-slot__recall {
+  flex: 0 0 34px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.nlab-slot__recall:disabled {
+  border-style: dashed;
+  background: transparent;
+  color: var(--fog-500);
+  cursor: default;
+}
+
+.nlab-slot__recall[data-filled='true'] {
+  border-color: rgba(239, 201, 111, 0.55);
+  color: #efc96f;
+}
+
+.nlab-slot__save {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 2px;
+  overflow: hidden;
+  font-size: 12px;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+}
+
+.nlab-tune__status {
+  min-height: 16px;
+  margin: 0;
+  padding-bottom: 2px;
+  font-size: 11.5px;
+  text-align: center;
+  color: var(--fog-300);
+}
+
+/* Texte copié / à coller : par-dessus les curseurs, dans la carte. */
+.nlab-tune__sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(9, 13, 21, 0.97);
+}
+
+.nlab-tune__sheet-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ivory-100);
+}
+
+.nlab-tune__text {
+  flex: 1 1 auto;
+  min-height: 90px;
+  padding: 8px 10px;
+  border: 1px solid rgba(236, 230, 211, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ivory-50);
+  font: 12px/1.45 ui-monospace, 'SF Mono', Menlo, monospace;
+  resize: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Vide : reste dans l'arbre (annonces), sans prendre de place. */
+.nlab-tune__status:empty {
+  min-height: 0;
+  margin-top: -6px;
+  padding: 0;
+}
+
+.nlab-tune__error {
+  margin: 0;
+  font-size: 12.5px;
+  color: #f0a58a;
+}
+
+.nlab-tune__row--end .nlab-btn {
+  min-width: 96px;
+}

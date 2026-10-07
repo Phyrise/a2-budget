@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import rules from '../../../../firestore.rules?raw';
-import { HOUSEHOLD_ID, INVITED_EMAILS, roleForAccount } from './allowlist';
+import { HOUSEHOLD_ID, INVITED_EMAILS, accountVerdict, roleForAccount } from './allowlist';
 
 /** La liste blanche telle que l'écrivent les règles Firestore. */
 function rulesAllowlist(src: string) {
@@ -29,5 +29,15 @@ describe('liste blanche', () => {
     expect(roleForAccount({ email: 'alexia.chaval@free.fr' })).toBeNull();
     expect(roleForAccount({ email: null, emailVerified: true })).toBeNull();
     expect(roleForAccount({ email: 'constructor', emailVerified: true })).toBeNull();
+  });
+});
+
+describe('verdict d’un compte', () => {
+  it('rôle, compte inconnu ou adresse invitée non vérifiée', () => {
+    expect(accountVerdict({ email: 'Arthur.Longuefosse@gmail.com', emailVerified: true })).toEqual({ role: 'a' });
+    expect(accountVerdict({ email: 'alexia.chaval@free.fr', emailVerified: true })).toEqual({ role: 'b' });
+    expect(accountVerdict({ email: 'quelquun@gmail.com', emailVerified: true })).toEqual({ refused: 'not-invited' });
+    expect(accountVerdict({ email: 'alexia.chaval@free.fr', emailVerified: false })).toEqual({ refused: 'unverified' });
+    expect(accountVerdict({ email: null, emailVerified: true })).toEqual({ refused: 'not-invited' });
   });
 });

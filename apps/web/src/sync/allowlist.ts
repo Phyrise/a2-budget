@@ -37,3 +37,20 @@ export function roleForAccount(account: {
   const key = normalizeEmail(account.email);
   return Object.hasOwn(INVITED_EMAILS, key) ? (INVITED_EMAILS[key] ?? null) : null;
 }
+
+/** Pourquoi un compte connecté n'entre pas (message doux de l'accueil). */
+export type RefusalReason = 'not-invited' | 'unverified';
+
+/**
+ * Verdict complet : le rôle, ou la raison du refus. Une adresse invitée mais
+ * pas encore vérifiée par Google (possible hors Gmail) a son propre message.
+ */
+export function accountVerdict(account: {
+  email?: string | null;
+  emailVerified?: boolean;
+}): { role: MemberRole } | { refused: RefusalReason } {
+  const role = roleForAccount(account);
+  if (role !== null) return { role };
+  const invited = !!account.email && Object.hasOwn(INVITED_EMAILS, normalizeEmail(account.email));
+  return { refused: invited ? 'unverified' : 'not-invited' };
+}

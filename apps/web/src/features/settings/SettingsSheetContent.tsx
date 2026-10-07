@@ -1,6 +1,7 @@
 /**
  * Réglages (feuille), allégés en V4.2 : vous deux (prénom au crayon, salaire
- * habituel sur une ligne), anniversaires (V4.3, au crayon), taux communs au
+ * habituel sur une ligne), compte (V5, seulement si Firebase est configuré :
+ * connecté avec Google ou invité), anniversaires (V4.3, au crayon), taux communs au
  * curseur (globaux : mois courant et suivants), dépenses récurrentes
  * (nouveaux mois), préférences (forêt vivante / immobile, sons), sauvegarde,
  * recommencer à zéro, à propos.
@@ -9,6 +10,8 @@
  */
 import type { PersonSettings } from '@a2/core';
 import { useState, type ReactNode } from 'react';
+import { AccountPanel } from '../../account/AccountPanel';
+import { FIREBASE_ENABLED } from '../../sync/firebase/config';
 import { useShell } from '../../app/ShellContext';
 import { exportFilename } from '../../state/exportImport';
 import { useApp } from '../../state/store';
@@ -131,6 +134,12 @@ export function SettingsSheetContent() {
         <PersonSettingsCard person="A" settings={settings.personA} />
         <PersonSettingsCard person="B" settings={settings.personB} />
       </div>
+
+      {FIREBASE_ENABLED && (
+        <Section id="account" icon="user" title="Compte">
+          <AccountPanel />
+        </Section>
+      )}
 
       <Section id="anniversaries" icon="sparkle" title="Anniversaires">
         <AnniversariesEditor />

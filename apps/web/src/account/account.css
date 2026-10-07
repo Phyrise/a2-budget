@@ -1,0 +1,48 @@
+/* Réglages › Compte (V5) : une ligne, un bouton. */
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account__who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account__text {
+  min-width: 0;
+}
+
+.account__text p {
+  margin: 0;
+}
+
+.account__name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.account__email {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.account__status {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-faint);
+}
+
+.account__notice {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  color: var(--amber-300);
+}

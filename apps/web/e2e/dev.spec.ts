@@ -67,3 +67,31 @@ test('objectif de la semaine : carte bienveillante, sans chiffre', async ({ page
   await expect(card).toContainText('trois soins par jour');
   expect(await card.innerText()).not.toMatch(/\d/);
 });
+
+test('mode développeur : rejouer les fêtes sans attendre la date, sans rien écrire', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.clock.setFixedTime(new Date('2026-10-06T12:00:00'));
+  await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ module: 'maison', devMode: true })), UI_KEY);
+  await openApp(page);
+  const header = page.locator('.app-header');
+  await expect.poll(async () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '{}').anniversaries, STORAGE_KEY)).toBeTruthy();
+  const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+
+  await header.getByRole('button', { name: 'Mode développeur' }).click();
+  const dev = sheet(page, 'Mode développeur');
+  await dev.getByRole('button', { name: 'Fête d’AC' }).click();
+  await expect(page.getByRole('button', { name: 'Joyeux anniversaire, AC (fermer)' })).toBeVisible();
+  await expect(page.locator('.party-cake')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Joyeux anniversaire, AC (fermer)' }).click();
+  await expect(page.locator('.party')).toHaveCount(0);
+
+  await header.getByRole('button', { name: 'Mode développeur' }).click();
+  await dev.getByRole('button', { name: 'Fête du couple' }).click();
+  await expect(page.getByText('Aperçu — vos données ne changent pas')).toBeVisible();
+  await page.getByRole('button', { name: 'Revenir à la vraie forêt' }).click();
+  await expect(page.locator('.preview-banner')).toHaveCount(0);
+
+  expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem('a2-budget:fetes:v1'))).toBeNull();
+  expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+});

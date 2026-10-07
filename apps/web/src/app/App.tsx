@@ -20,6 +20,8 @@
  *   petits sons de la forêt (useSoundEvents, monté une fois), préchargement
  *   discret des peintures de saison (useSeasonPrefetch, monté une fois).
  * - Pas de zoom (pincement, double toucher) : useNoZoom.
+ * - V4.3 : fête d'anniversaire d'AL ou d'AC à la première ouverture du jour
+ *   (BirthdayParty).
  */
 import '../styles/base.css';
 import '../styles/ui.css';
@@ -32,6 +34,7 @@ import { BudgetScreen } from '../features/budget/BudgetScreen';
 import { CalendarScreen } from '../features/calendar/CalendarScreen';
 import { CoursesScreen } from '../features/courses/CoursesScreen';
 import { DevPanel } from '../features/dev/DevPanel';
+import { BirthdayParty } from '../features/fetes/BirthdayParty';
 import { HistorySheetContent } from '../features/history/HistorySheetContent';
 import { MaisonScreen } from '../features/maison/MaisonScreen';
 import { SettingsSheetContent } from '../features/settings/SettingsSheetContent';
@@ -160,6 +163,7 @@ function Shell() {
         <ModuleNav />
       </div>
       <UpdatePrompt />
+      <BirthdayParty />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
         {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}

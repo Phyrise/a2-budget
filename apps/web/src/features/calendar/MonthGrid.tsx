@@ -3,7 +3,8 @@
  * icônes peintes de ses événements (univers Totoro), puis — plus discret — un
  * petit anneau de mousse s'il y a des tâches de la maison (plein quand
  * elles sont toutes faites) ; aujourd'hui est cerclé d'ambre, le jour
- * choisi est éclairé.
+ * choisi est éclairé. V4.3 : l'anniversaire du couple (chaque mois) porte un
+ * petit lampion dans le coin du jour.
  *
  * Clavier (motif « grille » ARIA, tabindex itinérant) : flèches = jour
  * voisin / même jour de la semaine voisine, Début / Fin = début / fin de
@@ -15,8 +16,10 @@ import { addDays, localDateKey, parseLocalDateKey, type CalendarOccurrence } fro
 import { useLayoutEffect, useRef, type KeyboardEvent } from 'react';
 import { WEEKDAYS, cx, fr, longDate } from '../../ui';
 import { displayTitle, eventsCount, monthWeeks } from './calendarText';
+import { Lampion } from '../fetes/Lampion';
 import { KindArt } from './kinds';
 import { tasksCount, type TaskItem } from './taskAgenda';
+import './festive.css';
 
 /** Icônes montrées par jour avant « + ». */
 const MAX_DOTS = 2;
@@ -28,9 +31,10 @@ function shiftMonthKeepingDay(key: string, delta: number): string {
   return localDateKey(new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), last)));
 }
 
-function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence[], tasks: TaskItem[]): string {
+function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence[], tasks: TaskItem[], couple: boolean): string {
   const parts = [longDate(parseLocalDateKey(key))];
   if (key === todayKey) parts.push('aujourd’hui');
+  if (couple) parts.push('anniversaire du couple');
   if (occurrences.length === 0 && tasks.length === 0) parts.push('rien de prévu');
   if (occurrences.length > 0) parts.push(fr(`${eventsCount(occurrences.length)} : ${occurrences.map((o) => displayTitle(o.event)).join(', ')}`));
   if (tasks.length > 0) {
@@ -41,6 +45,7 @@ function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence
 }
 
 const NO_TASKS: TaskItem[] = [];
+const NO_DAYS: ReadonlySet<string> = new Set();
 
 export function MonthGrid({
   monthKey,
@@ -48,6 +53,8 @@ export function MonthGrid({
   todayKey,
   byDay,
   tasksByDay,
+  coupleDays = NO_DAYS,
+  still = false,
   onSelect,
   labelledBy,
 }: {
@@ -58,6 +65,10 @@ export function MonthGrid({
   byDay: ReadonlyMap<string, CalendarOccurrence[]>;
   /** Tâches de la maison par jour (vide si « Afficher les tâches » est coupé). */
   tasksByDay: ReadonlyMap<string, TaskItem[]>;
+  /** V4.3 — jours de l'anniversaire du couple (petit lampion). */
+  coupleDays?: ReadonlySet<string>;
+  /** Forêt « Immobile » : le lampion du jour ne se balance pas. */
+  still?: boolean;
   /** Choisit un jour (le parent change de mois s'il le faut). */
   onSelect: (dateKey: string) => void;
   labelledBy: string;
@@ -135,6 +146,7 @@ export function MonthGrid({
             const isSelected = key === selected;
             const isToday = key === todayKey;
             const birthday = occurrences.some((o) => o.event.kind === 'anniversaire');
+            const couple = coupleDays.has(key);
             return (
               <div key={key} role="gridcell" aria-selected={isSelected} className="cal-grid__cell">
                 <button
@@ -149,8 +161,9 @@ export function MonthGrid({
                     occurrences.length > 0 && 'has-events',
                     tasks.length > 0 && 'has-tasks',
                     birthday && 'has-birthday',
+                    couple && 'is-couple-day',
                   )}
-                  aria-label={dayLabel(key, todayKey, occurrences, tasks)}
+                  aria-label={dayLabel(key, todayKey, occurrences, tasks, couple)}
                   aria-current={isToday ? 'date' : undefined}
                   onClick={() => onSelect(key)}
                   onKeyDown={(event) => onKeyDown(event, key)}
@@ -158,6 +171,7 @@ export function MonthGrid({
                   <span className="cal-day__num num" aria-hidden="true">
                     {Number(key.slice(8))}
                   </span>
+                  {couple && <Lampion size={13} className={cx('cal-day__lampion', still && 'is-still')} />}
                   <span className="cal-day__dots" aria-hidden="true">
                     {occurrences.slice(0, MAX_DOTS).map((o) => (
                       <KindArt key={`${o.event.id}-${o.date}`} kind={o.event.kind} size={17} className="cal-day__icon" />

@@ -42,6 +42,8 @@ export interface WorldState {
    * normal, allumée par `focus(progress)`.
    */
   lantern?: { id: string };
+  /** V4.3 — anniversaire du couple : petit matsuri (lampions, lucioles, kodama). */
+  festival?: boolean;
 }
 
 /**

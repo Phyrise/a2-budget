@@ -1,0 +1,299 @@
+/* Fête d'anniversaire d'AL (Jiji) ou d'AC (Calcifer), V4.3. */
+
+.party {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  pointer-events: none;
+}
+
+.party__card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--nav-height) + var(--safe-bottom) + 34px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateX(-50%);
+  animation: party-in 620ms var(--ease-out) both;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.party__card:focus-visible {
+  outline: 2px solid var(--amber-300);
+  outline-offset: 6px;
+  border-radius: 24px;
+}
+
+.party.is-leaving .party__card,
+.party.is-leaving .party__rain {
+  animation: party-out 420ms var(--ease-soft) both;
+}
+
+.party__stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  height: 118px;
+}
+
+.party__text {
+  padding: 8px 16px;
+  border: 1px solid rgba(236, 208, 154, 0.32);
+  border-radius: var(--radius-pill);
+  background: rgba(16, 27, 21, 0.86);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  color: var(--ivory-50);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 520;
+  white-space: nowrap;
+}
+
+.party--a .party__text {
+  border-color: rgba(185, 166, 236, 0.4);
+}
+
+.party--b .party__text {
+  border-color: rgba(235, 161, 90, 0.45);
+}
+
+/* ——— Compagnons en fête (PartyArt.tsx) ——— */
+
+.party-figure {
+  position: relative;
+  display: block;
+}
+
+.party__sprite,
+.party__drawn {
+  display: block;
+  height: 100%;
+  width: auto;
+  user-select: none;
+}
+
+.party__drawn > svg {
+  height: 100%;
+  width: auto;
+}
+
+/* Jiji : sprite 195 × 301, la tête en haut ; le chapeau entre les oreilles. */
+.party-figure--a {
+  height: 112px;
+  aspect-ratio: 195 / 301;
+  filter: drop-shadow(0 0 14px rgba(154, 132, 214, 0.45));
+}
+
+.party-hat {
+  position: absolute;
+  left: 47%;
+  top: 17%;
+  width: 40%;
+  transform: translate(-50%, -88%) rotate(-12deg);
+  transform-origin: 50% 100%;
+}
+
+.party--a:not(.party--still) .party-hat {
+  animation: party-hat 1.6s 0.5s var(--ease-soft) 2 both;
+}
+
+/* Calcifer : la grande flamme, posée sur le gâteau. */
+.party-figure--b {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 124px;
+}
+
+.party-figure__flame {
+  position: relative;
+  z-index: 1;
+  height: 74px;
+  margin-bottom: -26px;
+}
+
+.party--b:not(.party--still) .party-figure__flame {
+  animation: party-bounce 900ms var(--ease-soft) infinite alternate;
+}
+
+.party-figure__glow {
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  width: 140px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 170, 80, 0.42), rgba(255, 120, 50, 0));
+  transform: translateX(-50%);
+}
+
+.party--b:not(.party--still) .party-figure__glow {
+  animation: party-glow 1.3s ease-in-out infinite alternate;
+}
+
+.party-cake {
+  display: block;
+  width: 124px;
+}
+
+.party-candle__flame {
+  transform-box: view-box;
+}
+
+.party--b:not(.party--still) .party-candle__flame {
+  animation: party-flicker 520ms ease-in-out infinite alternate;
+}
+
+.party--b:not(.party--still) .party-candle + .party-candle .party-candle__flame {
+  animation-delay: -260ms;
+  animation-duration: 610ms;
+}
+
+/* Étincelles de Calcifer. */
+.party__sparks {
+  position: absolute;
+  left: 50%;
+  bottom: 52px;
+  width: 0;
+  height: 0;
+}
+
+.party__spark {
+  position: absolute;
+  left: var(--x);
+  top: 0;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: #ffd27a;
+  box-shadow: 0 0 6px 2px rgba(255, 150, 60, 0.75);
+  opacity: 0;
+  animation: party-spark var(--dur) var(--delay) ease-out 3 both;
+}
+
+/* Pluie de kompeitō (AL). */
+.party__rain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.party__konpeito {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  opacity: 0;
+  animation: party-fall var(--dur) var(--delay) cubic-bezier(0.35, 0, 0.75, 1) both;
+}
+
+@keyframes party-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 24px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes party-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes party-hat {
+  0%,
+  100% {
+    transform: translate(-50%, -88%) rotate(-12deg);
+  }
+  40% {
+    transform: translate(-50%, -100%) rotate(-3deg);
+  }
+}
+
+@keyframes party-bounce {
+  from {
+    transform: translateY(0) scale(1, 1);
+  }
+  to {
+    transform: translateY(-6px) scale(1.03, 0.98);
+  }
+}
+
+@keyframes party-glow {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes party-flicker {
+  from {
+    transform: scale(1, 1) rotate(-4deg);
+  }
+  to {
+    transform: scale(0.9, 1.12) rotate(4deg);
+  }
+}
+
+@keyframes party-spark {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), calc(var(--rise) * -1)) scale(0.4);
+  }
+}
+
+@keyframes party-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -40px) rotate(0deg);
+  }
+  8% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 92vh) rotate(var(--spin));
+  }
+}
+
+/* Sans mouvement : un simple fondu. */
+.party--still .party__card {
+  animation-name: party-still-in;
+}
+
+@keyframes party-still-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

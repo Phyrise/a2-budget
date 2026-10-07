@@ -40,6 +40,8 @@ const dayPanel = (page: Page) => page.locator('.cal-day-panel');
 test.describe('Calendrier — parcours', () => {
   test('ajouter un dîner en une phrase', async ({ page }) => {
     const errors = trackErrors(page);
+    // Loin des anniversaires d'AL et d'AC (annoncés un mois avant) : le calendrier vide reste calme.
+    await page.clock.setFixedTime(new Date('2026-10-06T12:00:00'));
     await openCalendar(page);
     await expect(page.getByText('Le calendrier est tout calme')).toBeVisible();
 

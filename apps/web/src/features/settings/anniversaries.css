@@ -1,0 +1,83 @@
+/* Réglages › Anniversaires (V4.3) : une ligne chacun, au crayon. */
+
+.settings-annivs {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(19, 33, 26, 0.6);
+  overflow: hidden;
+}
+
+.settings-anniv {
+  --who: var(--who-both);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 4px 8px 4px 12px;
+}
+
+.settings-anniv + .settings-anniv {
+  border-top: 1px solid var(--line);
+}
+
+.settings-anniv--a {
+  --who: var(--who-a);
+}
+
+.settings-anniv--b {
+  --who: var(--who-b);
+}
+
+.settings-anniv__figure {
+  display: grid;
+  place-items: center;
+  height: 34px;
+}
+
+.settings-anniv__name {
+  overflow: hidden;
+  color: var(--ivory-100);
+  font-size: 15px;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-anniv__edit {
+  position: relative;
+  min-width: 0;
+}
+
+.settings-anniv__edit .field__input {
+  padding-right: 30px;
+  color: color-mix(in srgb, var(--who) 70%, var(--ivory-50));
+  font-size: 15px;
+  text-align: right;
+}
+
+.settings-anniv__pencil {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  color: color-mix(in srgb, var(--who) 55%, var(--fog-300));
+  opacity: 0.8;
+  cursor: text;
+}
+
+.settings-anniv__edit:focus-within .settings-anniv__pencil {
+  opacity: 0;
+}
+
+.settings-anniv .lampion {
+  filter: drop-shadow(0 0 5px rgba(255, 140, 70, 0.45));
+}

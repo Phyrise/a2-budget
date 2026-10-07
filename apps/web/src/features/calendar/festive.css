@@ -1,0 +1,30 @@
+/* V4.3 — anniversaire du couple : un petit lampion suspendu au coin du jour. */
+
+.cal-day__lampion {
+  position: absolute;
+  top: 1px;
+  right: 3px;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 0 4px rgba(255, 140, 70, 0.5));
+}
+
+.cal-day.is-outside .cal-day__lampion {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-day.is-couple-day.is-today .cal-day__lampion:not(.is-still) {
+    animation: cal-lampion-sway 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes cal-lampion-sway {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}

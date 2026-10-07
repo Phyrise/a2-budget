@@ -7,8 +7,9 @@
  * la semaine), les constantes du domaine et les déblocages, propose des
  * aperçus NON PERSISTANTS de la forêt et l'écoute de chaque son, et copie
  * un instantané JSON pour régler les constantes ensemble, fait réagir les
- * compagnons (Jiji, Calcifer, Totoro, kodama) sans attendre, et montre la
- * saison réelle / affichée avec l'état du cache des peintures de saison. Rien n'est écrit
+ * compagnons (Jiji, Calcifer, Totoro, kodama) sans attendre, rejoue les fêtes
+ * (V4.3 : matsuri du couple, AL, AC, train) et montre la saison réelle /
+ * affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  */
 import { useMemo } from 'react';
@@ -18,6 +19,7 @@ import { Button, Sheet, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
 import { DevCompanions } from './DevCompanions';
 import { copyText, devData, devSnapshot } from './devData';
+import { DevFetes } from './DevFetes';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevSeasons } from './DevSeasons';
@@ -64,6 +66,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevNumbers data={data} />
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
           <DevCompanions onKodama={() => showForest(rattleKodama)} />
+          <DevFetes onClose={onClose} />
           <DevSeasons />
         </div>
       )}

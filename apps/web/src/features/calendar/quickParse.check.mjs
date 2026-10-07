@@ -35,11 +35,12 @@ check('rando dimanche', { title: 'Rando', date: '2026-10-11', kind: 'sortie' });
 // Dates explicites.
 check('Anniversaire de Calcifer 12 mars', { title: 'Anniversaire de Calcifer', date: '2027-03-12', kind: 'anniversaire' });
 check('anniv Jiji le 1er novembre', { title: 'Anniv Jiji', date: '2026-11-01', kind: 'anniversaire' });
-check('vacances 24 décembre 2027', { title: 'Vacances', date: '2027-12-24', kind: 'voyage' });
+check('vacances 24 décembre 2027', { title: 'Vacances', date: '2027-12-24', kind: 'sortie' }); // voyage fusionné dans sortie
 check('dentiste 14/10 à 9h', { title: 'Dentiste', date: '2026-10-14', time: '09:00', kind: 'rdv' });
 check('dentiste 3/10', { date: '2027-10-03' }); // passé cette année → l'an prochain
 check('notaire 2/1/27', { date: '2027-01-02', kind: 'rdv' });
-check('plombier le 20', { title: 'Plombier', date: '2026-10-20', kind: 'maison' });
+check('plombier le 20', { title: 'Plombier', date: '2026-10-20', kind: 'rdv' });
+check('ménage samedi', { title: 'Ménage', date: '2026-10-10', kind: undefined }); // plus de nature « maison »
 check('plombier le 2', { date: '2026-11-02' }); // déjà passé ce mois-ci
 check('Soirée chez Max samedi 10 octobre 20h', { title: 'Soirée chez Max', date: '2026-10-10', time: '20:00' });
 check('voyage 31 février', { date: undefined }); // date impossible : rien n'est deviné

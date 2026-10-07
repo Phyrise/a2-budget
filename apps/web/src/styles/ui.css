@@ -848,10 +848,10 @@ dialog.sheet[data-state='closing']::backdrop {
 .toast {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   max-width: 460px;
   min-height: 52px;
-  padding: 6px 6px 6px 16px;
+  padding: 6px 4px 6px 16px;
   border: 1px solid var(--line-strong);
   border-radius: 18px;
   background: #1c2f25;
@@ -859,11 +859,12 @@ dialog.sheet[data-state='closing']::backdrop {
   font-size: 15px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
   pointer-events: auto;
-  animation: toast-in 280ms var(--ease-out) both;
-}
-
-.toast:not(:has(.toast__action)) {
-  padding-right: 18px;
+  /* Glisser pour fermer (swipeDismiss.ts) : le geste appartient au message. */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Entrée seulement (pas de remplissage final) : le glissé décale `translate`. */
+  animation: toast-in 280ms var(--ease-out) backwards;
 }
 
 .toast.is-leaving {
@@ -872,6 +873,7 @@ dialog.sheet[data-state='closing']::backdrop {
 
 .toast__icon {
   flex: none;
+  margin-right: 4px;
   color: var(--moss-300);
 }
 
@@ -898,6 +900,25 @@ dialog.sheet[data-state='closing']::backdrop {
 
 .toast__action:hover {
   background: rgba(221, 179, 106, 0.22);
+}
+
+.toast__close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-left: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fog-400);
+}
+
+.toast__close:hover {
+  background: rgba(236, 230, 211, 0.08);
+  color: var(--ivory-100);
 }
 
 @keyframes toast-in {

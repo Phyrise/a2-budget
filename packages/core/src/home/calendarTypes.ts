@@ -9,7 +9,12 @@
  * Sémantique et cas limites : docs/DOMAIN_CONTRACTS.md §12.
  */
 
-/** Nature d'un événement (sert à l'icône et à la couleur douce). */
+/**
+ * Nature d'un événement (sert à l'icône et à la couleur douce).
+ * V4.2 : `voyage` et `maison` ne sont plus proposés (fusionnés dans
+ * `sortie`, rendus aux tâches) mais restent valides dans les données
+ * d'avant ; `activeCalendarKind` les ramène aux natures actuelles.
+ */
 export type CalendarEventKind =
   | 'repas'
   | 'sortie'
@@ -18,6 +23,9 @@ export type CalendarEventKind =
   | 'voyage'
   | 'maison'
   | 'autre';
+
+/** V4.2 — natures proposées à la saisie (sans les anciennes `voyage` / `maison`). */
+export type ActiveCalendarKind = Exclude<CalendarEventKind, 'voyage' | 'maison'>;
 
 /** Pour qui est l'événement : A, B ou les deux. */
 export type CalendarWho = 'a' | 'b' | 'both';

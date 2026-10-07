@@ -3,7 +3,8 @@
  * - Budget : mois existants (revenus, versé, dépenses, compte commun en fin
  *   de mois — V4, euros entiers) ; toucher un mois l'ouvre ;
  * - Maison : gestes faits, par jour (qui, quoi), sans score ;
- * - Courses : derniers articles achetés.
+ * - Courses : derniers articles achetés, les identiques combinés par jour
+ *   (« Pommes ×2 », voir purchaseLines.ts).
  * Lecture seule (aucune écriture, sauf « Effacer les mois passés » confirmé).
  */
 import {
@@ -21,6 +22,7 @@ import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { Button, Companion, ConfirmDialog, EmptyState, Icon, clockTime, cx, euro, euroMinus, relativeDayLabel } from '../../ui';
 import { assigneeName } from '../maison/taskText';
+import { purchaseLines } from './purchaseLines';
 import './history.css';
 
 /** « 1er » reste en minuscules dans les intitulés en capitales (« JEUDI 1er OCTOBRE »). */
@@ -181,7 +183,10 @@ function CoursesHistory() {
   const { appState, today } = useApp();
   const groups = useMemo(() => {
     if (!appState) return [];
-    return groupByDay(recentGroceryPurchases(appState.groceries, 60), (p) => p.boughtAt);
+    return groupByDay(recentGroceryPurchases(appState.groceries, 60), (p) => p.boughtAt).map((g) => ({
+      day: g.day,
+      items: purchaseLines(g.items),
+    }));
   }, [appState]);
 
   if (groups.length === 0) {
@@ -203,7 +208,12 @@ function CoursesHistory() {
                 <span className="history-entry__text">
                   <span className="history-entry__title">
                     {p.label}
-                    {p.quantity && <span className="history-entry__qty"> · {p.quantity}</span>}
+                    {p.quantity && (
+                      <span className="history-entry__qty">
+                        {p.quantity.startsWith('×') ? ' ' : ' · '}
+                        {p.quantity}
+                      </span>
+                    )}
                   </span>
                 </span>
               </li>

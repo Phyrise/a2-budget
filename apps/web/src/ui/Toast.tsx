@@ -1,10 +1,13 @@
 /**
  * Messages éphémères (« Pommes retirées · Annuler »). Région aria-live polie,
  * au-dessus de la navigation. Un seul message à la fois : le suivant remplace.
+ * Fermeture d'un glissé (horizontal ou vers le bas, voir swipeDismiss.ts) ou
+ * par la petite croix ; la fermeture automatique attend la fin d'un glissé.
  */
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from './Icon';
 import { cx } from './format';
+import { useSwipeDismiss } from './swipeDismiss';
 
 export interface ToastOptions {
   message: ReactNode;
@@ -34,6 +37,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastItem | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [held, setHeld] = useState(false);
   const idRef = useRef(0);
   const currentRef = useRef<ToastItem | null>(null);
   const pendingRef = useRef<ToastOptions | null>(null);
@@ -65,17 +69,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const item = { ...options, id: idRef.current };
     currentRef.current = item;
     setLeaving(false);
+    setHeld(false);
     setToast(item);
   }, []);
 
   const dismiss = useCallback(() => setLeaving(true), []);
+  const swipe = useSwipeDismiss<HTMLDivElement>({ onDismiss: dismiss, onDragChange: setHeld });
 
   useEffect(() => {
-    if (toast === null) return;
+    if (toast === null || held) return;
     const duration = toast.duration ?? (toast.action ? 6000 : 4000);
     const timer = window.setTimeout(() => setLeaving(true), duration);
     return () => window.clearTimeout(timer);
-  }, [toast]);
+  }, [toast, held]);
 
   useEffect(() => {
     if (!leaving) return;
@@ -97,7 +103,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-region" role="status" aria-live="polite">
         {toast && (
-          <div key={toast.id} ref={toastEl} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, leaving && 'is-leaving')}>
+          <div key={toast.id} ref={toastEl} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, leaving && 'is-leaving')} {...swipe}>
             {toast.icon && <Icon name={toast.icon} size={20} className="toast__icon" />}
             <span className="toast__message">{toast.message}</span>
             {toast.action && (
@@ -112,6 +118,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {toast.action.label}
               </button>
             )}
+            <button type="button" className="toast__close" aria-label="Fermer" onClick={dismiss}>
+              <Icon name="close" size={16} strokeWidth={2} />
+            </button>
           </div>
         )}
       </div>

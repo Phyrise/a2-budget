@@ -28,6 +28,8 @@ html {
      ni sous la barre de navigation fixes (WCAG 2.4.11). */
   scroll-padding-top: calc(var(--header-h) + 8px);
   scroll-padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 16px);
+  /* Pas de zoom au double toucher (voir app/noZoom.ts). */
+  touch-action: manipulation;
 }
 
 html.has-modal {
@@ -85,6 +87,13 @@ textarea {
   font: inherit;
   color: inherit;
   letter-spacing: inherit;
+}
+
+/* Champs de saisie ≥ 16 px : Safari iOS ne zoome pas au focus. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
 }
 
 button {

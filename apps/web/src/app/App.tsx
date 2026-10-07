@@ -19,6 +19,7 @@
  *   ouvert), feuilles globales, indicateur d'enregistrement, mise à jour PWA,
  *   petits sons de la forêt (useSoundEvents, monté une fois), préchargement
  *   discret des peintures de saison (useSeasonPrefetch, monté une fois).
+ * - Pas de zoom (pincement, double toucher) : useNoZoom.
  */
 import '../styles/base.css';
 import '../styles/ui.css';
@@ -46,6 +47,7 @@ import { ShellProvider, useMediaQuery, useShell } from './ShellContext';
 import { useSoundEvents } from './sound';
 import { UpdatePrompt } from './UpdatePrompt';
 import { useKeyboardOpen } from './useKeyboardOpen';
+import { useNoZoom } from './noZoom';
 import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
@@ -106,6 +108,7 @@ function Shell() {
   const keyboardOpen = useKeyboardOpen();
   // Petits sons de la forêt (tâche faite, créature, croissance…), montés une fois.
   useSoundEvents();
+  useNoZoom();
   // Peintures de saison hors précache : préchargement discret (saison en
   // cours, puis la suivante ~14 jours avant), d'après la VRAIE forêt.
   useSeasonPrefetch(realState?.stage ?? null, today, isDesktop);

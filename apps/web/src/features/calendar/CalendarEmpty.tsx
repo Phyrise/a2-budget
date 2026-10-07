@@ -33,7 +33,7 @@ export function DayEmpty({ month = false }: { month?: boolean }) {
     <div className="cal-day-empty">
       <img className="cal-day-empty__art" src={calendarTheme.totoro.sleeping} alt="" width={84} height={44} decoding="async" draggable={false} />
       <p className="cal-day-empty__text">
-        {month ? 'Rien de prévu ce mois-ci, pour l’instant.' : 'Rien de prévu ce jour-là. Totoro fait la sieste.'}
+        {month ? 'Rien de prévu ce mois-ci, pour l’instant.' : 'Rien de prévu ce jour-là.'}
       </p>
     </div>
   );

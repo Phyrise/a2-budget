@@ -11,6 +11,7 @@
 import { isValidLocalDateKey } from './dates.js';
 import { isIsoTimestamp, isPlainObject, type Fail, type Ok } from './validationHelpers.js';
 import type {
+  ActiveCalendarKind,
   CalendarEvent,
   CalendarEventKind,
   CalendarState,
@@ -25,10 +26,19 @@ export const CALENDAR_TITLE_MAX = 120;
 export const CALENDAR_PLACE_MAX = 120;
 /** Longueur maximale de la note. */
 export const CALENDAR_NOTE_MAX = 1000;
-/** Natures d'événement, dans l'ordre d'affichage suggéré. */
+/** Natures d'événement valides dans les données (anciennes comprises). */
 export const CALENDAR_KINDS: readonly CalendarEventKind[] = [
   'repas', 'sortie', 'anniversaire', 'rdv', 'voyage', 'maison', 'autre',
 ];
+/** V4.2 — natures proposées à la saisie, dans l'ordre d'affichage. */
+export const ACTIVE_CALENDAR_KINDS: readonly ActiveCalendarKind[] = ['repas', 'sortie', 'anniversaire', 'rdv', 'autre'];
+
+/** V4.2 — nature actuelle d'un événement : `voyage` → `sortie`, `maison` → `autre`. */
+export function activeCalendarKind(kind: CalendarEventKind): ActiveCalendarKind {
+  if (kind === 'voyage') return 'sortie';
+  if (kind === 'maison') return 'autre';
+  return kind;
+}
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -189,7 +199,8 @@ function buildEvent(base: CalendarEvent | null, patch: CalendarEventPatch & { id
   } else if (time === undefined) {
     endTime = undefined;
   }
-  const kind = patch.kind ?? base?.kind ?? 'autre';
+  // Une nature donnée est ramenée aux natures actuelles ; celle héritée reste.
+  const kind = patch.kind !== undefined ? activeCalendarKind(patch.kind) : base?.kind ?? 'autre';
   const candidate: Record<string, unknown> = {
     id: patch.id,
     title,

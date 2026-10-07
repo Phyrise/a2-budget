@@ -686,7 +686,12 @@ CalendarEvent = {
   d'origine précède l'année de création. L'interface pose `yearKnown` pour
   chaque anniversaire enregistré.
 - Limites : `CALENDAR_EVENTS_MAX` = 2000, titre ≤ 120 (`CALENDAR_TITLE_MAX`),
-  lieu ≤ 120, note ≤ 1000 ; `CALENDAR_KINDS` liste les natures.
+  lieu ≤ 120, note ≤ 1000 ; `CALENDAR_KINDS` liste les natures valides.
+- V4.2 : seules `ACTIVE_CALENDAR_KINDS` (repas, sortie, anniversaire, rdv,
+  autre) sont proposées. `voyage` et `maison` restent valides (données
+  d'avant, rechargées à l'identique) ; `activeCalendarKind` les ramène à
+  `sortie` / `autre` pour l'affichage, et `addEvent` / `updateEvent`
+  convertissent une nature ancienne passée dans le brouillon ou le patch.
 
 ### 12.2 Opérations (`calendar.ts`, pures, jamais d'exception)
 

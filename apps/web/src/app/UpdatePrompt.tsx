@@ -5,11 +5,13 @@
  *   précache est réellement prêt (needRefresh) ;
  * - jamais de rechargement automatique : l'utilisateur choisit « Actualiser »
  *   (SKIP_WAITING envoyé au worker en attente, cf. sw.ts) ;
- * - « Disponible hors ligne » est annoncé une seule fois, discrètement.
+ * - « Disponible hors ligne » est annoncé une seule fois, discrètement ;
+ * - « Plus tard » ou un glissé (comme les messages) referme l'invitation.
  */
 import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button, Icon, useToast } from '../ui';
+import { SWIPE_OUT_MS, useSwipeDismiss } from '../ui/swipeDismiss';
 import { useShell } from './ShellContext';
 
 export function UpdatePrompt() {
@@ -37,10 +39,12 @@ export function UpdatePrompt() {
     toast.show({ message: 'Disponible hors ligne', icon: 'leaf', priority: 'low' });
   }, [offlineReady, prefs.offlineAnnounced, setOfflineReady, toast, updatePrefs]);
 
+  const swipe = useSwipeDismiss<HTMLDivElement>({ onDismiss: () => window.setTimeout(() => setNeedRefresh(false), SWIPE_OUT_MS) });
+
   if (!needRefresh) return null;
 
   return (
-    <div className="update-prompt" role="status" aria-live="polite">
+    <div className="update-prompt" role="status" aria-live="polite" {...swipe}>
       <Icon name="sparkle" size={20} className="update-prompt__icon" />
       <p className="update-prompt__text">Une nouvelle version est prête.</p>
       <div className="update-prompt__actions">

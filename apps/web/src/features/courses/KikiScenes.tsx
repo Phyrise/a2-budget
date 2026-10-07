@@ -40,14 +40,11 @@ export function AllInBasket() {
   );
 }
 
-/** Salut de Kiki à la première ouverture du jour. */
+/** Salut de Kiki à la première ouverture du jour (seulement s'il reste à prendre). */
 export function KikiGreeting({ toBuy, now, onClose }: { toBuy: number; now: Date; onClose: () => void }) {
   const moment = timeOfDay(now);
   const hello = moment === 'soir' || moment === 'nuit' ? 'Bonsoir' : 'Bonjour';
-  const line =
-    toBuy > 0
-      ? `${plural(toBuy, 'article')} sur la liste. Je file quand vous voulez !`
-      : 'Tout est déjà dans le panier. Bravo, l’équipe !';
+  const line = `${plural(toBuy, 'article')} sur la liste. Je file quand vous voulez !`;
   return (
     <aside className="kiki-hello" aria-label="Bonjour de Kiki">
       <img className="kiki-hello__kiki" src={coursesTheme.kiki.wave} alt="" aria-hidden="true" draggable={false} />

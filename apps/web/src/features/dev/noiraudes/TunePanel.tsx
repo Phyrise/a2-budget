@@ -53,6 +53,16 @@ export function TunePanel({ tuning, scene }: { tuning: Tuning; scene: ReactNode 
     setSheet({ mode: 'copy', text, copied });
   };
 
+  // « Coller » : la zone de texte s'ouvre ; si le système le permet (bulle
+  // « Coller » de l'iPhone), le presse-papiers la remplit d'office.
+  const startPaste = () => {
+    setSheet({ mode: 'paste', text: '', error: '' });
+    navigator.clipboard
+      ?.readText()
+      .then((text) => setSheet((s) => (s?.mode === 'paste' && s.text === '' && text.includes('{') ? { ...s, text } : s)))
+      .catch(() => undefined);
+  };
+
   const applyPaste = () => {
     if (sheet?.mode !== 'paste') return;
     const next = parseParams(sheet.text, params);
@@ -128,7 +138,7 @@ export function TunePanel({ tuning, scene }: { tuning: Tuning; scene: ReactNode 
             <button type="button" className="nlab-btn nlab-btn--main" onClick={() => void copy()}>
               Copier les paramètres
             </button>
-            <button type="button" className="nlab-btn" onClick={() => setSheet({ mode: 'paste', text: '', error: '' })}>
+            <button type="button" className="nlab-btn" onClick={startPaste}>
               Coller
             </button>
             <button

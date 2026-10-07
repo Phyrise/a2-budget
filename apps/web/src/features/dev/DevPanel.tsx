@@ -72,7 +72,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
             <h3 id="dev-labs" className="dev-section__title">
               Labos
             </h3>
-            <p className="dev-section__lead">Les Noiraudes dessinées par le code : comparaison avec les peintures, scène vivante.</p>
+            <p className="dev-section__lead">Les Noiraudes dessinées par le code : comparaison avec les peintures, scène vivante, réglages de l’apparence.</p>
             <div className="dev-actions">
               <Button size="sm" variant="quiet" icon="sparkle" onClick={openNoiraudesLab}>
                 Labo Noiraudes

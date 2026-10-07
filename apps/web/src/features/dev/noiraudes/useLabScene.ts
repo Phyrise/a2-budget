@@ -13,6 +13,9 @@ import { createSusuwatariLayer, type Point, type Susuwatari, type SusuwatariLaye
 const LONG_PRESS_MS = 420;
 const SHIVER_MS = 650;
 
+/** La toile de la scène porte son calque (tests, captures). */
+export type LabCanvas = HTMLCanvasElement & { noiraudes?: SusuwatariLayer };
+
 export interface LabSceneSettings {
   count: number;
   size: number;
@@ -64,6 +67,8 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
     window.addEventListener('resize', remeasure);
     bgRef.current?.addEventListener('load', remeasure);
     layerRef.current = layer;
+    // Accès pour les tests et les captures (où sont les Noiraudes sur la toile).
+    (canvas as LabCanvas).noiraudes = layer;
     const timers = new Set<number>();
     const later = (ms: number, fn: () => void) => {
       const id = window.setTimeout(() => {
@@ -147,6 +152,7 @@ export function useLabScene(canvasRef: RefObject<HTMLCanvasElement | null>, bgRe
       timers.forEach((t) => window.clearTimeout(t));
       layer.destroy();
       layerRef.current = null;
+      delete (canvas as LabCanvas).noiraudes;
       factors.current.clear();
     };
   }, [canvasRef, bgRef]);

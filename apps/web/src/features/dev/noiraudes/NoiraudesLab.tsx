@@ -27,7 +27,7 @@ function Range({ label, value, min, max, onChange, unit }: { label: string; valu
     <label className="nlab-range">
       <span className="nlab-range__label">
         {label}
-        <output className="nlab-range__value">
+        <output className="nlab-range__value" aria-hidden="true">
           {value}
           {unit}
         </output>
@@ -38,6 +38,8 @@ function Range({ label, value, min, max, onChange, unit }: { label: string; valu
         max={max}
         step={1}
         value={value}
+        aria-label={label}
+        aria-valuetext={`${value}${unit ?? ''}`}
         style={{ '--fill': `${fill}%` } as CSSProperties}
         onChange={(e) => onChange(Number(e.target.value))}
       />

@@ -117,7 +117,7 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
     return best;
   };
   // Dessous un peu tassé (elle est posée), dessus un peu plus ébouriffé.
-  const sideFactor = (a: number) => 1 - 0.1 * Math.max(0, Math.sin(a)) + 0.04 * Math.max(0, -Math.sin(a));
+  const sideFactor = (a: number) => 1 - 0.15 * Math.max(0, Math.sin(a)) ** 2 + 0.02 * Math.max(0, -Math.sin(a));
 
   const n = counts(radiusPx);
   const strands: Strand[] = [];
@@ -186,7 +186,7 @@ export function furGenome(seed: number, radiusPx: number): FurGenome {
   for (let i = 0; i < n.spikes; i++) {
     const tuft = tufts[Math.floor(rand() * tufts.length)]!;
     const a = tuft.a + (rand() - 0.5) * tuft.width * 1.2;
-    const up = 0.8 + 0.2 * Math.max(0, -Math.sin(a));
+    const up = 0.85 + 0.12 * Math.max(0, -Math.sin(a));
     push({
       kind: Kind.Fringe,
       a,

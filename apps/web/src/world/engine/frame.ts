@@ -4,6 +4,7 @@
  */
 import { drawFrame } from './draw';
 import type { WorldEngine } from './Engine';
+import { festivalKodama, festivalOf } from './festival';
 import { approachParams, cloneParams, kodamaCount } from './moods';
 import { BURST, MOTES, RAIN } from './pipeline';
 import { approachLook, seasonLook } from './paint';
@@ -83,6 +84,9 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
       e.rayBoost = Math.max(e.rayBoost, 0.7);
     }
   }
+  // --- Matsuri (anniversaire du couple) : lampions, lucioles, kodama (festival.ts).
+  const festival = festivalOf(e, aspect);
+  const fest = festival.update(s.festival === true, n, dt, t, animate);
   e.gust *= animate ? Math.exp(-dt / 1.3) : 0;
   e.rayBoost *= animate ? Math.exp(-dt / 1.6) : 0;
 
@@ -180,9 +184,13 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
 
   // --- Esprits.
   const spots = m.kodamaSpots.length;
-  e.spirits.update(n, dt, kodamaCount(s.mood, spots, s.paused), s.creatures, animate || stillLive);
+  e.spirits.update(n, dt, festivalKodama(kodamaCount(s.mood, spots, s.paused), spots, fest), s.creatures, animate || stillLive);
   // Lanterne de pierre d'abord (au loin, sous les kodama des racines), puis les esprits.
-  const sprites = [...e.stone.draws(n, t, e.lantern.litLevel(n), night, mood.fog, animate), ...e.spirits.draws(n, night, mood.fog, g)];
+  const sprites = [
+    ...e.stone.draws(n, t, e.lantern.litLevel(n), night, mood.fog, animate),
+    ...e.spirits.draws(n, night, mood.fog, g),
+    ...festival.draws(e.res, night),
+  ];
 
   // --- Lots additifs.
   e.pipe.sceneFx.reset();
@@ -193,19 +201,21 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   e.lights.emit(e.pipe.emissive, n, t, night, 1, aspect);
   e.lantern.emit(e.pipe.emissive, n, t, night, animate);
   e.stone.emitNight(e.pipe.emissive, t, night);
+  festival.emit(e.pipe.emissive, night);
 
   // --- Particules.
   const sizeK = e.dpr * Math.min(1.4, Math.max(0.75, e.cssH / 700));
   const tierK = TIER_PARTICLES[tier] ?? 0.4;
   // Été : lucioles plus nombreuses le soir (même lot que les spores).
-  const motesCount = Math.min(MOTES, (mood.spores + s.growthProgress * 8) * day + 18 * night + 30 * sf.fireflies) * tierK;
+  const flies = Math.max(sf.fireflies, fest);
+  const motesCount = Math.min(MOTES, (mood.spores + s.growthProgress * 8) * day + 18 * night + 30 * sf.fireflies + 24 * fest) * tierK;
   const mu = e.pipe.motes.program.uniforms;
   mu.uTime!.value = t;
   mu.uCount!.value = motesCount;
-  mu.uNight!.value = Math.max(night, sf.fireflies);
+  mu.uNight!.value = Math.max(night, flies);
   mu.uGold!.value = mood.gold;
   mu.uSizeK!.value = sizeK;
-  mu.uIntensity!.value = 1 + 0.6 * sf.fireflies;
+  mu.uIntensity!.value = 1 + 0.6 * flies;
   const rainCount = mood.rain * look.rain * day * RAIN * tierK;
   const ru = e.pipe.rain.program.uniforms;
   ru.uTime!.value = t;

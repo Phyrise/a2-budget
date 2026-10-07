@@ -17,13 +17,8 @@ import type { ReactNode } from 'react';
 import { useApp } from '../../state/store';
 import { Companion, Icon, InlineTextField, useToast } from '../../ui';
 import { Lampion } from '../fetes/Lampion';
+import { deName } from '../fetes/names';
 import './anniversaries.css';
-
-/** « de Léa », « d’AL » (élision devant une voyelle). */
-function of(name: string): string {
-  const folded = name.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-  return /^[aeiouyœæ]/u.test(folded) ? `d’${name}` : `de ${name}`;
-}
 
 function Row({
   id,
@@ -97,7 +92,7 @@ export function AnniversariesEditor() {
         who="a"
         figure={<Companion who="a" size={30} />}
         name={names.a}
-        label={`Anniversaire ${of(names.a)}`}
+        label={`Anniversaire ${deName(names.a)}`}
         value={monthDayLabel(anniv.a)}
         onCommit={commitPerson('a')}
       />
@@ -106,7 +101,7 @@ export function AnniversariesEditor() {
         who="b"
         figure={<Companion who="b" size={30} />}
         name={names.b}
-        label={`Anniversaire ${of(names.b)}`}
+        label={`Anniversaire ${deName(names.b)}`}
         value={monthDayLabel(anniv.b)}
         onCommit={commitPerson('b')}
       />

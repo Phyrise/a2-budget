@@ -6,6 +6,7 @@ import {
   activeLantern,
   CREATURES,
   GROWTH_THRESHOLDS,
+  isCoupleDay,
   isLanternId,
   localDateKey,
   vitalityState,
@@ -35,7 +36,7 @@ export function lanternModelOf(app: Pick<AppState, 'focus'>): string {
   return activeLantern(app.focus);
 }
 
-export function toWorldState(app: AppState, now: Date): WorldState & { lantern: { id: string } } {
+export function toWorldState(app: AppState, now: Date): WorldState & { lantern: { id: string }; festival: boolean } {
   const forest = app.forest;
   const stage = Math.min(7, Math.max(1, forest.growthStage));
   const lo = GROWTH_THRESHOLDS[stage - 1] ?? 0;
@@ -55,6 +56,8 @@ export function toWorldState(app: AppState, now: Date): WorldState & { lantern: 
     lights,
     season: seasonOf(now),
     lantern: { id: lanternModelOf(app) },
+    // V4.3 : le jour de l'anniversaire du couple, la forêt fait un petit matsuri.
+    festival: isCoupleDay(app.anniversaries, today),
   };
 }
 
@@ -72,6 +75,8 @@ export interface WorldPreview {
   paused?: boolean;
   lantern?: number;
   lanternModel?: string;
+  /** V4.3 — matsuri de l'anniversaire du couple (true) ou jour ordinaire (false). */
+  festival?: boolean;
 }
 
 /** Vrai si l'aperçu change quelque chose (bandeau « Aperçu » visible). */
@@ -96,6 +101,7 @@ export function applyPreview<T extends WorldState>(state: T, preview: WorldPrevi
   if (preview.mood !== undefined) next.mood = preview.mood;
   if (preview.season !== undefined) next.season = preview.season;
   if (preview.paused !== undefined) next.paused = preview.paused;
+  if (preview.festival !== undefined) next.festival = preview.festival;
   if (preview.lanternModel !== undefined && isLanternId(preview.lanternModel)) {
     next.lantern = { id: preview.lanternModel };
   }

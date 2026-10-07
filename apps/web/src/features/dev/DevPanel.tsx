@@ -7,7 +7,8 @@
  * la semaine), les constantes du domaine et les déblocages, propose des
  * aperçus NON PERSISTANTS de la forêt et l'écoute de chaque son, et copie
  * un instantané JSON pour régler les constantes ensemble, et montre la
- * saison réelle / affichée avec l'état du cache des peintures de saison. Rien n'est écrit
+ * saison réelle / affichée avec l'état du cache des peintures de saison, et
+ * rejoue les fêtes (V4.3 : matsuri du couple, AL, AC, train). Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  */
 import { useMemo } from 'react';
@@ -16,6 +17,7 @@ import { useApp } from '../../state/store';
 import { Button, Sheet, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
 import { copyText, devData, devSnapshot } from './devData';
+import { DevFetes } from './DevFetes';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevSeasons } from './DevSeasons';
@@ -61,6 +63,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           </div>
           <DevNumbers data={data} />
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
+          <DevFetes onClose={onClose} />
           <DevSeasons />
         </div>
       )}

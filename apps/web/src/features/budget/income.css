@@ -1,5 +1,5 @@
-/* Revenus V4 : un curseur par montant (salaire 0–5 000 €, compléments
-   0–3 000 €), compléments repliés tant qu'ils valent 0. */
+/* Revenus V4.1 : salaire et compléments en grand, touchés pour ouvrir le
+   pavé (AmountPad) ; compléments repliés tant qu'ils valent 0. */
 
 .income-grid {
   display: grid;
@@ -72,14 +72,20 @@
   }
 }
 
-.person-card__bonus {
-  margin-top: 2px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(185, 198, 189, 0.14);
+.person-card__amounts {
+  display: grid;
 }
 
-.person-card__bonus .euro-value {
-  font-size: 20px;
+.person-card__amounts .amount-field {
+  min-height: 52px;
+}
+
+.person-card__amounts .amount-field__button {
+  margin-right: -4px;
+}
+
+.person-card__bonus {
+  border-top: 1px dashed rgba(185, 198, 189, 0.14);
 }
 
 .breakdown__rates {

@@ -12,11 +12,14 @@ test.use({ viewport: PHONE });
 
 const noFace = (page: Page) => page.locator('.balance-card .noface');
 
-/** Montant « toucher pour saisir » des curseurs. */
-async function setEuros(page: Page, id: string, text: string) {
+/** Montant au pavé : toucher le montant, taper les chiffres (clavier physique), Entrée. */
+async function setEuros(page: Page, id: string, digits: string) {
   await page.locator(`#${id}-value`).click();
-  await page.locator(`#${id}-edit`).fill(text);
-  await page.locator(`#${id}-edit`).press('Enter');
+  const display = page.locator(`#${id}-pad-display`);
+  await expect(display).toBeFocused();
+  await page.keyboard.type(digits);
+  await page.keyboard.press('Enter');
+  await expect(display).toHaveCount(0);
 }
 
 /** Salaires du mois (dépenses par défaut des réglages). */
@@ -102,24 +105,24 @@ test.describe('Budget — univers Chihiro', () => {
 
   test('chaque dépense a son kompeitō, de couleur stable ; liste vide = Noiraude cachée', async ({ page }) => {
     await openApp(page, 'budget');
-    const rows = page.locator('.expense-list--konpeito .expense-row');
+    const rows = page.locator('.paybook-list--expenses .paybook-row');
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
-    const konpeito = page.locator('.expense-list--konpeito .konpeito');
+    const konpeito = page.locator('.paybook-list--expenses .konpeito');
     await expect(konpeito).toHaveCount(count);
     const colors = await konpeito.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
     await page.reload();
     await expect(konpeito).toHaveCount(count);
     const again = await konpeito.evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.color));
     expect(again).toEqual(colors);
-    // Même kompeitō dans « À payer ce mois » (dépenses non nulles).
+    // Le kompeitō d'une dépense est celui de sa ligne dans « Ce mois-ci ».
     const paying = await page
       .locator('[data-testid="pay-expense-internet"] .konpeito')
       .evaluate((e) => (e as HTMLElement).dataset.color);
     expect(colors).toContain(paying);
 
     for (let i = 0; i < count; i += 1) {
-      await rows.first().locator('.expense-row__remove').click();
+      await rows.first().locator('.paybook-row__remove').click();
     }
     await expect(page.locator('.susu-empty .susu-empty__img')).toBeVisible();
     await expect(page.getByText('Aucune dépense ce mois-ci')).toBeVisible();
@@ -151,8 +154,9 @@ test.describe('Budget — univers Chihiro', () => {
     await expect(page.locator('.noface-visitor .noface')).toHaveCount(0, { timeout: 6_000 });
 
     // Tout payer : il salue.
-    for (let guard = 0; guard < 10 && (await page.locator('.pay-row:not(.is-paid)').count()) > 0; guard += 1) {
-      await page.locator('.pay-row:not(.is-paid)').first().getByRole('checkbox').click();
+    const unpaid = page.locator('.paybook-row:not(.is-paid) [role="checkbox"]');
+    for (let guard = 0; guard < 10 && (await unpaid.count()) > 0; guard += 1) {
+      await unpaid.first().click();
     }
     await expect(page.getByTestId('payments-progress')).toHaveText('Tout est payé');
     await page.evaluate(() => window.scrollTo(0, 0));

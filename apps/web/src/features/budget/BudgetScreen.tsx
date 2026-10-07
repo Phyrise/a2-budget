@@ -2,9 +2,12 @@
  * Budget — « le Foyer ». Règle d'or : lisible en 2 secondes.
  * Premier écran (390 × 844) : mois, à verser (AL, AC, ensemble, dépenses),
  * puis « Sur le compte commun » (solde estimé en ce moment, fin du mois,
- * recaler). Plus bas : « À payer ce mois » (cases du mois, le Sans-Visage
- * mange l'argent), revenus au curseur, dépenses en − / +.
- * V4 : euros entiers partout ; tous les chiffres viennent de @a2/core
+ * recaler). Plus bas : « Revenus du mois », puis UN bloc « Ce mois-ci »
+ * (virements et dépenses à cocher, le Sans-Visage mange l'argent), la
+ * réserve si elle existe, et le détail du calcul replié.
+ * V4.1 : chaque montant s'affiche en grand ; un toucher ouvre le pavé
+ * (AmountPad) — plus de curseur, faire défiler ne change rien.
+ * Euros entiers partout ; tous les chiffres viennent de @a2/core
  * (computeMonthSummary, currentBalanceEstimate, endOfMonthProjection…).
  */
 import type { MonthRecord, MonthSummary } from '@a2/core';
@@ -22,16 +25,16 @@ import {
 import { useRef, useState } from 'react';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useApp } from '../../state/store';
-import { AmountInput, Button, Disclosure, Icon, IconButton, cx, euro, percent, shiftMonthKey, useToast } from '../../ui';
+import { AmountField, Button, Disclosure, Icon, IconButton, cx, euro, percent, shiftMonthKey, useToast } from '../../ui';
+import { reserveShortcuts, type ShortcutSource } from './amountShortcuts';
 import { BalanceCard } from './BalanceCard';
 import { useFeeding } from './chihiro/feeding';
 import { noFaceMood } from './chihiro/mood';
 import { NoFaceVisitor } from './chihiro/NoFaceVisitor';
 import { SusuwatariRunner } from './chihiro/Susuwatari';
 import { useMonthEdits } from './chihiro/useMonthEdits';
-import { ExpenseList } from './ExpenseList';
 import { GiveCard } from './GiveCard';
-import { PaymentList } from './PaymentList';
+import { MonthLedger } from './MonthLedger';
 import { paymentProgress } from './paymentItems';
 import { BreakdownLine, PersonCard } from './PersonCard';
 import { RecalibrateSheet } from './RecalibrateSheet';
@@ -100,6 +103,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
   const progress = paymentProgress(currentMonth);
   const paidShare = progress.total === 0 ? 0 : progress.done / progress.total;
   const greeting = bowing || feeding.bowing;
+  const source: ShortcutSource = { settings: state?.settings ?? null, months: state?.months ?? [] };
 
   /** Action explicite, réversible : toast « Annuler » qui remet les taux d'avant. */
   const applyCommonRates = () => {
@@ -175,24 +179,58 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
           />
         </div>
 
-        <PaymentList month={currentMonth} flows={flows} feed={feeding.feed} />
-
         <div className="sheet-section">
           <div className="section-head">
             <h2 className="section-title">Revenus du mois</h2>
           </div>
           <div className="income-grid">
-            <PersonCard key={`${key}-a`} person="A" month={currentMonth} />
-            <PersonCard key={`${key}-b`} person="B" month={currentMonth} />
+            <PersonCard key={`${key}-a`} person="A" month={currentMonth} source={source} />
+            <PersonCard key={`${key}-b`} person="B" month={currentMonth} source={source} />
           </div>
+        </div>
 
+        <MonthLedger month={currentMonth} flows={flows} feed={feeding.feed} source={source} />
+
+        {reserve > 0 && (
+          <div className="sheet-section">
+            <div className="section-head">
+              <h2 className="section-title">Réserve</h2>
+            </div>
+            <div className="card reserve">
+              <AmountField
+                id={`reserve-${key}`}
+                label="Réserve visée ce mois"
+                accessibleLabel="Réserve visée ce mois"
+                padDescription={label}
+                valueCents={reserve}
+                onCommit={(cents) => setReserve(key, cents)}
+                shortcuts={reserveShortcuts(source)}
+                size="md"
+                layout="row"
+              />
+              <p className={cx('reserve__status', !s.reserveCovered && 'is-short')}>
+                {s.reserveCovered ? (
+                  <>
+                    Réserve couverte · loisirs <strong className="amount">{euro(s.leisureCents)}</strong>
+                  </>
+                ) : (
+                  <>
+                    Il manque <strong className="amount">{euro(s.reserveShortfallCents)}</strong> pour la réserve
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="sheet-section budget-detail">
           <Disclosure summary="Détail du calcul" className="breakdown">
             <div className="breakdown__body">
               <BreakdownLine name={currentMonth.personA.name} breakdown={s.breakdownA} settings={currentMonth.personA} />
               <BreakdownLine name={currentMonth.personB.name} breakdown={s.breakdownB} settings={currentMonth.personB} />
               <p className="breakdown__help">
-                Le salaire compte au taux de base, les compléments (heures sup, astreintes, gardes, souvent payés le mois
-                suivant) au taux au-delà. Chaque mois, ce que vous versez moins les dépenses s’ajoute au compte commun.{' '}
+                Le salaire compte au taux de base, les compléments (heures sup, astreintes, gardes) au taux au-delà.
+                Chaque mois, ce que vous versez moins les dépenses s’ajoute au compte commun.{' '}
                 {monthShared
                   ? 'Les taux sont communs à vous deux et se règlent dans les Réglages.'
                   : 'Ce mois garde des taux différents pour chacun, comme au moment où il a été créé.'}
@@ -211,36 +249,6 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
             </div>
           </Disclosure>
         </div>
-
-        {reserve > 0 && (
-          <div className="sheet-section">
-            <div className="section-head">
-              <h2 className="section-title">Réserve</h2>
-            </div>
-            <div className="card reserve">
-              <AmountInput
-                id={`reserve-${key}`}
-                label="Réserve visée ce mois"
-                appearance="field"
-                valueCents={reserve}
-                onCommit={(cents) => setReserve(key, cents)}
-              />
-              <p className={cx('reserve__status', !s.reserveCovered && 'is-short')}>
-                {s.reserveCovered ? (
-                  <>
-                    Réserve couverte · loisirs <strong className="amount">{euro(s.leisureCents)}</strong>
-                  </>
-                ) : (
-                  <>
-                    Il manque <strong className="amount">{euro(s.reserveShortfallCents)}</strong> pour la réserve
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
-
-        <ExpenseList month={currentMonth} totalCents={flows.expensesTotalCents} />
         <SusuwatariRunner run={run} areaRef={sheetRef} onDone={endRun} />
         <NoFaceVisitor
           visit={feeding.visit}

@@ -9,12 +9,14 @@ import { PHONE, monthKey, openApp, persisted, sheet } from './helpers';
 
 test.use({ viewport: PHONE });
 
-async function setEuros(page: Page, id: string, text: string) {
+/** Montant au pavé : toucher le montant, taper les chiffres (clavier physique), Entrée. */
+async function setEuros(page: Page, id: string, digits: string) {
   await page.locator(`#${id}-value`).click();
-  const field = page.locator(`#${id}-edit`);
-  await expect(field).toBeFocused();
-  await field.fill(text);
-  await field.press('Enter');
+  const display = page.locator(`#${id}-pad-display`);
+  await expect(display).toBeFocused();
+  await page.keyboard.type(digits);
+  await page.keyboard.press('Enter');
+  await expect(display).toHaveCount(0);
 }
 
 test('consulter des mois passés ne change ni l’état ni le solde du mois courant', async ({ page }) => {

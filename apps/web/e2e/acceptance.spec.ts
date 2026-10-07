@@ -19,13 +19,14 @@ function euros(cents: number): string {
   return cents < 0 ? `− ${eur0.format(-cents / 100)}` : eur0.format(cents / 100);
 }
 
-/** Montant « toucher pour saisir » (curseurs, − / +) : toucher le chiffre, écrire, Entrée. */
-async function setEuros(page: Page, id: string, text: string) {
+/** V4.1 : montant au pavé (AmountPad) — toucher le montant, taper les chiffres, Entrée. */
+async function setEuros(page: Page, id: string, digits: string) {
   await page.locator(`#${id}-value`).click();
-  const field = page.locator(`#${id}-edit`);
-  await expect(field).toBeFocused();
-  await field.fill(text);
-  await field.press('Enter');
+  const display = page.locator(`#${id}-pad-display`);
+  await expect(display).toBeFocused();
+  await page.keyboard.type(digits);
+  await page.keyboard.press('Enter');
+  await expect(display).toHaveCount(0);
 }
 
 async function currentMonthOf(page: Page) {
@@ -44,11 +45,16 @@ test.describe('Budget — critère de réussite', () => {
     await setEuros(page, 'salary-b', '3000');
     await expect(page.getByTestId('contribution-b')).toHaveText(euros(120_000));
 
-    // Compléments repliés tant qu'ils valent 0 ; le bouton ouvre le curseur et lui donne le focus.
+    // Compléments repliés tant qu'ils valent 0 ; le bouton ouvre directement le pavé.
     await expect(page.locator('#bonus-b')).toHaveCount(0);
     await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
-    await expect(page.locator('#bonus-b')).toBeFocused();
-    await setEuros(page, 'bonus-b', '675');
+    const bonusPad = page.getByRole('dialog', { name: 'Compléments d’AC', exact: true });
+    await expect(bonusPad.getByTestId('amount-pad-display')).toBeFocused();
+    await bonusPad.getByRole('button', { name: '6', exact: true }).click();
+    await bonusPad.getByRole('button', { name: '7', exact: true }).click();
+    await bonusPad.getByRole('button', { name: '5', exact: true }).click();
+    await bonusPad.getByRole('button', { name: 'Valider' }).click();
+    await expect(bonusPad).toHaveCount(0);
 
     await expect(page.getByTestId('contribution-a')).toHaveText(euros(88_000));
     await expect(page.getByTestId('contribution-b')).toHaveText(euros(133_500));
@@ -91,7 +97,10 @@ test.describe('Budget — critère de réussite', () => {
     await openApp(page, 'budget');
     await setEuros(page, 'salary-b', '3000');
     await page.getByRole('button', { name: 'Ajouter des compléments pour AC', exact: true }).click();
-    await setEuros(page, 'bonus-b', '675');
+    await expect(page.locator('#bonus-b-pad-display')).toBeFocused();
+    await page.keyboard.type('675');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#bonus-b-pad-display')).toHaveCount(0);
     const toggle = page.getByRole('button', { name: 'Détail du calcul' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
@@ -160,63 +169,58 @@ test.describe('Taux communs au curseur', () => {
 });
 
 test.describe('Saisie des montants', () => {
-  test('centimes et ambiguïtés rejetés sans toucher l’état ; brouillon invalide bloque Ajouter ; 0 accepté', async ({ page }) => {
+  test('pavé : euros entiers seulement, aucun champ texte ; ajouter une dépense (libellé requis, 0 € accepté)', async ({ page }) => {
     await openApp(page, 'budget');
+    // Aucun curseur, aucun champ de montant : seuls les libellés sont des champs texte.
+    await expect(page.locator('.budget input[type="range"], .budget [role="slider"]')).toHaveCount(0);
+    await expect(page.locator('.budget input[inputmode="decimal"], .budget input[inputmode="numeric"]')).toHaveCount(0);
     await setEuros(page, 'salary-a', '2200');
 
-    // « 1,234 » est ambigu, « 2300,50 » a des centimes : erreur locale, la valeur enregistrée reste.
-    for (const text of ['1,234', '2300,50']) {
-      await setEuros(page, 'salary-a', text);
-      await expect(page.locator('#salary-a-error')).toBeVisible();
-      await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
-    }
-    await expect(page.locator('#salary-a-error')).toContainText('sans centimes');
+    // Virgule, lettres, « € » : ignorés par le pavé ; jamais de centimes.
+    await page.locator('#salary-a-value').click();
+    const display = page.locator('#salary-a-pad-display');
+    await page.keyboard.type('23,50a€');
+    await expect(display).toHaveText(euros(235_000));
+    await page.keyboard.press('Escape');
+    await expect(display).toHaveCount(0);
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_000));
     await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(220_000);
 
-    // Espaces de milliers et « € » acceptés.
-    await setEuros(page, 'salary-a', '2 300 €');
-    await expect(page.locator('#salary-a-value')).toHaveText(euros(230_000));
-    await expect(page.locator('#salary-a-error')).toHaveCount(0);
-
     const key = await monthKey(page);
-    await page.getByRole('button', { name: 'Ajouter une dépense', exact: true }).click();
+    const ledger = page.getByTestId('month-ledger');
+    const before = await ledger.locator('.paybook-row--expense').count();
+    await ledger.getByRole('button', { name: 'Ajouter une dépense', exact: true }).click();
     const label = page.locator(`#m-${key}-add-label`);
-    const amount = page.locator(`#m-${key}-add-amount`);
-    const submit = page.locator('.expense-add__submit');
+    const submit = ledger.locator('.paybook-add__submit');
     await expect(label).toBeFocused();
-    await label.fill('Mutuelle');
-    await amount.click();
-    await amount.fill('12,345');
-    await amount.blur();
-    await expect(page.locator(`#m-${key}-add-amount-error`)).toBeVisible();
     await expect(submit).toBeDisabled();
-
-    await amount.click();
-    await amount.fill('');
-    await amount.blur();
-    await amount.click();
-    await amount.fill('0');
+    await label.fill('Mutuelle');
     await expect(submit).toBeEnabled();
-    const before = await page.locator('.expense-row').count();
+    // Entrée dans le libellé ouvre le pavé du montant ; 0 € accepté.
+    await label.press('Enter');
+    await expect(page.locator(`#m-${key}-add-amount-pad-display`)).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator(`#m-${key}-add-amount-pad-display`)).toHaveCount(0);
     await submit.click();
-    await expect(page.locator('.expense-row')).toHaveCount(before + 1);
+    await expect(ledger.locator('.paybook-row--expense')).toHaveCount(before + 1);
     await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
   });
 
-  test('renommer, régler au − / + ou au toucher, retirer une dépense (annulable)', async ({ page }) => {
+  test('renommer, régler au pavé, retirer une dépense (annulable)', async ({ page }) => {
     await openApp(page, 'budget');
     const key = await monthKey(page);
-    await page.getByRole('button', { name: 'Montant de Internet : plus 1 €', exact: true }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_600));
-    await page.getByRole('button', { name: 'Montant de Internet : moins 1 €', exact: true }).click();
-    await expect(page.getByTestId('expenses-total')).toContainText(euros(184_500));
-
     await setEuros(page, `m-${key}-internet-amount`, '45');
     await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));
+    await expect(page.getByTestId('ledger-expenses-total')).toHaveText(euros(186_000));
     await expect(page.getByRole('checkbox', { name: 'Internet payé', exact: true })).toBeVisible();
-    await expect(page.locator('[data-testid="pay-expense-internet"] .pay-row__amount')).toHaveText(euros(4_500));
+    await expect(page.locator(`#m-${key}-internet-amount-value`)).toHaveText(euros(4_500));
 
-    await page.getByRole('button', { name: 'Retirer Internet', exact: true }).click();
+    const name = page.locator(`#m-${key}-internet-label`);
+    await name.fill('Box internet');
+    await name.press('Enter');
+    await expect.poll(async () => (await currentMonthOf(page)).expenses.find((e: { id: string }) => e.id === 'internet')?.label).toBe('Box internet');
+
+    await page.getByRole('button', { name: 'Retirer Box internet', exact: true }).click();
     await expect(page.getByTestId('expenses-total')).toContainText(euros(181_500));
     await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
     await expect(page.getByTestId('expenses-total')).toContainText(euros(186_000));

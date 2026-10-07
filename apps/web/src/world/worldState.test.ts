@@ -1,4 +1,4 @@
-import { LANTERNS, addFocusSession, emptyAppState, type AppState } from '@a2/core';
+import { LANTERNS, addFocusSession, defaultAnniversaries, emptyAppState, withAnniversaries, type AppState } from '@a2/core';
 import { describe, expect, it } from 'vitest';
 import { applyPreview, lanternModelOf, toWorldState } from './worldState';
 
@@ -40,5 +40,27 @@ describe('worldState — modèle de lanterne de pierre', () => {
     expect(applyPreview(base, { lanternModel: last.id }).lantern?.id).toBe(last.id);
     expect(applyPreview(base, { lanternModel: 'lanterne-inconnue' }).lantern?.id).toBe('kasuga-moss');
     expect(applyPreview(base, null)).toBe(base);
+  });
+});
+
+describe('worldState — matsuri de l’anniversaire du couple (V4.3)', () => {
+  it('le 19 du mois (réglage prérempli) : fête ; un autre jour ou sans réglage : non', () => {
+    const s = withAnniversaries(emptyAppState());
+    expect(toWorldState(s, new Date('2026-10-19T10:00:00')).festival).toBe(true);
+    expect(toWorldState(s, NOW).festival).toBe(false);
+    expect(toWorldState(emptyAppState(), new Date('2026-10-19T10:00:00')).festival).toBe(false);
+  });
+
+  it('suit le jour réglé (dernier jour des mois plus courts)', () => {
+    const s: AppState = { ...emptyAppState(), anniversaries: { ...defaultAnniversaries(), coupleDay: 31 } };
+    expect(toWorldState(s, new Date('2026-11-30T10:00:00')).festival).toBe(true);
+    expect(toWorldState(s, new Date('2026-12-30T10:00:00')).festival).toBe(false);
+  });
+
+  it("l'aperçu du mode développeur allume ou éteint le matsuri", () => {
+    const base = toWorldState(emptyAppState(), NOW);
+    expect(applyPreview(base, { festival: true }).festival).toBe(true);
+    const fete = toWorldState(withAnniversaries(emptyAppState()), new Date('2026-10-19T10:00:00'));
+    expect(applyPreview(fete, { festival: false }).festival).toBe(false);
   });
 });

@@ -24,8 +24,16 @@ function draw(renderer: Renderer, mesh: Mesh, target: Pipeline['target'] | null)
   renderer.render({ scene: mesh, target: target ?? undefined, clear: false, sort: false, frustumCull: false, update: false });
 }
 
+/** Marge du quad d'une tête qui secoue (karakara) : elle peut sortir de sa case. */
+const HEAD_PAD = 0.15;
+const NO_HEAD = [0.5, 0.4, 0, 0];
+
 function setSprite(mesh: Mesh, d: SpriteDraw, fogColor: [number, number, number], emissive: boolean) {
   const un = mesh.program.uniforms;
+  const hd = d.head;
+  un.uPad!.value = hd ? HEAD_PAD : 0;
+  un.uHead!.value = hd ? [hd.rig.pivot[0], hd.rig.pivot[1], hd.angle, hd.squeeze] : NO_HEAD;
+  if (hd) un.uHeadBox!.value = [hd.rig.center[0], hd.rig.center[1], hd.rig.radius[0], hd.rig.radius[1]];
   un.uTex!.value = d.asset.tex;
   un.uCell!.value = d.asset.rect;
   un.uAnchor!.value = [d.x, d.y];

@@ -48,6 +48,8 @@ interface WorldContextValue {
   playGuardian: () => void;
   /** Lanterne : progression 0..1, ou null pour l'éteindre. */
   focus: (progress: number | null, who?: Who) => void;
+  /** Aperçu du karakara des kodama (mode développeur). */
+  rattleKodama: () => void;
   /** Aperçu non persistant (mode développeur), null = la vraie forêt. */
   preview: WorldPreview | null;
   setPreview: (p: SetStateAction<WorldPreview | null>) => void;
@@ -75,6 +77,7 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   const expectPulse = useCallback((id: string) => handleRef.current?.expectPulse?.(id), []);
   const playGuardian = useCallback(() => handleRef.current?.playGuardian(), []);
   const focus = useCallback((progress: number | null, who?: Who) => handleRef.current?.focus(progress, who), []);
+  const rattleKodama = useCallback(() => handleRef.current?.rattleKodama?.(), []);
 
   // Lanterne de l'aperçu : allumée / éteinte seulement quand l'aperçu change
   // (la lanterne d'une vraie session garde la main sinon).
@@ -91,8 +94,8 @@ export function WorldProvider({ children }: { children: ReactNode }) {
   }, [previewLantern]);
 
   const value = useMemo(
-    () => ({ state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, preview, setPreview, previewActive, handleRef }),
-    [state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, preview, previewActive],
+    () => ({ state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, rattleKodama, preview, setPreview, previewActive, handleRef }),
+    [state, realState, presentation, setPresentation, pulse, expectPulse, playGuardian, focus, rattleKodama, preview, previewActive],
   );
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;
 }
@@ -103,8 +106,8 @@ export function useWorld(): WorldContextValue {
   return ctx;
 }
 
-/** La scène elle-même, montée une seule fois par la coquille. */
-export function WorldStage({ className }: { className?: string }) {
+/** La scène elle-même, montée une seule fois par la coquille (`onKodama` : son du karakara). */
+export function WorldStage({ className, onKodama }: { className?: string; onKodama?: () => void }) {
   const { state, presentation, handleRef } = useWorld();
   if (state === null) return null;
   return (
@@ -115,6 +118,7 @@ export function WorldStage({ className }: { className?: string }) {
       live={presentation.live}
       motion={presentation.motion}
       className={className}
+      onKodama={onKodama}
     />
   );
 }

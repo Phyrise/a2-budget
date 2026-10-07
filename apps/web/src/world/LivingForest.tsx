@@ -54,7 +54,7 @@ const layer: CSSProperties = { position: 'absolute', inset: 0, pointerEvents: 'n
 const BASE_CSS = ':where(.living-forest){position:relative;display:block;width:100%;height:100%;}';
 
 export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & { manifest?: WorldManifest; lanterns?: LanternArtSource | null }>(function LivingForest(
-  { state, variant = 'hero', live, motion = 'full', className = '', onReady, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS },
+  { state, variant = 'hero', live, motion = 'full', className = '', onReady, onKodama, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS },
   ref,
 ) {
   const reduced = usePrefersReducedMotion();
@@ -76,6 +76,10 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   const readyRef = useRef(false);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const onKodamaRef = useRef(onKodama);
+  onKodamaRef.current = onKodama;
+  // Aperçu du karakara (module du moteur chargé paresseusement).
+  const previewRef = useRef<(() => void) | null>(null);
 
   const [framing, setFraming] = useState<Framing | null>(null);
   const [mode, setMode] = useState<Mode>('loading');
@@ -155,6 +159,11 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         await engine.init(cur.state);
         if (cancelled) return;
         engineRef.current = engine;
+        // Toucher un kodama : il secoue la tête (karakara), le son suit.
+        const kodamaSound = () => onKodamaRef.current?.();
+        engine.cleanups.push(mod.bindKodamaTouch(engine, kodamaSound));
+        const live = engine;
+        previewRef.current = () => mod.previewKodama(live, kodamaSound);
         // QA (serveur de dev uniquement) : inspection du moteur par Playwright.
         if (import.meta.env.DEV) (window as unknown as { __worldEngine?: WorldEngine }).__worldEngine = engine;
         engine.setState(latest.current.state);
@@ -175,7 +184,10 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
       canvas.removeEventListener('webglcontextrestored', onRestored);
       cleanupIo();
       engine?.destroy();
-      if (engineRef.current === engine) engineRef.current = null;
+      if (engineRef.current === engine) {
+        engineRef.current = null;
+        previewRef.current = null;
+      }
     };
     // Recréé seulement pour un nouveau canvas ou un autre manifest.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,6 +216,7 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
         focusRef.current = { progress, who: who ?? focusRef.current.who };
         engineRef.current?.focus(progress, who);
       },
+      rattleKodama: () => previewRef.current?.(),
       stats: () => engineRef.current?.stats() ?? null,
       lanternKodama: (pose = 0) => {
         const e = engineRef.current;

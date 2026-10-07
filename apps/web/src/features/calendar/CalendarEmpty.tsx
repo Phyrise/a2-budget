@@ -2,10 +2,12 @@
  * États vides illustrés du Calendrier (univers Totoro, V4) : Totoro sous son
  * parapluie-feuille attend à l'arrêt quand rien n'est à venir ; Totoro
  * endormi quand un jour (ou un mois) est libre. Jamais de reproche : un jour
- * sans rien est un jour tranquille. Pas de bouton ici : l'unique « + » est
- * en tête du jour choisi, on y renvoie d'un mot.
+ * sans rien est un jour tranquille. Pas de bouton d'action ici : l'unique
+ * « + » est en tête du jour choisi, on y renvoie d'un mot. Totoro endormi se
+ * touche pour rien : il bâille, s'étire et se rendort (SleepingTotoro).
  */
 import { calendarTheme } from '../../themes/manifest';
+import { SleepingTotoro } from './SleepingTotoro';
 
 export function CalendarEmpty({ hasPast }: { hasPast: boolean }) {
   return (
@@ -31,7 +33,7 @@ export function CalendarEmpty({ hasPast }: { hasPast: boolean }) {
 export function DayEmpty({ month = false }: { month?: boolean }) {
   return (
     <div className="cal-day-empty">
-      <img className="cal-day-empty__art" src={calendarTheme.totoro.sleeping} alt="" width={84} height={44} decoding="async" draggable={false} />
+      <SleepingTotoro />
       <p className="cal-day-empty__text">
         {month ? 'Rien de prévu ce mois-ci, pour l’instant.' : 'Rien de prévu ce jour-là.'}
       </p>

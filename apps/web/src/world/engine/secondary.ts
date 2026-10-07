@@ -1,20 +1,20 @@
 /**
- * Chargement secondaire, non bloquant (après la première image) : kodama,
- * créatures, atlas des effets peints, LUT de nuit (de la saison peinte),
- * préchargement au repos de la peinture du stade suivant.
+ * Chargement secondaire, non bloquant (après la première image) : kodama
+ * (et le gréement de leur tête), créatures, atlas des effets peints, LUT de
+ * nuit (de la saison peinte), préchargement au repos de la peinture du stade
+ * suivant.
  */
 import type { WorldEngine } from './Engine';
 import { prefetchNext } from './growth';
+import { rigFor } from './karakara';
 import { nightLutUrl } from './paint';
 
 export async function loadSecondary(e: WorldEngine): Promise<void> {
   const m = e.cfg.manifest;
-  const assets = await Promise.all(
-    m.sprites.kodama.length > 0
-      ? m.kodamaSpots.map((_, i) => e.res.sprite(m.sprites.kodama[i % m.sprites.kodama.length]!, i, m.sprites.kodama.length === 1))
-      : [],
-  );
-  e.spirits.kodama = assets.filter((a): a is NonNullable<typeof a> => a !== null);
+  const urls = m.kodamaSpots.map((_, i) => m.sprites.kodama[i % m.sprites.kodama.length]!);
+  const assets = await Promise.all(m.sprites.kodama.length > 0 ? urls.map((url, i) => e.res.sprite(url, i, m.sprites.kodama.length === 1)) : []);
+  // Chaque peinture garde le gréement de sa tête (karakara).
+  e.spirits.kodama = assets.flatMap((a, i) => (a ? [{ ...a, head: rigFor(urls[i]!) }] : []));
   if (e.isDestroyed) return;
   await e.syncCreatures();
   await e.res.loadAtlas();

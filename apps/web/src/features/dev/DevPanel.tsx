@@ -6,7 +6,8 @@
  * forêt (stade, avancée, vitalité, crédits, séries, objectif et partage de
  * la semaine), les constantes du domaine et les déblocages, propose des
  * aperçus NON PERSISTANTS de la forêt et l'écoute de chaque son, et copie
- * un instantané JSON pour régler les constantes ensemble, et montre la
+ * un instantané JSON pour régler les constantes ensemble, fait réagir les
+ * compagnons (Jiji, Calcifer, Totoro, kodama) sans attendre, et montre la
  * saison réelle / affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  */
@@ -15,6 +16,7 @@ import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { Button, Sheet, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
+import { DevCompanions } from './DevCompanions';
 import { copyText, devData, devSnapshot } from './devData';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
@@ -27,7 +29,7 @@ const CLOSE_MS = 280;
 export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { appState, today } = useApp();
   const { setModule } = useShell();
-  const { preview, playGuardian } = useWorld();
+  const { preview, playGuardian, rattleKodama } = useWorld();
   const toast = useToast();
   const data = useMemo(() => (appState ? devData(appState, today) : null), [appState, today]);
 
@@ -61,6 +63,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           </div>
           <DevNumbers data={data} />
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
+          <DevCompanions onKodama={() => showForest(rattleKodama)} />
           <DevSeasons />
         </div>
       )}

@@ -74,6 +74,14 @@
   animation: basket-bump 560ms var(--ease-out);
 }
 
+/* Calque du coup de patte (jijiPaw.ts) : pivote aux pattes de Jiji. */
+.basket-stage__paw {
+  position: absolute;
+  inset: 0;
+  transform-origin: 82% 96%;
+  pointer-events: none;
+}
+
 .basket-stage__jiji {
   right: -4px;
   height: 64px;

@@ -2,8 +2,9 @@
  * Courses — la liste commune, dans l'univers de Kiki la petite sorcière.
  * Ajout rapide toujours visible (« 2 pommes », « lait x2 »), rayons
  * automatiques illustrés, coup de balai vers le panier en osier (Jiji veille
- * dessus), suggestions des articles fréquents, retrait par glissement ou
- * bouton (annulable), envol de Kiki quand on vide le panier.
+ * dessus et donne un coup de patte à chaque article qui arrive), suggestions
+ * des articles fréquents, retrait par glissement ou bouton (annulable), envol
+ * de Kiki quand on vide le panier.
  *
  * L'état est écrit tout de suite (cocher reste instantané) ; seules les
  * animations sont différées : pendant le coup de balai, l'article coché est
@@ -37,6 +38,7 @@ export function CoursesScreen() {
   const returning = useIdSet();
   const [landed, setLanded] = useState<string | null>(null);
   const [bump, setBump] = useState(0);
+  const [paw, setPaw] = useState(0);
   const [bagUntil, setBagUntil] = useState(0);
   const [flight, setFlight] = useState<{ reduced: boolean } | null>(null);
   const [greeting, setGreeting] = useState(false);
@@ -123,6 +125,7 @@ export function CoursesScreen() {
     if (!item.done) {
       returning.remove(item.id);
       sweeping.add(item.id);
+      setPaw((n) => n + 1);
     } else if (sweeping.has(item.id)) {
       // Décoché pendant le coup de balai : il reste dans son rayon.
       sweeping.remove(item.id);
@@ -296,7 +299,7 @@ export function CoursesScreen() {
             )}
 
             <section className="sheet-section basket" aria-labelledby="basket-title">
-              <BasketStage fill={fill} pose={pose} done={inBasket} total={total} bump={bump} />
+              <BasketStage fill={fill} pose={pose} done={inBasket} total={total} bump={bump} paw={paw} />
               {basket.length > 0 && (
                 <ul className="item-list item-list--basket">
                   {basket.map((item) => (

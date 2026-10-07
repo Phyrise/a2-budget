@@ -68,6 +68,8 @@ export interface LivingForestProps {
   className?: string;
   /** Appelé quand la première image est affichée (poster ou WebGL). */
   onReady?: () => void;
+  /** Un kodama a été touché (karakara) : le cliquetis de bois peut sonner. */
+  onKodama?: () => void;
 }
 
 export interface PulseOptions {
@@ -103,6 +105,11 @@ export interface LivingForestHandle {
    * initialisation.
    */
   focus(progress: number | null, who?: Who): void;
+  /**
+   * Aperçu (mode développeur) : un kodama secoue la tête, ses voisins
+   * l'imitent (s'il n'y en a aucun de visible, ils sortent un instant).
+   */
+  rattleKodama?(): void;
 }
 
 // ---------------------------------------------------------------------------

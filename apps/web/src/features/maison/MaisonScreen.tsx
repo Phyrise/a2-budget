@@ -269,9 +269,9 @@ export function MaisonScreen() {
         <RitualsBar />
 
         <div className="perch" ref={perchRef}>
-          <span className="perch__figures" aria-hidden="true">
-            <Companion who="a" size={60} mood={perchedMood('a')} reactKey={perchedKey('a')} perched />
-            <Companion who="b" size={56} mood={perchedMood('b')} reactKey={perchedKey('b')} perched />
+          <span className="perch__figures">
+            <Companion who="a" size={60} mood={perchedMood('a')} reactKey={perchedKey('a')} perched touchable />
+            <Companion who="b" size={56} mood={perchedMood('b')} reactKey={perchedKey('b')} perched touchable />
           </span>
           {perchVisible && <CompanionBubble bubble={bubble} variant="perch" className={bubble ? `is-${bubble.who}` : undefined} />}
         </div>

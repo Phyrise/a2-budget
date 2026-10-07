@@ -116,7 +116,7 @@ export class Pipeline {
       ...f,
       uAnchor: u([0.5, 0.5]), uSize: u([0.05, 0.05]), uDepth: u(0.5), uRot: u(0), uAspect: u(aspect), uCell: u([0, 0, 1, 1]),
       uTex: u(blank), uNoise: u(noise), uAlpha: u(1), uReveal: u(1), uEmissive: u(0), uGlow: u([1, 1, 1]),
-      uFogColor: u([0.6, 0.66, 0.64]), uFogMix: u(0),
+      uFogColor: u([0.6, 0.66, 0.64]), uFogMix: u(0), uPad: u(0), uHead: u([0.5, 0.4, 0, 0]), uHeadBox: u([0.5, 0.2, 0.2, 0.2]),
     });
     const spriteProgram = new Program(gl, { ...common, transparent: true, vertex: SPRITE_VERT, fragment: SPRITE_FRAG, uniforms: spriteUniforms() });
     spriteProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

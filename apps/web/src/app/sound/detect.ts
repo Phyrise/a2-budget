@@ -241,6 +241,10 @@ const LEAD_MS: Record<SoundCue, number> = {
   balanceBell: 480,
   lanternLit: 700,
   lanternNew: 640,
+  karakara: 600,
+  crackle: 320,
+  grumble: 560,
+  yawn: 900,
 };
 
 /** Importance (mouvement réduit : on ne garde que le plus marquant). */
@@ -265,6 +269,10 @@ const PRIORITY: Record<SoundCue, number> = {
   balanceBell: 3,
   lanternLit: 4,
   lanternNew: 6,
+  karakara: 2,
+  crackle: 1,
+  grumble: 2,
+  yawn: 2,
 };
 
 /**

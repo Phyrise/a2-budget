@@ -34,6 +34,13 @@
  * - `lanternLit`  la lanterne de pierre s'allume (minuteur lancé)
  *                 → allumette frottée, puis un souffle chaud ;
  * - `lanternNew`  un nouveau modèle de lanterne débloqué → carillon.
+ *
+ * Compagnons (V4.3, touchés pour rien, juste pour le plaisir) :
+ * - `karakara`    un kodama secoue la tête → cliquetis de bois, ses voisins
+ *                 répondent ;
+ * - `crackle`     Calcifer touché → la flamme crépite et s'élève ;
+ * - `grumble`     Calcifer agacé (touché trop souvent) → grognement de braise ;
+ * - `yawn`        Totoro bâille et s'étire → long souffle grave et doux.
  */
 export type SoundCue =
   | 'done'
@@ -55,7 +62,11 @@ export type SoundCue =
   | 'ah'
   | 'balanceBell'
   | 'lanternLit'
-  | 'lanternNew';
+  | 'lanternNew'
+  | 'karakara'
+  | 'crackle'
+  | 'grumble'
+  | 'yawn';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -92,4 +103,8 @@ export const ALL_CUES: readonly SoundCue[] = [
   'balanceBell',
   'lanternLit',
   'lanternNew',
+  'karakara',
+  'crackle',
+  'grumble',
+  'yawn',
 ];

@@ -1,0 +1,202 @@
+/* Totoro endormi qui bâille (SleepingTotoro.tsx) : il s'étire, se rendort,
+   une bulle gonfle à son nez puis éclate. Calme : la bulle seule, en fondu. */
+
+.cal-totoro {
+  --totoro-w: 72px;
+  --totoro-h: 38px;
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  margin: 0;
+  padding: 3px 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cal-totoro__art {
+  transform-origin: 92% 90%;
+}
+
+/* Bulle de sommeil, posée par son coin sur le nez (≈ 30 % / 16 % de la
+   peinture) : la pellicule gonfle puis éclate en deux gouttelettes. */
+.cal-totoro__bubble {
+  position: absolute;
+  left: calc(var(--totoro-w) * 0.3 - 12px);
+  top: calc(3px + var(--totoro-h) * 0.16 - 11px);
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+.cal-totoro__film {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.95) 0 9%, transparent 13%),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(220, 238, 250, 0.08) 0 50%,
+      rgba(230, 244, 255, 0.6) 63%,
+      rgba(230, 244, 255, 0.18) 69%,
+      transparent 72%
+    );
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: 88% 88%;
+  animation: totoro-bubble 2.6s ease-out forwards;
+}
+
+.cal-totoro__drop {
+  position: absolute;
+  left: 12%;
+  top: 22%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(226, 242, 255, 0.85);
+  opacity: 0;
+  animation: totoro-drop-a 2.6s ease-out forwards;
+}
+
+.cal-totoro__drop + .cal-totoro__drop {
+  left: auto;
+  right: 6%;
+  top: 4%;
+  animation-name: totoro-drop-b;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cal-totoro.is-yawning:not(.is-calm) .cal-totoro__art {
+    animation: totoro-yawn 2.6s var(--ease-soft);
+  }
+}
+
+.cal-totoro.is-calm .cal-totoro__film {
+  transform: none;
+  animation-name: totoro-bubble-still;
+}
+
+.cal-totoro.is-calm .cal-totoro__drop {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-totoro__film {
+    transform: none;
+    animation-name: totoro-bubble-still;
+  }
+
+  .cal-totoro__drop {
+    animation: none;
+  }
+}
+
+@keyframes totoro-yawn {
+  0% {
+    transform: none;
+  }
+  10% {
+    transform: scale(1.03, 0.97);
+  }
+  28% {
+    transform: scale(1.12, 0.93) rotate(3deg);
+  }
+  36% {
+    transform: scale(1.13, 0.92) rotate(3.6deg);
+  }
+  44% {
+    transform: scale(1.12, 0.93) rotate(3deg);
+  }
+  56% {
+    transform: scale(0.98, 1.03) rotate(-0.5deg);
+  }
+  66% {
+    transform: scale(1.01, 0.99);
+  }
+  78% {
+    transform: scale(1.025, 0.985);
+  }
+  88%,
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes totoro-bubble {
+  0%,
+  56% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  70% {
+    transform: scale(0.75);
+  }
+  74% {
+    transform: scale(0.66);
+  }
+  82% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  85% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes totoro-bubble-still {
+  0%,
+  50% {
+    opacity: 0;
+  }
+  65%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes totoro-drop-a {
+  0%,
+  83% {
+    opacity: 0;
+    transform: none;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-7px, -6px);
+  }
+}
+
+@keyframes totoro-drop-b {
+  0%,
+  83% {
+    opacity: 0;
+    transform: none;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(6px, -8px);
+  }
+}

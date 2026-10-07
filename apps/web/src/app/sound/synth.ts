@@ -30,7 +30,7 @@ export function percussive(param: AudioParam, t: number, peak: number, attack: n
 }
 
 /** Relie une voix au bus (sec + envoi réverbération), déconnexion à la fin. */
-function route(bus: Bus, out: GainNode, wet: number, nodes: AudioNode[], last: AudioScheduledSourceNode): void {
+export function route(bus: Bus, out: GainNode, wet: number, nodes: AudioNode[], last: AudioScheduledSourceNode): void {
   out.connect(bus.dry);
   const send = bus.ctx.createGain();
   send.gain.value = wet;

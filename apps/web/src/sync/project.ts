@@ -90,8 +90,9 @@ function objects(parts: Parts, c: CollectionName): DocData[] {
   return (parts.get(c) ?? []).filter((r) => r.data.deletedAt === undefined).map((r) => stripMeta(r.data));
 }
 
+/** Faits d'une collection (annulés compris) ; l'id est celui du document. */
 function facts<T>(parts: Parts, c: CollectionName): T[] {
-  return (parts.get(c) ?? []).map((r) => stripMeta(r.data) as T);
+  return (parts.get(c) ?? []).map((r) => ({ ...stripMeta(r.data), id: r.id }) as T);
 }
 
 function single(parts: Parts, c: CollectionName, id: string): DocData | undefined {

@@ -160,11 +160,13 @@ function forestOps(prev: AppState, next: AppState, ctx: DiffContext): WriteOp[] 
   if (prev.forest === next.forest) return [];
   const ops: WriteOp[] = [];
   if (prev.forest.paused !== next.forest.paused) {
+    const id = ctx.newId();
     ops.push({
       kind: 'create',
       collection: 'forestEvents',
-      id: ctx.newId(),
+      id,
       data: {
+        id,
         kind: next.forest.paused ? 'pause' : 'resume',
         localDay: localDateKey(ctx.now),
         at: ctx.now.toISOString(),

@@ -56,11 +56,25 @@ export function addGrocery(s: AppState, label: string, when: Date, by: 'a' | 'b'
   return { ...s, groceries: { ...s.groceries, items: r.items } };
 }
 
+/** Une liste facultative vide vaut « absente » (forme projetée). */
+export function withoutEmpty(s: AppState): AppState {
+  const out: AppState = { ...s, chores: { ...s.chores }, groceries: { ...s.groceries } };
+  if (out.chores.skips?.length === 0) delete out.chores.skips;
+  if (out.groceries.history?.length === 0) delete out.groceries.history;
+  if (out.groceries.categoryMemory !== undefined && Object.keys(out.groceries.categoryMemory).length === 0) {
+    delete out.groceries.categoryMemory;
+  }
+  if (out.rituals?.circles.length === 0) delete out.rituals;
+  if (out.calendar?.events.length === 0) delete out.calendar;
+  if (out.focus?.sessions.length === 0 && out.focus.selectedLantern === undefined) delete out.focus;
+  return out;
+}
+
 /** Valide et normalise (forme rechargée). */
 export function canonical(s: AppState): AppState {
   const r = validateAppState(JSON.parse(JSON.stringify(s)));
   if (!r.ok) throw new Error(`état invalide : ${r.reason}`);
-  return r.state;
+  return withoutEmpty(r.state);
 }
 
 /** Un foyer bien rempli : budget, solde, tâches, faits, forêt, courses, calendrier, cercle, lanternes. */
@@ -83,7 +97,7 @@ export function richState(): AppState {
   s = toggle(s, 'draps', at(6, 10));
   s = toggle(s, 'plantes', at(7, 9));
   s = toggle(s, 'plantes', at(7, 9, 5)); // décochée
-  s = toggle(s, 'vaisselle', at(8, 21));
+  s = toggle(s, 'vaisselle', at(8, 19));
   s = toggle(s, 'rideaux', at(8, 15), 'both');
   const skip = skipOccurrence(s.chores.skips, { id: 'k1', taskId: 'plantes', dueDate: '2026-10-08', at: at(8, 7).toISOString(), by: 'b' });
   s = { ...s, chores: { ...s.chores, skips: skip.skips }, forest: advanceDay(s.forest, localDateKey(NOW)) };

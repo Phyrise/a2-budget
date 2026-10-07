@@ -3,8 +3,19 @@
 **Document de conception uniquement : rien n'est implémenté en V4.** Il remplace la piste «
 Fastify + SQLite » de `FUTURE_SYNC.md` (serveur maison, tunnel) par une solution gratuite,
 sans serveur et sans carte bancaire : Firebase (Auth Google + Cloud Firestore, offre Spark).
-Pas à pas console : `docs/FIREBASE_SETUP.md` (qui contient aussi le fichier de règles
-complet).
+Pas à pas console : `docs/FIREBASE_SETUP.md`. Règles : `firestore.rules` (racine du dépôt),
+testées sur l'émulateur par `pnpm test:rules`.
+
+**Décisions d'Arthur pour la V5 (elles priment sur la suite du document)** :
+
+- À l'arrivée, un écran d'accueil doux : « Se connecter avec Google » ou « Continuer en
+  invité ». Choix mémorisé sur le téléphone, modifiable dans Réglages.
+- **Invité** = l'app d'aujourd'hui, exactement : le SDK Firebase n'est jamais chargé, aucune
+  requête vers Google/Firebase, les données locales ne sont jamais perdues.
+- **Connexion** : liste blanche de deux comptes Google (rôle déduit de l'e-mail), un seul
+  foyer `a2home`, pas d'invitation par code (§5.1). Un autre compte : « Ce compte n'est pas
+  invité », déconnexion, retour à l'accueil.
+- Sans configuration Firebase (`VITE_FIREBASE_*` absentes) : ni accueil ni Firebase.
 
 Principes conservés (V3 §1) : hors ligne d'abord, cocher reste instantané, rien ne punit,
 rien ne compare. Ajouté : chacun voit ce que l'autre fait, en douceur, et personne n'annule
@@ -35,14 +46,14 @@ Téléphone AL (PWA, phyrise.github.io/a2-budget/)    Téléphone AC (idem)
   sont **pas** des secrets ; la sécurité vient des règles. Elle est fournie au build par
   `apps/web/.env.production` (variables `VITE_FIREBASE_*`, versionnées).
 - **Drapeau** : sans `VITE_FIREBASE_PROJECT_ID`, l'app reste **100 % locale** et le SDK
-  Firebase n'est jamais chargé (import dynamique, chunk à part). Avec la config, l'app reste
-  locale tant que personne ne choisit « Synchroniser nos deux téléphones » dans Réglages.
+  Firebase n'est jamais chargé (import dynamique, chunk à part). Avec la config : écran
+  d'accueil (Google ou invité) ; en invité, même chose que sans config.
 - **SDK** : `firebase` v12+ modulaire (`firebase/app`, `firebase/auth`, `firebase/firestore`
   ; jamais `firestore/lite`, qui n'a pas de hors ligne). ≈ 120–150 Ko gzip, chargés
   seulement en mode synchronisé, puis précachés par le service worker.
-- **Foyer** : exactement 2 membres, chacun avec un rôle `a` (AL, Jiji) ou `b` (AC,
-  Calcifer). Le rôle relie l'UID Google aux `'a' | 'b'` déjà utilisés partout dans
-  `@a2/core` (assignee, doneBy, addedBy…).
+- **Foyer** : un seul, `a2home`, exactement 2 membres, chacun avec un rôle `a` (AL, Jiji) ou
+  `b` (AC, Calcifer), **déduit de l'e-mail** (liste blanche, §5.1). Le rôle relie le compte
+  Google aux `'a' | 'b'` déjà utilisés partout dans `@a2/core` (assignee, doneBy, addedBy…).
 
 ### 1.1 Connexion Google : le point délicat
 
@@ -62,26 +73,29 @@ Stratégie retenue :
    `phyrise.github.io`, avec `.nojekyll`, sinon GitHub ignore les dossiers commençant par
    `_`) ; `authDomain` devient `phyrise.github.io` ; `signInWithRedirect` redevient même
    origine. GitHub Pages sert `handler.html` pour `/__/auth/handler` (fichiers sans
-   extension renommés en `.html`) — **à confirmer à l'étape 0** (§11).
+   extension renommés en `.html`) — **à confirmer à l'étape 0** (§11). Les fichiers sont
+   préparés par `apps/web/scripts/firebase-auth-helper.mjs <projectId>` (dossier
+   `phyrise.github.io/` prêt à pousser, plus une copie brute à part : un fichier sans
+   extension y serait servi comme un téléchargement). Les pages du helper chargent leurs
+   scripts en relatif (`src="handler.js"`) : elles doivent rester dans `/__/auth/`.
 3. Plan B si l'étape 0 échoue sur iPhone : **connexion anonyme Firebase + code
-   d'invitation** (aucune fenêtre, aucun Google). L'UID vit dans l'IndexedDB de la PWA (non
-   purgée pour une app installée) ; perdu (réinstallation), l'autre membre régénère un code
-   et l'on rejoint de nouveau (règle « remplacer le membre de même rôle », à ajouter alors).
+   d'invitation** (aucune fenêtre, aucun Google). Incompatible tel quel avec la liste
+   blanche (un compte anonyme n'a pas d'e-mail) : il faudrait alors revenir à l'invitation
+   (§5.1, « plus tard »). À rouvrir seulement si l'étape 0 échoue.
 
 La session Firebase est persistée (`browserLocalPersistence`) : on se connecte une fois par
 téléphone.
 
 ## 2. Modèle de données Firestore
 
-Tout vit sous `households/{hid}`. `hid` = id aléatoire (20 caractères). Les ids des
-documents sont **les ids déjà générés par l'app** (`newId()`, UUID) : aucune traduction
-d'identifiant.
+Tout vit sous `households/{hid}`, avec `hid` = `a2home` (foyer unique ; la liste des
+membres n'est pas dans la base mais dans les règles, §5.1). Les ids des documents sont **les
+ids déjà générés par l'app** (`newId()`, UUID) : aucune traduction d'identifiant. Tout autre
+chemin est refusé.
 
 | Chemin | Nature | Contenu |
 |---|---|---|
-| `users/{uid}` | profil privé | `{ hid }` — où est mon foyer |
-| `invites/{code}` | invitation | `{ hid, role, createdBy, expiresAt }` — usage unique, `role` = celui offert |
-| `households/{hid}` | foyer | `memberUids: [uid…]` (≤ 2), `members: { uid: 'a'\|'b' }`, `names: { a, b }`, `schema`, `minApp`, `inviteCode?`, `inviteExpiresAt?` |
+| `households/{hid}` | foyer | `names: { a, b }`, `schema`, `minApp` |
 | `…/tasks/{id}` | objet | `HouseholdTask` |
 | `…/completions/{id}` | **fait** | `ChoreCompletion` + `localDay`, `creditKey` |
 | `…/skips/{id}` | **fait** | `ChoreSkip` |
@@ -99,8 +113,8 @@ d'identifiant.
 | `…/activity/{id}` | **fait** | fil des nouvelles (§7) |
 | `…/checkpoints/{YYYY-MM-DD}` | dérivé | `ForestState` figé à ce jour (§3.3) |
 | `…/meta/forestMilestones` | monotone | plus hauts stade / soins / déblocages vus |
-| `…/memberState/{uid}` | privé partagé | `{ activitySeenAt }` |
-| `…/push/{uid}` | privé partagé | abonnement Web Push (option, §8) |
+| `…/memberState/{role}` | par personne (`a`\|`b`) | `{ activitySeenAt }` |
+| `…/push/{role}` | par personne | abonnement Web Push (option, §8) |
 
 Unités inchangées : montants en **centimes** entiers (l'affichage à l'euro reste un rendu,
 V4), dates « YYYY-MM-DD » locales, horodatages ISO. `selectedMonth` et toutes les
@@ -247,9 +261,9 @@ nouvelles, 20 divers).
 |---|---|---|
 | 30 ouvertures × 16 écouteurs (1 lecture minimum par requête) | 480 | — |
 | chaque écriture relue par les 2 téléphones | 240 | 120 |
-| `get()` des règles (appartenance, 1 par requête) | 120 | — |
+| `get()` des règles (aucun : la liste blanche est dans les règles) | 0 | — |
 | fil des nouvelles, curseurs, jalons | 60 | 40 |
-| **Total** | **≈ 900 (1,8 % de 50 000)** | **≈ 160 (0,8 % de 20 000)** |
+| **Total** | **≈ 780 (1,6 % de 50 000)** | **≈ 160 (0,8 % de 20 000)** |
 
 Stockage : ≈ 400 o par fait → ≈ 2 Mo par an (quota : 1 Gio). Sortie réseau : quelques Mo par
 mois (quota : 10 Gio). Migration initiale (§6) : une seule fois, ≈ 1 000 à 3 000 écritures.
@@ -263,38 +277,44 @@ Pacifique), **sans facture**.
 
 ## 5. Sécurité
 
-Règles complètes : `docs/FIREBASE_SETUP.md` §5. En résumé :
+Règles complètes : `firestore.rules` (à coller dans la console, `FIREBASE_SETUP.md` §4),
+testées par `pnpm test:rules` (`tests/rules`). En résumé :
 
-- `households/{hid}` et tout ce qu'il contient : lecture et écriture réservées aux UID de
-  `memberUids` (un `get()` du foyer par requête).
+- Membre = compte connecté dont l'e-mail (en minuscules) est dans la liste blanche **et**
+  `email_verified == true` ; seul le foyer `a2home` existe. Aucun `get()` (lectures
+  épargnées). Tout autre chemin (`users/`, `invites/`…) est refusé.
 - Chaque écriture doit porter `updatedBy == request.auth.uid` et `syncedAt == request.time`
   (curseur fiable, auteur vérifié).
-- Faits : création seulement ; une seule mise à jour possible, l'annulation (`undoneAt`,
-  `undoneDay`, `undoneBy`, `devOverride`) ; jamais supprimés (sauf `groceryHistory` et
-  `activity`, élagués).
-- Objets : purge définitive seulement 30 jours après `deletedAt`.
-- `meta/forestMilestones` : aucune valeur ne peut baisser.
-- `memberState/{uid}`, `push/{uid}` : écrits seulement par leur propriétaire.
-- Liste des membres : immuable pour les membres (pas de 3e, pas d'éviction depuis l'app ; la
-  console reste le recours).
+- Faits : création seulement, signée (`createdBy` = son UID, `role` = son rôle d'après
+  l'e-mail), jamais déjà annulée ; une seule mise à jour possible, l'annulation (`undoneAt`
+  texte, `undoneDay` « YYYY-MM-DD », `undoneBy` = soi, `devOverride`) ; annuler le fait de
+  l'autre exige `devOverride: true` (la trace du mode développeur, §9) ; jamais supprimés
+  (sauf `groceryHistory` et `activity`, élagués).
+- Objets : jamais créés supprimés ; `deletedAt` = heure du serveur ; purge définitive
+  seulement 30 jours après `deletedAt`.
+- `checkpoints/{jour}` : `day` = id ; le drapeau `genesis` ne change pas ; la genèse ne se
+  supprime pas. `meta/forestMilestones` : forme complète, aucune valeur ne peut baisser.
+- `memberState/{role}`, `push/{role}` : écrits seulement par la personne de ce rôle.
 
-### 5.1 Invitation du 2e membre (code à usage unique)
+### 5.1 Qui entre : la liste blanche (V5)
 
-1. AL : « Créer notre foyer » → lot : `households/{hid}` (AL seul membre, rôle choisi) +
-   `users/{uidAL}`.
-2. AL : « Inviter AC » → code de 8 caractères (alphabet sans ambiguïté, ≈ 40 bits, ex.
-   `KQ7M-2XPD`), valable 48 h. Lot : `invites/{code}` + `inviteCode`/`inviteExpiresAt` sur
-   le foyer. Partage : lien `https://phyrise.github.io/a2-budget/#rejoindre=KQ7M-2XPD`
-   (fragment : jamais envoyé à un serveur) ou code à taper / QR affiché à l'écran.
-3. AC, connecté : lit `invites/{code}` (lecture par code exact seulement, aucune liste
-   possible ; il y trouve `hid` et son rôle) → lot : ajout de son UID au foyer
-   (`arrayUnion`) avec **l'autre rôle** + suppression de l'invitation + `users/{uidAC}`. Les
-   règles exigent que l'invitation référencée par le foyer existe avant et n'existe plus
-   après le lot (`exists` / `existsAfter`) : le code ne sert qu'une fois, et seulement si le
-   foyer n'a qu'un membre.
+Deux comptes Google, écrits en dur à deux endroits qui disent la même chose (un test le
+vérifie) : le bloc « liste blanche » en tête de `firestore.rules` (la vraie protection) et
+`apps/web/src/sync/allowlist.ts` (le client refuse gentiment avant la base).
 
-N'importe quel compte Google peut se connecter au projet (Firebase Auth ne filtre pas), mais
-un inconnu ne lit rien : il n'est membre d'aucun foyer et ne connaît aucun code.
+| E-mail | Rôle |
+|---|---|
+| `arthur.longuefosse@gmail.com` | `a` (AL) |
+| `alexia.chaval@free.fr` | `b` (AC) |
+
+N'importe quel compte Google peut se connecter au projet (Firebase Auth ne filtre pas) ; un
+autre compte voit « Ce compte n'est pas invité », il est déconnecté, et la base lui refuse
+tout. Le premier membre connecté crée `households/a2home` ; il n'y a rien à rejoindre.
+
+**Plus tard, « par paire »** (plusieurs foyers) : seuls ce bloc des règles et `allowlist.ts`
+changent — par exemple l'invitation à usage unique (code de 8 caractères, valable 48 h,
+`invites/{code}` consommé dans le même lot que l'ajout au foyer, vérifié par `exists` /
+`existsAfter`), avec `memberUids` dans le foyer et un `get()` par requête.
 
 ## 6. Migration depuis le localStorage
 
@@ -311,7 +331,7 @@ un inconnu ne lit rien : il n'est membre d'aucun foyer et ne connaît aucun code
      reconstruit pas) ; les faits importés sont antérieurs au point de reprise, donc jamais
      rejoués ;
    - `meta/forestMilestones` initialisé depuis cette forêt.
-3. **Second téléphone** : rejoint avec le code ; ses données locales ne sont **pas
+3. **Second téléphone** : se connecte (liste blanche) ; ses données locales ne sont **pas
    fusionnées** (deux historiques indépendants créeraient des doublons de tâches et
    fausseraient la forêt). Elles restent intactes sous `a2-budget:state:v1` et dans l'export
    ; un écran propose d'ajouter à la liste commune ses articles de courses non cochés (seul
@@ -338,7 +358,7 @@ gestes qui intéressent l'autre :
 - Temps réel (écouteur delta) : petit toast doux, au plus un par type toutes les 10 minutes,
   jamais pendant une animation ; aucun son.
 - Badge : pastille discrète sur l'onglet concerné + feuille « Nouvelles » (depuis l'en-tête)
-  ; « vu » = `memberState/{uid}.activitySeenAt`.
+  ; « vu » = `memberState/{role}.activitySeenAt`.
 - Une complétion distante fait arriver une luciole dans la forêt.
 - Jamais de nouvelle négative (« AC n'a pas fait… »), jamais de compteur comparatif (V3 §1).
 - Conservation : 90 jours, élagués par n'importe quel téléphone.
@@ -359,7 +379,7 @@ Pour être prévenu **app fermée**. Faisabilité :
   ES256 : WebCrypto natif, quelques ms).
 
 Fonctionnement, **sans aucun stockage côté Worker** : chaque téléphone enregistre son
-`PushSubscription` dans `households/{hid}/push/{uid}`. Après une écriture d'`activity`, le
+`PushSubscription` dans `households/{hid}/push/{role}`. Après une écriture d'`activity`, le
 client appelle `POST /notify { hid, activityId }` avec son jeton d'identité Firebase. Le
 Worker vérifie le jeton (RS256, `aud` = projet, `iss` = securetoken), relit **avec ce même
 jeton** via l'API REST Firestore le foyer, l'activité et l'abonnement de l'autre (les règles
@@ -418,13 +438,20 @@ trace dans les données.
 - **Domaine** (Vitest, `pnpm test`) : `replayForest` — toutes les permutations d'arrivée des
   faits donnent la même forêt ; plafond, pause, annulation, recomplétion, jalons jamais en
   baisse ; `diffToOps` / `projectState` aller-retour ; maps des mois.
-- **Règles** : `firebase-tools` (devDependency, `npx firebase`) +
-  `@firebase/rules-unit-testing`, émulateur Firestore + Auth, projet `demo-a2home` (préfixe
-  `demo-` : aucun compte, aucune ressource réelle). Java **21+** requis par l'émulateur.
-  Script `pnpm test:rules` = `firebase emulators:exec --only firestore,auth --project
-  demo-a2home "vitest run -c vitest.rules.config.ts"`, hors de `pnpm test` (Java) et en job
-  CI séparé. Cas : inconnu refusé, 3e membre refusé, code réutilisé refusé, fait modifié
-  refusé, `syncedAt` falsifié refusé, jalons en baisse refusés.
+- **Règles** (fait, branche `v5/prep`) : `firebase-tools` et `@firebase/rules-unit-testing`
+  en devDependencies de la racine (`npx firebase`), `firebase.json` + `.firebaserc`, projet
+  `demo-a2home` (préfixe `demo-` : aucun compte, aucune ressource réelle). Java **21+**
+  requis par l'émulateur : `scripts/install-java.sh` pose un JRE Temurin dans
+  `~/.cache/a2home/java-21` (ni sudo, ni Homebrew : sur Mac Intel, Homebrew recompilerait
+  une trentaine de dépendances) ; `scripts/with-java.sh` le trouve. `pnpm test:rules` =
+  `firebase emulators:exec --only firestore … "vitest run -c vitest.rules.config.ts"`, hors
+  de `pnpm test` ; `pnpm emulators` = Auth + Firestore pour le développement (ports dans
+  `firebase.json` : Firestore 8180, Auth 9180, interface 4180). Cas : inconnu, non vérifié,
+  anonyme, autre foyer refusés ; membres et minuscules acceptés ; rôle usurpé, fait réécrit,
+  `syncedAt` falsifié, jalons en baisse, genèse supprimée refusés (chaque condition des
+  règles est couverte : la retirer fait échouer un test).
+- **Liste blanche** (`pnpm test`) : `allowlist.test.ts` compare le client à
+  `firestore.rules`.
 - **QA bout en bout** (`apps/web/scripts/qa-sync.mjs`) : Playwright, deux contextes = deux
   téléphones, émulateurs, connexion par faux jeton Google de l'émulateur Auth,
   `context.setOffline(true)` pour les scénarios hors ligne (cocher des deux côtés, fusion,
@@ -438,7 +465,8 @@ trace dans les données.
 1. **Domaine** : `replayForest`, faits annulables, maps, jalons + tests.
 2. **Pont** : `diffToOps`, `projectState`, clés `a2-budget:sync:v1`, mode local intact
    (tests sans Firebase).
-3. **Firebase** : init paresseuse, Auth, foyer, invitation, règles + `test:rules`.
+3. **Firebase** : init paresseuse, écran d'accueil (Google ou invité), Auth, liste blanche ;
+   règles + `test:rules` (faits en avance : `v5/prep`).
 4. **Migration** : sauvegardes, envoi par lots avec reprise, écran de choix.
 5. **Temps réel** : écouteurs delta, resynchronisation, indicateur discret (« à jour », «
    hors ligne — tout est gardé »).
@@ -450,7 +478,7 @@ trace dans les données.
 
 | Risque | Parade |
 |---|---|
-| Connexion Google dans la PWA iPhone | étape 0 ; helper auto-hébergé ; plan B anonyme + code |
+| Connexion Google dans la PWA iPhone | étape 0 ; helper auto-hébergé (`firebase-auth-helper.mjs`) ; plan B à rouvrir (§1.1) |
 | Quotas de lecture | écouteurs delta, pas d'écouteur sur collection entière, compteur dev |
 | Cache IndexedDB effacé | détection → resynchronisation complète ; copie `localStorage` |
 | Données perdues (pas de sauvegarde Spark) | 2 copies complètes, export JSON, faits jamais supprimés |

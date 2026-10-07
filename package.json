@@ -8,13 +8,28 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
+    ],
+    "ignoredBuiltDependencies": [
+      "@firebase/util",
+      "protobufjs",
+      "re2"
     ]
   },
   "scripts": {
     "dev": "pnpm --filter @a2/web dev",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc -p tests/rules",
     "test": "pnpm -r test",
+    "test:rules": "scripts/with-java.sh firebase emulators:exec --only firestore --project demo-a2home \"vitest run -c vitest.rules.config.ts\"",
+    "emulators": "scripts/with-java.sh firebase emulators:start --only auth,firestore --project demo-a2home",
     "build": "pnpm --filter @a2/web build",
     "preview": "pnpm --filter @a2/web preview"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "@types/node": "22.20.4",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.32.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   }
 }

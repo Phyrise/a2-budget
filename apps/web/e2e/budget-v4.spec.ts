@@ -1,7 +1,8 @@
 /**
- * Budget V4 : curseurs en euros entiers (− / + à l'euro, appui long qui
- * accélère, saisie au toucher au-delà du maximum), paiements du mois cochés
- * et solde du compte commun (en ce moment, fin du mois, recalage).
+ * Budget V4 / V4.1 : montants au pavé (AmountPad : grosses touches, − / +,
+ * raccourcis, clavier physique ; aucun curseur, aucun clavier système),
+ * paiements du mois cochés dans « Ce mois-ci » et solde du compte commun
+ * (en ce moment, fin du mois, recalage).
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, openApp, persisted, sheet } from './helpers';
@@ -14,13 +15,14 @@ function euros(cents: number): string {
   return cents < 0 ? `−\u202f${eur0.format(-cents / 100)}` : eur0.format(cents / 100);
 }
 
-/** Montant « toucher pour saisir » : toucher le chiffre, écrire, Entrée. */
-async function setEuros(page: Page, id: string, text: string) {
+/** Montant au pavé : toucher le montant, taper les chiffres (clavier physique), Entrée. */
+async function setEuros(page: Page, id: string, digits: string) {
   await page.locator(`#${id}-value`).click();
-  const field = page.locator(`#${id}-edit`);
-  await expect(field).toBeFocused();
-  await field.fill(text);
-  await field.press('Enter');
+  const display = page.locator(`#${id}-pad-display`);
+  await expect(display).toBeFocused();
+  await page.keyboard.type(digits);
+  await page.keyboard.press('Enter');
+  await expect(display).toBeHidden();
 }
 
 async function currentMonthOf(page: Page) {
@@ -28,42 +30,74 @@ async function currentMonthOf(page: Page) {
   return s.budget.months.find((x: { monthKey: string }) => x.monthKey === s.budget.selectedMonth);
 }
 
-test.describe('Curseurs en euros entiers', () => {
-  test('curseurs : + d’un euro, appui long qui accélère, saisie au-delà du maximum', async ({ page }) => {
+test.describe('Saisie au pavé (AmountPad)', () => {
+  test('toucher le montant ouvre le pavé : touches, 00, effacer, − / +, raccourci, Annuler, Valider', async ({ page }) => {
     await openApp(page, 'budget');
+    await expect(page.locator('.budget input[type="range"], .budget [role="slider"]')).toHaveCount(0);
     await setEuros(page, 'salary-a', '2200');
-    const salary = page.locator('#salary-a');
-    await expect(salary).toHaveAttribute('max', '5000');
-    await expect(salary).toHaveAttribute('aria-valuetext', euros(220_000));
 
-    await page.locator('#salary-a-plus').click();
-    await expect(page.locator('#salary-a-value')).toHaveText(euros(220_100));
-    await page.locator('#salary-a-minus').click();
-    await page.locator('#salary-a-minus').click();
-    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(219_900);
+    await page.locator('#salary-a-value').click();
+    const pad = page.getByRole('dialog', { name: 'Salaire d’AL', exact: true });
+    const display = pad.getByTestId('amount-pad-display');
+    await expect(display).toBeFocused();
+    // Aucun champ texte : le clavier du téléphone ne s'ouvre pas.
+    expect(await page.evaluate(() => document.activeElement?.matches('input, textarea') ?? false)).toBe(false);
+    await expect(display).toHaveText(euros(220_000));
 
-    // Appui long : l'avance s'accélère (pas de 1 €, puis 10 €, puis 50 €).
-    const plus = await page.locator('#salary-a-plus').boundingBox();
-    if (plus === null) throw new Error('Bouton + introuvable');
-    await page.mouse.move(plus.x + plus.width / 2, plus.y + plus.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(2400);
-    await page.mouse.up();
-    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBeGreaterThan(219_900 + 3_000);
-    const held = (await currentMonthOf(page)).salaryACents;
-    expect(held % 100).toBe(0);
+    // Le premier chiffre remplace le montant ; « 00 » ; effacer.
+    const key = (name: string) => pad.getByRole('button', { name, exact: true }).click();
+    await key('2');
+    await key('4');
+    await key('Deux zéros');
+    await key('7');
+    await key('Effacer le dernier chiffre');
+    await expect(display).toHaveText(euros(240_000));
+    await key('Plus 100 €');
+    await key('Moins 10 €');
+    await expect(display).toHaveText(euros(249_000));
+    // Rien n'est écrit avant « Valider ».
+    expect((await currentMonthOf(page)).salaryACents).toBe(220_000);
+    await pad.getByRole('button', { name: 'Valider' }).click();
+    await expect(pad).toBeHidden();
+    await expect(page.locator('#salary-a-value')).toBeFocused();
+    await expect(page.locator('#salary-a-value')).toHaveText(euros(249_000));
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(249_000);
 
-    // Clavier sur la piste : flèches ±1 €, Page ±100 €.
-    await salary.focus();
-    await page.keyboard.press('ArrowLeft');
-    await page.keyboard.press('PageUp');
-    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(held + 9_900);
+    // Annuler ne change rien ; le raccourci « Salaire habituel » remet 2 200 €.
+    await page.locator('#salary-a-value').click();
+    await key('9');
+    await pad.getByRole('button', { name: 'Annuler' }).click();
+    await expect(pad).toBeHidden();
+    expect((await currentMonthOf(page)).salaryACents).toBe(249_000);
+    await page.locator('#salary-a-value').click();
+    await pad.getByRole('button', { name: /^Salaire habituel/u }).click();
+    await expect(display).toHaveText(euros(220_000));
+    await pad.getByRole('button', { name: 'Valider' }).click();
+    await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(220_000);
 
-    // Une valeur au-delà du maximum est acceptée : le curseur se cale au bout.
+    // Clavier physique : Entrée rouvre, chiffres, Échap annule ; pas de maximum.
+    await page.keyboard.press('Enter');
+    await expect(display).toBeFocused();
+    await page.keyboard.type('6200');
+    await page.keyboard.press('Escape');
+    await expect(pad).toBeHidden();
+    expect((await currentMonthOf(page)).salaryACents).toBe(220_000);
     await setEuros(page, 'salary-a', '6200');
     await expect(page.locator('#salary-a-value')).toHaveText(euros(620_000));
-    await expect(salary).toHaveValue('5000');
     await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(620_000);
+  });
+
+  test('faire défiler au-dessus des montants ne change rien', async ({ page }) => {
+    await openApp(page, 'budget');
+    await setEuros(page, 'salary-b', '3000');
+    const before = JSON.stringify(await currentMonthOf(page));
+    const box = await page.locator('#salary-b-value').boundingBox();
+    if (box === null) throw new Error('Salaire introuvable');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 5; i += 1) await page.mouse.wheel(0, 140);
+    for (let i = 0; i < 5; i += 1) await page.mouse.wheel(0, -140);
+    await page.waitForTimeout(300);
+    expect(JSON.stringify(await currentMonthOf(page))).toBe(before);
   });
 });
 

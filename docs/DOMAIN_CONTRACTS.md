@@ -408,7 +408,7 @@ connu (avancé de façon optimiste : deux appels dans le même tick se voient).
 | `skipToday(task, by?)` / `unskipToday(task)` | « pas aujourd'hui » (§11.4) | `boolean` |
 | `applySuggestion(s)` | rotate → `rotation: true` ; reassign → `assignee: s.to` | `boolean` |
 | `saveCircle({ gratitude, burdens, intentions, weekStart? })` | cercle de la semaine (remplace la même semaine, garde son id) | `Circle \| null` |
-| `addFocusSession({ minutes, who, label?, taskId?, startedAt? })` | mémorise une lanterne | `FocusSession \| null` |
+| `addFocusSession({ id?, minutes, who, label?, taskId?, startedAt?, completed? })` | mémorise une lanterne (V4.2 : `id` = celui du minuteur, un second envoi est ignoré) | `FocusSession \| null` |
 | `toggleHomePause()` | pause / réveil de la forêt | — |
 | `addGrocery(label, addedBy?)` | `addGroceryItem` (quantité, rayon, anti-doublon) | `{ added, item }` |
 | `toggleGrocery(id)` | `toggleGroceryItem` | — |
@@ -778,9 +778,12 @@ une phrase douce, jamais un reproche.
   semaine locale de `now` (`weekStart`, `weekEnd`).
 - `target` : 12 par défaut (`WEEKLY_GOAL_TARGET` = 4 jours de soins pleins),
   configurable (`opts.target`, entier ≥ 1, sinon défaut).
-- `level` : `resting` < 5, `good` 5–11, `flourishing` ≥ 12
+- `weekLevel` : `resting` < 5, `good` 5–11, `flourishing` ≥ 12
   (`WEEKLY_GOAL_LEVELS`). Avec un autre objectif, `goodFrom` suit la même
   proportion (round(target × 5/12), au moins 1) et `flourishing` = `target`.
+- `level` (V4.2, affiché) : le meilleur entre `weekLevel` et le plancher du
+  jour — une journée pleine (`creditsToday` ≥ `DAILY_CREDIT_CAP`, crédits
+  actifs du jour) vaut au moins `good`.
 - `progress` : `creditsThisWeek / target` borné à 0..1 (jauge douce).
 - `trend` : si `opts.weekStartVitality` est fourni (l'état ne garde pas
   d'instantané de vitalité, l'appelant peut l'avoir mémorisé), compare la

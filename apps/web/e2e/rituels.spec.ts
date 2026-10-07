@@ -150,7 +150,7 @@ test.describe('Rituels', () => {
     // Les stades à venir : de la brume, pas la peinture ; une petite barre au lieu de « À venir ».
     await expect(carnet.locator('.carnet-stage.is-future img')).toHaveCount(0);
     await expect(carnet.locator('.carnet-stages')).not.toContainText('À venir');
-    await expect(carnet.locator('.carnet-stage.is-future [role="progressbar"]')).toHaveCount(6);
+    await expect(carnet.locator('.carnet-stage.is-future [role="progressbar"]')).toHaveCount(1);
 
     // Lanternes : la première est posée dans la forêt, les six autres sont
     // des silhouettes avec une petite barre (« 0 sur 3 lanternes »), sans

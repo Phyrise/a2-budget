@@ -169,18 +169,14 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
             const future = n > stage;
             const hidden = future && !revealAll;
             return (
-              <li key={n} className={cx('carnet-stage', future && 'is-future', hidden && 'is-hidden', n === stage && 'is-current')} aria-current={n === stage ? 'step' : undefined}>
+              <li key={n} className={cx('carnet-stage', hidden && 'is-future', n === stage && 'is-current')} aria-current={n === stage ? 'step' : undefined}>
                 <span className="carnet-stage__img" aria-hidden="true">
                   {/* Les stades à venir restent dans la brume : leur peinture n'est pas chargée. */}
                   {hidden ? <span className="carnet-stage__mist" /> : <CarnetImage src={manifest.stages[n].color} />}
                 </span>
                 {!hidden && <span className="carnet-stage__name">{STAGE_NAMES[n]}</span>}
-                {future && (
-                  <CarnetProgress
-                    className="carnet-stage__progress"
-                    value={n === stage + 1 ? growth.progressToNext : 0}
-                    srLabel={`Vers le stade ${numberWords(n)}`}
-                  />
+                {n === stage + 1 && (
+                  <CarnetProgress className="carnet-stage__progress" value={growth.progressToNext} srLabel={`Vers le stade ${numberWords(n)}`} />
                 )}
                 <span className="visually-hidden">{future ? `Stade ${numberWords(n)}, à venir` : `Stade ${numberWords(n)}`}</span>
               </li>

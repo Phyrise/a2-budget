@@ -189,11 +189,29 @@ export function shadow(): HTMLCanvasElement {
 }
 
 /**
+ * Libère tout de suite la mémoire de toiles qui ne servent plus (Safari sur
+ * iPhone plafonne la mémoire des toiles et ne la rend qu'au ramasse-miettes :
+ * pendant un glissé de curseur, des dizaines de sprites sont jetés).
+ */
+export function releaseCanvases(canvases: Iterable<HTMLCanvasElement | null>): void {
+  for (const c of canvases) {
+    if (!c) continue;
+    c.width = 0;
+    c.height = 0;
+  }
+}
+
+export function spriteCanvases(set: BodySprites): HTMLCanvasElement[] {
+  return [...set.frames, set.halo, set.eye, set.glow].filter((c): c is HTMLCanvasElement => c !== null);
+}
+
+/**
  * Construction pas à pas : chaque `next()` peint une seule toile (le disque,
  * puis chaque image de frisottis, puis halo et yeux), pour étaler le coût
- * sur plusieurs images d'animation.
+ * sur plusieurs images d'animation. `made` reçoit chaque toile créée (pour
+ * la libérer si le chantier est abandonné).
  */
-export function* buildSteps(variant: number, radius: number, rim: number, p: SootSpriteParams): Generator<void, BodySprites, void> {
+export function* buildSteps(variant: number, radius: number, rim: number, p: SootSpriteParams, made: HTMLCanvasElement[] = []): Generator<void, BodySprites, void> {
   const R = radius;
   const Rd = R * p.body.radius;
   const genome = furGenome(variant + 1, p);
@@ -202,14 +220,20 @@ export function* buildSteps(variant: number, radius: number, rim: number, p: Soo
   const side = Math.ceil(R * extent * 2) + 4;
   const k: Paint = { genome, p, Rd, m: side / 2 };
   const disc = canvas(side, side);
+  made.push(disc);
   paintDisc(ctx2d(disc), k);
   yield;
   const frames: HTMLCanvasElement[] = [];
   for (let f = 0; f < FRAMES; f++) {
     frames.push(paintFrame(k, side, f, rim, disc));
+    made.push(frames[f]!);
     yield;
   }
-  return { radius: R, side, frames, halo: rim > 0 ? paintHalo(k, R, side, rim) : null, eye: paintEye(p, R), glow: paintGlow(p, R) };
+  // Le disque est déjà dans chaque image : sa toile est rendue.
+  releaseCanvases([disc]);
+  const set = { radius: R, side, frames, halo: rim > 0 ? paintHalo(k, R, side, rim) : null, eye: paintEye(p, R), glow: paintGlow(p, R) };
+  made.push(...spriteCanvases(set).slice(FRAMES));
+  return set;
 }
 
 export function buildBody(variant: number, radius: number, rim: number, p: SootSpriteParams): BodySprites {

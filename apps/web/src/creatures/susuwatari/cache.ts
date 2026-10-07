@@ -8,7 +8,7 @@
  * l'affichage réduit un sprite (17 % au plus), ne l'agrandit jamais.
  */
 import { spriteKey, type SootSpriteParams } from './params';
-import { buildSteps, type BodySprites } from './sprites';
+import { buildSteps, releaseCanvases, spriteCanvases, type BodySprites } from './sprites';
 
 /**
  * Palier de rayon (20 %) : un rayon voulu → rayon du sprite à construire,
@@ -20,9 +20,19 @@ export function bucketRadius(radius: number): number {
   return Math.ceil(Math.pow(1.2, k));
 }
 
+/**
+ * Budget de reconstruction PARTAGÉ par tous les calques d'une même image
+ * (le Labo en a trois) : pendant un glissé de curseur, la page entière ne
+ * peint pas plus de REBUILD_BUDGET_MS de sprites par image.
+ */
+const REBUILD_BUDGET_MS = 9;
+const shared = { frame: -1, spent: 0 };
+
 interface Job {
   key: string;
   steps: Generator<void, BodySprites, void>;
+  /** Toiles déjà peintes par ce chantier (libérées s'il est abandonné). */
+  made: HTMLCanvasElement[];
 }
 
 /**
@@ -73,9 +83,22 @@ export class SpriteCache {
   }
 
   private invalidate(): void {
-    for (const [k, set] of this.sets) this.stale.set(k, set);
+    for (const [k, set] of this.sets) {
+      const old = this.stale.get(k);
+      if (old) releaseCanvases(spriteCanvases(old));
+      this.stale.set(k, set);
+    }
     this.sets.clear();
+    for (const job of this.jobs) releaseCanvases(job.made);
     this.jobs = [];
+  }
+
+  private dropStale(key?: string): void {
+    for (const [k, set] of this.stale) {
+      if (key !== undefined && k !== key) continue;
+      releaseCanvases(spriteCanvases(set));
+      this.stale.delete(k);
+    }
   }
 
   get(variant: number, radius: number, now: number): BodySprites | null {
@@ -84,7 +107,10 @@ export class SpriteCache {
     const hit = this.sets.get(key);
     this.used.set(key, now);
     if (hit) return hit;
-    if (!this.jobs.some((j) => j.key === key)) this.jobs.push({ key, steps: buildSteps(variant, r, this.rim, this.params) });
+    if (!this.jobs.some((j) => j.key === key)) {
+      const made: HTMLCanvasElement[] = [];
+      this.jobs.push({ key, steps: buildSteps(variant, r, this.rim, this.params, made), made });
+    }
     // En attendant : l'ancien sprite de ce palier, sinon le palier le plus
     // proche de la même variante (nouveaux paramètres d'abord).
     const old = this.stale.get(key);
@@ -97,26 +123,52 @@ export class SpriteCache {
     this.builtAt = performance.now();
     if (!step.done) return false;
     this.sets.set(job.key, step.value);
-    this.stale.delete(job.key);
+    this.dropStale(job.key);
     this.jobs.splice(this.jobs.indexOf(job), 1);
-    if (this.jobs.length === 0) this.stale.clear();
+    if (this.jobs.length === 0) this.dropStale();
     return true;
   }
 
-  /** Avance les chantiers tant que le budget (ms) le permet (plus large pendant une reconstruction). */
-  pump(budgetMs: number, now: number): void {
+  /**
+   * Avance les chantiers tant que le budget (ms) le permet, au moins d'une
+   * toile. Pendant une reconstruction (`frame` : horodatage de l'image), le
+   * budget est plus large mais partagé entre les calques de cette image.
+   */
+  pump(budgetMs: number, now: number, frame = -1): void {
     const start = performance.now();
-    const budget = this.stale.size > 0 ? Math.max(budgetMs, 10) : budgetMs;
+    let budget = budgetMs;
+    const rebuilding = this.stale.size > 0;
+    if (rebuilding) {
+      if (shared.frame !== frame) {
+        shared.frame = frame;
+        shared.spent = 0;
+      }
+      budget = Math.max(0, REBUILD_BUDGET_MS - shared.spent);
+    }
     while (this.jobs.length > 0) {
       this.advance(this.jobs[0]!);
       if (performance.now() - start > budget) break;
     }
+    if (rebuilding) shared.spent += performance.now() - start;
     // Les paliers oubliés depuis 10 s (curseur de taille) sont libérés.
     if (this.sets.size > 16) {
       for (const [key, at] of this.used) {
-        if (now - at > 10 && this.sets.delete(key)) this.used.delete(key);
+        const set = this.sets.get(key);
+        if (now - at <= 10 || !set) continue;
+        releaseCanvases(spriteCanvases(set));
+        this.sets.delete(key);
+        this.used.delete(key);
       }
     }
+  }
+
+  /** Libère toutes les toiles (calque détruit). */
+  dispose(): void {
+    for (const set of this.sets.values()) releaseCanvases(spriteCanvases(set));
+    this.sets.clear();
+    this.dropStale();
+    for (const job of this.jobs) releaseCanvases(job.made);
+    this.jobs = [];
   }
 
   /** Premier affichage d'une variante : construite tout de suite (sinon le palier voisin sert). */

@@ -9,8 +9,11 @@
  * - prefers-reduced-motion (suivi en direct) : mouvements calmes.
  * - `night` : seuls les yeux restent visibles.
  * - Profondeur : `depth(y)` réduit un peu celles qui sont loin (haut de zone).
- * - Apparence : `params` (SootSpriteParams) ; `setParams` la change en direct
- *   (sprites reconstruits à l'image suivante, les anciens servent en attendant).
+ * - Apparence : `params` (SootSpriteParams) ; `setParams` la change en direct :
+ *   membres, yeux et tempo tout de suite, sprites reconstruits dès l'image
+ *   suivante (les anciens servent en attendant). Pendant un glissé de curseur,
+ *   une reconstruction en cours n'est relancée qu'une fois finie (ou après
+ *   REBUILD_MS) : l'aperçu suit le doigt sans mettre la page à genoux.
  *
  * Usage :
  *   const layer = createSusuwatariLayer(canvas, { rim: 1 });
@@ -73,6 +76,9 @@ function reducedQuery(): MediaQueryList | null {
   }
 }
 
+/** Délai maximal avant de relancer une reconstruction en cours (s). */
+const REBUILD_S = 0.2;
+
 export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: SusuwatariLayerOptions = {}): SusuwatariLayer {
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('Canvas 2D indisponible');
@@ -81,6 +87,9 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   let params = options.params ?? DEFAULT_SOOT_PARAMS;
   let rig = rigOf(params);
   const cache = new SpriteCache(rim, params);
+  /** Apparence pas encore passée aux sprites, et quand ils ont été relancés. */
+  let pendingSprites: SootSpriteParams | null = null;
+  let relaunchedAt = -Infinity;
   const creatures: Susuwatari[] = [];
   const query = reducedQuery();
   let reduced = query?.matches ?? false;
@@ -151,6 +160,12 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     }
     options.onFrame?.(dt, time);
 
+    if (pendingSprites && (!cache.rebuilding || time - relaunchedAt > REBUILD_S)) {
+      cache.setParams(pendingSprites);
+      pendingSprites = null;
+      relaunchedAt = time;
+    }
+
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     // De l'arrière vers l'avant.
@@ -159,7 +174,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
       if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
     }
-    cache.pump(4, time);
+    cache.pump(4, time, now);
     frameMs = frameMs * 0.9 + (performance.now() - start) * 0.1;
     schedule();
   };
@@ -232,7 +247,8 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       params = value;
       rig = rigOf(value);
       for (const s of creatures) s.rig = rig;
-      cache.setParams(value);
+      pendingSprites = value;
+      schedule();
     },
     hitTest(x, y) {
       let hit: Susuwatari | null = null;
@@ -255,6 +271,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       document.removeEventListener('visibilitychange', onVisibility);
       query?.removeEventListener('change', onReduced);
       creatures.length = 0;
+      cache.dispose();
     },
   };
 }

@@ -1,41 +1,50 @@
 /**
- * Revenus d'une personne (V4) : salaire du mois au curseur (0–5 000 €, crans
- * de 10 €, − / + à l'euro, toucher le montant pour le saisir), compléments
- * au curseur (0–3 000 €) — heures sup, astreintes, gardes, au taux au-delà.
+ * Revenus d'une personne (V4.1) : salaire du mois et compléments (heures
+ * sup, astreintes, gardes, au taux au-delà) affichés en grand ; un toucher
+ * ouvre l'AmountPad (pavé maison, raccourcis « Salaire habituel », « Comme
+ * le mois dernier »). Plus de curseur : faire défiler ne change rien.
  * Les compléments restent repliés derrière « + Compléments » tant qu'ils
- * valent 0. Euros entiers : aucun centime ni en saisie ni à l'affichage.
+ * valent 0 : le bouton ouvre directement le pavé.
  */
 import type { ContributionBreakdown, MonthRecord } from '@a2/core';
-import { useState } from 'react';
+import { monthKeyToLabel } from '@a2/core';
+import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
-import { Companion, EuroSlider, Icon, NBSP, cx, euro, percent } from '../../ui';
+import { AmountField, Companion, Icon, NBSP, cx, euro, percent, type AmountFieldHandle } from '../../ui';
+import { bonusShortcuts, salaryShortcuts, type ShortcutSource } from './amountShortcuts';
 import './income.css';
 
-export const SALARY_MAX_EUROS = 5000;
-export const BONUS_MAX_EUROS = 3000;
+function elide(name: string): string {
+  return /^[aeiouyhâàéèêîïôûAEIOUYHÂÀÉÈÊÎÏÔÛ]/u.test(name) ? `d’${name}` : `de${NBSP}${name}`;
+}
 
-export function PersonCard({ person, month }: { person: 'A' | 'B'; month: MonthRecord }) {
+export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month: MonthRecord; source: ShortcutSource }) {
   const { setSalary, setBonus } = useApp();
   const who = person === 'A' ? 'a' : 'b';
   const settings = person === 'A' ? month.personA : month.personB;
   const salary = person === 'A' ? month.salaryACents : month.salaryBCents;
   const bonus = person === 'A' ? month.bonusACents : month.bonusBCents;
-  const [opened, setOpened] = useState(false);
-  const bonusShown = opened || bonus > 0;
+  const [adding, setAdding] = useState(false);
+  const bonusRef = useRef<AmountFieldHandle>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  const bonusShown = adding || bonus > 0;
+  const of = elide(settings.name);
+  const monthLabel = monthKeyToLabel(month.monthKey);
 
   const openBonus = () => {
-    setOpened(true);
-    // Le curseur apparaît à l'image suivante : on lui donne le focus (clavier).
-    requestAnimationFrame(() => document.getElementById(`bonus-${who}`)?.focus());
+    setAdding(true);
+    // Le montant apparaît à l'image suivante : le pavé s'ouvre aussitôt.
+    requestAnimationFrame(() => bonusRef.current?.open());
   };
 
   return (
-    <article className={cx('person-card', `person-card--${who}`)} aria-label={`Revenus de ${settings.name}`}>
+    <article className={cx('person-card', `person-card--${who}`)} aria-label={`Revenus ${of}`}>
       <header className="person-card__head">
         <Companion who={who} size={30} />
         <h3 className="person-card__name">{settings.name}</h3>
         {!bonusShown && (
           <button
+            ref={addRef}
             type="button"
             className="person-card__add-bonus"
             aria-label={`Ajouter des compléments pour ${settings.name}`}
@@ -47,27 +56,38 @@ export function PersonCard({ person, month }: { person: 'A' | 'B'; month: MonthR
           </button>
         )}
       </header>
-      <EuroSlider
-        id={`salary-${who}`}
-        label="Salaire du mois"
-        accessibleLabel={`Salaire de ${settings.name}`}
-        valueCents={salary}
-        maxEuros={SALARY_MAX_EUROS}
-        onCommit={(cents) => setSalary(month.monthKey, person, cents)}
-        className="person-card__salary"
-      />
-      {bonusShown && (
-        <EuroSlider
-          id={`bonus-${who}`}
-          label="Compléments"
-          accessibleLabel={`Compléments de ${settings.name}`}
-          hint="Heures sup, astreintes, gardes, souvent payées le mois suivant"
-          valueCents={bonus}
-          maxEuros={BONUS_MAX_EUROS}
-          onCommit={(cents) => setBonus(month.monthKey, person, cents)}
-          className="person-card__bonus"
+      <div className="person-card__amounts">
+        <AmountField
+          id={`salary-${who}`}
+          label="Salaire"
+          accessibleLabel={`Salaire ${of}`}
+          padDescription={monthLabel}
+          valueCents={salary}
+          onCommit={(cents) => setSalary(month.monthKey, person, cents)}
+          shortcuts={salaryShortcuts(source, month, person)}
+          size="lg"
+          className="person-card__salary"
         />
-      )}
+        {bonusShown && (
+          <AmountField
+            ref={bonusRef}
+            id={`bonus-${who}`}
+            label="Compléments"
+            accessibleLabel={`Compléments ${of}`}
+            padDescription={`Heures sup, astreintes, gardes · ${monthLabel}`}
+            valueCents={bonus}
+            onCommit={(cents) => setBonus(month.monthKey, person, cents)}
+            onPadClosed={() => {
+              setAdding(false);
+              // Rien d'ajouté : le montant se replie, le focus revient sur « + Compléments ».
+              if (bonus === 0) requestAnimationFrame(() => addRef.current?.focus({ preventScroll: true }));
+            }}
+            shortcuts={bonusShortcuts(source, month, person)}
+            size="md"
+            className="person-card__bonus"
+          />
+        )}
+      </div>
     </article>
   );
 }

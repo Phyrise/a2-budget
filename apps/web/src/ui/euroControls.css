@@ -1,4 +1,4 @@
-/* Montants en euros entiers : curseur (EuroSlider), − / + (EuroStepper),
+/* Montants en euros entiers : − / + (EuroStepper, Réglages),
    montant « toucher pour saisir » (EuroValue). */
 
 /* ------------------------------------------------ Montant à toucher */
@@ -91,59 +91,6 @@
   white-space: normal;
 }
 
-/* ------------------------------------------------ Curseur de montant */
-
-.euro-slider {
-  gap: 2px;
-}
-
-.euro-slider .slider__head {
-  align-items: center;
-  min-height: 40px;
-}
-
-.euro-slider .slider__label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--fog-300);
-}
-
-.euro-slider .slider__hint {
-  font-size: 12px;
-}
-
-.euro-slider .euro-value {
-  font-size: 24px;
-}
-
-.euro-slider.is-active .euro-value__button {
-  transform: scale(1.08);
-}
-
-.euro-slider .slider__row {
-  gap: 8px;
-}
-
-.euro-slider .slider__step {
-  width: 40px;
-  height: 40px;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Zone tactile de 44 px autour des boutons de 40 px. */
-.euro-step {
-  position: relative;
-}
-
-.euro-step::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-}
-
 /* ------------------------------------------------ − / + (dépenses) */
 
 .euro-stepper {
@@ -230,9 +177,5 @@
   .euro-value__button,
   .euro-stepper__btn {
     transition: none;
-  }
-
-  .euro-slider.is-active .euro-value__button {
-    transform: none;
   }
 }

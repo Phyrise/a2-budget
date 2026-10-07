@@ -1,17 +1,13 @@
 /**
- * Dépenses communes du mois, éditables en place : renommer, montant
- * (V4 : − / + à l'euro, appui long qui accélère, toucher pour saisir ; euros
- * entiers), retirer (annulable), ajouter. Une saisie invalide ne touche
- * jamais l'état.
- * Univers Chihiro (écran Budget) : chaque dépense porte un kompeitō de
- * couleur stable (d'après son libellé) ; liste vide = Noiraude cachée.
+ * Listes de dépenses éditables en place des Réglages (dépenses récurrentes) :
+ * renommer, montant (− / + à l'euro, toucher pour saisir), retirer, ajouter.
+ * Une saisie invalide ne touche jamais l'état.
+ * Le Budget utilise désormais « Ce mois-ci » (MonthLedger, montants au pavé).
  */
 import type { MonthRecord } from '@a2/core';
-import { isExpensePaid } from '@a2/core';
 import { useRef, useState } from 'react';
-import { useApp } from '../../state/store';
-import { AmountInput, Button, EuroStepper, IconButton, InlineTextField, TextField, cx, euro, fr, useToast } from '../../ui';
-import { Konpeito, SusuwatariEmpty } from './chihiro/Susuwatari';
+import { AmountInput, Button, EuroStepper, IconButton, InlineTextField, TextField, cx } from '../../ui';
+import { Konpeito } from './chihiro/Susuwatari';
 
 export function ExpenseEditorList({
   idPrefix,
@@ -131,56 +127,5 @@ export function ExpenseAddForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-export function ExpenseList({ month, totalCents }: { month: MonthRecord; totalCents: number }) {
-  const { renameExpense, setExpenseAmount, removeExpense, addExpense, restoreExpense } = useApp();
-  const toast = useToast();
-  const [adding, setAdding] = useState(false);
-  const key = month.monthKey;
-
-  const remove = (id: string) => {
-    const index = month.expenses.findIndex((e) => e.id === id);
-    const expense = month.expenses[index];
-    if (!expense) return;
-    // Annuler la remet à l'identique : même id, même place, cochée si elle l'était.
-    const paid = isExpensePaid(month, id);
-    removeExpense(key, id);
-    toast.show({
-      message: fr(`Dépense retirée : ${expense.label}`),
-      icon: 'trash',
-      action: { label: 'Annuler', onClick: () => restoreExpense(key, expense, index, paid) },
-    });
-  };
-
-  return (
-    <div className="sheet-section expenses">
-      <div className="section-head">
-        <h2 className="section-title">Dépenses communes</h2>
-        <span className="section-head__meta amount">{euro(totalCents)}</span>
-      </div>
-      {month.expenses.length === 0 ? (
-        <SusuwatariEmpty title="Aucune dépense ce mois-ci">
-          {fr('Les Noiraudes attendent leurs kompeitō : ajoutez le loyer, les courses, les abonnements…')}
-        </SusuwatariEmpty>
-      ) : (
-        <ExpenseEditorList
-          idPrefix={`m-${key}`}
-          expenses={month.expenses}
-          onRename={(id, label) => renameExpense(key, id, label)}
-          onAmount={(id, cents) => setExpenseAmount(key, id, cents)}
-          onRemove={remove}
-          konpeito
-        />
-      )}
-      {adding ? (
-        <ExpenseAddForm idPrefix={`m-${key}`} onAdd={(label, cents) => addExpense(key, label, cents)} onClose={() => setAdding(false)} />
-      ) : (
-        <Button variant="ghost" icon="plus" className="expenses__add" onClick={() => setAdding(true)}>
-          Ajouter une dépense
-        </Button>
-      )}
-    </div>
   );
 }

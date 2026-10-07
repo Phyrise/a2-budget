@@ -1,0 +1,220 @@
+/* « Ce mois-ci » (V4.1) : virements puis dépenses dans un seul bloc ; une
+   ligne = case · nom · montant · retirer. Une ligne payée s'apaise (montant
+   doré adouci, jamais barré dur). */
+
+.ledger__head {
+  align-items: baseline;
+}
+
+.ledger__total {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.ledger__total strong {
+  margin-left: 4px;
+  color: var(--ivory-100);
+  font-size: 17px;
+  font-weight: 540;
+}
+
+.ledger__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 4px;
+}
+
+.ledger__progress .payments__bar {
+  flex: 1;
+  margin: 0 0 0 2px;
+}
+
+.ledger__progress .payments__progress {
+  margin-left: 0;
+  font-size: 12.5px;
+}
+
+.ledger-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  column-gap: 4px;
+  min-height: 50px;
+  border-bottom: 1px solid rgba(169, 178, 230, 0.08);
+}
+
+/* Virements, puis dépenses : un léger séparateur doré. */
+.ledger-list:not(.ledger-list--expenses) .ledger-row:last-child {
+  border-bottom-color: rgba(226, 172, 69, 0.24);
+}
+
+.ledger-list--expenses .ledger-row:last-child {
+  border-bottom: 0;
+}
+
+.ledger-row > .check {
+  width: 44px;
+  height: 44px;
+  margin-left: -4px;
+}
+
+.ledger-row__nocheck {
+  justify-self: center;
+  width: 22px;
+  height: 22px;
+  margin-left: -8px;
+  border: 1.5px dashed rgba(185, 198, 189, 0.22);
+  border-radius: 50%;
+}
+
+.ledger-row__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ledger-row__name .konpeito {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.ledger-row__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin: 0 4px 0 5px;
+  border-radius: 50%;
+  background: var(--who-a);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--who-a) 55%, transparent);
+}
+
+.ledger-row--b .ledger-row__dot {
+  background: var(--who-b);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--who-b) 55%, transparent);
+}
+
+.ledger-row__label {
+  overflow: hidden;
+  color: var(--ivory-100);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-base) var(--ease-soft);
+}
+
+.ledger-row__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.ledger-row__field .field__input {
+  width: calc(100% + 6px);
+  min-height: 42px;
+  margin-left: -6px;
+  padding: 0 6px;
+  overflow: hidden;
+  color: var(--ivory-100);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  transition: color var(--dur-base) var(--ease-soft);
+}
+
+.ledger-row__amount--static {
+  padding-right: 6px;
+  color: var(--ivory-100);
+  font-size: 16px;
+  font-weight: 560;
+  transition:
+    color var(--dur-base) var(--ease-soft),
+    opacity var(--dur-base) var(--ease-soft);
+}
+
+.ledger-row--transfer .ledger-row__amount--static {
+  grid-column: 3;
+}
+
+.ledger-row__amount .amount-field__button {
+  transition:
+    color var(--dur-base) var(--ease-soft),
+    opacity var(--dur-base) var(--ease-soft),
+    border-color var(--dur-base) var(--ease-soft);
+}
+
+.ledger-row__remove {
+  width: 44px;
+  height: 44px;
+  color: var(--fog-500);
+}
+
+.ledger-row.is-paid .ledger-row__label,
+.ledger-row.is-paid .ledger-row__field .field__input:not(:focus) {
+  color: var(--text-muted);
+}
+
+.ledger-row.is-paid .ledger-row__amount--static,
+.ledger-row.is-paid .ledger-row__amount .amount-field__button:not(.is-open) {
+  color: var(--chi-gold-300, var(--amber-300));
+  opacity: 0.8;
+}
+
+.ledger-row.is-paid .ledger-row__amount .amount-field__button {
+  border-bottom-color: rgba(221, 179, 106, 0.18);
+}
+
+.ledger .susu-empty {
+  margin-top: 6px;
+}
+
+.ledger__add {
+  margin-top: 10px;
+}
+
+.ledger-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: rgba(5, 10, 8, 0.35);
+  animation: module-in 240ms var(--ease-out) both;
+}
+
+.ledger-add__amount {
+  align-items: flex-end;
+  min-width: 96px;
+}
+
+.ledger-add__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 359px) {
+  .ledger-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+    column-gap: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger-add {
+    animation: none;
+  }
+}

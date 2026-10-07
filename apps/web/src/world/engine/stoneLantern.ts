@@ -18,7 +18,7 @@ import { GLOW, type BillboardWriter } from './batch';
 import { rng } from './noise';
 import type { SpriteAsset, SpriteDraw } from './spirits';
 import {
-  between, DEFAULT_LANTERN, FALLBACK_SHAPE, KODAMA_ON_ROOF, LANTERN_HEIGHT, lanternGeometry, VISIT, visitFrame,
+  between, DEFAULT_LANTERN, FALLBACK_SHAPE, KODAMA_ON_ROOF, LANTERN_GROUND, LANTERN_HEIGHT, lanternGeometry, VISIT, visitFrame,
   type LanternGeometry, type LanternShape,
 } from './toro';
 
@@ -50,12 +50,20 @@ interface RoofKodama extends SpriteAsset {
 }
 
 const SWAP = 1.4;
+/** Marge transparente sous la base dans chaque toile (contrat de themes/lanterns.ts : 6 px). */
+const CANVAS_MARGIN_PX = 6;
+/** Ombre de contact de la pierre sur la mousse (opacité au centre). */
+const CONTACT_SHADOW = 0.5;
+/** Kodama assis : dans la scène (brume, profondeur), sans pied ni ombre. */
+const ON_ROOF = { foot: 1, ground: 0, shadow: 0 };
 const NIGHT_FLIES = 6;
 
 type Loader = (url: string) => Promise<SpriteAsset | null>;
 
 export class StoneLantern {
   model: Model | null = null;
+  /** Point de pose (labo / QA : réglable pour essayer un emplacement). */
+  ground: { x: number; y: number; depth: number } = LANTERN_GROUND;
   private prev: Model | null = null;
   private wanted: string | null = null;
   private pending: Promise<boolean> = Promise.resolve(false);
@@ -114,7 +122,7 @@ export class StoneLantern {
 
   /** Géométrie de la pierre posée (repli : proportions d'une kasuga). */
   geometry(): LanternGeometry {
-    return lanternGeometry(this.model?.shape ?? FALLBACK_SHAPE, this.sceneAspect);
+    return lanternGeometry(this.model?.shape ?? FALLBACK_SHAPE, this.sceneAspect, this.ground);
   }
 
   /** QA / labo : un kodama vient s'asseoir tout de suite (pose 0..3). */
@@ -161,11 +169,13 @@ export class StoneLantern {
     }
     const fogMix = fog * (1 - this.geometry().ground.depth) * 0.3;
     const stone = (model: Model, alpha: number, reveal: number) => {
-      const g = lanternGeometry(model.shape, this.sceneAspect);
+      const g = lanternGeometry(model.shape, this.sceneAspect, this.ground);
+      // Pied de la pierre : la toile garde une marge transparente sous la base.
+      const foot = 1 - CANVAS_MARGIN_PX / Math.max(64, model.unlit.px ?? 400);
       const base = { x: g.ground.x, y: g.ground.y, depth: g.ground.depth, h: g.h, rot: 0, reveal, glowColor: [1, 0.8, 0.5] as [number, number, number], fogMix };
-      out.push({ ...base, asset: model.unlit, alpha, glow: 0 });
-      // Allumée par-dessus : seule la lumière change (hors foyer, pixels de l'éteinte).
-      if (lit > 0.002) out.push({ ...base, asset: model.lit, alpha: alpha * lit, glow: night * 0.35 * lit });
+      out.push({ ...base, asset: model.unlit, alpha, glow: 0, stone: { foot, ground: 1, shadow: CONTACT_SHADOW } });
+      // Allumée par-dessus : seule la lumière change (hors foyer, pixels de l'éteinte) ; une seule ombre.
+      if (lit > 0.002) out.push({ ...base, asset: model.lit, alpha: alpha * lit, glow: night * 0.35 * lit, stone: { foot, ground: 1, shadow: 0 } });
     };
     if (this.prev && k < 1) stone(this.prev, 1 - k, 1);
     stone(m, 1, k);
@@ -179,7 +189,7 @@ export class StoneLantern {
         const sway = animate ? Math.sin(t * 0.7 + v.pose) * 0.035 : 0;
         out.push({
           asset: kd, x: g.roof.x, y: g.roof.y + (1 - kd.seat) * h - hop * h * 0.45, depth: g.ground.depth + 0.002, h, rot: sway,
-          alpha: vis, reveal: 1, glow: night * 0.55 * vis, glowColor: [0.75, 0.95, 0.85], fogMix,
+          alpha: vis, reveal: 1, glow: night * 0.55 * vis, glowColor: [0.75, 0.95, 0.85], fogMix, stone: ON_ROOF,
         });
       }
     }

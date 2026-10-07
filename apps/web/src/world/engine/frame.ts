@@ -237,6 +237,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   drawFrame(e.renderer, e.pipe, {
     sprites,
     fogColor,
+    stoneSeason: look.fg,
     hasForeground: !!e.res.foreground,
     drawRain: animate && rainCount > 1,
     drawBurst: g.burst > 0,

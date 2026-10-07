@@ -8,12 +8,15 @@
  */
 
 /**
- * Pied de la lanterne : sur le tertre moussu de la grande racine droite du
- * cèdre (profondeur lue dans la carte : 0,2). Au téléphone (390×844), la
- * pierre est entière au-dessus de la feuille et à droite de la phrase de la
- * forêt (date + humeur, en bas à gauche du héros), au-dessus des compagnons.
+ * Pied de la lanterne : dans la trouée moussue entre la grande racine droite
+ * du cèdre et les racines de droite, DERRIÈRE la branche moussue du premier
+ * plan (cadre de fougères) qui passe devant sa base — la chambre à feu et le
+ * toit restent dégagés au-dessus d'elle pour les sept modèles. Profondeur lue
+ * dans la carte du stade 6 à cet endroit (0,205 : mi-profondeur, comme la
+ * racine). Au téléphone (390×844), la pierre est entière au-dessus de la
+ * feuille, à droite de la phrase de la forêt et au-dessus des compagnons.
  */
-export const LANTERN_GROUND = { x: 0.752, y: 0.54, depth: 0.2 } as const;
+export const LANTERN_GROUND = { x: 0.8, y: 0.585, depth: 0.205 } as const;
 
 /** Hauteur (en hauteur d'image) de la toile du plus haut modèle (scale = 1). */
 export const LANTERN_HEIGHT = 0.16;

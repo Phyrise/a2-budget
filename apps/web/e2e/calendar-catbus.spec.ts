@@ -113,15 +113,36 @@ test.describe('mouvement réduit', () => {
     await addEvent(page, 'dîner samedi 20h');
     const still = page.locator('.cal-catbus--still');
     await still.waitFor({ state: 'attached' });
+    // Échantillons image par image pendant toute la vie du fondu (1,6 s) :
+    // indépendant de la charge, contrairement à deux mesures espacées.
+    const samples = await page.evaluate(
+      () =>
+        new Promise<{ x: number; y: number; opacity: number; imgs: number; tracks: number }[]>((resolve) => {
+          const out: { x: number; y: number; opacity: number; imgs: number; tracks: number }[] = [];
+          const tick = () => {
+            const img = document.querySelector<HTMLImageElement>('.cal-catbus--still img');
+            if (!img) return resolve(out);
+            const r = img.getBoundingClientRect();
+            out.push({
+              x: r.left,
+              y: r.top,
+              opacity: Number(getComputedStyle(img).opacity),
+              imgs: document.querySelectorAll('.cal-catbus--still img').length,
+              tracks: document.querySelectorAll('.cal-catbus__track').length,
+            });
+            requestAnimationFrame(tick);
+          };
+          tick();
+        }),
+    );
+    expect(samples.length).toBeGreaterThan(5);
+    expect(samples.every((s) => s.imgs === 1 && s.tracks === 0)).toBe(true);
+    const xs = samples.map((s) => s.x);
+    const ys = samples.map((s) => s.y);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(1);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(1);
+    expect(Math.max(...samples.map((s) => s.opacity))).toBeGreaterThan(0.9);
     await expect(page.getByRole('dialog')).toBeHidden();
-    await expect(page.locator('.cal-catbus__track')).toHaveCount(0);
-    await expect(still.locator('img')).toHaveCount(1);
-    const first = (await still.locator('img').boundingBox())!;
-    await page.waitForTimeout(600);
-    const later = (await still.locator('img').boundingBox())!;
-    expect(later.x).toBeCloseTo(first.x, 0);
-    expect(later.y).toBeCloseTo(first.y, 0);
-    expect(Number(await still.locator('img').evaluate((el) => getComputedStyle(el).opacity))).toBeGreaterThan(0.5);
     await expect(page.locator('.cal-catbus')).toHaveCount(0, { timeout: 3000 });
   });
 });

@@ -22,7 +22,7 @@ const N = {
 
 /** Petit « toc » de bois creux (triangle très bref, partiel boisé en option). */
 function knock(bus: Bus, t: number, f: number, level: number, wood: boolean): void {
-  tone(bus, t, f, { peak: 0.07 * level, attack: 0.002, decay: 0.07, wet: 0.14, type: 'triangle' });
+  tone(bus, t, f, { peak: 0.09 * level, attack: 0.002, decay: 0.07, wet: 0.14, type: 'triangle' });
   if (wood) tone(bus, t, f * 2.76, { peak: 0.018 * level, attack: 0.001, decay: 0.03, wet: 0.08 });
 }
 
@@ -34,9 +34,9 @@ export function karakara(bus: Bus, t: number, gentle: boolean): void {
   const voices: Array<readonly [number, number, number, number, number]> = gentle
     ? [[0, 1, N.B5, N.Gs5, 7]]
     : [
-        [0, 1, N.B5, N.Gs5, 12],
-        [0.3, 0.5, N.Cs6, N.B5, 9],
-        [0.48, 0.32, N.E6, N.Cs6, 8],
+        [0, 1, N.B5, N.Gs5, 11],
+        [0.28, 0.5, N.Cs6, N.B5, 7],
+        [0.44, 0.32, N.E6, N.Cs6, 6],
       ];
   voices.forEach(([start, level, hi, lo, clicks], v) => {
     for (let i = 0; i < clicks; i++) {
@@ -104,23 +104,23 @@ export function yawn(bus: Bus, t: number, gentle: boolean): void {
   const osc = ctx.createOscillator();
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(N.Gs2, t);
-  osc.frequency.exponentialRampToValueAtTime(N.B2, t + 0.5);
-  osc.frequency.exponentialRampToValueAtTime(N.E2, t + 1.4);
+  osc.frequency.exponentialRampToValueAtTime(N.B2, t + 0.4);
+  osc.frequency.exponentialRampToValueAtTime(N.E2, t + 0.95);
   const mouth = ctx.createBiquadFilter();
   mouth.type = 'lowpass';
   mouth.Q.value = 3;
   mouth.frequency.setValueAtTime(320, t);
-  mouth.frequency.exponentialRampToValueAtTime(880, t + 0.55);
-  mouth.frequency.exponentialRampToValueAtTime(300, t + 1.4);
+  mouth.frequency.exponentialRampToValueAtTime(880, t + 0.42);
+  mouth.frequency.exponentialRampToValueAtTime(300, t + 0.95);
   const out = ctx.createGain();
   out.gain.setValueAtTime(0, t);
-  out.gain.linearRampToValueAtTime(0.13 * level, t + 0.35);
-  out.gain.linearRampToValueAtTime(0.1 * level, t + 0.9);
-  out.gain.linearRampToValueAtTime(0, t + 1.5);
+  out.gain.linearRampToValueAtTime(0.13 * level, t + 0.28);
+  out.gain.linearRampToValueAtTime(0.09 * level, t + 0.65);
+  out.gain.linearRampToValueAtTime(0, t + 1.0);
   osc.connect(mouth).connect(out);
   osc.start(t);
-  osc.stop(t + 1.55);
+  osc.stop(t + 1.05);
   route(bus, out, 0.3, [osc, mouth], osc);
-  tone(bus, t + 0.1, N.E3, { peak: 0.02 * level, attack: 0.3, hold: 0.6, decay: 1.3, wet: 0.35 });
-  breath(bus, t, { sweep: [[0, 500], [0.5, 900], [1.3, 380]], q: 1.2, shape: [[0.3, 0.05 * level], [0.9, 0.035 * level], [1.45, 0]], wet: 0.35 });
+  tone(bus, t + 0.08, N.E3, { peak: 0.02 * level, attack: 0.25, hold: 0.45, decay: 0.95, wet: 0.35 });
+  breath(bus, t, { sweep: [[0, 500], [0.4, 900], [0.9, 380]], q: 1.2, shape: [[0.25, 0.05 * level], [0.65, 0.035 * level], [0.98, 0]], wet: 0.35 });
 }

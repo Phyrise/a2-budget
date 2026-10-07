@@ -130,6 +130,14 @@ export interface WeeklyCareGoal {
   target: number;
   /** Seuil « dans le bon » effectivement utilisé. */
   goodFrom: number;
+  /** Crédits « active » accordés aujourd'hui (plafonnés à DAILY_CREDIT_CAP). */
+  creditsToday: number;
+  /** Niveau de la semaine seule (crédits cumulés). */
+  weekLevel: WeeklyGoalLevel;
+  /**
+   * Niveau affiché : le meilleur entre `weekLevel` et le plancher du jour
+   * (une journée pleine, DAILY_CREDIT_CAP soins, vaut au moins « dans le bon »).
+   */
   level: WeeklyGoalLevel;
   /** creditsThisWeek / target, borné à 0..1 (pour une jauge douce). */
   progress: number;
@@ -146,7 +154,9 @@ function activeCreditsBetween(forest: ForestState, from: string, to: string): nu
 
 /**
  * Objectif de la semaine locale de `now` (lundi → dimanche). Jamais une
- * sanction : `resting` signifie « la forêt se repose », rien de plus. Pur.
+ * sanction : `resting` signifie « la forêt se repose », rien de plus ; une
+ * journée pleine (DAILY_CREDIT_CAP soins aujourd'hui) relève le niveau
+ * affiché à « dans le bon » au moins. Pur.
  */
 export function weeklyCareGoal(forest: ForestState, now: Date, opts: WeeklyGoalOptions = {}): WeeklyCareGoal {
   const rawTarget = opts.target;
@@ -163,9 +173,13 @@ export function weeklyCareGoal(forest: ForestState, now: Date, opts: WeeklyGoalO
   const prevStart = localDateKey(addDays(monday, -7));
   const prevSameDay = localDateKey(addDays(monday, -7 + Math.min(6, Math.max(0, elapsed))));
   const previousWeekSameSpan = activeCreditsBetween(forest, prevStart, prevSameDay);
-  const level: WeeklyGoalLevel = creditsThisWeek >= target
+  const weekLevel: WeeklyGoalLevel = creditsThisWeek >= target
     ? 'flourishing'
     : creditsThisWeek >= goodFrom ? 'good' : 'resting';
+  const todayKey = localDateKey(now);
+  const creditsToday = activeCreditsBetween(forest, todayKey, todayKey);
+  // Une journée pleine ne laisse jamais lire « la forêt se repose ».
+  const level: WeeklyGoalLevel = weekLevel === 'resting' && creditsToday >= DAILY_CREDIT_CAP ? 'good' : weekLevel;
   let trend: WeeklyGoalTrend;
   const start = opts.weekStartVitality;
   if (start !== undefined && Number.isFinite(start)) {
@@ -184,6 +198,8 @@ export function weeklyCareGoal(forest: ForestState, now: Date, opts: WeeklyGoalO
     previousWeekSameSpan,
     target,
     goodFrom,
+    creditsToday,
+    weekLevel,
     level,
     progress: Math.min(1, creditsThisWeek / target),
     trend,

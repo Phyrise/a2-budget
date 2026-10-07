@@ -80,6 +80,23 @@ describe('weeklyCareGoal (jamais une sanction)', () => {
     expect(weeklyCareGoal(f, sunday)).toMatchObject({ creditsThisWeek: 12, level: 'flourishing', progress: 1 });
   });
 
+  it('journée pleine : au moins « dans le bon », même en début de semaine', () => {
+    const monday = new Date(2026, 9, 5, 21, 0);
+    let f = care(emptyForest(), '2026-10-05', DAILY_CREDIT_CAP - 1);
+    expect(weeklyCareGoal(f, monday)).toMatchObject({ creditsToday: DAILY_CREDIT_CAP - 1, level: 'resting' });
+    f = care(f, '2026-10-05', 1, 'x');
+    expect(weeklyCareGoal(f, monday)).toMatchObject({ creditsToday: DAILY_CREDIT_CAP, weekLevel: 'resting', level: 'good' });
+    // Le lendemain, sans soin : le plancher du jour retombe.
+    expect(weeklyCareGoal(f, new Date(2026, 9, 6, 9, 0))).toMatchObject({ creditsToday: 0, level: 'resting' });
+    // Un soin annulé ne compte plus.
+    const undone = tombstoneCredit(f, 'x0|2026-10-05').forest;
+    expect(weeklyCareGoal(undone, monday).level).toBe('resting');
+    // Le meilleur des deux : une semaine florissante le reste.
+    const full = care(care(care(emptyForest(), '2026-10-05', 3, 'a'), '2026-10-06', 3, 'b'), '2026-10-07', 3, 'c');
+    const thursday = new Date(2026, 9, 8, 20, 0);
+    expect(weeklyCareGoal(care(full, '2026-10-08', 3, 'd'), thursday)).toMatchObject({ weekLevel: 'flourishing', level: 'flourishing' });
+  });
+
   it('ne compte que les crédits actifs de la semaine locale (lundi → dimanche)', () => {
     let f = care(emptyForest(), '2026-10-04', 3, 'prev'); // dimanche précédent
     f = care(f, '2026-10-05', 3);

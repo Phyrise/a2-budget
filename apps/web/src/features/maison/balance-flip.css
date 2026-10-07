@@ -1,0 +1,117 @@
+/* Le partage de la semaine, carte à deux faces : l'endroit (la branche)
+   donne la taille ; le dos (comment ça marche) se pose exactement dessus,
+   si bien que rien ne bouge quand le « ? » la retourne. */
+.balance {
+  position: relative;
+}
+
+.balance__face {
+  min-width: 0;
+  padding: 14px 16px 6px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(147, 173, 124, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
+}
+
+.balance > .balance__back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.balance.is-flipped .balance__front {
+  visibility: hidden;
+}
+
+.balance.is-flipped .balance__back {
+  visibility: visible;
+}
+
+/* La face qui apparaît redevient visible tout de suite (le focus peut s'y
+   poser) mais ne s'allume qu'à mi-course ; celle qui part s'éteint à
+   mi-course et n'est masquée qu'à la fin. Délais : transform, opacity,
+   visibility. */
+@media (prefers-reduced-motion: no-preference) {
+  .balance__face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: perspective(1200px) rotateY(0deg);
+    /* Courbe symétrique : mi-course = carte de profil. */
+    transition:
+      transform 620ms cubic-bezier(0.65, 0, 0.35, 1),
+      opacity 0s linear 310ms,
+      visibility 0s linear;
+  }
+
+  .balance__back,
+  .balance.is-flipped .balance__front {
+    opacity: 0;
+    transition-delay: 0s, 310ms, 620ms;
+  }
+
+  .balance__back {
+    transform: perspective(1200px) rotateY(180deg);
+  }
+
+  .balance.is-flipped .balance__front {
+    transform: perspective(1200px) rotateY(-180deg);
+  }
+
+  .balance.is-flipped .balance__back {
+    opacity: 1;
+    transform: perspective(1200px) rotateY(0deg);
+    transition-delay: 0s, 310ms, 0s;
+  }
+}
+
+/* Mouvement réduit : un simple fondu. */
+@media (prefers-reduced-motion: reduce) {
+  .balance__face {
+    transition:
+      opacity 220ms ease,
+      visibility 0s linear;
+  }
+
+  .balance__back,
+  .balance.is-flipped .balance__front {
+    opacity: 0;
+    transition-delay: 0s, 220ms;
+  }
+
+  .balance.is-flipped .balance__back {
+    opacity: 1;
+    transition-delay: 0s, 0s;
+  }
+}
+
+/* Le dos : l'explication, centrée dans la place libre. */
+.balance-how {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: auto 0;
+  padding: 2px 0 0;
+  list-style: none;
+}
+
+.balance-how li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fog-300);
+  text-wrap: pretty;
+}
+
+.balance-how li > svg {
+  justify-self: center;
+  margin-top: 1px;
+  color: var(--moss-300);
+}

@@ -1,12 +1,6 @@
-/* Le partage de la semaine — deux galets sur une branche. */
-
-.balance {
-  padding: 14px 16px 6px;
-  overflow: hidden;
-  background:
-    radial-gradient(120% 70% at 50% 0%, rgba(147, 173, 124, 0.08), transparent 70%),
-    linear-gradient(180deg, rgba(26, 44, 35, 0.72), rgba(19, 33, 26, 0.72));
-}
+/* Le partage de la semaine — deux galets sur une branche. Les deux faces
+   et le retournement : balance-flip.css. */
+@import './balance-flip.css';
 
 .balance__head {
   display: flex;
@@ -51,7 +45,8 @@
   line-height: 1;
 }
 
-.balance__help.is-open > span,
+/* Au dos, le même rond, allumé : il remet la carte à l'endroit. */
+.balance__back .balance__help > span,
 .balance__help:hover > span {
   border-color: var(--moss-300);
   color: var(--ivory-100);
@@ -311,37 +306,4 @@
 .week-detail__sep {
   margin-right: 3px;
   color: var(--text-faint);
-}
-
-/* « ? » : la bulle d'explication, sous l'en-tête. */
-.balance-how {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin: 2px 0 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: rgba(7, 13, 10, 0.5);
-}
-
-.balance-how[hidden] {
-  display: none;
-}
-
-.balance-how li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--fog-300);
-}
-
-.balance-how li > svg {
-  justify-self: center;
-  margin-top: 1px;
-  color: var(--moss-300);
 }

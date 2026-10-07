@@ -28,8 +28,7 @@ import { clearOfLantern } from './toro';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
-export type { EngineStats, QualitySetting } from './quality';
-export { DPR_CAPS } from './quality';
+export { DPR_CAPS, type EngineStats, type QualitySetting } from './quality';
 
 export interface EngineConfig {
   manifest: WorldManifest;
@@ -51,8 +50,7 @@ export class WorldEngine {
   readonly res: Resources;
   readonly pipe: Pipeline;
   readonly spirits: Spirits;
-  /** Emplacements des kodama de la forêt, écartés de la lanterne de pierre. */
-  readonly kodamaSpots: ScenePoint[];
+  readonly kodamaSpots: ScenePoint[]; // kodama de la forêt, écartés de la lanterne de pierre
   readonly lights: DayLights;
   readonly fx: FxSystem;
   readonly seasons = new SeasonFx();

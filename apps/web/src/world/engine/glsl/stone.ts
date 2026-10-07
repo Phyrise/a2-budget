@@ -131,8 +131,10 @@ void main() {
     float cap = smoothstep(0.3, 0.85, tx.a - above);
     float lumps = 0.6 + 0.4 * sin(c.x * 90.0 + sin(c.y * 60.0) * 2.0);
     vec3 frost = vec3(l * 1.15 + 0.04) * vec3(0.88, 0.95, 1.06);
-    rgb = mix(rgb, frost, uSeasonK.y * 0.35);
-    rgb = mix(rgb, vec3(0.84, 0.88, 0.94), uSeasonK.y * cap * lumps * 0.85);
+    // Mousse endormie sous le givre, comme celle du cèdre peint.
+    rgb = mix(rgb, vec3(l), uSeasonK.y * green * 0.55);
+    rgb = mix(rgb, frost, uSeasonK.y * 0.42);
+    rgb = mix(rgb, vec3(0.86, 0.9, 0.96), uSeasonK.y * cap * lumps);
   }
   // Lumière du lieu : teinte ambiante de la peinture alentour, désaturation légère.
   vec3 env = texture2D(uColor, suv, 5.0).rgb;

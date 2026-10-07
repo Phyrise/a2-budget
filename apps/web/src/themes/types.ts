@@ -70,6 +70,14 @@ export interface CalendarTheme {
   totoro: Record<TotoroPose, string>;
   /** Chatbus : court de profil, arrêté porte ouverte, de trois-quarts face (panneau vide), en saut. */
   catbus: Record<CatbusPose, string>;
+  /**
+   * Facultatif (V4.1) : frames d'UN cycle de course du Chatbus, de profil,
+   * tourné vers la gauche, dans l'ordre (6 à 8 conseillées). Toutes au même
+   * cadre (même taille, même ligne de sol, bus au même endroit), fond
+   * transparent ; l'interface les joue en boucle à ~12 images/s pendant la
+   * traversée. Absent (ou moins de 2 frames) : alternance « running » / « leap ».
+   */
+  catbusRun?: string[];
   /** Une icône par nature d'événement : clés = CALENDAR_KINDS de @a2/core. */
   kinds: Record<CalendarEventKind, string>;
   /** Icônes bonus : parapluie rouge, jeune pousse. */

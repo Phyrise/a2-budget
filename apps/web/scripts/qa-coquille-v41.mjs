@@ -155,10 +155,12 @@ await step('catbus', async () => {
         const out = [];
         const t0 = performance.now();
         const tick = () => {
-          const bus = document.querySelector('.cal-catbus__body');
-          if (!bus) return resolve(out);
-          const r = bus.getBoundingClientRect();
-          const m = new DOMMatrix(getComputedStyle(bus).transform);
+          const track = document.querySelector('.cal-catbus__track');
+          const body = document.querySelector('.cal-catbus__body');
+          const tilt = document.querySelector('.cal-catbus__tilt');
+          if (!track || !body || !tilt) return resolve(out);
+          const r = { left: track.getBoundingClientRect().left, top: body.getBoundingClientRect().top };
+          const m = new DOMMatrix(getComputedStyle(tilt).transform);
           out.push({ t: performance.now() - t0, x: r.left, y: r.top, angle: (Math.atan2(m.b, m.a) * 180) / Math.PI });
           requestAnimationFrame(tick);
         };
@@ -167,13 +169,15 @@ await step('catbus', async () => {
   );
   writeFileSync(join(outDir, 'catbus-samples.json'), JSON.stringify(samples, null, 1));
   const mid = samples.filter((s) => s.x < 390 && s.x > -200);
-  const steps = mid.slice(1).map((s, i) => (mid[i].x - s.x) / Math.max(1, s.t - mid[i].t));
-  const back = steps.filter((v) => v < 0).length;
-  const speeds = steps.filter((v) => v > 0);
-  const mean = speeds.reduce((a, b) => a + b, 0) / Math.max(1, speeds.length);
-  const spread = Math.max(...speeds) / Math.max(0.001, Math.min(...speeds));
-  check('Chatbus : jamais de recul', back === 0, `${back} recul(s) / ${steps.length}`);
-  check('Chatbus : vitesse régulière (max/min < 1,6)', spread < 1.6, `×${spread.toFixed(2)}, ${mean.toFixed(2)} px/ms`);
+  const back = mid.slice(1).filter((s, i) => s.x > mid[i].x).length;
+  check('Chatbus : jamais de recul', back === 0, `${back} recul(s) / ${mid.length}`);
+  // Vitesse régulière : écart maximal à la droite x(t) des moindres carrés.
+  const n = mid.length;
+  const mt = mid.reduce((a, s) => a + s.t, 0) / n;
+  const mx = mid.reduce((a, s) => a + s.x, 0) / n;
+  const slope = mid.reduce((a, s) => a + (s.t - mt) * (s.x - mx), 0) / mid.reduce((a, s) => a + (s.t - mt) ** 2, 0);
+  const dev = Math.max(...mid.map((s) => Math.abs(mx + slope * (s.t - mt) - s.x)));
+  check('Chatbus : vitesse régulière (écart à la droite < 6 px)', dev < 6, `${dev.toFixed(1)} px, ${(-slope).toFixed(2)} px/ms`);
   const ys = mid.map((s) => s.y);
   check('Chatbus : rebond de course', Math.max(...ys) - Math.min(...ys) >= 4, `${(Math.max(...ys) - Math.min(...ys)).toFixed(1)} px`);
   const angles = mid.map((s) => s.angle);

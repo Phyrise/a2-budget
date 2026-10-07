@@ -1,0 +1,146 @@
+/*
+ * Le Chatbus traverse l'écran quand on ajoute un moment (Catbus.tsx).
+ * V4.1 : mouvement fluide, tout en transformations composées (aucun
+ * left/top animé) —
+ *   .cal-catbus__track  : la traversée, vitesse constante (linéaire) ;
+ *   .cal-catbus__body   : le rebond de course, sinusoïdal (aller-retour
+ *                         ease-in-out), une foulée par --catbus-stride ;
+ *   .cal-catbus__tilt   : l'inclinaison, déphasée d'un quart de foulée
+ *                         (le museau se lève en montant, plonge en retombant) ;
+ *   .cal-catbus__bus    : les poses — « course » au sol, « saut » en l'air
+ *                         (calées sur le rebond), ou les frames d'un cycle
+ *                         de course (calendarTheme.catbusRun, ~12 i/s).
+ * La durée et la distance viennent du composant (largeur de l'écran).
+ */
+
+.cal-catbus {
+  --catbus-w: 190px;
+  --catbus-stride: 340ms;
+  position: fixed;
+  z-index: 60;
+  top: 34%;
+  left: 0;
+  width: 100%;
+  height: 130px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cal-catbus__track {
+  position: absolute;
+  bottom: 18px;
+  left: 100%;
+  width: var(--catbus-w);
+  height: calc(var(--catbus-w) * 192 / 440);
+  will-change: transform;
+  animation: cal-catbus-cross var(--catbus-ms, 1700ms) linear forwards;
+}
+
+@keyframes cal-catbus-cross {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--catbus-span, 100vw)), 0, 0);
+  }
+}
+
+.cal-catbus__body,
+.cal-catbus__tilt {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.cal-catbus__body {
+  animation: cal-catbus-bounce calc(var(--catbus-stride) / 2) ease-in-out infinite alternate;
+}
+
+@keyframes cal-catbus-bounce {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -7px, 0);
+  }
+}
+
+.cal-catbus__tilt {
+  transform-origin: 46% 70%;
+  animation: cal-catbus-tilt calc(var(--catbus-stride) / 2) ease-in-out infinite alternate;
+  /* Un quart de foulée d'avance : le museau monte pendant l'élan. */
+  animation-delay: calc(var(--catbus-stride) / -4);
+}
+
+@keyframes cal-catbus-tilt {
+  from {
+    transform: rotate(-1.4deg);
+  }
+  to {
+    transform: rotate(1.8deg);
+  }
+}
+
+.cal-catbus__bus {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.4));
+  user-select: none;
+}
+
+/* Deux poses existantes, à la même échelle (sprites de 440 et 385 px de
+   large) : la pose « saut » s'affiche au sommet de chaque rebond. */
+.cal-catbus--poses .cal-catbus__bus--run {
+  animation: cal-catbus-ground var(--catbus-stride) linear infinite;
+}
+
+.cal-catbus--poses .cal-catbus__bus--leap {
+  top: -11px;
+  left: 4px;
+  width: calc(var(--catbus-w) * 385 / 440);
+  opacity: 0;
+  animation: cal-catbus-air var(--catbus-stride) linear infinite;
+}
+
+@keyframes cal-catbus-ground {
+  0%,
+  29.9% {
+    opacity: 1;
+  }
+  30%,
+  69.9% {
+    opacity: 0;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes cal-catbus-air {
+  0%,
+  29.9% {
+    opacity: 0;
+  }
+  30%,
+  69.9% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Frames d'un cycle de course : une seule visible, choisie par le composant. */
+.cal-catbus--frames .cal-catbus__bus {
+  opacity: 0;
+}
+
+.cal-catbus--frames .cal-catbus__bus.is-on {
+  opacity: 1;
+}

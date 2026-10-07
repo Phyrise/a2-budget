@@ -38,8 +38,9 @@ export interface BudgetActions {
    * « Recaler sur le compte » : solde réel en **euros entiers** (négatif
    * permis). Par défaut (`asOf: 'opening'`) c'est le solde au début du mois ;
    * avec `asOf: 'now'`, c'est le solde constaté maintenant (les virements et
-   * dépenses déjà cochés sont retirés pour retrouver l'ouverture). Une
-   * correction par mois, la dernière remplace. false si saisie invalide.
+   * dépenses déjà cochés sont retirés pour retrouver l'ouverture ; le solde
+   * saisi est gardé dans `observedCents`). Une correction par mois, la
+   * dernière remplace. false si saisie invalide.
    */
   recordBalanceCorrection: (
     monthKey: string,
@@ -101,6 +102,7 @@ export function useBudgetActions(transact: Transact): BudgetActions {
             id,
             recordedAt,
             ...(note !== undefined ? { note } : {}),
+            ...(opts?.asOf === 'now' ? { observedCents: cents } : {}),
           });
           return { state: { ...s, budget }, result: true };
         } catch {

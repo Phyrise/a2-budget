@@ -1,28 +1,49 @@
 /**
- * « Recaler sur le compte » (V4) : on regarde le vrai solde du compte commun
- * et on l'écrit ici, en euros entiers (négatif permis : « −120 » ou la case
- * « À découvert »), avec une note facultative. L'estimation repart de ce
- * chiffre à partir de ce mois ; les mois passés ne sont jamais réécrits.
- * Historique des recalages replié (Disclosure), chacun retirable.
+ * « Recaler sur le compte » (V4.2.1) : le vrai solde du compte commun, saisi
+ * au pavé comme les salaires (AmountPad : aucun clavier système, rien ne se
+ * cache sous un clavier), prérempli avec l'estimation actuelle. Euros
+ * entiers, jamais négatif. Seule précision : le dernier recalage (montant
+ * saisi, date), figé à l'ouverture.
  *
- * Saisie : `parseEurosInput` (@a2/core) tranche ; seul le signe est lu ici.
  * Écriture : `recordBalanceCorrection(..., { asOf: 'now' })` du store,
- * toujours sur le **mois courant** (le solde constaté aujourd'hui) : la
- * feuille n'est proposée que sur le mois courant. « Annuler » remet la
- * correction précédente à l'identique (`restoreBalanceCorrection`).
+ * toujours sur le **mois courant** (la feuille n'est proposée que là). Même
+ * un montant inchangé confirme le solde. « Annuler » (toast) remet la
+ * correction précédente à l'identique ou la retire.
  */
 import type { BalanceCorrection } from '@a2/core';
-import { BALANCE_ANCHOR_NOTE, BALANCE_NOTE_MAX, monthKeyToLabel, roundToEuroCents } from '@a2/core';
-import { useEffect, useRef, useState } from 'react';
+import { BALANCE_ANCHOR_NOTE } from '@a2/core';
+import { useState } from 'react';
 import { useApp } from '../../state/store';
-import { Button, Disclosure, Sheet, Switch, TextField, euro, euroMinus, fr, useToast } from '../../ui';
-import { EURO_ERROR_MESSAGES } from '../../ui/AmountInput';
-import { parseSignedEuros } from './signedEuros';
+import { AmountPad, euro, euroMinus, fr, useToast } from '../../ui';
 
-const dateFormatter = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
+const dayMonth = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
+const dayMonthYear = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 function signed(cents: number): string {
   return cents < 0 ? euroMinus(-cents) : euro(cents);
+}
+
+/** Dernier vrai recalage (l'ancrage automatique n'en est pas un). */
+function lastRecalibration(corrections: readonly BalanceCorrection[]): BalanceCorrection | undefined {
+  let last: BalanceCorrection | undefined;
+  for (const c of corrections) {
+    if (c.note === BALANCE_ANCHOR_NOTE) continue;
+    if (last === undefined || c.recordedAt > last.recordedAt) last = c;
+  }
+  return last;
+}
+
+/** « Dernier recalage : 1 500 €, le 6 octobre » (sans montant pour un recalage d'avant V4.2.1). */
+function lastLine(corrections: readonly BalanceCorrection[]): string | undefined {
+  const c = lastRecalibration(corrections);
+  if (c === undefined) return undefined;
+  const at = new Date(c.recordedAt);
+  const now = new Date();
+  const when =
+    at.toDateString() === now.toDateString()
+      ? 'aujourd’hui'
+      : `le ${(at.getFullYear() === now.getFullYear() ? dayMonth : dayMonthYear).format(at)}`;
+  return fr(c.observedCents === undefined ? `Dernier recalage ${when}` : `Dernier recalage : ${signed(c.observedCents)}, ${when}`);
 }
 
 export function RecalibrateSheet({
@@ -41,39 +62,22 @@ export function RecalibrateSheet({
 }) {
   const { recordBalanceCorrection, removeBalanceCorrection, restoreBalanceCorrection } = useApp();
   const toast = useToast();
-  const [amount, setAmount] = useState('');
-  const [overdrawn, setOverdrawn] = useState(false);
-  const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const amountRef = useRef<HTMLInputElement>(null);
+  // Figé à l'ouverture : la ligne ne change pas pendant la fermeture.
+  const [last, setLast] = useState(() => lastLine(corrections));
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setLast(lastLine(corrections));
+  }
 
-  // À l'ouverture : l'estimation actuelle sert de point de départ.
-  useEffect(() => {
-    if (!open) return;
-    const rounded = roundToEuroCents(nowCents) / 100;
-    setAmount(String(Math.abs(rounded)));
-    setOverdrawn(rounded < 0);
-    setNote('');
-    setError(null);
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const parsed = parseSignedEuros(amount);
-  const euros = parsed.ok ? (overdrawn ? -Math.abs(parsed.euros) : parsed.euros) : null;
-
-  const save = () => {
-    if (!parsed.ok || euros === null) {
-      setError(parsed.ok ? null : (EURO_ERROR_MESSAGES[parsed.reason] ?? 'Écrivez le solde en euros, par exemple 1 234.'));
-      return;
-    }
+  const commit = (cents: number) => {
     const previous = corrections.find((c) => c.monthKey === monthKey);
-    const trimmed = note.trim();
-    if (!recordBalanceCorrection(monthKey, euros, trimmed === '' ? undefined : trimmed, { asOf: 'now' })) {
-      setError('Ce solde n’a pas pu être enregistré.');
+    if (!recordBalanceCorrection(monthKey, cents / 100, undefined, { asOf: 'now' })) {
+      toast.show({ message: 'Ce solde n’a pas pu être enregistré.', icon: 'info' });
       return;
     }
-    onClose();
     toast.show({
-      message: fr(`Compte recalé : ${signed(euros * 100)}`),
+      message: fr(`Compte recalé : ${euro(cents)}`),
       icon: 'check',
       action: {
         label: 'Annuler',
@@ -85,96 +89,18 @@ export function RecalibrateSheet({
     });
   };
 
-  const remove = (c: BalanceCorrection) => {
-    if (!removeBalanceCorrection(c.monthKey)) return;
-    toast.show({
-      message: fr(`Recalage de ${monthKeyToLabel(c.monthKey)} retiré`),
-      icon: 'undo',
-      action: {
-        label: 'Annuler',
-        onClick: () => restoreBalanceCorrection(c),
-      },
-    });
-  };
-
-  const history = [...corrections].sort((a, b) => b.monthKey.localeCompare(a.monthKey));
-
   return (
-    <Sheet
+    <AmountPad
       open={open}
       onClose={onClose}
       title="Recaler sur le compte"
-      description={fr('Regardez le solde de votre compte commun et écrivez-le ici : l’estimation repart de ce chiffre, sans changer les mois passés.')}
-      size="auto"
+      description={last}
+      valueCents={Math.max(0, nowCents)}
+      onCommit={commit}
+      commitUnchanged
+      confirmLabel="Recaler"
+      idPrefix="recalibrate"
       className="recalibrate"
-      initialFocusRef={amountRef}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button variant="primary" icon="check" onClick={save}>
-            Recaler
-          </Button>
-        </>
-      }
-    >
-      <form
-        className="recalibrate__form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          save();
-        }}
-      >
-        <TextField
-          ref={amountRef}
-          id="recalibrate-amount"
-          label="Solde du compte en ce moment, en euros"
-          value={amount}
-          onChange={(v) => {
-            setAmount(v);
-            if (error) setError(null);
-          }}
-          inputMode="numeric"
-          enterKeyHint="done"
-          autoComplete="off"
-          error={error}
-          hint="En euros entiers, sans centimes."
-          onFocus={(event) => event.currentTarget.select()}
-        />
-        <Switch checked={overdrawn} onChange={setOverdrawn} label="À découvert (solde négatif)" className="recalibrate__overdrawn" />
-        <TextField
-          id="recalibrate-note"
-          label="Note"
-          value={note}
-          onChange={setNote}
-          maxLength={BALANCE_NOTE_MAX}
-          placeholder="Ex. relevé du 6 octobre"
-          hint="Facultatif"
-          enterKeyHint="done"
-        />
-      </form>
-      {history.length > 0 && (
-        <Disclosure summary="Recalages précédents" meta={String(history.length)} className="recalibrate__history">
-          <ul className="recalibrate__list">
-            {history.map((c) => (
-              <li key={c.id} className="recalibrate__item" data-testid="correction">
-                <span className="recalibrate__item-text">
-                  <span className="recalibrate__item-month">{monthKeyToLabel(c.monthKey)}</span>
-                  <span className="recalibrate__item-detail">
-                    {fr(`début du mois : ${signed(c.balanceCents)}`)}
-                    {c.note === BALANCE_ANCHOR_NOTE ? ' · point de départ, à confirmer' : c.note ? ` · ${c.note}` : ''}
-                  </span>
-                  <span className="recalibrate__item-date">noté le {dateFormatter.format(new Date(c.recordedAt))}</span>
-                </span>
-                <Button variant="quiet" size="sm" onClick={() => remove(c)} aria-label={`Retirer le recalage de ${monthKeyToLabel(c.monthKey)}`}>
-                  Retirer
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </Disclosure>
-      )}
-    </Sheet>
+    />
   );
 }

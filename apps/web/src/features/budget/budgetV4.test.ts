@@ -2,25 +2,11 @@ import { computeMonthSummary, createMonthRecord, emptyAppState, setExpensePaid, 
 import { describe, expect, it } from 'vitest';
 import { balanceFill, noFaceMood } from './chihiro/mood';
 import { payableExpenses, paymentProgress } from './paymentItems';
-import { parseSignedEuros } from './signedEuros';
 
 const month = () => {
   const s = emptyAppState();
   return { ...createMonthRecord('2026-10', s.budget.settings), salaryACents: 220_000, salaryBCents: 300_000, bonusBCents: 67_500 };
 };
-
-describe('saisie du solde réel (recaler)', () => {
-  it('euros entiers, signe permis, centimes refusés', () => {
-    expect(parseSignedEuros('1500')).toEqual({ ok: true, euros: 1500 });
-    expect(parseSignedEuros(' 1 234 € ')).toEqual({ ok: true, euros: 1234 });
-    expect(parseSignedEuros('-120')).toEqual({ ok: true, euros: -120 });
-    expect(parseSignedEuros('−1 200')).toEqual({ ok: true, euros: -1200 });
-    expect(parseSignedEuros('-0')).toEqual({ ok: true, euros: 0 });
-    expect(parseSignedEuros('12,50')).toEqual({ ok: false, reason: 'not-integer' });
-    expect(parseSignedEuros('')).toEqual({ ok: false, reason: 'empty' });
-    expect(parseSignedEuros('abc')).toEqual({ ok: false, reason: 'invalid' });
-  });
-});
 
 describe('paiements du mois', () => {
   it('deux virements + chaque dépense non nulle ; la case cochée compte', () => {

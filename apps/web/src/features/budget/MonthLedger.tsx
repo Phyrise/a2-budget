@@ -19,7 +19,8 @@ import { Konpeito, SusuwatariEmpty } from './chihiro/Susuwatari';
 import type { Feeding } from './chihiro/feeding';
 import { LedgerAddForm } from './LedgerAddForm';
 import { paymentProgress } from './paymentItems';
-import './ledger.css';
+import './payments.css';
+import './paybook.css';
 
 function of(name: string): string {
   return /^[aeiouyhâàéèêîïôûAEIOUYHÂÀÉÈÊÎÏÔÛ]/u.test(name) ? `d’${name}` : `de${NBSP}${name}`;
@@ -71,17 +72,17 @@ export function MonthLedger({
   ];
 
   return (
-    <div className="sheet-section ledger" data-testid="ledger">
-      <div className="section-head ledger__head">
+    <div className="sheet-section paybook" data-testid="month-ledger">
+      <div className="section-head paybook__head">
         <h2 className="section-title">Ce mois-ci</h2>
-        <span className="ledger__total">
+        <span className="paybook__total">
           Dépenses{' '}
           <strong className="amount" data-testid="ledger-expenses-total">
             {formatEuros(flows.expensesTotalCents)}
           </strong>
         </span>
       </div>
-      <div className="ledger__progress">
+      <div className="paybook__progress">
         <div className="payments__bar" aria-hidden="true">
           <span style={{ transform: `scaleX(${total === 0 ? 0 : done / total})` }} />
         </div>
@@ -90,13 +91,13 @@ export function MonthLedger({
         </span>
       </div>
 
-      <ul className="ledger-list" aria-label="Virements au compte commun">
+      <ul className="paybook-list" aria-label="Virements au compte commun">
         {transfers.map((t) => {
           const paid = isTransferPaid(month, t.who);
           return (
             <li
               key={t.who}
-              className={cx('ledger-row', 'ledger-row--transfer', `ledger-row--${t.tone}`, paid && 'is-paid')}
+              className={cx('paybook-row', 'paybook-row--transfer', `paybook-row--${t.tone}`, paid && 'is-paid')}
               data-testid={`pay-transfer-${t.tone}`}
             >
               <Checkbox
@@ -106,11 +107,11 @@ export function MonthLedger({
                 size="sm"
                 onToggle={(origin) => toggle('transfer', (p) => setTransferPaid(key, t.who, p), paid, origin)}
               />
-              <span className="ledger-row__name">
-                <span className="ledger-row__dot" aria-hidden="true" />
-                <span className="ledger-row__label">Virement {of(t.name)}</span>
+              <span className="paybook-row__name">
+                <span className="paybook-row__dot" aria-hidden="true" />
+                <span className="paybook-row__label">Virement {of(t.name)}</span>
               </span>
-              <span className="ledger-row__amount ledger-row__amount--static amount">{formatEuros(t.cents)}</span>
+              <span className="paybook-row__amount paybook-row__amount--static amount">{formatEuros(t.cents)}</span>
             </li>
           );
         })}
@@ -121,13 +122,13 @@ export function MonthLedger({
           {fr('Les Noiraudes attendent leurs kompeitō : ajoutez le loyer, les courses, les abonnements…')}
         </SusuwatariEmpty>
       ) : (
-        <ul className="ledger-list ledger-list--expenses" aria-label="Dépenses du mois">
+        <ul className="paybook-list paybook-list--expenses" aria-label="Dépenses du mois">
           {month.expenses.map((e) => {
             const paid = isExpensePaid(month, e.id);
             // Une dépense à 0 € n'a rien à payer (sauf si elle a déjà été cochée).
             const payable = e.amountCents > 0 || paid;
             return (
-              <li key={e.id} className={cx('ledger-row', 'ledger-row--expense', paid && 'is-paid')} data-testid={`pay-expense-${e.id}`}>
+              <li key={e.id} className={cx('paybook-row', 'paybook-row--expense', paid && 'is-paid')} data-testid={`pay-expense-${e.id}`}>
                 {payable ? (
                   <Checkbox
                     checked={paid}
@@ -136,16 +137,16 @@ export function MonthLedger({
                     onToggle={(origin) => toggle('expense', (p) => setExpensePaid(key, e.id, p), paid, origin)}
                   />
                 ) : (
-                  <span className="ledger-row__nocheck" aria-hidden="true" title="Rien à payer" />
+                  <span className="paybook-row__nocheck" aria-hidden="true" title="Rien à payer" />
                 )}
-                <span className="ledger-row__name">
+                <span className="paybook-row__name">
                   <Konpeito label={e.label} />
                   <InlineTextField
                     id={`m-${key}-${e.id}-label`}
                     label={`Libellé de la dépense ${e.label}`}
                     value={e.label}
                     onCommit={(label) => renameExpense(key, e.id, label)}
-                    className="ledger-row__field"
+                    className="paybook-row__field"
                   />
                 </span>
                 <AmountField
@@ -157,9 +158,9 @@ export function MonthLedger({
                   shortcuts={expenseShortcuts(source, month, e.id)}
                   size="sm"
                   layout="bare"
-                  className="ledger-row__amount"
+                  className="paybook-row__amount"
                 />
-                <IconButton icon="close" label={`Retirer ${e.label}`} variant="ghost" className="ledger-row__remove" onClick={() => remove(e.id)} />
+                <IconButton icon="close" label={`Retirer ${e.label}`} variant="ghost" className="paybook-row__remove" onClick={() => remove(e.id)} />
               </li>
             );
           })}
@@ -174,7 +175,7 @@ export function MonthLedger({
           onClose={() => setAdding(false)}
         />
       ) : (
-        <Button variant="ghost" icon="plus" className="ledger__add" onClick={() => setAdding(true)}>
+        <Button variant="ghost" icon="plus" className="paybook__add" onClick={() => setAdding(true)}>
           Ajouter une dépense
         </Button>
       )}

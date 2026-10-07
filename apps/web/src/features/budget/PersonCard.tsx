@@ -66,6 +66,7 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
           onCommit={(cents) => setSalary(month.monthKey, person, cents)}
           shortcuts={salaryShortcuts(source, month, person)}
           size="lg"
+          layout="row"
           className="person-card__salary"
         />
         {bonusShown && (
@@ -84,6 +85,7 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
             }}
             shortcuts={bonusShortcuts(source, month, person)}
             size="md"
+            layout="row"
             className="person-card__bonus"
           />
         )}

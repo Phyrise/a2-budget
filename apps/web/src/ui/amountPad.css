@@ -32,28 +32,31 @@
 .amount-field__button {
   position: relative;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   min-height: 44px;
-  padding: 4px 4px 2px;
+  padding: 0 4px;
   border: 0;
-  border-bottom: 1.5px dashed rgba(221, 179, 106, 0.32);
-  border-radius: 6px 6px 2px 2px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ivory-50);
   font-size: 18px;
   font-weight: 540;
   line-height: 1.1;
+  /* Souligné en tirets : « ce montant se touche ». */
+  text-decoration: underline dashed rgba(221, 179, 106, 0.4);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.28em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--dur-fast) var(--ease-soft),
-    border-color var(--dur-base) var(--ease-soft),
+    text-decoration-color var(--dur-base) var(--ease-soft),
     color var(--dur-base) var(--ease-soft),
     transform var(--dur-fast) var(--ease-out);
 }
 
 .amount-field__button:hover {
-  border-bottom-color: var(--amber-400);
+  text-decoration-color: var(--amber-400);
   background: rgba(236, 230, 211, 0.04);
 }
 
@@ -63,7 +66,7 @@
 
 .amount-field__button.is-open {
   color: var(--amber-300);
-  border-bottom-color: var(--amber-400);
+  text-decoration-color: var(--amber-400);
 }
 
 .amount-field--lg .amount-field__button {
@@ -79,9 +82,15 @@
 
 .amount-field--sm .amount-field__button {
   min-height: 44px;
-  padding: 2px 6px 1px;
+  padding: 0 6px;
   font-size: 16px;
   font-weight: 560;
+}
+
+.amount-field--row .amount-field__label {
+  color: var(--fog-300);
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .amount-field__hint {

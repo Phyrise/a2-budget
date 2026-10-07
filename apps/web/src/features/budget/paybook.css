@@ -2,49 +2,62 @@
    ligne = case · nom · montant · retirer. Une ligne payée s'apaise (montant
    doré adouci, jamais barré dur). */
 
-.ledger__head {
+/* Une carte à part entière, sœur des cartes de revenus (indigo, liseré doré). */
+.budget .paybook {
+  position: relative;
+  margin-top: 6px;
+  padding: 14px 14px 12px 16px;
+  border: 1px solid rgba(226, 172, 69, 0.2);
+  border-radius: 22px;
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(226, 172, 69, 0.07), transparent 60%),
+    linear-gradient(180deg, rgba(31, 37, 71, 0.72), rgba(19, 22, 43, 0.82));
+  box-shadow: 0 1px 0 rgba(236, 230, 211, 0.05) inset, 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.paybook__head {
   align-items: baseline;
 }
 
-.ledger__total {
+.paybook__total {
   margin-left: auto;
   color: var(--text-faint);
   font-size: 13.5px;
   white-space: nowrap;
 }
 
-.ledger__total strong {
+.paybook__total strong {
   margin-left: 4px;
   color: var(--ivory-100);
   font-size: 17px;
   font-weight: 540;
 }
 
-.ledger__progress {
+.paybook__progress {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: -4px 0 4px;
 }
 
-.ledger__progress .payments__bar {
+.paybook__progress .payments__bar {
   flex: 1;
   margin: 0 0 0 2px;
 }
 
-.ledger__progress .payments__progress {
+.paybook__progress .payments__progress {
   margin-left: 0;
   font-size: 12.5px;
 }
 
-.ledger-list {
+.paybook-list {
   display: grid;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ledger-row {
+.paybook-row {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto 44px;
   align-items: center;
@@ -54,21 +67,21 @@
 }
 
 /* Virements, puis dépenses : un léger séparateur doré. */
-.ledger-list:not(.ledger-list--expenses) .ledger-row:last-child {
+.paybook-list:not(.paybook-list--expenses) .paybook-row:last-child {
   border-bottom-color: rgba(226, 172, 69, 0.24);
 }
 
-.ledger-list--expenses .ledger-row:last-child {
+.paybook-list--expenses .paybook-row:last-child {
   border-bottom: 0;
 }
 
-.ledger-row > .check {
+.paybook-row > .check {
   width: 44px;
   height: 44px;
   margin-left: -4px;
 }
 
-.ledger-row__nocheck {
+.paybook-row__nocheck {
   justify-self: center;
   width: 22px;
   height: 22px;
@@ -77,20 +90,20 @@
   border-radius: 50%;
 }
 
-.ledger-row__name {
+.paybook-row__name {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
 }
 
-.ledger-row__name .konpeito {
+.paybook-row__name .konpeito {
   flex: none;
   width: 18px;
   height: 18px;
 }
 
-.ledger-row__dot {
+.paybook-row__dot {
   flex: none;
   width: 9px;
   height: 9px;
@@ -100,12 +113,12 @@
   box-shadow: 0 0 8px color-mix(in srgb, var(--who-a) 55%, transparent);
 }
 
-.ledger-row--b .ledger-row__dot {
+.paybook-row--b .paybook-row__dot {
   background: var(--who-b);
   box-shadow: 0 0 8px color-mix(in srgb, var(--who-b) 55%, transparent);
 }
 
-.ledger-row__label {
+.paybook-row__label {
   overflow: hidden;
   color: var(--ivory-100);
   font-size: 15px;
@@ -114,12 +127,12 @@
   transition: color var(--dur-base) var(--ease-soft);
 }
 
-.ledger-row__field {
+.paybook-row__field {
   flex: 1;
   min-width: 0;
 }
 
-.ledger-row__field .field__input {
+.paybook-row__field .field__input {
   width: calc(100% + 6px);
   min-height: 42px;
   margin-left: -6px;
@@ -131,7 +144,7 @@
   transition: color var(--dur-base) var(--ease-soft);
 }
 
-.ledger-row__amount--static {
+.paybook-row__amount--static {
   padding-right: 6px;
   color: var(--ivory-100);
   font-size: 16px;
@@ -141,47 +154,47 @@
     opacity var(--dur-base) var(--ease-soft);
 }
 
-.ledger-row--transfer .ledger-row__amount--static {
+.paybook-row--transfer .paybook-row__amount--static {
   grid-column: 3;
 }
 
-.ledger-row__amount .amount-field__button {
+.paybook-row__amount .amount-field__button {
   transition:
     color var(--dur-base) var(--ease-soft),
     opacity var(--dur-base) var(--ease-soft),
-    border-color var(--dur-base) var(--ease-soft);
+    text-decoration-color var(--dur-base) var(--ease-soft);
 }
 
-.ledger-row__remove {
+.paybook-row__remove {
   width: 44px;
   height: 44px;
   color: var(--fog-500);
 }
 
-.ledger-row.is-paid .ledger-row__label,
-.ledger-row.is-paid .ledger-row__field .field__input:not(:focus) {
+.paybook-row.is-paid .paybook-row__label,
+.paybook-row.is-paid .paybook-row__field .field__input:not(:focus) {
   color: var(--text-muted);
 }
 
-.ledger-row.is-paid .ledger-row__amount--static,
-.ledger-row.is-paid .ledger-row__amount .amount-field__button:not(.is-open) {
+.paybook-row.is-paid .paybook-row__amount--static,
+.paybook-row.is-paid .paybook-row__amount .amount-field__button:not(.is-open) {
   color: var(--chi-gold-300, var(--amber-300));
   opacity: 0.8;
 }
 
-.ledger-row.is-paid .ledger-row__amount .amount-field__button {
-  border-bottom-color: rgba(221, 179, 106, 0.18);
+.paybook-row.is-paid .paybook-row__amount .amount-field__button {
+  text-decoration-color: rgba(221, 179, 106, 0.2);
 }
 
-.ledger .susu-empty {
+.paybook .susu-empty {
   margin-top: 6px;
 }
 
-.ledger__add {
+.paybook__add {
   margin-top: 10px;
 }
 
-.ledger-add {
+.paybook-add {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
@@ -194,12 +207,12 @@
   animation: module-in 240ms var(--ease-out) both;
 }
 
-.ledger-add__amount {
+.paybook-add__amount {
   align-items: flex-end;
   min-width: 96px;
 }
 
-.ledger-add__actions {
+.paybook-add__actions {
   grid-column: 1 / -1;
   display: flex;
   justify-content: flex-end;
@@ -207,14 +220,14 @@
 }
 
 @media (max-width: 359px) {
-  .ledger-row {
+  .paybook-row {
     grid-template-columns: 44px minmax(0, 1fr) auto 44px;
     column-gap: 2px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ledger-add {
+  .paybook-add {
     animation: none;
   }
 }

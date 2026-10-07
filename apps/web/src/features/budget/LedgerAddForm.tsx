@@ -33,7 +33,7 @@ export function LedgerAddForm({
 
   return (
     <form
-      className="ledger-add"
+      className="paybook-add"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
@@ -59,7 +59,7 @@ export function LedgerAddForm({
             onClose();
           }
         }}
-        className="ledger-add__label"
+        className="paybook-add__label"
       />
       <AmountField
         ref={amountRef}
@@ -70,13 +70,13 @@ export function LedgerAddForm({
         valueCents={cents}
         onCommit={setCents}
         size="md"
-        className="ledger-add__amount"
+        className="paybook-add__amount"
       />
-      <div className="ledger-add__actions">
+      <div className="paybook-add__actions">
         <Button variant="ghost" onClick={onClose}>
           Fermer
         </Button>
-        <Button type="submit" variant="primary" icon="plus" disabled={!canAdd} className="ledger-add__submit">
+        <Button type="submit" variant="primary" icon="plus" disabled={!canAdd} className="paybook-add__submit">
           Ajouter
         </Button>
       </div>

@@ -35,9 +35,11 @@ export function BasketStage({
   /** Change à chaque article coché (en vol vers le panier) : coup de patte de Jiji. */
   paw?: number;
 }) {
-  const jijiRef = useRef<HTMLImageElement>(null);
+  // Le coup de patte anime un calque stable : Jiji peut changer de pose
+  // (nouvelle image) pendant le geste sans l'interrompre.
+  const pawRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (paw > 0) jijiPaw(jijiRef.current);
+    if (paw > 0) jijiPaw(pawRef.current);
   }, [paw]);
 
   return (
@@ -51,14 +53,15 @@ export function BasketStage({
           alt=""
           draggable={false}
         />
-        <img
-          key={pose}
-          ref={jijiRef}
-          className={cx('basket-stage__jiji', `basket-stage__jiji--${pose}`)}
-          src={coursesTheme.jiji[pose]}
-          alt=""
-          draggable={false}
-        />
+        <span ref={pawRef} className="basket-stage__paw">
+          <img
+            key={pose}
+            className={cx('basket-stage__jiji', `basket-stage__jiji--${pose}`)}
+            src={coursesTheme.jiji[pose]}
+            alt=""
+            draggable={false}
+          />
+        </span>
       </div>
       <div className="basket-head__text">
         <div className="section-head">

@@ -68,7 +68,7 @@ test.describe('Compagnons V4.3', () => {
     await page.keyboard.press('Enter');
     await page.getByRole('checkbox', { name: /lait/i }).first().click();
     await expect
-      .poll(() => page.evaluate(() => document.getAnimations().some((a) => (a.effect as KeyframeEffect | null)?.target?.classList.contains('basket-stage__jiji') && !('animationName' in a))))
+      .poll(() => page.evaluate(() => document.getAnimations().some((a) => (a.effect as KeyframeEffect | null)?.target?.classList.contains('basket-stage__paw') && !('animationName' in a))))
       .toBe(true);
   });
 

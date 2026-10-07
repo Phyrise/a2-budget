@@ -32,7 +32,7 @@ function calm(): boolean {
   }
 }
 
-/** Joue le coup de patte sur l'image de Jiji ; faux s'il n'a pas lieu. */
+/** Joue le coup de patte sur Jiji (son image, ou le calque qui la porte) ; faux s'il n'a pas lieu. */
 export function jijiPaw(el: HTMLElement | null, delay = PAW_DELAY_MS): boolean {
   if (!el || typeof el.animate !== 'function' || calm()) return false;
   const cur = running.get(el);

@@ -55,8 +55,12 @@ test.describe('Compagnons V4.3', () => {
     await ownsItsCenter(page, page.locator('.cal-add'));
     await totoro.click();
     await expect(totoro).toHaveClass(/is-yawning/);
+    // Anti-rafale : retoucher ne relance pas le bâillement (la même bulle, ou
+    // plus de bulle du tout si la machine est lente — jamais une nouvelle).
+    await totoro.evaluate((el) => el.querySelector('.cal-totoro__bubble')?.setAttribute('data-first', ''));
     await totoro.click();
-    await expect(totoro.locator('.cal-totoro__bubble')).toHaveCount(1);
+    await page.waitForTimeout(200);
+    expect(await totoro.locator('.cal-totoro__bubble:not([data-first])').count()).toBe(0);
     await expect(totoro).not.toHaveClass(/is-yawning/, { timeout: 5000 });
   });
 

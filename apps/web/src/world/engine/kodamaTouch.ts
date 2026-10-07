@@ -19,12 +19,13 @@ const TAP_SLOP = 10;
 const TAP_MS = 600;
 /** Ce qui garde ses touchers : contrôles, feuilles, en-tête, navigation. */
 const NOT_FOREST =
-  'button, a, input, textarea, select, label, summary, [role="button"], [role="dialog"], [contenteditable="true"], .screen-sheet, .app-header, .app-dock';
+  'button, a, input, textarea, select, label, summary, dialog, [role="button"], [role="dialog"], [role="alertdialog"], [contenteditable="true"], .screen-sheet, .app-header, .app-dock';
 
 /** Le toucher tombe sur la forêt (la scène, ou un conteneur transparent par-dessus). */
 export function onForest(canvas: HTMLCanvasElement, target: EventTarget | null): boolean {
   const root = canvas.closest('.living-forest');
-  if (!root || !(target instanceof Element)) return false;
+  // Une feuille modale ouverte recouvre la forêt (son fond capte le toucher).
+  if (!root || !(target instanceof Element) || document.querySelector('dialog[open]')) return false;
   return root.contains(target) || target.closest(NOT_FOREST) === null;
 }
 

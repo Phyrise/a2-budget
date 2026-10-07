@@ -22,7 +22,7 @@ async function setEuros(page: Page, id: string, digits: string) {
   await expect(display).toBeFocused();
   await page.keyboard.type(digits);
   await page.keyboard.press('Enter');
-  await expect(display).toBeHidden();
+  await expect(display).toHaveCount(0);
 }
 
 async function currentMonthOf(page: Page) {
@@ -58,7 +58,7 @@ test.describe('Saisie au pavé (AmountPad)', () => {
     // Rien n'est écrit avant « Valider ».
     expect((await currentMonthOf(page)).salaryACents).toBe(220_000);
     await pad.getByRole('button', { name: 'Valider' }).click();
-    await expect(pad).toBeHidden();
+    await expect(pad).toHaveCount(0);
     await expect(page.locator('#salary-a-value')).toBeFocused();
     await expect(page.locator('#salary-a-value')).toHaveText(euros(249_000));
     await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(249_000);
@@ -67,20 +67,22 @@ test.describe('Saisie au pavé (AmountPad)', () => {
     await page.locator('#salary-a-value').click();
     await key('9');
     await pad.getByRole('button', { name: 'Annuler' }).click();
-    await expect(pad).toBeHidden();
+    await expect(pad).toHaveCount(0);
     expect((await currentMonthOf(page)).salaryACents).toBe(249_000);
     await page.locator('#salary-a-value').click();
     await pad.getByRole('button', { name: /^Salaire habituel/u }).click();
     await expect(display).toHaveText(euros(220_000));
     await pad.getByRole('button', { name: 'Valider' }).click();
     await expect.poll(async () => (await currentMonthOf(page)).salaryACents).toBe(220_000);
+    await expect(pad).toHaveCount(0);
+    await expect(page.locator('#salary-a-value')).toBeFocused();
 
     // Clavier physique : Entrée rouvre, chiffres, Échap annule ; pas de maximum.
     await page.keyboard.press('Enter');
     await expect(display).toBeFocused();
     await page.keyboard.type('6200');
     await page.keyboard.press('Escape');
-    await expect(pad).toBeHidden();
+    await expect(pad).toHaveCount(0);
     expect((await currentMonthOf(page)).salaryACents).toBe(220_000);
     await setEuros(page, 'salary-a', '6200');
     await expect(page.locator('#salary-a-value')).toHaveText(euros(620_000));

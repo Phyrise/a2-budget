@@ -19,7 +19,7 @@ async function setEuros(page: Page, id: string, digits: string) {
   await expect(display).toBeFocused();
   await page.keyboard.type(digits);
   await page.keyboard.press('Enter');
-  await expect(display).toBeHidden();
+  await expect(display).toHaveCount(0);
 }
 
 /** Salaires du mois (dépenses par défaut des réglages). */

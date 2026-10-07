@@ -16,7 +16,7 @@ async function setEuros(page: Page, id: string, digits: string) {
   await expect(display).toBeFocused();
   await page.keyboard.type(digits);
   await page.keyboard.press('Enter');
-  await expect(display).toBeHidden();
+  await expect(display).toHaveCount(0);
 }
 
 test('consulter des mois passés ne change ni l’état ni le solde du mois courant', async ({ page }) => {

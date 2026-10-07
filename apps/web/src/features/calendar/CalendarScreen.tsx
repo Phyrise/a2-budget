@@ -18,9 +18,23 @@
  * - Univers Totoro (calendarTheme) : Totoro endormi ou sous la pluie dans
  *   les états vides, Totoro au paquet-feuille pour les anniversaires, le
  *   Chatbus traverse quand on ajoute un moment.
+ * - V4.3 : les anniversaires d'AL et d'AC (Réglages) s'ajoutent en annuels
+ *   virtuels (jamais écrits ; les toucher ouvre les Réglages) ; le jour de
+ *   l'anniversaire du couple porte un petit lampion dans la grille.
  * Occurrences, tris et répétitions : @a2/core uniquement.
  */
-import { addDays, eventsBetween, eventsOn, localDateKey, nextEvents, type CalendarEvent, type CalendarOccurrence } from '@a2/core';
+import {
+  addDays,
+  coupleDaysBetween,
+  eventsBetween,
+  eventsOn,
+  isAnniversaryEventId,
+  localDateKey,
+  nextEvents,
+  withAnniversaryEvents,
+  type CalendarEvent,
+  type CalendarOccurrence,
+} from '@a2/core';
 import { useEffect, useMemo, useState } from 'react';
 import { ShellNotices } from '../../app/ShellNotices';
 import { useShell } from '../../app/ShellContext';
@@ -44,6 +58,7 @@ const UPCOMING_COUNT = 8;
 /** « À venir » montre les tâches des sept prochains jours. */
 const UPCOMING_TASK_DAYS = 7;
 const NO_TASKS: TaskItem[] = [];
+const NO_EVENTS: CalendarEvent[] = [];
 
 /** Heure courante, rafraîchie chaque minute (« À venir » retire ce qui est fini). */
 function useNow(): Date {
@@ -80,7 +95,7 @@ function groupByDay(occurrences: CalendarOccurrence[]): Map<string, CalendarOccu
 
 export function CalendarScreen() {
   const { appState, today, removeCalendarEvent, restoreCalendarEvent } = useApp();
-  const { setForegroundSheet } = useShell();
+  const { setForegroundSheet, openSheet } = useShell();
   const toast = useToast();
   const now = useNow();
   const todayKey = localDateKey(today);
@@ -103,17 +118,19 @@ export function CalendarScreen() {
     return () => window.clearTimeout(t);
   }, [highlightId]);
 
-  const events = appState?.calendar?.events ?? [];
-  const names = {
-    a: appState?.budget.settings.personA.name ?? 'AL',
-    b: appState?.budget.settings.personB.name ?? 'AC',
-  };
+  const nameA = appState?.budget.settings.personA.name ?? 'AL';
+  const nameB = appState?.budget.settings.personB.name ?? 'AC';
+  const names = useMemo(() => ({ a: nameA, b: nameB }), [nameA, nameB]);
+  const anniversaries = appState?.anniversaries;
+  const stored = appState?.calendar?.events ?? NO_EVENTS;
+  const events = useMemo(() => withAnniversaryEvents(stored, anniversaries, names), [stored, anniversaries, names]);
 
   const weeks = useMemo(() => monthWeeks(monthKey), [monthKey]);
   const gridFrom = weeks[0]![0]!;
   const lastWeek = weeks[weeks.length - 1]!;
   const gridTo = lastWeek[lastWeek.length - 1]!;
   const byDay = useMemo(() => groupByDay(eventsBetween(events, gridFrom, gridTo)), [events, gridFrom, gridTo]);
+  const coupleDays = useMemo(() => new Set(coupleDaysBetween(anniversaries, gridFrom, gridTo)), [anniversaries, gridFrom, gridTo]);
 
   // Tâches de la maison : la grille affichée, plus la semaine à venir.
   const upcomingTo = localDateKey(addDays(today, UPCOMING_TASK_DAYS));
@@ -164,7 +181,9 @@ export function CalendarScreen() {
     setSheet({ mode: 'create', prefill: { ...prefill, date: prefill.date ?? selected ?? (monthKey === todayKey.slice(0, 7) ? todayKey : `${monthKey}-01`) } });
   };
 
-  const openEdit = (o: CalendarOccurrence) => setSheet({ mode: 'edit', event: o.event, occurrenceDate: o.date });
+  // Anniversaire d'AL ou d'AC (virtuel) : il se règle dans les Réglages.
+  const openEdit = (o: CalendarOccurrence) =>
+    isAnniversaryEventId(o.event.id) ? openSheet('settings') : setSheet({ mode: 'edit', event: o.event, occurrenceDate: o.date });
 
   const onSaved = (event: CalendarEvent, created: boolean) => {
     setSheet(null);
@@ -214,6 +233,7 @@ export function CalendarScreen() {
             todayKey={todayKey}
             byDay={byDay}
             tasksByDay={tasksByDay}
+            coupleDays={coupleDays}
             onSelect={selectDay}
             labelledBy="cal-grid-label"
           />
@@ -253,7 +273,7 @@ export function CalendarScreen() {
               À venir
             </h2>
           </div>
-          {upcoming.length > 0 ? <AgendaList days={upcoming} today={today} {...agenda} /> : <CalendarEmpty hasPast={events.length > 0} />}
+          {upcoming.length > 0 ? <AgendaList days={upcoming} today={today} {...agenda} /> : <CalendarEmpty hasPast={stored.length > 0} />}
         </section>
       </section>
 

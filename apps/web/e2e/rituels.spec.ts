@@ -1,8 +1,9 @@
 /**
  * Rituels V3 : cercle de la semaine (tenu puis relu), carnet (V4 : sans
  * triche — silhouettes à part, aucune URL de vrai sprite avant la
- * rencontre ; collection des lanternes de pierre). La lanterne elle-même :
- * rituels-lanterne.spec.ts.
+ * rencontre ; collection des lanternes de pierre ; V4.2 : avancée en
+ * petites barres, « Tout voir » du mode développeur, sans rien écrire). La
+ * lanterne elle-même : rituels-lanterne.spec.ts.
  * L'état de départ est construit avec @a2/core (valide pour validateAppState).
  */
 import { addDays, createTask, emptyAppState, localDateKey, toggleTaskToday, validateAppState, type AppState } from '@a2/core';
@@ -30,16 +31,16 @@ function seedState(): AppState {
   return s;
 }
 
-async function openSeeded(page: Page) {
+async function openSeeded(page: Page, devMode = false) {
   const state = JSON.stringify(seedState());
   await page.addInitScript(
-    ({ key, ui, value }) => {
+    ({ key, ui, value, dev }) => {
       if (sessionStorage.getItem('rituels-seeded')) return;
       localStorage.setItem(key, value);
-      localStorage.setItem(ui, JSON.stringify({ module: 'maison', forestMotion: 'still', guardianSeen: false, offlineAnnounced: true }));
+      localStorage.setItem(ui, JSON.stringify({ module: 'maison', forestMotion: 'still', guardianSeen: false, offlineAnnounced: true, devMode: dev }));
       sessionStorage.setItem('rituels-seeded', '1');
     },
-    { key: STORAGE_KEY, ui: UI_KEY, value: state },
+    { key: STORAGE_KEY, ui: UI_KEY, value: state, dev: devMode },
   );
   await page.goto(`${APP}?module=maison`);
   await expect(page.locator('.screen-sheet')).toBeVisible();
@@ -108,6 +109,10 @@ test.describe('Rituels', () => {
     const carnet = page.getByRole('dialog', { name: 'Carnet de la forêt' });
     await expect(carnet).toBeVisible();
     await expect(carnet.getByRole('heading', { name: 'Créatures' })).toBeVisible();
+    // Plus de phrase sous le titre : une fine séparation ; pas de « Tout voir » hors mode développeur.
+    await expect(carnet).not.toContainText('Ce que la forêt a vu');
+    await expect(carnet.locator('.carnet-rule')).toHaveCount(1);
+    await expect(carnet.getByRole('button', { name: 'Tout voir' })).toHaveCount(0);
     await expect(carnet).toContainText('Les kodama');
     expect(await carnet.getByText('pas encore rencontrée').count()).toBeGreaterThanOrEqual(4);
     await expect(carnet.getByRole('heading', { name: 'Le cèdre' })).toBeVisible();
@@ -142,19 +147,51 @@ test.describe('Rituels', () => {
       return e.defaultPrevented;
     });
     expect(blocked).toBe(true);
-    // Les stades à venir : de la brume, pas la peinture.
+    // Les stades à venir : de la brume, pas la peinture ; une petite barre au lieu de « À venir ».
     await expect(carnet.locator('.carnet-stage.is-future img')).toHaveCount(0);
+    await expect(carnet.locator('.carnet-stages')).not.toContainText('À venir');
+    await expect(carnet.locator('.carnet-stage.is-future [role="progressbar"]')).toHaveCount(6);
 
     // Lanternes : la première est posée dans la forêt, les six autres sont
-    // des silhouettes (« après trois lanternes »), sans leur vraie peinture.
+    // des silhouettes avec une petite barre (« 0 sur 3 lanternes »), sans
+    // leur vraie peinture.
     await expect(carnet.getByRole('heading', { name: 'Lanternes' })).toBeVisible();
     await expect(carnet.locator('.carnet-lantern')).toHaveCount(7);
     await expect(carnet.locator('.carnet-lantern.is-locked')).toHaveCount(6);
-    await expect(carnet.locator('.carnet-lantern.is-locked').first()).toContainText('Après trois lanternes');
+    await expect(carnet.locator('.carnet-lantern.is-locked').first()).toContainText(/^Une lanterne dans la brume0\s+sur 3\s+lanternes$/);
+    await expect(carnet.locator('.carnet-lantern.is-locked [role="progressbar"]')).toHaveCount(6);
     await expect(carnet.getByRole('button', { name: /La Kasuga moussue, posée dans la forêt/ })).toHaveAttribute('aria-pressed', 'true');
     const lockedSrcs = await carnet.locator('.carnet-lantern.is-locked img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src));
     expect(lockedSrcs).toHaveLength(6);
     for (const src of lockedSrcs) expect(src).toMatch(/-silhouette/);
+    expect(errors).toEqual([]);
+  });
+
+  test('carnet, mode développeur : « Tout voir » montre tout, sans rien écrire', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openSeeded(page, true);
+    const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+    await rituals(page).getByRole('button', { name: 'Carnet de la forêt' }).click();
+    const carnet = page.getByRole('dialog', { name: 'Carnet de la forêt' });
+    const all = carnet.getByRole('button', { name: 'Tout voir' });
+    await expect(all).toHaveAttribute('aria-pressed', 'false');
+    await all.click();
+    await expect(all).toHaveAttribute('aria-pressed', 'true');
+    await expect(carnet.locator('.carnet-creature.is-unmet')).toHaveCount(0);
+    await expect(carnet).toContainText('Boule-de-Mousse');
+    await expect(carnet.locator('.carnet-stage img')).toHaveCount(7);
+    await expect(carnet).toContainText('Le millénaire');
+    await expect(carnet).toContainText('Le gardien de la forêt vous a rendu visite');
+    // Lanternes verrouillées : visibles, mais on ne peut pas les poser.
+    await expect(carnet.locator('.carnet-lantern.is-revealed')).toHaveCount(6);
+    await expect(carnet).toContainText('La lanterne des esprits');
+    await expect(carnet.locator('.carnet-lantern__pick')).toHaveCount(1);
+    expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(before);
+    // Refermer : le carnet redevient le vrai.
+    await page.keyboard.press('Escape');
+    await rituals(page).getByRole('button', { name: 'Carnet de la forêt' }).click();
+    await expect(carnet.getByRole('button', { name: 'Tout voir' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(carnet.locator('.carnet-lantern.is-revealed')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 });

@@ -8,7 +8,7 @@
  */
 import type { ContributionBreakdown, MonthRecord } from '@a2/core';
 import { monthKeyToLabel } from '@a2/core';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { AmountField, Companion, Icon, NBSP, cx, euro, percent, type AmountFieldHandle } from '../../ui';
 import { bonusShortcuts, salaryShortcuts, type ShortcutSource } from './amountShortcuts';
@@ -27,6 +27,7 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
   const [adding, setAdding] = useState(false);
   const bonusRef = useRef<AmountFieldHandle>(null);
   const addRef = useRef<HTMLButtonElement>(null);
+  const refocusAdd = useRef(false);
   const bonusShown = adding || bonus > 0;
   const of = elide(settings.name);
   const monthLabel = monthKeyToLabel(month.monthKey);
@@ -36,6 +37,14 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
     // Le montant apparaît à l'image suivante : le pavé s'ouvre aussitôt.
     requestAnimationFrame(() => bonusRef.current?.open());
   };
+
+  // Compléments repliés sans rien ajouter : le focus revient sur « + Compléments »
+  // une fois le bouton remonté (après le rendu, jamais avant).
+  useEffect(() => {
+    if (bonusShown || !refocusAdd.current) return;
+    refocusAdd.current = false;
+    addRef.current?.focus({ preventScroll: true });
+  }, [bonusShown]);
 
   return (
     <article className={cx('person-card', `person-card--${who}`)} aria-label={`Revenus ${of}`}>
@@ -79,9 +88,9 @@ export function PersonCard({ person, month, source }: { person: 'A' | 'B'; month
             valueCents={bonus}
             onCommit={(cents) => setBonus(month.monthKey, person, cents)}
             onPadClosed={() => {
-              setAdding(false);
               // Rien d'ajouté : le montant se replie, le focus revient sur « + Compléments ».
-              if (bonus === 0) requestAnimationFrame(() => addRef.current?.focus({ preventScroll: true }));
+              refocusAdd.current = bonus === 0;
+              setAdding(false);
             }}
             shortcuts={bonusShortcuts(source, month, person)}
             size="md"

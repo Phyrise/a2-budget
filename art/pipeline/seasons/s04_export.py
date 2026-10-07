@@ -1,11 +1,13 @@
 """Exports livrés des saisons + décision profondeur + contrôle des masques.
 
 Forêt (~/a2art/out/assets/seasons/<saison>/, récupérée par remote.sh pull) :
-  season-<saison>-stage-<n>.webp   couleur WebP 1024×1536 (recalée, s01), qualité
-                                   84 par défaut, abaissée par pas de 2 (plancher
-                                   76) jusqu'à tenir COLOR_BUDGET (≈ 0,3 Mo) : les
-                                   peintures de saison (neige, feuilles, fleurs)
-                                   sont plus détaillées que la base (≈ 0,45 Mo à q84) ;
+  season-<saison>-stage-<n>.webp   couleur WebP 1536×2304 (recalée, s01, puis
+                                   agrandie par upscale.py du pipeline de base,
+                                   cache work/upscaled/), qualité 80 par défaut,
+                                   abaissée par pas de 2 (plancher 76) jusqu'à
+                                   tenir COLOR_BUDGET (≈ 0,6 Mo) : les peintures de
+                                   saison (neige, feuilles, fleurs) sont plus
+                                   détaillées que la base (≈ 0,65 Mo à q80) ;
   season-<saison>-depth-<n>.webp   profondeur de saison (WebP sans perte ou PNG,
                                    le plus léger), SEULEMENT si la profondeur
                                    de base ne convient pas — sinon le manifest
@@ -30,8 +32,9 @@ from PIL import Image, ImageDraw
 
 from scommon import (
     MASKS, MAX_DEPTH_CHANGED, MAX_DEPTH_MAE, MAX_DRIFT_PX, QA, SEASONS, SRC_BANNERS, THEMES_OUT, WORK,
-    WORLD_OUT, grid, label, load_aligned, load_base, read_json, tile, to_u8, write_json,
+    WORLD_OUT, aligned_path, grid, label, load_aligned, load_base, read_json, tile, to_u8, write_json,
 )
+from upscale import PH, PW, cached  # pipeline de base (copié dans base/ par remote.sh push)
 
 BANNERS = {
     "budget": "b-bathhouse-{s}-{f}.png",
@@ -47,8 +50,8 @@ FRAMES = {
 }
 
 
-COLOR_BUDGET = 320 * 1024
-QUALITIES = (84, 82, 80, 78, 76)
+COLOR_BUDGET = 600 * 1024
+QUALITIES = (80, 78, 76)
 
 
 def color_webp(im: Image.Image) -> tuple[bytes, int]:
@@ -111,8 +114,9 @@ def forest(report: dict) -> None:
         tiles = []
         for n in range(1, 8):
             name = f"{season}-stage-{n}"
-            rgb = load_aligned(season, n)
-            data, q = color_webp(Image.fromarray(to_u8(rgb)))
+            im = cached(aligned_path(season, n), WORK / "upscaled" / f"{name}.png")
+            assert im.size == (PW, PH), im.size
+            data, q = color_webp(im)
             (d / f"season-{name}.webp").write_bytes(data)
             a, z = align[name], depth[name]
             reuse = a["drift_px"] <= MAX_DRIFT_PX and z["depth_mae"] <= MAX_DEPTH_MAE and z["depth_changed"] <= MAX_DEPTH_CHANGED
@@ -131,7 +135,7 @@ def forest(report: dict) -> None:
                 r["depth_file"] = save_depth(season, n)
             report["forest"][name] = r
             print(name, r, flush=True)
-            tiles.append(label(tile(rgb, 200), f"{n} q{q} {len(data) // 1024}K depth={r['depth']}"))
+            tiles.append(label(tile(np.asarray(im), 200), f"{n} q{q} {len(data) // 1024}K depth={r['depth']}"))
         tiles.append(label(tile(load_aligned(season, "night"), 200), "nuit (cible LUT)"))
         grid(tiles, 8).save(QA / f"s04-stages-{season}.jpg", quality=84)
 

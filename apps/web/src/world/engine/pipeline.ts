@@ -10,6 +10,7 @@ import { FOREGROUND_FRAG, SPRITE_FRAG, SPRITE_VERT } from './glsl/layers';
 import { POINTS_FRAG, POINTS_VERT } from './glsl/points';
 import { POST_FRAG } from './glsl/post';
 import { SCENE_FRAG } from './glsl/scene';
+import { STONE_FRAG, STONE_VERT } from './glsl/stone';
 import { SEASON_FRAG, SEASON_VERT } from './glsl/season';
 import { SEASON, restPoints } from './seasons';
 import { rng } from './noise';
@@ -39,6 +40,8 @@ export class Pipeline {
   readonly fg: Mesh;
   readonly sprite: Mesh;
   readonly spriteGlow: Mesh;
+  readonly stone: Mesh;
+  readonly stoneGlow: Mesh;
   readonly sceneFx: BillboardBatch;
   readonly emissive: BillboardBatch;
   readonly motes: Mesh;
@@ -58,18 +61,23 @@ export class Pipeline {
     const tri = new Triangle(gl);
     const common = { transparent: false, depthTest: false, depthWrite: false, cullFace: false as const };
 
+    // Atmosphère et peinture : mêmes objets d'uniformes pour la passe de scène et la
+    // lanterne de pierre (glsl/atmosphere.ts) — réglés une fois par image (frame.ts).
+    const atmo = {
+      uNoise: u(noise), uTime: u(0), uAspect: u(aspect),
+      uFog: u(0.5), uFogLift: u(0.3), uFogLayers: u(3), uFogColor: u([0.6, 0.66, 0.64]), uFogGlow: u(0),
+      uRays: u(0.4), uRayW: u([1, 0, 0, 0]), uRayAng: u([0, 0, 0, 0]), uRayWidth: u([0.08, 0.08, 0.08, 0.08]),
+      uLight: u([0.6, 0.02]), uRayColor: u([1, 0.94, 0.8]), uMoon: u(0), uDetail: u(1),
+      uLantern: u([0.5, 0.6, 0.1, 0]), uLanternColor: u([1, 0.8, 0.5]),
+    };
+    const paint = { uColor: u(blank), uDepth: u(blank), uMasks: u(blank) };
     const sceneProgram = new Program(gl, {
       ...common,
       vertex: FULLSCREEN_VERT,
       fragment: SCENE_FRAG,
       uniforms: {
-        ...f,
-        uColor: u(blank), uPrev: u(blank), uDepth: u(blank), uMasks: u(blank), uNoise: u(noise),
-        uTime: u(0), uAspect: u(aspect), uTexel: u(texel), uGrow: u(1), uFadeMode: u(0), uWind: u(1), uWater: u(1),
-        uFog: u(0.5), uFogLift: u(0.3), uFogLayers: u(3), uFogColor: u([0.6, 0.66, 0.64]), uFogGlow: u(0),
-        uRays: u(0.4), uRayW: u([1, 0, 0, 0]), uRayAng: u([0, 0, 0, 0]), uRayWidth: u([0.08, 0.08, 0.08, 0.08]),
-        uLight: u([0.6, 0.02]), uRayColor: u([1, 0.94, 0.8]), uSparkle: u(0), uMoss: u(0), uMoon: u(0), uDetail: u(1),
-        uLantern: u([0.5, 0.6, 0.1, 0]), uLanternColor: u([1, 0.8, 0.5]),
+        ...f, ...atmo, ...paint,
+        uPrev: u(blank), uTexel: u(texel), uGrow: u(1), uFadeMode: u(0), uWind: u(1), uWater: u(1), uSparkle: u(0), uMoss: u(0),
       },
     });
     this.scene = new Mesh(gl, { geometry: tri, program: sceneProgram, frustumCulled: false });
@@ -117,6 +125,21 @@ export class Pipeline {
     const glowProgram = new Program(gl, { ...common, transparent: true, vertex: SPRITE_VERT, fragment: SPRITE_FRAG, uniforms: glowUniforms });
     glowProgram.setBlendFunc(gl.ONE, gl.ONE);
     this.spriteGlow = new Mesh(gl, { geometry: quad, program: glowProgram, frustumCulled: false });
+
+
+    // Lanterne de pierre (et kodama assis sur son toit) : dans la peinture, puis sa lueur.
+    const stoneUniforms = (emissive: number) => ({
+      ...f, ...atmo, ...paint,
+      uAnchor: u([0.5, 0.5]), uSize: u([0.05, 0.05]), uZ: u(0.2), uRot: u(0), uCell: u([0, 0, 1, 1]), uPad: u([0, 0, 0]),
+      uTex: u(blank), uAlpha: u(1), uReveal: u(1), uEmissive: u(emissive), uGlow: u([1, 1, 1]),
+      uFoot: u(1), uGround: u(0), uShadow: u(0), uTexelV: u(0.003), uSeasonK: u([0, 0, 0]),
+    });
+    const stoneProgram = new Program(gl, { ...common, transparent: true, vertex: STONE_VERT, fragment: STONE_FRAG, uniforms: stoneUniforms(0) });
+    stoneProgram.setBlendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    this.stone = new Mesh(gl, { geometry: quad, program: stoneProgram, frustumCulled: false });
+    const stoneGlowProgram = new Program(gl, { ...common, transparent: true, vertex: STONE_VERT, fragment: STONE_FRAG, uniforms: stoneUniforms(1) });
+    stoneGlowProgram.setBlendFunc(gl.ONE, gl.ONE);
+    this.stoneGlow = new Mesh(gl, { geometry: quad, program: stoneGlowProgram, frustumCulled: false });
 
     const batchUniforms = () => ({ ...f, uAspect: u(aspect), uAtlas: u(blank) });
     this.sceneFx = new BillboardBatch(gl, 64, batchUniforms());

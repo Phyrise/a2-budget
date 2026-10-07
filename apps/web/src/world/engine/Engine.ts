@@ -7,7 +7,7 @@
  * Lanterne allumée : jamais de gel (≥ 30 fps, 20 sur appareil lent).
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
-import type { GrowthStage, PulseOptions, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
+import type { GrowthStage, PulseOptions, ScenePoint, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
 import { expectPulse, playGuardian, pulseLight, releaseGuardian, syncLantern } from './commands';
 import { FxSystem } from './fx';
 import { computeFraming, framingFor, type Framing } from './framing';
@@ -24,11 +24,11 @@ import { Resources, type StageTextures } from './resources';
 import { SeasonFx } from './seasons';
 import { Spirits } from './spirits';
 import { StoneLantern, type LanternArtSource } from './stoneLantern';
+import { clearOfLantern } from './toro';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
-export type { EngineStats, QualitySetting } from './quality';
-export { DPR_CAPS } from './quality';
+export { DPR_CAPS, type EngineStats, type QualitySetting } from './quality';
 
 export interface EngineConfig {
   manifest: WorldManifest;
@@ -50,6 +50,7 @@ export class WorldEngine {
   readonly res: Resources;
   readonly pipe: Pipeline;
   readonly spirits: Spirits;
+  readonly kodamaSpots: ScenePoint[]; // kodama de la forêt, écartés de la lanterne de pierre
   readonly lights: DayLights;
   readonly fx: FxSystem;
   readonly seasons = new SeasonFx();
@@ -116,7 +117,8 @@ export class WorldEngine {
     this.res = new Resources(this.gl, m);
     const blank = this.res.texture(new Uint8Array([0, 0, 0, 0]), { w: 1, h: 1 });
     this.pipe = new Pipeline(this.gl, this.res.noise, blank, m.size.w / m.size.h, 1 / m.size.w);
-    this.spirits = new Spirits(m.kodamaSpots, m.creatureSpots, m.guardianSpot);
+    this.kodamaSpots = lanterns ? clearOfLantern(m.kodamaSpots, m.size.w / m.size.h) : m.kodamaSpots;
+    this.spirits = new Spirits(this.kodamaSpots, m.creatureSpots, m.guardianSpot);
     this.lights = new DayLights(m.anchors);
     this.fx = new FxSystem(m.size.w / m.size.h, m.lightSource);
     this.lantern = new Lantern(m.size.w / m.size.h);

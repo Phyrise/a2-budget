@@ -32,6 +32,21 @@ export interface SpriteDraw {
   glow: number;
   glowColor: [number, number, number];
   fogMix: number;
+  /**
+   * Objet posé DANS la peinture (lanterne de pierre, kodama sur son toit) :
+   * occlusion par la profondeur, pied dans la mousse, ombre de contact,
+   * atmosphère de la scène (glsl/stone.ts). Absent : sprite simple.
+   */
+  stone?: StonePlacement;
+}
+
+export interface StonePlacement {
+  /** Ligne du pied dans la toile (v depuis le haut). */
+  foot: number;
+  /** 1 = le pied s'enfonce dans la mousse (touffes, frondes devant) ; 0 = aucun. */
+  ground: number;
+  /** Ombre de contact (0 = aucune). */
+  shadow: number;
 }
 
 interface KodamaState {

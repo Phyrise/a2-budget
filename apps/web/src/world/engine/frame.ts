@@ -220,7 +220,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
     su.uSizeK!.value = sizeK;
     su.uFogColor!.value = fogColor;
     su.uFog!.value = mood.fog;
-    e.seasons.uniforms(su, sf, n, avoidList(m.kodamaSpots, (i) => e.spirits.visibility(i)), e.gust);
+    e.seasons.uniforms(su, sf, n, avoidList(e.kodamaSpots, (i) => e.spirits.visibility(i)), e.gust);
     su.uCount!.value = seasonCount;
   }
   const bu = e.pipe.burst.program.uniforms;
@@ -237,6 +237,7 @@ export function renderWorld(e: WorldEngine, n: number, dt: number, fps: number) 
   drawFrame(e.renderer, e.pipe, {
     sprites,
     fogColor,
+    stoneSeason: look.fg,
     hasForeground: !!e.res.foreground,
     drawRain: animate && rainCount > 1,
     drawBurst: g.burst > 0,

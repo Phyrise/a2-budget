@@ -26,6 +26,7 @@ import { DAILY_CREDIT_CAP, emptyForest, VITALITY_MAX } from './forest.js';
 import { isGroceryCategory } from './groceries.js';
 import { validateGroceryMemory } from './groceryMemory.js';
 import { validateCalendar } from './calendar.js';
+import { validateAnniversaries } from './anniversaries.js';
 import {
   validateCompletionCare,
   validateFocus,
@@ -563,7 +564,7 @@ export function validateAppState(
     if (!forest.ok) return forest;
     const groceries = validateGroceries(value.groceries);
     if (!groceries.ok) return groceries;
-    const care: Pick<AppState, 'rituals' | 'focus' | 'calendar'> = {};
+    const care: Pick<AppState, 'rituals' | 'focus' | 'calendar' | 'anniversaries'> = {};
     if (value.rituals !== undefined && value.rituals !== null) {
       const rituals = validateRituals(value.rituals);
       if (!rituals.ok) return rituals;
@@ -578,6 +579,11 @@ export function validateAppState(
       const calendar = validateCalendar(value.calendar);
       if (!calendar.ok) return calendar;
       care.calendar = calendar.state;
+    }
+    if (value.anniversaries !== undefined && value.anniversaries !== null) {
+      const anniversaries = validateAnniversaries(value.anniversaries);
+      if (!anniversaries.ok) return anniversaries;
+      care.anniversaries = anniversaries.state;
     }
 
     return {

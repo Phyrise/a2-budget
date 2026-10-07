@@ -229,6 +229,28 @@ export {
 } from './lanterns.js';
 export type { LanternDef } from './lanterns.js';
 
+// V4.3 — anniversaires (couple chaque mois, A et B chaque année), événements virtuels.
+export {
+  DEFAULT_ANNIVERSARIES,
+  defaultAnniversaries,
+  isMonthDay,
+  validateAnniversaries,
+  withAnniversaries,
+  coupleDayIn,
+  fetesOn,
+  isCoupleDay,
+  nextAnniversary,
+  coupleDaysBetween,
+  monthDayLabel,
+  coupleDayLabel,
+  parseMonthDay,
+  parseCoupleDay,
+  isAnniversaryEventId,
+  anniversaryEvents,
+  withAnniversaryEvents,
+} from './anniversaries.js';
+export type { Anniversaries, FeteKind, MonthDay } from './anniversaries.js';
+
 export {
   migrateV1toV2,
   emptyAppState,

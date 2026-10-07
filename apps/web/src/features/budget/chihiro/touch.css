@@ -1,0 +1,106 @@
+/* V4.2 — le Sans-Visage suit le compte : il se tasse quand l'argent part
+   (`is-sighing`) ; touché, il penche la tête et offre un kompeitō. */
+
+/* Les pièces le quittent : il se tasse un peu, la lanterne pâlit. */
+.noface.is-sighing .noface__img.is-shown {
+  animation: noface-sigh 1400ms var(--ease-soft) 1;
+}
+
+.noface.is-sighing .noface__glow {
+  opacity: 0.6;
+}
+
+@keyframes noface-sigh {
+  0%,
+  100% {
+    scale: var(--sx) var(--sy);
+    translate: 0 0;
+  }
+  35%,
+  70% {
+    scale: calc(var(--sx) * 0.96) calc(var(--sy) * 0.95);
+    translate: 0 2px;
+  }
+}
+
+/* Zone de toucher : la silhouette seule, rien autour. */
+.noface__touch {
+  position: absolute;
+  inset: -4px 6px 0;
+  z-index: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 36px 36px 12px 12px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noface.is-tapped .noface__img.is-shown {
+  animation: noface-tilt 1000ms var(--ease-soft) 1;
+}
+
+@keyframes noface-tilt {
+  0%,
+  100% {
+    rotate: 0deg;
+  }
+  30%,
+  62% {
+    rotate: -7deg;
+  }
+}
+
+/* Le kompeitō offert : il monte doucement de sa main, puis s'efface. */
+.noface__gift {
+  position: absolute;
+  left: 58%;
+  bottom: 42%;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(255, 214, 150, 0.5));
+  animation: noface-gift 1100ms var(--ease-out) both;
+}
+
+@keyframes noface-gift {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.1) rotate(-10deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-16px) scale(1) rotate(12deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.8) rotate(20deg);
+  }
+}
+
+@keyframes noface-gift-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .noface.is-sighing .noface__img.is-shown,
+  .noface.is-tapped .noface__img.is-shown {
+    animation: none;
+  }
+
+  .noface__gift {
+    animation-name: noface-gift-still;
+    animation-timing-function: linear;
+  }
+}

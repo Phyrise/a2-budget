@@ -24,9 +24,12 @@
  * - `woodNote` un événement ajouté au calendrier → note de bois douce.
  *
  * V4 :
- * - `nom`         un paiement du mois coché (virement fait, dépense payée)
+ * - `nom`         le compte monte (virement coché, dépense décochée)
  *                 → des pièces qui tombent dans la bouche du Sans-Visage,
  *                 un « nom » doux ;
+ * - `spend`       le compte descend (dépense cochée, virement décoché)
+ *                 → des pièces qui s'en vont, un petit « oh… » qui descend ;
+ * - `ah`          on touche le Sans-Visage → un « ah… » feutré ;
  * - `balanceBell` le solde recalé sur le compte → petite cloche ;
  * - `lanternLit`  la lanterne de pierre s'allume (minuteur lancé)
  *                 → allumette frottée, puis un souffle chaud ;
@@ -48,6 +51,8 @@ export type SoundCue =
   | 'shopBell'
   | 'woodNote'
   | 'nom'
+  | 'spend'
+  | 'ah'
   | 'balanceBell'
   | 'lanternLit'
   | 'lanternNew';
@@ -82,6 +87,8 @@ export const ALL_CUES: readonly SoundCue[] = [
   'shopBell',
   'woodNote',
   'nom',
+  'spend',
+  'ah',
   'balanceBell',
   'lanternLit',
   'lanternNew',

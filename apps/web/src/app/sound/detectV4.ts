@@ -4,8 +4,10 @@
  * les transitions pas à pas d'un geste sonnent, jamais le premier rendu ni
  * un état remplacé d'un bloc (import, remise à zéro).
  *
- * - `nom`         : un paiement coché (virement d'AL / d'AC fait, dépense
- *                   payée) dans un mois qui existait déjà. Décocher : rien.
+ * - `nom` / `spend` : une case du mois cochée ou décochée, dans un mois qui
+ *                   existait déjà, selon le sens du compte (V4.2) : il monte
+ *                   (virement coché, dépense décochée) → `nom` ; il descend
+ *                   (dépense cochée, virement décoché) → `spend`.
  * - `balanceBell` : « Recaler sur le compte » (une correction ajoutée ou
  *                   changée). Rien si les mois changent en même temps
  *                   (« Effacer l'historique » pose une correction : pas de
@@ -16,25 +18,29 @@
  *                   du minuteur (hors AppState) : une NOUVELLE session passe
  *                   en cours. Reprendre après une pause ne rallume rien.
  */
-import { unlockedLanterns, type AppState, type MonthRecord } from '@a2/core';
+import { isExpensePaid, isTransferPaid, unlockedLanterns, type AppState, type MonthRecord } from '@a2/core';
 import type { SoundEvent } from './cues';
 import { isWholesaleChange } from './detect';
 
-/** Au-delà de ce nombre de cases cochées d'un coup : changement en bloc, silence. */
+/** Au-delà de ce nombre de cases changées d'un coup : changement en bloc, silence. */
 const MAX_STEP_PAID = 3;
 
-function newlyPaid(prev: MonthRecord, next: MonthRecord): number {
-  const pp = prev.paid;
-  const np = next.paid;
-  if (pp === np || np === undefined) return 0;
-  let count = 0;
-  if (np.transferA === true && pp?.transferA !== true) count += 1;
-  if (np.transferB === true && pp?.transferB !== true) count += 1;
-  const known = new Set(prev.expenses.map((e) => e.id));
-  for (const [id, paid] of Object.entries(np.expenses ?? {})) {
-    if (paid === true && pp?.expenses?.[id] !== true && known.has(id)) count += 1;
+/** Cases changées entre deux versions d'un mois : combien font monter / descendre le compte. */
+function paidSteps(prev: MonthRecord, next: MonthRecord): { up: number; down: number } {
+  const steps = { up: 0, down: 0 };
+  if (prev.paid === next.paid) return steps;
+  for (const who of ['A', 'B'] as const) {
+    const now = isTransferPaid(next, who);
+    if (now !== isTransferPaid(prev, who)) steps[now ? 'up' : 'down'] += 1;
   }
-  return count;
+  // Seules les dépenses présentes avant et après (un retrait n'est pas un décochage).
+  const known = new Set(prev.expenses.map((e) => e.id));
+  for (const e of next.expenses) {
+    if (!known.has(e.id)) continue;
+    const now = isExpensePaid(next, e.id);
+    if (now !== isExpensePaid(prev, e.id)) steps[now ? 'down' : 'up'] += 1;
+  }
+  return steps;
 }
 
 function paymentEvents(prev: AppState, next: AppState): SoundEvent[] {
@@ -42,12 +48,17 @@ function paymentEvents(prev: AppState, next: AppState): SoundEvent[] {
   const nm = next.budget.months;
   if (pm === nm) return [];
   const before = new Map(pm.map((m) => [m.monthKey, m]));
-  let count = 0;
+  let up = 0;
+  let down = 0;
   for (const month of nm) {
     const old = before.get(month.monthKey);
-    if (old !== undefined && old !== month) count += newlyPaid(old, month);
+    if (old === undefined || old === month) continue;
+    const steps = paidSteps(old, month);
+    up += steps.up;
+    down += steps.down;
   }
-  return count > 0 && count <= MAX_STEP_PAID ? [{ cue: 'nom' }] : [];
+  if (up + down === 0 || up + down > MAX_STEP_PAID || up === down) return [];
+  return [{ cue: up > down ? 'nom' : 'spend' }];
 }
 
 function balanceEvents(prev: AppState, next: AppState): SoundEvent[] {

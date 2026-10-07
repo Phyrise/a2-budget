@@ -1,22 +1,23 @@
 /**
- * Le Sans-Visage mange l'argent (V4) : quand on coche un paiement du mois,
- * quelques pépites d'or s'envolent de la case jusqu'à lui ; à leur arrivée
- * il mâche, la pépite à la bouche, et s'arrondit un peu (pose 'content',
- * voir NoFace) ; quand tout est payé, il salue. Toujours doux.
- *
- * - Vol : couche `position: fixed` posée dans <body>, Web Animations API
- *   (transform / opacity seulement), retirée à la fin ; jamais rendu si
- *   prefers-reduced-motion (il mâche quand même, sans voler).
- * - Si le Sans-Visage du solde est hors de l'écran (on a fait défiler
- *   jusqu'à la liste), il vient au bord de l'écran, mange, puis repart
- *   (NoFaceVisitor).
+ * Le Sans-Visage et l'argent du compte commun (V4.2) : il EST le compte.
+ * - Le compte monte (virement coché, dépense décochée) : quelques pépites
+ *   s'envolent de la case jusqu'à sa bouche ; il mâche, content, et
+ *   s'arrondit (réaction 'gain').
+ * - Le compte descend (dépense cochée, virement décoché) : les pièces le
+ *   quittent et volent jusqu'à la case ; il se tasse un peu, triste
+ *   (réaction 'loss').
+ * Vol : couche `position: fixed` posée dans <body>, Web Animations API
+ * (transform / opacity seulement), retirée à la fin ; jamais rendu si
+ * prefers-reduced-motion (il réagit quand même, sans vol). Si le
+ * Sans-Visage du solde est hors de l'écran, il vient au bord de l'écran,
+ * réagit, puis repart (NoFaceVisitor).
  * Décoratif uniquement : les chiffres restent la seule information.
  */
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { budgetTheme } from '../../../themes/manifest';
-import { BOW_MS } from './useMonthEdits';
+import { paymentReaction } from './mood';
+import { REACT_MS, react, useReaction } from './reaction';
 
-export const CHEW_MS = 1500;
 const FLIGHT_MS = 760;
 const STAGGER_MS = 80;
 
@@ -28,8 +29,10 @@ function prefersReducedMotion(): boolean {
   }
 }
 
-/** Point visé : la bouche du Sans-Visage (haut de la silhouette), borné à l'écran. */
-function mouthOf(target: HTMLElement | null): { x: number; y: number } {
+type Point = { x: number; y: number };
+
+/** La bouche du Sans-Visage (haut de la silhouette), bornée à l'écran. */
+function mouthOf(target: HTMLElement | null): Point {
   const w = window.innerWidth;
   const h = window.innerHeight;
   const img = target?.querySelector<HTMLElement>('.noface__img.is-shown') ?? target;
@@ -41,14 +44,13 @@ function mouthOf(target: HTMLElement | null): { x: number; y: number } {
 }
 
 /**
- * Fait voler `count` pépites de `from` vers le Sans-Visage. La promesse est
- * résolue à l'arrivée de la première pépite (le début du repas).
+ * Fait voler `count` pépites de `from` à `to` (vers le Sans-Visage ou depuis
+ * lui). La promesse est résolue à l'arrivée de la première pépite.
  */
-export function flyNuggets(from: { x: number; y: number }, target: HTMLElement | null, count: number): Promise<void> {
+export function flyNuggets(from: Point, to: Point, count: number): Promise<void> {
   if (prefersReducedMotion() || typeof document === 'undefined' || typeof Element.prototype.animate !== 'function') {
     return Promise.resolve();
   }
-  const to = mouthOf(target);
   const layer = document.createElement('div');
   layer.className = 'nugget-flight';
   layer.setAttribute('aria-hidden', 'true');
@@ -104,31 +106,31 @@ function inView(el: HTMLElement | null): boolean {
   return rect.bottom > 56 && rect.top < window.innerHeight - 110;
 }
 
-/** Visite : il arrive au bord de l'écran, mange, puis repart. */
+/** Visite : il arrive au bord de l'écran, réagit, puis repart. */
 export type Visit = 'in' | 'out' | null;
 const LEAVE_MS = 420;
+/** Le visiteur glisse depuis le bord avant que les pièces le quittent. */
+const VISIT_SETTLE_MS = 280;
 
 export interface Feeding {
-  /** Racine du Sans-Visage du solde (cible des pépites). */
+  /** Racine du Sans-Visage du solde (cible ou départ des pépites). */
   noFaceRef: RefObject<HTMLDivElement | null>;
-  /** Bouche du Sans-Visage visiteur (s'il faut venir manger hors de l'écran). */
+  /** Bouche du Sans-Visage visiteur (s'il faut venir hors de l'écran). */
   visitorRef: RefObject<HTMLSpanElement | null>;
+  /** Une réaction est en cours (gain ou perte, voir `useReaction`). */
   eating: boolean;
-  /** Salut après le dernier paiement du mois. */
+  /** Plus de salut final depuis V4.2 (il ne finit plus tête basse) : toujours faux. */
   bowing: boolean;
   visit: Visit;
-  /** Une case vient d'être cochée en `origin` ; `allPaid` : c'était la dernière. */
-  feed: (origin: { x: number; y: number }, opts: { count: number; allPaid: boolean }) => void;
+  /** Une case vient d'être cochée (`paid`) ou décochée en `origin`. */
+  feed: (origin: Point, opts: { kind: 'transfer' | 'expense'; paid: boolean }) => void;
 }
 
 export function useFeeding(): Feeding {
   const noFaceRef = useRef<HTMLDivElement>(null);
   const visitorRef = useRef<HTMLSpanElement>(null);
-  const [eating, setEating] = useState(false);
-  const [bowing, setBowing] = useState(false);
+  const reacting = useReaction() !== null;
   const [visit, setVisit] = useState<Visit>(null);
-  const chewTimer = useRef<number | undefined>(undefined);
-  const bowTimer = useRef<number | undefined>(undefined);
   const leaveTimer = useRef<number | undefined>(undefined);
   const alive = useRef(true);
 
@@ -136,45 +138,38 @@ export function useFeeding(): Feeding {
     alive.current = true;
     return () => {
       alive.current = false;
-      window.clearTimeout(chewTimer.current);
-      window.clearTimeout(bowTimer.current);
       window.clearTimeout(leaveTimer.current);
     };
   }, []);
 
-  const feed = useCallback((origin: { x: number; y: number }, opts: { count: number; allPaid: boolean }) => {
+  const feed = useCallback((origin: Point, opts: { kind: 'transfer' | 'expense'; paid: boolean }) => {
     window.clearTimeout(leaveTimer.current);
-    // Hors de l'écran, il vient manger au bord, près de la liste.
+    // Hors de l'écran, il vient au bord, près de la liste.
     const visiting = !inView(noFaceRef.current);
     if (visiting) setVisit('in');
     const target = visiting ? visitorRef.current : noFaceRef.current;
-    const leave = () => {
+    const kind = paymentReaction(opts.kind, opts.paid);
+    const count = opts.kind === 'transfer' ? 5 : 3;
+    const leaveAfter = (ms: number) => {
       if (!visiting) return;
       leaveTimer.current = window.setTimeout(() => {
         setVisit('out');
         leaveTimer.current = window.setTimeout(() => setVisit(null), LEAVE_MS);
-      }, 260);
+      }, ms);
     };
-    void flyNuggets(origin, target, opts.count).then(() => {
-      if (!alive.current) return;
-      window.clearTimeout(bowTimer.current);
-      setBowing(false);
-      setEating(true);
-      window.clearTimeout(chewTimer.current);
-      chewTimer.current = window.setTimeout(() => {
-        setEating(false);
-        if (!opts.allPaid) {
-          leave();
-          return;
-        }
-        setBowing(true);
-        bowTimer.current = window.setTimeout(() => {
-          setBowing(false);
-          leave();
-        }, BOW_MS);
-      }, CHEW_MS);
-    });
+    if (kind === 'gain') {
+      void flyNuggets(origin, mouthOf(target), count).then(() => {
+        if (!alive.current) return;
+        react('gain');
+        leaveAfter(REACT_MS + 260);
+      });
+      return;
+    }
+    // Perte : il s'attriste tout de suite, et les pièces le quittent.
+    react('loss');
+    window.setTimeout(() => void flyNuggets(mouthOf(target), origin, count), visiting ? VISIT_SETTLE_MS : 0);
+    leaveAfter(REACT_MS + 260);
   }, []);
 
-  return { noFaceRef, visitorRef, eating, bowing, visit, feed };
+  return { noFaceRef, visitorRef, eating: reacting, bowing: false, visit, feed };
 }

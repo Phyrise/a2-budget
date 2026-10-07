@@ -5,7 +5,7 @@
  * (toucher → AmountPad), retirer (annulable). « Ajouter une dépense » en bas.
  * En-tête : total des dépenses et progression discrète « 3 sur 7 payés ».
  *
- * Cocher = le Sans-Visage mange les pépites (useFeeding, inchangé). Montants
+ * Cocher / décocher = le Sans-Visage suit le compte (useFeeding). Montants
  * des virements et des cases : `monthFlows` (@a2/core), les mêmes que ceux
  * qu'additionne le solde. Une dépense à 0 € n'a rien à payer : pas de case.
  */
@@ -48,8 +48,7 @@ export function MonthLedger({
 
   const toggle = (kind: 'transfer' | 'expense', write: (paid: boolean) => boolean, paid: boolean, origin: { x: number; y: number }) => {
     const next = !paid;
-    if (!write(next) || !next) return;
-    feed(origin, { count: kind === 'transfer' ? 5 : 3, allPaid: done + 1 === total });
+    if (write(next)) feed(origin, { kind, paid: next });
   };
 
   const remove = (id: string) => {

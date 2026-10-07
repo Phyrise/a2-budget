@@ -5,7 +5,8 @@
  * Aucune de ces valeurs n'est affichée en texte : l'information reste dans
  * les chiffres de l'écran.
  */
-import type { MonthSummary } from '@a2/core';
+import type { MonthRecord, MonthSummary } from '@a2/core';
+import { monthFlows, paidFlows } from '@a2/core';
 import type { BudgetTheme, NoFacePose } from '../../../themes/types';
 
 /** Pose « humeur » du Sans-Visage (hors 'bow' et 'fading', réservées aux transitions). */
@@ -50,6 +51,39 @@ export function balanceFill(balanceCents: number, summary: MonthSummary): number
   const reference = Math.max(summary.householdContributionCents, summary.expensesTotalCents);
   if (reference <= 0) return 1;
   return Math.min(1, balanceCents / reference);
+}
+
+/**
+ * V4.2 : le Sans-Visage EST le compte commun. Quand le compte monte (virement
+ * coché, dépense décochée), il reçoit l'argent : content ('gain'). Quand il
+ * descend (dépense cochée, virement décoché), les pièces le quittent : triste
+ * ('loss').
+ */
+export type AccountReaction = 'gain' | 'loss';
+
+/** Sens du mouvement quand on coche (`paid`) ou décoche une case du mois. */
+export function paymentReaction(kind: 'transfer' | 'expense', paid: boolean): AccountReaction {
+  return (kind === 'transfer') === paid ? 'gain' : 'loss';
+}
+
+/** Sens d'une modification du mois (montant, taux) : le net du mois monte ou descend ; sinon rien. */
+export function editReaction(before: MonthRecord, after: MonthRecord): AccountReaction | null {
+  const delta = monthFlows(after).netCents - monthFlows(before).netCents;
+  return delta > 0 ? 'gain' : delta < 0 ? 'loss' : null;
+}
+
+/**
+ * Embonpoint du Sans-Visage, de −1 à 1 : ce qui est déjà passé sur le compte
+ * ce mois-ci (virements cochés − dépenses cochées, `paidFlows`), rapporté au
+ * plus grand des flux du mois. Il s'arrondit quand le compte monte, se tasse
+ * un peu quand il descend.
+ */
+export function accountSwell(month: MonthRecord): number {
+  const flows = monthFlows(month);
+  const reference = Math.max(flows.transfersTotalCents, flows.expensesTotalCents);
+  if (reference <= 0) return 0;
+  const paid = paidFlows(month);
+  return Math.max(-1, Math.min(1, (paid.transfersCents - paid.expensesCents) / reference));
 }
 
 /** Teintes de kompeitō (clés de budgetTheme.gold.konpeito, variantes « -2 » en plus). */

@@ -58,6 +58,8 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   shopBell: 'Clochette',
   woodNote: 'Note de bois',
   nom: 'Paiement mangé',
+  spend: 'Pièces qui partent',
+  ah: 'Sans-Visage touché',
   balanceBell: 'Solde recalé',
   lanternLit: 'Lanterne allumée',
   lanternNew: 'Nouvelle lanterne',

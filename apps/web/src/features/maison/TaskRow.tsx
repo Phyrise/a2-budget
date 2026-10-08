@@ -8,6 +8,7 @@ import { useId } from 'react';
 import { Checkbox, Companion, Icon, clockTime, cx } from '../../ui';
 import type { CompanionMood } from '../../world/types';
 import { CairnMark } from './EffortArt';
+import { GroceryBadge } from './GroceryLink';
 import { assigneeName, recurrenceLabel, turnLabel } from './taskText';
 
 export type Names = { a: string; b: string };
@@ -98,6 +99,7 @@ export function TaskRow({
           <Icon name="more" size={20} />
         </span>
       </button>
+      {task.groceries === true && <GroceryBadge />}
     </li>
   );
 }

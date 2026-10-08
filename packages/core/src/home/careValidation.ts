@@ -31,9 +31,9 @@ import {
   type Ok,
 } from './validationHelpers.js';
 
-type TaskCare = Pick<HouseholdTask, 'effort' | 'rotation' | 'flexible'>;
+type TaskCare = Pick<HouseholdTask, 'effort' | 'rotation' | 'flexible' | 'groceries'>;
 
-/** effort ∈ {1,2,3} ; rotation booléen (true exige a/b) ; flexible booléen (true exige weekly). */
+/** effort ∈ {1,2,3} ; rotation booléen (true exige a/b) ; flexible booléen (true exige weekly) ; groceries booléen (V5.2). */
 export function validateTaskCare(
   value: Record<string, unknown>,
   assignee: string,
@@ -59,6 +59,10 @@ export function validateTaskCare(
       return { ok: false, reason: 'task-flexible-requires-weekly' };
     }
     out.flexible = value.flexible;
+  }
+  if (value.groceries !== undefined) {
+    if (typeof value.groceries !== 'boolean') return { ok: false, reason: 'task-invalid-groceries' };
+    if (value.groceries) out.groceries = true;
   }
   return { ok: true, state: out };
 }

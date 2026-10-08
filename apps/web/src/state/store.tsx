@@ -96,13 +96,15 @@ export interface NewHomeTaskInput {
   rotation?: boolean;
   /** V3 — hebdomadaire souple : n'importe quel jour de la semaine (weekly seulement). */
   flexible?: boolean;
+  /** V5.2 — liée à la liste de courses. */
+  groceries?: boolean;
 }
 
 /** Champs modifiables d'une tâche Maison. */
 export type HomeTaskPatch = Partial<
   Pick<
     HouseholdTask,
-    'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'effort' | 'rotation' | 'flexible'
+    'title' | 'assignee' | 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'effort' | 'rotation' | 'flexible' | 'groceries'
   >
 >;
 
@@ -675,6 +677,7 @@ export function AppProvider({
             ...(input.effort !== undefined ? { effort: input.effort } : {}),
             ...(input.rotation === true ? { rotation: true } : {}),
             ...(input.flexible === true && input.recurrence === 'weekly' ? { flexible: true } : {}),
+            ...(input.groceries === true ? { groceries: true } : {}),
           },
           localDateKey(now),
         );

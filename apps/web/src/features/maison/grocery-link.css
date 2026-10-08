@@ -1,0 +1,61 @@
+/* V5.2 — lien Courses ↔ Maison : petit balai de Kiki (posé en biais). */
+
+.grocery-broom {
+  display: block;
+  height: auto;
+  transform: rotate(-40deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+}
+
+/* Sur la ligne Maison : balai + articles restants → onglet Courses. */
+.grocery-badge {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  margin-right: 4px;
+  padding: 0 9px 0 4px;
+  border: 1px solid rgba(221, 179, 106, 0.35);
+  border-radius: var(--radius-pill);
+  background: rgba(221, 179, 106, 0.1);
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.grocery-badge::after {
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
+}
+
+.grocery-badge:hover {
+  background: rgba(221, 179, 106, 0.18);
+}
+
+/* Dans la feuille de tâche : suggestion « Courses », à droite du « Quoi ? ». */
+.task-form__what {
+  position: relative;
+}
+
+.chip.grocery-chip {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  min-height: 30px;
+  padding: 0 12px 0 6px;
+  gap: 4px;
+  font-size: 13.5px;
+}
+
+.chip.grocery-chip.is-selected {
+  border-color: rgba(221, 179, 106, 0.6);
+  background: rgba(221, 179, 106, 0.16);
+  color: var(--ivory-50);
+}

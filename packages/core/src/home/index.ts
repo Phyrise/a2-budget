@@ -292,3 +292,6 @@ export {
   validateQuests,
 } from './quests.js';
 export type { QuestKind, QuestRole, QuestStatus, QuestTab, QuestsState, SharedQuest } from './quests.js';
+// V5.2 — lien Courses ↔ Maison.
+export { GROCERY_TASK_LOOKAHEAD_DAYS, groceryTaskOf, groceriesLeft, groceryTaskStatus } from './groceryTask.js';
+export type { GroceryTaskStatus } from './groceryTask.js';

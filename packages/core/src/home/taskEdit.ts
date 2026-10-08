@@ -88,11 +88,13 @@ export function createTask(
     effort?: TaskEffort;
     rotation?: boolean;
     flexible?: boolean;
+    /** V5.2 — liée à la liste de courses. */
+    groceries?: boolean;
   },
   createdAt: string,
 ): HouseholdTask {
   assertTaskFields(input);
-  return withCareFields(
+  const task = withCareFields(
     {
       id: input.id,
       title: input.title.trim(),
@@ -107,6 +109,7 @@ export function createTask(
     input.rotation,
     input.flexible,
   );
+  return input.groceries === true ? { ...task, groceries: true } : task;
 }
 
 /** Champs modifiables d'une tâche. */
@@ -122,6 +125,7 @@ export type TaskPatch = Partial<
     | 'effort'
     | 'rotation'
     | 'flexible'
+    | 'groceries'
   >
 >;
 
@@ -134,6 +138,8 @@ export type TaskPatch = Partial<
  *   lèvent une RangeError ; hérités et devenus sans objet (assignee passé à
  *   « ensemble », récurrence quittant weekly), ils sont retirés en silence.
  * Lève une RangeError si incohérent (rien n'est modifié).
+ *
+ * V5.2 : `groceries` (lien Courses) est conservé sauf patch explicite.
  *
  * `id` et `createdAt` ne changent jamais. Les faits Maison passés gardent
  * leur copie du titre et de l'assignee ; les crédits de la forêt sont
@@ -175,6 +181,7 @@ export function updateTask(tasks: HouseholdTask[], id: string, patch: TaskPatch)
     rotation,
     flexible,
   );
+  if ((patch.groceries ?? current.groceries) === true) next.groceries = true;
   if (
     next.title === current.title &&
     next.description === current.description &&
@@ -184,7 +191,8 @@ export function updateTask(tasks: HouseholdTask[], id: string, patch: TaskPatch)
     next.monthlyDay === current.monthlyDay &&
     next.effort === current.effort &&
     (next.rotation === true) === (current.rotation === true) &&
-    (next.flexible === true) === (current.flexible === true)
+    (next.flexible === true) === (current.flexible === true) &&
+    (next.groceries === true) === (current.groceries === true)
   ) {
     return tasks;
   }

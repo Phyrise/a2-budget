@@ -55,6 +55,7 @@ import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
 import { LiveProvider } from '../presence/LiveContext';
+import { PartnerAvatar } from '../presence/avatar/PartnerAvatar';
 
 function Screen({ module }: { module: ModuleId }) {
   if (module === 'budget') return <BudgetScreen />;
@@ -161,6 +162,7 @@ function Shell() {
       </main>
 
       <div className="app-dock">
+        <PartnerAvatar />
         <ModuleNav />
       </div>
       <UpdatePrompt />

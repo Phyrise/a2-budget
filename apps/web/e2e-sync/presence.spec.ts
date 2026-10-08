@@ -1,6 +1,6 @@
 /**
  * QA « deux téléphones » V5.1 : présence de l'autre (sa tête sur l'icône de
- * son onglet), compagnons côte à côte dans l'en-tête, coucou, et bocal de
+ * son onglet), avatar de l'autre sur la barre du bas (V5.2), coucou, et bocal de
  * kompeitō partagé (somme des gestes des deux, jamais compté deux fois).
  * Lancer : `node apps/web/scripts/qa-sync.mjs` (build émulateurs compris).
  */
@@ -35,19 +35,20 @@ test('AL change d’onglet : AC voit Jiji sur l’icône ; même onglet : coucou
   await expect(navButton(ac.page, 'Courses').locator('.partner-head')).toBeVisible();
   await expect(navButton(ac.page, 'Maison').locator('.partner-head')).toHaveCount(0);
 
-  // Même onglet : chacun voit le compagnon de l'autre dans l'en-tête.
+  // Même onglet : chacun voit le compagnon de l'autre entrer sur la barre du bas (V5.2).
   await go(al.page, 'Budget');
   const toAl = ac.page.getByRole('button', { name: 'Coucou à AL' });
   await expect(toAl).toBeVisible();
   await expect(al.page.getByRole('button', { name: 'Coucou à AC' })).toBeVisible();
+  await expect(ac.page.getByTestId('partner-avatar')).toHaveCount(1);
 
-  // Coucou d'AC : chez AL, son Jiji saute avec une bulle ♡.
-  await toAl.click();
+  // Coucou d'AC (toucher Jiji) : Jiji saute avec un ♡ chez AC ; chez AL, son
+  // Jiji saute dans l'en-tête et Calcifer (l'avatar d'AC) fait coucou.
+  await toAl.click({ force: true });
+  await expect(ac.page.getByTestId('partner-avatar-heart')).toBeVisible();
   await expect(al.page.locator('.presence.is-poked .presence__heart')).toBeVisible();
   await expect(al.page.getByRole('status').filter({ hasText: 'Coucou de AC' })).toHaveCount(1);
-  // Anti-rafale : un second toucher tout de suite ne repart pas.
-  await toAl.click();
-  await expect(ac.page.locator('.presence__partner.is-sent')).toHaveCount(1);
+  await expect(al.page.locator('[data-testid="partner-avatar"][data-react="wave"]')).toHaveCount(1);
 
   // AL ferme l'app (arrière-plan) : il n'est plus là chez AC.
   await al.page.evaluate(() => {

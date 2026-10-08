@@ -3,16 +3,18 @@
  * Vérifie un build (V5) : le SDK Firebase ne fait jamais partie de ce que
  * la page charge au démarrage (invité = Firebase jamais chargé).
  *
- *   node scripts/check-firebase-split.mjs [dist] [--emulators]
+ *   node scripts/check-firebase-split.mjs [dist] [--emulators] [--no-config]
  *
  * - Sans configuration : aucun fichier du build ne contient Firebase.
  * - Avec configuration : Firebase vit dans un chunk à part, atteint seulement
  *   par un import dynamique ; ni l'entrée de index.html ni ses imports
  *   statiques ne le contiennent.
+ * - `--no-config` (build e2e, mode « e2e ») : exige qu'aucun fichier ne
+ *   contienne Firebase (`.env.production` non chargé).
  * - La porte de QA (faux jeton Google, `__a2qa`) n'existe que dans le build
  *   émulateurs (`--emulators`) ; jamais ailleurs.
  *
- * Appelé après `vite build` (scripts build et build:emu de apps/web).
+ * Appelé après `vite build` (scripts build, build:emu et build:e2e de apps/web).
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
@@ -41,7 +43,7 @@ const hasSdk = (code) => SDK_MARKERS.some((marker) => code.includes(marker));
  * Analyse un build donné sous forme { 'chemin relatif': contenu }.
  * Rend la liste des problèmes (vide = conforme).
  */
-export function checkBuild(files, { emulators = false } = {}) {
+export function checkBuild(files, { emulators = false, noConfig = false } = {}) {
   const problems = [];
   const html = files['index.html'];
   if (html === undefined) return ['index.html absent'];
@@ -67,6 +69,7 @@ export function checkBuild(files, { emulators = false } = {}) {
 
   const withSdk = Object.keys(files).filter((path) => path.endsWith('.js') && hasSdk(files[path]));
   if (emulators && withSdk.length === 0) problems.push('build émulateurs sans chunk Firebase');
+  if (noConfig && withSdk.length > 0) problems.push(`Firebase présent dans un build sans configuration : ${withSdk.join(', ')}`);
   const withQa = Object.keys(files).filter((path) => files[path].includes(QA_MARKER));
   if (!emulators && withQa.length > 0) problems.push(`porte de QA hors build émulateurs : ${withQa.join(', ')}`);
   return problems;
@@ -90,7 +93,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   const dir = resolve(args.find((arg) => !arg.startsWith('--')) ?? 'dist');
   const emulators = args.includes('--emulators');
   const files = readBuild(dir);
-  const problems = checkBuild(files, { emulators });
+  const problems = checkBuild(files, { emulators, noConfig: args.includes('--no-config') });
   const sdkChunks = Object.keys(files).filter((path) => path.endsWith('.js') && hasSdk(files[path]));
   if (problems.length > 0) {
     console.error(`✗ Firebase / ${relative(process.cwd(), dir) || '.'} :\n  - ${problems.join('\n  - ')}`);

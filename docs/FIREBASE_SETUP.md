@@ -87,6 +87,13 @@ dirai : il suffira de recoller.
    `apps/web/.env.production` (versionné). Sans ce fichier, l'app reste
    exactement comme aujourd'hui, 100 % locale.
 
+   Fait : `apps/web/.env.production` contient la configuration du projet
+   `a2-home` (`authDomain` = `phyrise.github.io`). Il n'est lu qu'en mode
+   production (`pnpm build`, CI et déploiement Pages). Les e2e principaux
+   tournent sur un build sans configuration : `pnpm --filter @a2/web
+   build:e2e` (mode `e2e`, dossier `dist-e2e/`, servi par le `webServer`
+   de `playwright.config.ts`), ou `pnpm --filter @a2/web e2e`.
+
 ## 6. Seulement pour un iPhone (connexion dans l'app installée)
 
 Sur iPhone, la fenêtre Google ne revient pas toujours dans l'app installée

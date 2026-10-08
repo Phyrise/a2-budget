@@ -3,6 +3,7 @@ dist/
 dev-dist/
 dist-preview/
 dist-emu/
+dist-e2e/
 dist-auth-helper/
 qa-forest/
 *.local

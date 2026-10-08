@@ -102,6 +102,7 @@ export {
 } from './rituals.js';
 export {
   normalizeCircle,
+  trimCircles,
   circlePartId,
   saveCirclePart,
   weekRecords,

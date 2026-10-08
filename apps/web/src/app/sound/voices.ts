@@ -11,7 +11,7 @@ import type { SoundCue, SoundVoice } from './cues';
 import { broom, coins, konpeito, shopBell, woodNote } from './moduleVoices';
 import { bell, breath, pluck, tone, type Bus } from './synth';
 import { ah, balanceBell, lanternLit, lanternNew, nom, spend, squeak } from './v4Voices';
-import { crackle, grumble, karakara, yawn } from './companionVoices';
+import { crackle, grumble, karakara, purr, yawn } from './companionVoices';
 
 const N = {
   B3: 246.94,
@@ -200,6 +200,9 @@ export function renderCue(bus: Bus, cue: SoundCue, t: number, o: VoiceOptions = 
       return;
     case 'squeak':
       squeak(bus, t, gentle);
+      return;
+    case 'purr':
+      purr(bus, t, gentle);
       return;
   }
 }

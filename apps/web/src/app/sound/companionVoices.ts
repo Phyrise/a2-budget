@@ -124,3 +124,41 @@ export function yawn(bus: Bus, t: number, gentle: boolean): void {
   tone(bus, t + 0.08, N.E3, { peak: 0.02 * level, attack: 0.25, hold: 0.45, decay: 0.95, wet: 0.35 });
   breath(bus, t, { sweep: [[0, 500], [0.4, 900], [0.9, 380]], q: 1.2, shape: [[0.25, 0.05 * level], [0.65, 0.035 * level], [0.98, 0]], wet: 0.35 });
 }
+
+/**
+ * Jiji caressé : ronron. Un souffle grave et feutré, battu à ~24 Hz (le
+ * roulement du chat), qui inspire puis expire.
+ */
+export function purr(bus: Bus, t: number, gentle: boolean): void {
+  const { ctx } = bus;
+  const level = gentle ? 0.6 : 1;
+  const len = 1.1;
+  const src = ctx.createBufferSource();
+  src.buffer = bus.noise;
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 0.9;
+  lp.frequency.setValueAtTime(240, t);
+  lp.frequency.linearRampToValueAtTime(320, t + len * 0.4);
+  lp.frequency.linearRampToValueAtTime(200, t + len);
+  const trem = ctx.createGain();
+  trem.gain.value = 0.5;
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 24;
+  const depth = ctx.createGain();
+  depth.gain.value = 0.5;
+  lfo.connect(depth).connect(trem.gain);
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0, t);
+  out.gain.linearRampToValueAtTime(0.16 * level, t + 0.18);
+  out.gain.linearRampToValueAtTime(0.07 * level, t + len * 0.5);
+  out.gain.linearRampToValueAtTime(0.13 * level, t + len * 0.7);
+  out.gain.linearRampToValueAtTime(0, t + len);
+  src.connect(lp).connect(trem).connect(out);
+  src.start(t, Math.random() * 0.3, len + 0.05);
+  lfo.start(t);
+  lfo.stop(t + len + 0.05);
+  route(bus, out, 0.12, [src, lp, trem, lfo, depth], src);
+  tone(bus, t, N.E2, { peak: 0.025 * level, attack: 0.2, hold: 0.5, decay: 1, wet: 0.1, type: 'triangle' });
+}

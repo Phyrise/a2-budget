@@ -189,6 +189,34 @@ service cloud.firestore {
         allow create, update: if isMember(hid) && who == myRole() && stamped();
         allow delete: if isMember(hid) && who == myRole();
       }
+
+      // ---------- V5.1 — Bocal de kompeitō partagé (clé = rôle) ----------
+      // Chacun écrit SON document en incréments (ses propres gestes) ; le
+      // bocal affiché = 20 + Σ given − Σ spent. Compteurs entiers, jamais en
+      // baisse ; la marque de migration ne s'efface pas.
+      match /play/{who} {
+        function playCount(f) {
+          return incoming().get(f, 0) is int && incoming().get(f, 0) >= 0;
+        }
+        function playShape() {
+          return incoming().keys().hasOnly(['given', 'spent', 'caught', 'golden', 'migrated',
+                                            'updatedBy', 'syncedAt'])
+            && playCount('given') && playCount('spent')
+            && playCount('caught') && playCount('golden')
+            && incoming().get('migrated', false) is bool;
+        }
+        function playNeverLower() {
+          return incoming().get('given', 0) >= resource.data.get('given', 0)
+            && incoming().get('spent', 0) >= resource.data.get('spent', 0)
+            && incoming().get('caught', 0) >= resource.data.get('caught', 0)
+            && incoming().get('golden', 0) >= resource.data.get('golden', 0)
+            && (resource.data.get('migrated', false) == false || incoming().get('migrated', false) == true);
+        }
+        allow read: if isMember(hid);
+        allow create: if isMember(hid) && who == myRole() && stamped() && playShape();
+        allow update: if isMember(hid) && who == myRole() && stamped() && playShape() && playNeverLower();
+        allow delete: if false;
+      }
     }
   }
 }

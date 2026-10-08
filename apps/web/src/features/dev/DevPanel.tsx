@@ -18,6 +18,7 @@ import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { Button, Sheet, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
+import { DevAvatar } from './DevAvatar';
 import { DevCompanions } from './DevCompanions';
 import { copyText, devData, devSnapshot } from './devData';
 import { DevFetes } from './DevFetes';
@@ -74,6 +75,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevNumbers data={data} />
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
           <DevCompanions onKodama={() => showForest(rattleKodama)} />
+          <DevAvatar onClose={onClose} />
           <DevFetes onClose={onClose} />
           <DevQuests onClose={onClose} />
           <DevSeasons />

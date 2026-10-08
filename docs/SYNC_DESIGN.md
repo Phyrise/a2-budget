@@ -681,3 +681,44 @@ existante (test unitaire dans `diff.test.ts`).
 - Règles (bloc « Quêtes communes » de firestore.rules, tests/rules/quests.test.ts) : création par un membre (`createdBy` = son rôle, au plus sa propre aide, sans `doneAt`) ; ensuite chacun n'écrit que `helpers.<son rôle>`, une fois ; `doneAt` seulement avec les deux aides ; pas de suppression.
 - Une quête n'est écrite qu'au premier toucher (sinon : 0 lecture/écriture de plus) ; récompense +3 kompeitō dans le bocal LOCAL de chacun, une fois par quête (`a2-budget:quests:v1`).
 - QA : `e2e-sync/qa-quests.spec.ts` (lancé par `qa-sync.mjs`).
+
+## 19. V5.1 — Présence, coucous, bocal partagé (connecté seulement)
+
+- **Présence** : `memberState/{rôle}` reçoit `{ tab, visible, at }` (heure
+  serveur, fusion) à chaque changement d'onglet, `visible: false` à la mise
+  en arrière-plan, battement 60 s si visible. L'autre est « là » si
+  `visible` et `at` < 2,5 min. Écoute de la fiche de l'autre seulement
+  quand l'app est visible (`presence/LiveContext.tsx`, `sdk/live.ts`).
+- **Coucou** : `pokeAt` (heure serveur) dans sa propre fiche, anti-rafale
+  5 s ; joué une fois chez l'autre s'il a moins de 20 s.
+- **Bocal** : `play/{rôle}` `{ given, spent, caught, golden, migrated }`,
+  écrit en `increment` par ses propres gestes ; bocal = 20 + Σ given − Σ
+  spent. Migration unique (transaction, marque `migrated`). Règles : écrit
+  par son rôle, entiers ≥ 0, jamais en baisse, marque jamais effacée.
+- **Coût** (`dayCost`, testé) : grosse journée à deux (3 h visibles chacun,
+  30 ouvertures, 120 onglets, 20 coucous, 40 gestes) = 840 écritures + 1 100
+  lectures < 2 000 ; journée ordinaire < 700.
+- **QA** : `e2e-sync/presence.spec.ts` (dans `qa-sync.mjs`).
+
+## 20. V5.2 — Avatar de l'autre (local seulement)
+
+- **Serveur** : rien de nouveau. Seule la présence du §19 (« l'autre est sur
+  le même onglet ») décide de l'arrivée et du départ. Aucune position, aucun
+  état d'animation n'est transmis ; zéro lecture ou écriture en plus.
+- **Sur le téléphone** (`presence/avatar/`) : petit automate pur et
+  déterministe (`avatarModel.ts`, testé avec graine) — entrée par un bord
+  (Jiji trottine, Calcifer flotte), errance sur le haut de la barre du bas,
+  poses (assis, regarde ton doigt ou ton compagnon, bâille), sommeil après
+  75 s sans geste, sortie par le bord le plus proche. Boucle
+  `requestAnimationFrame` seulement pendant les déplacements ; sinon minuteur
+  jusqu'à la pose suivante, et rien pendant le sommeil.
+- **Gestes** : toucher → saut + ♡ et le coucou existant (anti-rafale 5 s,
+  1 écriture) ; caresser → ronron (Jiji) ou crépitement (Calcifer), local ;
+  kompeitō → 1 du bocal partagé (`playSpend`, 1 écriture). Coucou reçu
+  pendant qu'il est là : il fait coucou.
+- L'en-tête ne montre plus le compagnon de l'autre (une seule présence
+  visible) ; il garde le saut + ♡ de ton compagnon au coucou reçu.
+- **Calme** (« Immobile », mouvement réduit) : apparaît assis, disparaît
+  d'un coup, poses seulement. Masqué sur ordinateur.
+- **DEV** : « Faire venir Jiji / Calcifer », « Il me fait coucou », « Le
+  faire repartir » (présence simulée en local, invité compris, rien écrit).

@@ -37,6 +37,8 @@ export default defineConfig({
       url: 'http://127.0.0.1:8180/',
       reuseExistingServer: true,
       timeout: 120_000,
+      // Arrêt propre (Ctrl-C) : sinon le Java de l'émulateur Firestore, détaché, survit.
+      gracefulShutdown: { signal: 'SIGINT', timeout: 20_000 },
     },
     {
       command: `pnpm exec vite preview --outDir dist-emu --port ${PORT} --strictPort`,

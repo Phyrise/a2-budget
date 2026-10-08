@@ -1,6 +1,6 @@
 /**
  * Choix de la méthode de connexion Google (docs/SYNC_DESIGN.md §1.1).
- * Module pur (aucun Firebase), testé dans platform.test.ts.
+ * Module pur (aucun Firebase), testé dans signIn.test.ts.
  *
  * - Navigateur, Android (même installé) : fenêtre (`signInWithPopup`).
  * - App installée sur iPhone / iPad : la fenêtre ne revient jamais ; redirection

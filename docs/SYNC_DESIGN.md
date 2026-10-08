@@ -517,3 +517,56 @@ Domaine : `packages/core/src/sync/` (`DOMAIN_CONTRACTS.md` §15). Pont :
   règles essentielles, hors ligne, deux ordres de reconnexion).
 - Copie locale du mode synchronisé : `a2-budget:sync:v1` (`syncCache.ts`),
   jamais `a2-budget:state:v1`.
+
+## 15. Implémentation — étape 3 (connexion)
+
+Branche `v5/sync`. Sans configuration, rien ne change (ni accueil, ni chunk
+Firebase) ; le store n'est pas encore branché sur `SyncEngine`.
+
+- **Chargement** (`apps/web/src/sync/firebase/`) : `config.ts` lit les
+  `VITE_FIREBASE_*` (apiKey, authDomain, projectId, appId obligatoires) ;
+  `FIREBASE_ENABLED` est une constante du build. `loader.ts` est le seul
+  `import()` vers `sdk/`, seul dossier qui importe `firebase/*` :
+  `client.ts` (Auth `browserLocalPersistence` + résolveur popup/redirection,
+  Firestore `persistentLocalCache` + `persistentMultipleTabManager`,
+  émulateurs), `session.ts`, `household.ts`. Gardes :
+  `firebaseImports.test.ts` (sources) et `scripts/check-firebase-split.mjs`
+  après chaque build (sans config : aucun Firebase ; avec config : Firebase
+  seulement derrière un import dynamique ; porte de QA seulement dans le
+  build émulateurs).
+- **Compte** (`apps/web/src/account/`) : machine d'état pure
+  (`accountModel.ts`), choix mémorisé `a2-budget:account:v1` =
+  `{"entry":"guest"|"google"}` (`accountChoice.ts`, jamais synchronisé),
+  fournisseur (`AccountContext.tsx`, valeur locale fixe sans config), porte
+  (`AccountGate.tsx` : l'accueil tant qu'aucun choix, l'app n'est pas montée
+  derrière), `Welcome.tsx`, Réglages › Compte (`AccountPanel.tsx`).
+- **Connexion** : fenêtre partout ; redirection dans l'app installée sur
+  iPhone/iPad, seulement si `authDomain` est l'hôte de la page (helper
+  auto-hébergé), sinon le mot « bientôt ». Le SDK se charge au toucher du
+  bouton ; s'il est déjà là, la fenêtre s'ouvre dans le geste même.
+- **Liste blanche** : `accountVerdict` ; un autre compte (ou une adresse non
+  vérifiée) est déconnecté aussitôt, l'accueil revient avec son mot, rien
+  n'est mémorisé ni écrit.
+- **Foyer** : transaction « créer si absent » au premier passage d'un
+  membre : `households/a2home` (`names`, `schema`, `minApp`, `createdAt`,
+  `createdByRole`) et `memberState/{rôle}` (`uid`, `joinedAt`), avec
+  `updatedBy`/`syncedAt`. Réessayée au retour du réseau.
+- **QA** : `pnpm --filter @a2/web build:emu` (mode `emulators`,
+  `.env.emulators`, `dist-emu/`) ; `window.__a2qa.signInAs(email,
+  vérifié)` = faux jeton Google de l'émulateur Auth (build émulateurs et
+  page locale seulement) ; `pnpm --filter @a2/web e2e:sync`
+  (`playwright.sync.config.ts`, `e2e-sync/`, émulateurs lancés s'il le faut).
+- **Invité** : aucune requête vers Google/Firebase (vérifié en e2e). Le
+  service worker précache le chunk `session-*.js` comme le reste du build
+  (même origine, jamais exécuté en invité) pour que la connexion marche
+  hors ligne une fois membre.
+
+**Écarts entre `firestore.rules` (v5/prep) et le pont (v5/domaine), à régler
+avec le transport Firestore** (règles et `tests/rules` ensemble) :
+
+1. `undoneBy` : les règles exigent l'UID (`me()`), le pont écrit le rôle.
+2. Réécrire une annulation déjà posée : refusé par les règles (une seule
+   fois), attendu par le pont (§14).
+3. Décocher annule tous les faits vivants de l'occurrence, y compris celui
+   de l'autre (« fait ensemble ») : les règles exigent alors `devOverride`.
+   Décision produit à prendre (n'annuler que son propre fait ?).

@@ -162,3 +162,10 @@ dossier suffit à le retirer).
 - `pnpm test:rules` : règles testées sur l'émulateur (hors de `pnpm test`).
 - `pnpm emulators` : Auth + Firestore en local (interface sur
   <http://127.0.0.1:4180>).
+- `pnpm --filter @a2/web e2e:sync` : build émulateurs (`dist-emu/`) puis
+  tests navigateur du compte (accueil, invité sans aucune requête serveur,
+  connexion par faux jeton Google, refus, foyer). Lance les émulateurs s'ils
+  ne tournent pas ; pas en même temps que `pnpm test:rules` (mêmes ports).
+- Sur le build émulateurs seulement, `window.__a2qa.signInAs(email)` connecte
+  un compte Google factice de l'émulateur Auth (n'existe dans aucun autre build :
+  `scripts/check-firebase-split.mjs` le vérifie).

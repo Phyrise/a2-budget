@@ -113,12 +113,13 @@ function FirebaseAccountProvider({ children }: { children: ReactNode }) {
   const run = useCallback(
     (attempt: (loaded: FirebaseSession) => Promise<SignInOutcome>) => {
       dispatch({ type: 'connect' });
-      ready()
-        .then(attempt)
-        .then(
-          (outcome) => dispatch({ type: 'outcome', outcome }),
-          () => dispatch({ type: 'load-failed' }),
-        );
+      // SDK déjà là (préchargé au toucher) : la fenêtre s'ouvre dans le geste
+      // même, sans attente qui la ferait bloquer (Safari).
+      const loaded = session.current;
+      (loaded !== null ? attempt(loaded) : ready().then(attempt)).then(
+        (outcome) => dispatch({ type: 'outcome', outcome }),
+        () => dispatch({ type: 'load-failed' }),
+      );
     },
     [ready],
   );

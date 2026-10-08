@@ -82,13 +82,17 @@ export function readFirebaseSetup(env: Env): FirebaseSetup | null {
 }
 
 /**
- * Vrai si Firebase est configuré. Expression sur les variables elles-mêmes
- * (remplacées au build), sans appel de fonction : sans elles, Rollup la
- * réduit à `false` et élimine le chargement du SDK (aucun chunk produit).
+ * Vrai si Firebase est configuré (les mêmes quatre variables que
+ * `readFirebaseSetup`). Expression sur les variables elles-mêmes (remplacées
+ * au build), sans appel de fonction : sans elles, Rollup la réduit à `false`
+ * et élimine le chargement du SDK (aucun chunk produit).
  */
 export const FIREBASE_ENABLED: boolean =
   import.meta.env.VITE_FIREBASE_EMULATORS === '1' ||
-  (!!import.meta.env.VITE_FIREBASE_PROJECT_ID && !!import.meta.env.VITE_FIREBASE_API_KEY);
+  (!!import.meta.env.VITE_FIREBASE_API_KEY &&
+    !!import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
+    !!import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+    !!import.meta.env.VITE_FIREBASE_APP_ID);
 
 /** Build de QA sur émulateurs : seul cas où le faux jeton Google existe. */
 export const FIREBASE_EMULATORS: boolean = import.meta.env.VITE_FIREBASE_EMULATORS === '1';

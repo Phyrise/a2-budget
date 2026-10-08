@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json && vite build",
-    "build:emu": "tsc --noEmit && vite build --mode emulators --outDir dist-emu",
+    "build": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json && vite build && node scripts/check-firebase-split.mjs dist",
+    "build:emu": "tsc --noEmit && vite build --mode emulators --outDir dist-emu && node scripts/check-firebase-split.mjs dist-emu --emulators",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "test": "vitest run",

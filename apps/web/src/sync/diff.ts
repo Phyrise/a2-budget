@@ -48,6 +48,7 @@ import {
   type WriteOp,
 } from './docs';
 import { LIST_SPECS, listDocs, SINGLETON_SPECS, singletonDoc, type ListSpec } from './entities';
+import { QUESTS, questAddedOps } from './quests';
 
 export interface DiffContext {
   /** Documents connus du téléphone (vue locale, écritures en attente comprises). */
@@ -124,6 +125,7 @@ function occurrenceUndo(
 
 function removedOps(spec: ListSpec, id: string, prev: AppState, next: AppState, ctx: DiffContext): WriteOp[] {
   const at = ctx.now.toISOString();
+  if (spec.collection === QUESTS) return []; // jamais supprimées (élagage local seulement)
   if (!spec.fact) {
     return [{ kind: 'update', collection: spec.collection, id, fields: [[['deletedAt'], at], [['updatedAt'], at]] }];
   }
@@ -157,7 +159,8 @@ function listOps(spec: ListSpec, prev: AppState, next: AppState, ctx: DiffContex
   for (const [key, data] of after) {
     const [, id] = splitDocKey(key);
     const old = before.get(key);
-    if (old === undefined) ops.push(addedOp(spec, id, data, ctx));
+    if (old === undefined && spec.collection === QUESTS) ops.push(...questAddedOps(id, data, ctx.now.toISOString()));
+    else if (old === undefined) ops.push(addedOp(spec, id, data, ctx));
     else if (!spec.fact) {
       const fields = diffFields(old, data);
       if (fields.length > 0) {

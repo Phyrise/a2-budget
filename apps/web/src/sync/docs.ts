@@ -30,6 +30,8 @@ export const COLLECTIONS = [
   'settings',
   'checkpoints',
   'meta',
+  // V5.1 — quêtes communes (sync/quests.ts)
+  'quests',
 ] as const;
 
 export type CollectionName = (typeof COLLECTIONS)[number];

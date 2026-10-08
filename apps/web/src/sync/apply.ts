@@ -24,6 +24,7 @@ import {
   type FieldWrite,
   type WriteOp,
 } from './docs';
+import { QUESTS, questUpdateRefusal } from './quests';
 
 export interface ApplyOptions {
   /**
@@ -83,9 +84,14 @@ function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean, auth
       return current === undefined ? { ...op.data } : undefined;
     case 'set':
       if (rules && isFact(op) && current !== undefined) return 'fact-immutable';
+      if (rules && op.collection === QUESTS && current !== undefined) return 'quest-exists';
       return { ...op.data };
     case 'update':
       if (current === undefined) return 'not-found';
+      if (rules && op.collection === QUESTS) {
+        const refusal = questUpdateRefusal(current, op.fields, author);
+        if (refusal !== null) return refusal;
+      }
       if (rules && isFact(op)) {
         if (!onlyUndo(op.fields)) return 'fact-immutable';
         const refusal = undoRefusal(current, op, author);

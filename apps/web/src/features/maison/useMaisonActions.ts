@@ -6,6 +6,7 @@
  */
 import { nextAssignee, type ChoreCompletion, type ChoreDoer, type HouseholdTask, type TaskAssignee } from '@a2/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
 import { fr, useToast } from '../../ui';
 import type { CompanionMood, Who } from '../../world/types';
@@ -150,6 +151,7 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       dropLingering(task.id);
       return;
     }
+    playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
     const who = (result.doneBy ?? planned) as Who;
     const fly = (o: Origin) => {
       if (import.meta.env.DEV) tracePulse(task.id, o);

@@ -1,7 +1,7 @@
 import { createMonthRecord, emptyAppState, setExpensePaid, setTransferPaid } from '@a2/core';
 import { describe, expect, it } from 'vitest';
 import { accountSwell, editReaction, paymentReaction } from './mood';
-import { STRAY_SIZE, nextDelayMs, pickPerch, type Box } from './strays';
+import { STRAY_SIZE, nextDelayMs, pickPerch, type Box } from '../../../creatures/soot/perch';
 
 const month = () => {
   const s = emptyAppState();

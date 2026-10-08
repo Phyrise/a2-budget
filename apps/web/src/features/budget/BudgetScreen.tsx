@@ -29,6 +29,7 @@ import { BalanceCard } from './BalanceCard';
 import { useFeeding } from './chihiro/feeding';
 import { noFaceMood } from './chihiro/mood';
 import { NoFaceVisitor } from './chihiro/NoFaceVisitor';
+import { KonpeitoJar } from './chihiro/KonpeitoJar';
 import { SusuwatariRunner } from './chihiro/Susuwatari';
 import { SusuwatariGame } from './chihiro/SusuwatariGame';
 import { useMonthEdits } from './chihiro/useMonthEdits';
@@ -147,6 +148,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
         <div className="sheet-section budget-income">
           <div className="section-head">
             <h2 className="section-title">Revenus du mois</h2>
+            <KonpeitoJar />
           </div>
           <div className="income-grid">
             <PersonCard key={`${key}-a`} person="A" month={currentMonth} source={source} giveCents={flows.transferACents} />

@@ -49,6 +49,7 @@ import { AgendaList, DayAgenda } from './EventList';
 import { EventSheet } from './EventSheet';
 import type { EventPrefill, EventSheetState } from './eventForm';
 import { MonthGrid } from './MonthGrid';
+import { SootStage } from '../../creatures/soot';
 import { useShowTasks } from './calendarPrefs';
 import { TasksFilter } from './TasksFilter';
 import { agendaDays, byDate, taskItemsBetween, tasksCount, type TaskItem } from './taskAgenda';
@@ -231,6 +232,7 @@ export function CalendarScreen() {
 
       <section className="screen-sheet calendar" aria-labelledby="calendar-title">
         <ShellNotices />
+        <SootStage screen="calendar" />
 
         <div className="cal-month">
           <p id="cal-grid-label" className="visually-hidden">

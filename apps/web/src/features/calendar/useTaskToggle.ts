@@ -6,6 +6,7 @@
  * « Annuler ». Décocher ne dit rien de plus que la case elle-même.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
 import { fr, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
@@ -28,6 +29,7 @@ export function useTaskToggle(): { celebratingKey: string | null; toggle: (item:
       if (!item.checkable) return;
       const result = toggleHomeTask(item.task);
       if (result.completionId === null || !result.completed) return;
+      playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
       const who = (result.doneBy ?? item.who) as Who;
       world.pulse({ id: result.completionId, who, fromClientX: origin.x, fromClientY: origin.y, ...(item.task.effort === 3 ? { strong: true } : {}) });
       window.clearTimeout(timer.current);

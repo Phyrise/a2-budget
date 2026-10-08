@@ -242,7 +242,8 @@ test.describe('Budget — univers Chihiro', () => {
     await expect(page.locator('.susu-stray__tally')).toHaveText('Noiraudes attrapées\u00a0: 1');
     await expect(stray).toHaveCount(0, { timeout: 4_000 });
     await expect(page.getByTestId('susu-count')).toHaveText('Noiraudes attrapées\u00a0: 1');
-    expect(await page.evaluate(() => localStorage.getItem('a2-budget:susuwatari:v1'))).toBe('{"caught":1}');
+    // Jeu hors AppState (creatures/play) : attrapée = +1 au compteur et au bocal.
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('a2-budget:play:v1') ?? 'null'))).toMatchObject({ caught: 1, jar: 21 });
     expect(await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY)).toBe(saved);
 
     await page.reload();

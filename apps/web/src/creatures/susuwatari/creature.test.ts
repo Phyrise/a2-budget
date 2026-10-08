@@ -79,4 +79,36 @@ describe('Noiraude', () => {
     run(s, 0.5, 0.5, { gaze: { x: 100, y: 200 } });
     expect(s.look.y).toBeLessThan(-0.8);
   });
+
+  it('tenue sur un doigt : pas de pesanteur ; lâchée, elle retombe', () => {
+    const s = new Susuwatari({ x: 100, y: 400, size: 44, seed: 6 });
+    s.held = true;
+    s.z = 60;
+    let t = run(s, 0.5);
+    expect(s.z).toBe(60);
+    expect(s.legs).toBeGreaterThan(0.5);
+    s.held = false;
+    run(s, 1, t);
+    expect(s.z).toBe(0);
+  });
+
+  it('suit le défilement : position et but décalés ensemble', () => {
+    const s = new Susuwatari({ x: 100, y: 400, size: 44, seed: 8 });
+    let arrived = false;
+    s.walkTo(200, 400, { onArrive: () => (arrived = true) });
+    let t = run(s, 0.3);
+    s.shift(0, -120);
+    expect(s.goal).toEqual({ x: 200, y: 280 });
+    run(s, 3, t);
+    expect(arrived).toBe(true);
+    expect(Math.hypot(s.x - 200, s.y - 280)).toBeLessThan(2);
+  });
+
+  it('peine sous une charge : un petit tremblement continu', () => {
+    const s = new Susuwatari({ x: 100, y: 400, size: 44, seed: 9 });
+    s.strain = 1;
+    run(s, 0.6);
+    expect(s.shake).toBeGreaterThan(0.2);
+    expect(s.state).toBe('idle');
+  });
 });

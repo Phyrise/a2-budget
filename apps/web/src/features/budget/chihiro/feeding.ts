@@ -14,6 +14,8 @@
  * Décoratif uniquement : les chiffres restent la seule information.
  */
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { playGive } from '../../../creatures/play';
+import { soot, type PortTarget } from '../../../creatures/soot';
 import { budgetTheme } from '../../../themes/manifest';
 import { paymentReaction } from './mood';
 import { REACT_MS, react, useReaction } from './reaction';
@@ -99,6 +101,14 @@ export function flyNuggets(from: Point, to: Point, count: number): Promise<void>
   return flights[0] ?? Promise.resolve();
 }
 
+/** Le Sans-Visage du solde à l'écran pour les porteuses : ses pieds et sa bouche. */
+function portTarget(target: HTMLElement | null): PortTarget | null {
+  const img = target?.querySelector<HTMLElement>('.noface__img.is-shown') ?? target;
+  const rect = img?.getBoundingClientRect();
+  if (!rect || rect.width === 0) return null;
+  return { ground: { x: rect.left + rect.width / 2, y: rect.bottom - 4 }, mouth: mouthOf(target) };
+}
+
 /** Le Sans-Visage du solde est-il visible (hors bandeau du haut et de la navigation) ? */
 function inView(el: HTMLElement | null): boolean {
   const rect = el?.getBoundingClientRect();
@@ -150,6 +160,12 @@ export function useFeeding(): Feeding {
     const target = visiting ? visitorRef.current : noFaceRef.current;
     const kind = paymentReaction(opts.kind, opts.paid);
     const count = opts.kind === 'transfer' ? 5 : 3;
+    if (opts.kind === 'transfer') {
+      // Portage : des Noiraudes apportent (ou rapportent) la pièce ; un kompeitō
+      // au bocal pour un virement coché (jamais retiré quand on décoche).
+      soot.porters(origin, opts.paid, visiting ? null : portTarget(noFaceRef.current));
+      if (opts.paid) playGive(1, 'virement');
+    }
     const leaveAfter = (ms: number) => {
       if (!visiting) return;
       leaveTimer.current = window.setTimeout(() => {

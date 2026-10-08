@@ -7,6 +7,7 @@
  * appelle `update` à chaque image ; le dessin lit les champs publics.
  */
 import { rng } from '../../world/engine/noise';
+import { eyeTrack, updateEyes, type EyeTrack } from './eyes';
 import { DEFAULT_RIG, type SootRig } from './params';
 import { VARIANTS } from './sprites';
 import type { ArmPose, EyeMood, Point, Rect, SusuwatariEnv, SusuwatariInit, SusuwatariState } from './types';
@@ -65,14 +66,18 @@ export class Susuwatari {
   autonomous = false;
   restUntil = 0;
   sleepUntil = 0;
-
-  private lookGoal: Point = { x: 0, y: -0.2 };
-  private lookPoint: Point | null = null;
-  private nextSaccade = 0;
-  private blinkAt: number;
-  private blinkStart = -1;
-  private blinkTwice = false;
-  private goal: Point | null = null;
+  /** Opacité (0–1) : apparaître, s'effacer. */
+  alpha = 1;
+  /** Tenue en l'air (sur un doigt, en haut d'un tas) : pas de pesanteur. */
+  held = false;
+  /** Noiraude dorée (rarissime). */
+  gold = false;
+  /** Peine sous une charge trop lourde (0–1) : elle tremble un peu. */
+  strain = 0;
+  /** Regard et clignements (eyes.ts). */
+  readonly eyeTrack: EyeTrack;
+  /** But de la marche en cours (lecture seule hors d'ici ; `shift` le décale). */
+  goal: Point | null = null;
   private speed = 70;
   private onArrive: (() => void) | null = null;
   private hopAt = -1;
@@ -92,7 +97,7 @@ export class Susuwatari {
     this.y = init.y;
     this.size = init.size ?? 44;
     this.fur = this.rand() * 8;
-    this.blinkAt = 1 + this.rand() * 4;
+    this.eyeTrack = eyeTrack(1 + this.rand() * 4);
   }
 
   /** Diamètre affiché (profondeur comprise). */
@@ -118,7 +123,15 @@ export class Susuwatari {
 
   /** Regarde un point précis (null : regarde le doigt commun ou alentour). */
   lookAt(point: Point | null): this {
-    this.lookPoint = point;
+    this.eyeTrack.point = point;
+    return this;
+  }
+
+  /** Décale position et but (défilement de la page sous elle). */
+  shift(dx: number, dy: number): this {
+    this.x += dx;
+    this.y += dy;
+    if (this.goal) this.goal = { x: this.goal.x + dx, y: this.goal.y + dy };
     return this;
   }
 
@@ -169,7 +182,7 @@ export class Susuwatari {
     this.onGone = opts.onGone ?? null;
     this.armPose = 'flail';
     this.eyes = 'wide';
-    this.lookPoint = null;
+    this.eyeTrack.point = null;
     return this;
   }
 
@@ -239,7 +252,7 @@ export class Susuwatari {
       this.squashV -= 3.5 * Math.min(1.6, this.rig.bounce);
       if (!env.reduced) this.eyes = 'happy';
     }
-    if (this.z > 0 || this.vz > 0) {
+    if (!this.held && (this.z > 0 || this.vz > 0)) {
       this.vz -= GRAVITY * dt;
       this.z += this.vz * dt;
       if (this.z <= 0) {
@@ -318,7 +331,8 @@ export class Susuwatari {
     // Ressort d'écrasement (+ respiration).
     const breath = Math.sin(t * Math.PI * 2 * (this.state === 'sleep' ? 0.22 : 0.32) + this.fur) * (this.state === 'sleep' ? 0.03 : 0.012);
     const anticip = this.hopAt >= 0 ? 0.2 : 0;
-    const acc = -420 * (this.squash - anticip - breath) - 18 * this.squashV;
+    // Sous une charge trop lourde, elle est tassée.
+    const acc = -420 * (this.squash - anticip - breath - this.strain * 0.14) - 18 * this.squashV;
     this.squashV += acc * dt;
     this.squash = Math.max(-0.3, Math.min(0.35, this.squash + this.squashV * dt));
 
@@ -333,7 +347,7 @@ export class Susuwatari {
         then?.();
       }
     } else {
-      this.shake = approach(this.shake, 0, 10, dt);
+      this.shake = approach(this.shake, this.strain * 0.6, 10, dt);
     }
     const amp = this.shake * S * (env.reduced ? 0.008 : 0.035);
     this.jitterX = amp * Math.sin(t * 83 + this.fur * 5);
@@ -346,44 +360,6 @@ export class Susuwatari {
     const furRate = this.state === 'shiver' ? 9 : this.state === 'flee' ? 3 : moving ? 1.2 : 0.4;
     this.fur += dt * furRate * this.rig.furSpeed * (env.reduced ? 0.5 : 1);
 
-    this.updateEyes(dt, env);
-  }
-
-  private updateEyes(dt: number, env: SusuwatariEnv): void {
-    const t = env.time;
-    const target = this.lookPoint ?? (this.state === 'flee' ? null : env.gaze);
-    if (this.state === 'flee') {
-      this.lookGoal = { x: this.facing * 0.9, y: -0.1 };
-    } else if (target) {
-      const b = this.body();
-      const dx = target.x - b.x;
-      const dy = target.y - (b.y - 0.05 * this.scale);
-      const d = Math.hypot(dx, dy) || 1;
-      const m = Math.min(1, d / (this.scale * 1.1));
-      this.lookGoal = { x: (dx / d) * m, y: (dy / d) * m };
-    } else if (t >= this.nextSaccade) {
-      // Coups d'œil alentour, plutôt vers le haut (comme sur les peintures).
-      this.lookGoal = { x: (this.rand() - 0.5) * 1.6, y: -0.15 - this.rand() * 0.6 + (this.rand() < 0.2 ? 0.7 : 0) };
-      this.nextSaccade = t + 0.6 + this.rand() * 2.4;
-    }
-    this.look.x = approach(this.look.x, this.lookGoal.x, 16, dt);
-    this.look.y = approach(this.look.y, this.lookGoal.y, 16, dt);
-
-    // Clignements (parfois deux de suite).
-    if (this.eyes === 'open' && this.blinkStart < 0 && t >= this.blinkAt && this.rig.blink > 0) {
-      this.blinkStart = t;
-      this.blinkTwice = this.rand() < 0.22;
-      this.blinkAt = t + (1.8 + this.rand() * 4.5) / this.rig.blink;
-    }
-    if (this.blinkStart >= 0) {
-      const u = (t - this.blinkStart) / 0.15;
-      if (u >= 1) {
-        if (this.blinkTwice) {
-          this.blinkTwice = false;
-          this.blinkStart = t + 0.06;
-        } else this.blinkStart = -1;
-        this.blink = 0;
-      } else this.blink = u < 0 ? 0 : u < 0.4 ? u / 0.4 : 1 - (u - 0.4) / 0.6;
-    }
+    updateEyes(this, dt, env);
   }
 }

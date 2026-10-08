@@ -1,0 +1,108 @@
+/* Noiraudes d'un écran : une toile sur toute la fenêtre, au-dessus de la
+   feuille, sous le bandeau (30) et la navigation (40). Seules les cibles
+   des Noiraudes perchées reçoivent des touchers. */
+
+.soot-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.soot-stage__canvas,
+.soot-stage__hits {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.susu-stray {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 45%;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.susu-stray.is-caught {
+  cursor: default;
+  pointer-events: none;
+}
+
+.susu-stray__tally {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: rgba(11, 20, 16, 0.88);
+  box-shadow: 0 0 0 1px rgba(242, 211, 134, 0.25);
+  color: var(--text);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: susu-tally 1600ms var(--ease-soft) both;
+}
+
+.susu-stray__tally.is-start {
+  left: 0;
+  translate: 0 0;
+}
+
+.susu-stray__tally.is-end {
+  left: auto;
+  right: 0;
+  translate: 0 0;
+}
+
+@keyframes susu-tally {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .susu-stray__tally {
+    animation-name: susu-tally-fade;
+  }
+}
+
+@keyframes susu-tally-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+}
+
+/* Doigt immobile près d'une Noiraude : pas de sélection de texte ni de menu. */
+html.soot-holding,
+html.soot-holding * {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}

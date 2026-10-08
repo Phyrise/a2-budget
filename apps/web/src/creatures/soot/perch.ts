@@ -1,22 +1,38 @@
 /**
- * Noiraudes vagabondes (V4.2) : règles pures du petit jeu de l'écran Budget
- * (rythme des apparitions, perchoir au bord d'un bloc, loin de tout contrôle)
- * et compteur « Noiraudes attrapées », sous une clé dédiée
- * `a2-budget:susuwatari:v1` (jamais dans l'AppState ; `a2-budget:ui:v1`
- * appartient à la coquille). Lecture / écriture protégées.
+ * Règles pures des Noiraudes d'un écran (V4.2, reprises par les Noiraudes
+ * dessinées par le code) : rythme des apparitions, perchoir au bord d'un
+ * bloc loin de tout contrôle, bande du bas (au-dessus de la navigation) et
+ * raretés jamais annoncées.
  */
 
 /** Pas d'apparition pendant les premières secondes à l'écran. */
 export const WARMUP_MS = 20_000;
 /** Une apparition « au défilement » attend au moins ceci depuis la précédente. */
 export const SCROLL_GAP_MS = 18_000;
-/** Taille de la Noiraude à l'écran (px). */
+/** Place d'une Noiraude perchée (px) : boule et pattes. */
 export const STRAY_SIZE = { w: 34, h: 46 } as const;
 
 /** Prochaine apparition : 25–60 s ; plus rare quand tout est immobile (60–120 s). */
 export function nextDelayMs(calm: boolean, rand: () => number): number {
   const [min, max] = calm ? [60_000, 120_000] : [25_000, 60_000];
   return min + rand() * (max - min);
+}
+
+/** Onglet où une Noiraude « se trompe » : rare (45–120 s, une chance sur huit). */
+export function wrongTabDelayMs(rand: () => number): number {
+  return 45_000 + rand() * 75_000;
+}
+export const WRONG_TAB_CHANCE = 0.125;
+
+/**
+ * Rareté d'une apparition : la dorée (≈ 1 sur 60), la procession
+ * (≈ 1 sur 25, jamais au calme), sinon une Noiraude ordinaire.
+ */
+export function rollRarity(calm: boolean, rand: () => number): 'golden' | 'procession' | null {
+  const r = rand();
+  if (r < 1 / 60) return 'golden';
+  if (!calm && r < 1 / 60 + 1 / 25) return 'procession';
+  return null;
 }
 
 export interface Box {
@@ -63,23 +79,16 @@ export function pickPerch(blocks: readonly Box[], obstacles: readonly Box[], vie
   return null;
 }
 
-const KEY = 'a2-budget:susuwatari:v1';
-
-export function readCaught(): number {
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    const value = raw === null ? null : (JSON.parse(raw) as { caught?: unknown } | null);
-    const caught = value?.caught;
-    return typeof caught === 'number' && Number.isInteger(caught) && caught > 0 ? caught : 0;
-  } catch {
-    return 0;
-  }
-}
-
-export function writeCaught(caught: number): void {
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify({ caught }));
-  } catch {
-    // Stockage indisponible : le compteur vaut pour cette session.
-  }
+/**
+ * Bande du bas, où passent la procession et la Noiraude qui traverse : le
+ * haut de la navigation quand elle est une pilule en bas de l'écran (elles
+ * y marchent dessus), sinon le bas de la fenêtre. `left` / `right` : la
+ * feuille de l'écran, bornée à la fenêtre.
+ */
+export function laneOf(dock: Box | null, sheet: Box | null, width: number, height: number): { y: number; left: number; right: number } {
+  const atBottom = dock !== null && dock.top > height * 0.6 && dock.right - dock.left > width * 0.5;
+  const y = atBottom ? dock.top + 2 : height - 14;
+  const left = Math.max(0, sheet?.left ?? 0);
+  const right = Math.min(width, sheet?.right ?? width);
+  return right - left > 120 ? { y, left, right } : { y, left: 0, right: width };
 }

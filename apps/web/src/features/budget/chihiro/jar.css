@@ -1,0 +1,119 @@
+/* Bocal de kompeitō : petit, discret, au bout de « Revenus du mois ».
+   Le nombre seul, en doré pâle ; le bocal se laisse tirer du doigt. */
+
+.konpeito-jar {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  margin-block: -8px -2px;
+  padding: 2px 2px 0 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  transform-origin: 50% 100%;
+}
+
+.konpeito-jar.is-open {
+  cursor: grabbing;
+}
+
+.konpeito-jar__count {
+  margin-bottom: 2px;
+  color: var(--chi-gold-300, var(--amber-300));
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+.konpeito-jar__glass {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.konpeito-jar__body {
+  fill: rgba(206, 226, 230, 0.1);
+  stroke: rgba(236, 230, 211, 0.55);
+  stroke-width: 1;
+}
+
+.konpeito-jar__star {
+  stroke: rgba(70, 52, 44, 0.25);
+  stroke-width: 0.3;
+}
+
+.konpeito-jar__shine {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.32);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.konpeito-jar__cloth {
+  fill: #b4563f;
+}
+
+.konpeito-jar__string {
+  fill: none;
+  stroke: #ead6a8;
+  stroke-width: 0.8;
+}
+
+.konpeito-jar.is-open .konpeito-jar__cloth {
+  transform: translate(1px, -2.5px) rotate(-12deg);
+  transform-origin: 14px 9px;
+  transition: transform 160ms var(--ease-out);
+}
+
+/* Un kompeitō gagné vient d'y tomber. */
+.konpeito-jar.is-fed {
+  animation: konpeito-jar-fed 420ms var(--ease-out);
+}
+
+/* Vide : il remue un peu, rien ne sort. */
+.konpeito-jar.is-empty {
+  animation: konpeito-jar-empty 360ms ease-in-out;
+}
+
+@keyframes konpeito-jar-fed {
+  30% {
+    transform: scale(1.12, 0.9);
+  }
+  60% {
+    transform: scale(0.96, 1.05);
+  }
+}
+
+@keyframes konpeito-jar-empty {
+  25% {
+    transform: rotate(-7deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .konpeito-jar.is-fed,
+  .konpeito-jar.is-empty {
+    animation: none;
+  }
+}
+
+/* Compteur discret « Noiraudes attrapées », en bas de la feuille. */
+.susu-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 26px 0 0;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.susu-count img {
+  opacity: 0.75;
+}

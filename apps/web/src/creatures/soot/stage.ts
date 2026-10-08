@@ -66,10 +66,10 @@ export const soot = {
     attempt();
     return true;
   },
-  /** Kompeitō tiré du bocal : faux s'il n'y a pas de scène. */
-  treatStart(p: Point): boolean {
+  /** Kompeitō tiré du bocal (`finger` : au doigt) : faux s'il n'y a pas de scène. */
+  treatStart(p: Point, finger = false): boolean {
     if (!active) return false;
-    treatStart(active, p);
+    treatStart(active, p, finger);
     return true;
   },
   treatMove(p: Point): void {

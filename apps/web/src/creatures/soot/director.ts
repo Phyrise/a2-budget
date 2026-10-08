@@ -53,13 +53,28 @@ function boxOf(el: Element | null): Box | null {
   return r.width === 0 && r.height === 0 ? null : { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
 }
 
-/** Une feuille, le pavé ou le clavier sont ouverts (ou l'onglet est caché). */
+/** Écran tactile : le clavier se juge à la géométrie (`.app--keyboard`), pas au focus. */
+function touchScreen(): boolean {
+  try {
+    return window.matchMedia('(pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Une feuille, le pavé ou le clavier sont ouverts (ou l'onglet est caché).
+ * Au doigt, un champ garde souvent le focus une fois le clavier fermé
+ * (iPhone, bouton retour d'Android) : le focus seul n'y compte pas, sinon
+ * plus aucune Noiraude ni aucun bonbon n'apparaîtrait jusqu'au prochain
+ * toucher d'un autre champ.
+ */
 export function busy(): boolean {
   return (
     document.visibilityState !== 'visible' ||
     document.querySelector('dialog[open]') !== null ||
     document.querySelector('.app--keyboard') !== null ||
-    isTextEntry(document.activeElement)
+    (isTextEntry(document.activeElement) && !touchScreen())
   );
 }
 

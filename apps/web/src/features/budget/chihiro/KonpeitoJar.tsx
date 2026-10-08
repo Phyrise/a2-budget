@@ -6,6 +6,9 @@
  * Glisser un kompeitō depuis le bocal : les Noiraudes le suivent en
  * troupeau ; le lâcher le leur donne (coûte 1). Relâché tout près : il
  * revient, gratuit. État : creatures/play (hors AppState).
+ * Au doigt : zone de toucher élargie (jar.css), défilement bloqué sur le
+ * bocal, et un geste perdu (capture perdue sans pointerup, nouveau doigt)
+ * ne bloque jamais le suivant.
  */
 import { useEffect, useRef, type PointerEvent } from 'react';
 import { playSpend, usePlay } from '../../../creatures/play';
@@ -52,12 +55,18 @@ export function KonpeitoJar() {
   };
 
   const onDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (drag.current !== null) return;
+    if (!e.isPrimary || e.button > 0) return;
+    // Un geste précédent jamais terminé (doigt perdu) : il rend son bonbon.
+    if (drag.current !== null) {
+      drag.current = null;
+      soot.treatCancel();
+    }
     if (jar < 1) {
       wiggle();
       return;
     }
-    if (!soot.treatStart({ x: e.clientX, y: e.clientY })) return;
+    e.preventDefault();
+    if (!soot.treatStart({ x: e.clientX, y: e.clientY }, e.pointerType !== 'mouse')) return;
     drag.current = e.pointerId;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -94,6 +103,7 @@ export function KonpeitoJar() {
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onCancel}
+      onLostPointerCapture={onCancel}
       onContextMenu={(e) => e.preventDefault()}
     >
       <span className="konpeito-jar__count" data-testid="konpeito-count">

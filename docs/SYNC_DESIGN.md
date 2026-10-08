@@ -106,14 +106,14 @@ chemin est refusé.
 | `…/events/{id}` | objet | `CalendarEvent` |
 | `…/months/{YYYY-MM}` | objet | `MonthRecord` (dépenses et paiements en **maps**, §2.3) |
 | `…/balanceCorrections/{YYYY-MM}` | objet | `BalanceCorrection` (une par mois) |
-| `…/circles/{id}` | objet | `Circle` |
+| `…/circles/{id}` | objet | `Circle` ; V5.2 : une part par personne et par semaine, id `circle-<lundi>-<rôle>` (§18) |
 | `…/settings/budget` | objet | `Settings` (dépenses récurrentes en map) |
 | `…/settings/focus` | objet | `{ selectedLantern }` |
 | `…/settings/groceryMemory` | objet | `{ memory: { clé: rayon } }` |
 | `…/activity/{id}` | **fait** | fil des nouvelles (§7) |
 | `…/checkpoints/{YYYY-MM-DD}` | dérivé | `ForestState` figé à ce jour (§3.3) |
 | `…/meta/forestMilestones` | monotone | plus hauts stade / soins / déblocages vus |
-| `…/memberState/{role}` | par personne (`a`\|`b`) | `{ activitySeenAt }` |
+| `…/memberState/{role}` | par personne (`a`\|`b`) | `{ activitySeenAt }` ; V5.2 : `circleSeen` (§18) |
 | `…/push/{role}` | par personne | abonnement Web Push (option, §8) |
 
 Unités inchangées : montants en **centimes** entiers (l'affichage à l'euro reste un rendu,
@@ -673,3 +673,28 @@ apparaît (`paid` absent du mois → `paid = { transferB: true }`) ; hors ligne,
 le virement coché par l'un effaçait celui de l'autre. Une map nouvelle
 s'écrit désormais feuille par feuille (`paid.transferB`), comme une map
 existante (test unitaire dans `diff.test.ts`).
+
+## 18. V5.2 — lettres du cercle
+
+Chacun écrit **sa part** du cercle de la semaine, quand il veut, de son téléphone (son merci
+à l'autre, ce qui lui pèse, une intention, un petit mot) ; l'autre la reçoit comme une
+lettre.
+
+- **Sans perte** : une part est un `Circle` avec `author` (`a`|`b`) et un id déterministe
+  `circle-<lundi>-<rôle>` (core : `saveCirclePart`). Seul son auteur l'écrit ; deux
+  appareils du même rôle : le dernier gagne (`replaceOnAdd` : `set`, sans `creationId`).
+  Le cercle tenu à deux sur un téléphone (ancien format, invité) reste un `Circle` sans
+  `author`. La projection garde par semaine un cercle à deux + une part par personne ; la
+  vue d'une semaine fusionne (`mergeWeek` : les mots d'une personne viennent de sa part si
+  elle existe, sinon du cercle à deux). Validation : unicité par (semaine, auteur) ; champs
+  `author` et `notes` optionnels (rétrocompatible).
+- **Non lu** déduit des données : la part de l'autre la plus récente (semaine en cours ou
+  précédente) dont `heldAt` dépasse ma marque `memberState/{mon rôle}.circleSeen`
+  (= `heldAt` de la dernière lettre lue ; écrite en fusion, règles inchangées : seul ce
+  rôle écrit sa fiche). Marque locale (cet appareil) en attendant la fiche.
+- **Réception** (`features/rituals/letters/`) : enveloppe cachetée sur la carte du cercle,
+  pastille sur l'onglet Maison, toast « ✉ » sans son quand une lettre arrive app ouverte ;
+  toucher → la lettre s'ouvre ; ouvrir = lu sur tous mes appareils. Invité : rien.
+- **Coût** : une écoute de ma fiche, app visible seulement ; une écriture par lettre lue.
+- **App fermée** : rien sans Web Push (§8) ; le déclencheur serait l'écriture d'une part.
+

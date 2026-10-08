@@ -12,7 +12,9 @@ test.use({ viewport: PHONE });
 async function devAction(page: Page, name: string) {
   await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
   await sheet(page, 'Mode développeur').getByRole('button', { name }).click();
-  await expect(page.locator('.sheet')).toHaveCount(0);
+  await expect(sheet(page, 'Mode développeur')).toBeHidden();
+  // Un message éphémère passe au même endroit, au-dessus de lui : on le laisse partir.
+  await expect(page.locator('.toast')).toHaveCount(0, { timeout: 10_000 });
 }
 
 test('mode développeur : Jiji entre, saute au toucher, ronronne, croque, fait coucou, puis sort', async ({ page }) => {

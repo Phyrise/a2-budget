@@ -7,7 +7,12 @@
  *   (moins de ~45 i/s soutenus), la densité descend à 2 puis 1,5.
  * - Boucle en pause quand l'onglet est caché ou le calque `paused`.
  * - prefers-reduced-motion (suivi en direct) : mouvements calmes.
- * - `night` : seuls les yeux restent visibles.
+ * - `night` : seuls les yeux restent visibles ; `setCalm` : calme forcé
+ *   (forêt « immobile »), comme prefers-reduced-motion.
+ * - `drawUnder` / `drawOver` : ce que l'écran dessine sous et sur les
+ *   Noiraudes (kompeitō au sol, objets portés), sur la même toile.
+ * - `idleWhenEmpty` : sans Noiraude (ni `keepAwake`), la boucle s'arrête ;
+ *   `spawn` ou `wake` la relancent.
  * - Profondeur : `depth(y)` réduit un peu celles qui sont loin (haut de zone).
  * - Apparence : `params` (SootSpriteParams) ; `setParams` la change en direct :
  *   membres, yeux et tempo tout de suite, sprites reconstruits dès l'image
@@ -43,6 +48,13 @@ export interface SusuwatariLayerOptions {
   onFrame?: (dt: number, time: number) => void;
   /** Apparence (défaut : le modèle visé, DEFAULT_SOOT_PARAMS). */
   params?: SootSpriteParams;
+  /** Dessiné avant les Noiraudes / après elles (toile en px appareil, `dpr`). */
+  drawUnder?: (ctx: CanvasRenderingContext2D, dpr: number, time: number) => void;
+  drawOver?: (ctx: CanvasRenderingContext2D, dpr: number, time: number) => void;
+  /** Boucle arrêtée quand il n'y a personne (défaut false). */
+  idleWhenEmpty?: boolean;
+  /** Garde la boucle en marche malgré tout (ex. un kompeitō au sol). */
+  keepAwake?: () => boolean;
 }
 
 export interface SusuwatariLayer {
@@ -55,6 +67,10 @@ export interface SusuwatariLayer {
   setGaze(point: Point | null): void;
   setNight(on: boolean): void;
   setPaused(on: boolean): void;
+  /** Calme forcé (forêt « immobile ») en plus de prefers-reduced-motion. */
+  setCalm(on: boolean): void;
+  /** Relance la boucle (après `idleWhenEmpty`). */
+  wake(): void;
   setRim(rim: number): void;
   /** Change l'apparence de toutes les Noiraudes du calque. */
   setParams(params: SootSpriteParams): void;
@@ -93,6 +109,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   const creatures: Susuwatari[] = [];
   const query = reducedQuery();
   let reduced = query?.matches ?? false;
+  let calm = false;
   let night = false;
   let paused = false;
   let gaze: Point | null = null;
@@ -151,11 +168,11 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     last = now;
     time += dt;
 
-    const env: SusuwatariEnv = { time, reduced, gaze, view: view() };
+    const env: SusuwatariEnv = { time, reduced: reduced || calm, gaze, view: view() };
     const zone = area();
     for (const s of creatures) {
       s.k = options.depth?.(s.y, height) ?? 1;
-      live(s, time, zone, reduced);
+      live(s, time, zone, env.reduced);
       s.update(dt, env);
     }
     options.onFrame?.(dt, time);
@@ -168,14 +185,22 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    options.drawUnder?.(ctx, dpr, time);
     // De l'arrière vers l'avant.
     const order = creatures.filter((s) => s.state !== 'gone').sort((a, b) => a.y - b.y);
     for (const s of order) {
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
       if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
     }
+    options.drawOver?.(ctx, dpr, time);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     cache.pump(4, time, now);
     frameMs = frameMs * 0.9 + (performance.now() - start) * 0.1;
+    // Personne, rien à dessiner : la boucle s'arrête (toile déjà vidée).
+    if (options.idleWhenEmpty && creatures.length === 0 && !options.keepAwake?.()) {
+      last = 0;
+      return;
+    }
     schedule();
   };
 
@@ -216,6 +241,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       // Premier affichage net : le palier exact est construit tout de suite.
       cache.warm(s.variant, (s.scale / 2) * dpr, time);
       creatures.push(s);
+      schedule();
       return s;
     },
     remove(s) {
@@ -234,6 +260,12 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     setPaused(on) {
       paused = on;
       last = 0;
+      schedule();
+    },
+    setCalm(on) {
+      calm = on;
+    },
+    wake() {
       schedule();
     },
     setRim(value) {

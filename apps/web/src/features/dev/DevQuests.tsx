@@ -6,6 +6,7 @@
  */
 import { QUEST_TAB, localDateKey, questOfDay, type QuestKind } from '@a2/core';
 import { useShell } from '../../app/ShellContext';
+import { questMemory } from '../quests/questMemory';
 import { useApp } from '../../state/store';
 import { Button, useToast } from '../../ui';
 
@@ -41,7 +42,10 @@ export function DevQuests({ onClose }: { onClose: () => void }) {
   const helpAs = (role: 'a' | 'b') => {
     if (current === null) return;
     if (helpQuest(current, role) === null) toast.show({ message: 'Déjà aidé', icon: 'check' });
-    else go(current.kind);
+    else {
+      questMemory.markHelped(current.id);
+      go(current.kind);
+    }
   };
 
   return (

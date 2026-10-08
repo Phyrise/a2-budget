@@ -41,6 +41,9 @@ test('AL change d’onglet : AC voit Jiji sur l’icône ; même onglet : coucou
   await expect(toAl).toBeVisible();
   await expect(al.page.getByRole('button', { name: 'Coucou à AC' })).toBeVisible();
   await expect(ac.page.getByTestId('partner-avatar')).toHaveCount(1);
+  // Il a fini d'entrer (sinon il est encore hors de l'écran) et il est à portée de doigt.
+  await expect(ac.page.getByTestId('partner-avatar')).not.toHaveAttribute('data-phase', 'enter', { timeout: 8_000 });
+  await expect(toAl).toBeInViewport();
 
   // Coucou d'AC (toucher Jiji) : Jiji saute avec un ♡ chez AC ; chez AL, son
   // Jiji saute dans l'en-tête et Calcifer (l'avatar d'AC) fait coucou.

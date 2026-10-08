@@ -116,7 +116,10 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
     if (visible === null || status === 'done') return;
     const role = helpQuest(visible);
     if (role === null) setWiggle(true);
-    else playCue('woodNote', { who: role });
+    else {
+      questMemory.markHelped(visible.id);
+      playCue('woodNote', { who: role });
+    }
   };
 
   return (
@@ -143,7 +146,7 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
   );
 }
 
-/** Les +3 kompeitō de CE téléphone, une fois par quête réglée (aujourd'hui ou hier). */
+/** Les +3 kompeitō de CE téléphone, une fois par quête réglée (aujourd'hui ou hier) où il a aidé. */
 export function QuestRewards() {
   const { appState, today } = useApp();
   const items = appState?.quests?.items;

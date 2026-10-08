@@ -68,10 +68,10 @@ test('quête à deux : AL la fait apparaître, les deux aident, récompense des 
     return [doc?.createdBy, typeof helpers.a, typeof helpers.b, typeof doc?.doneAt].join(',');
   }).toBe('a,string,string,string');
 
-  // +3 kompeitō chacun, dans son bocal.
+  // +3 kompeitō chacun, dans le bocal partagé : +6 vus des deux côtés.
   await go(al.page, 'Budget');
   await go(ac.page, 'Budget');
-  await expect.poll(() => jarCount(al.page)).toBe(jars.al + 3);
-  await expect.poll(() => jarCount(ac.page)).toBe(jars.ac + 3);
+  await expect.poll(() => jarCount(al.page)).toBe(jars.al + 6);
+  await expect.poll(() => jarCount(ac.page)).toBe(jars.ac + 6);
   await closePhones(al, ac);
 });

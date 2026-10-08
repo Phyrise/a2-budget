@@ -106,7 +106,7 @@ export function CircleReadback({
   );
 }
 
-export function CircleClosing({ circle, names }: { circle: Circle; names: Names }) {
+export function CircleClosing({ circle, names, sentTo = null }: { circle: Circle; names: Names; sentTo?: 'a' | 'b' | null }) {
   const lines = circleClosingLine(circle.id);
   return (
     <div className="circle-closing">
@@ -115,7 +115,9 @@ export function CircleClosing({ circle, names }: { circle: Circle; names: Names 
         <Companion who="b" size={68} mood="happy" reactKey="close-b" touchable />
       </div>
       <h3 className="circle-closing__title display">Merci d’avoir pris ce moment.</h3>
-      <p className="circle-closing__sub">Le cercle de la semaine est gardé dans le carnet de la forêt.</p>
+      <p className="circle-closing__sub">
+        {sentTo !== null ? `${names[sentTo]} va recevoir ta lettre.` : 'Le cercle de la semaine est gardé dans le carnet de la forêt.'}
+      </p>
       <div className="circle-closing__bubbles">
         <p className="ritual-bubble ritual-bubble--a">
           <span className="ritual-bubble__who">Jiji</span> {lines.a}

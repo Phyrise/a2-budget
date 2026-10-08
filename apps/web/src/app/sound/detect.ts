@@ -102,9 +102,14 @@ function mergeVoices(voices: SoundVoice[]): SoundVoice {
   return set.size === 1 ? [...set][0]! : 'both';
 }
 
+/**
+ * Cercle tenu à deux. Une part (lettre, V5.2) n'est pas entendue ici : celle
+ * de l'autre arrive en silence (l'enveloppe la montre), la sienne sonne à
+ * l'envoi (CircleSheet).
+ */
 function circleChanged(prev: AppState, next: AppState): boolean {
   const before = new Map((prev.rituals?.circles ?? []).map((c) => [c.id, c.heldAt]));
-  return (next.rituals?.circles ?? []).some((c) => before.get(c.id) !== c.heldAt);
+  return (next.rituals?.circles ?? []).some((c) => c.author === undefined && before.get(c.id) !== c.heldAt);
 }
 
 /** Le montant d'une dépense, par id (pour repérer un montant modifié). */

@@ -4,6 +4,7 @@
  * module (variable --module-accent posée sur .app--<module>).
  */
 import { Icon, cx } from '../ui';
+import { NavLetterDot } from '../features/rituals/letters/NavLetterDot';
 import { NAV_ICONS } from './modules';
 import { MODULES } from './prefs';
 import { useShell } from './ShellContext';
@@ -29,6 +30,7 @@ export function ModuleNav() {
           }}
         >
           <Icon name={NAV_ICONS[m.id]} size={22} />
+          <NavLetterDot tab={m.id} />
           <span className="app-nav__label">{m.label}</span>
         </button>
       ))}

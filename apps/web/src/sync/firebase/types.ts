@@ -4,6 +4,7 @@
  * jamais importer Firebase.
  */
 import type { AppState } from '@a2/core';
+import type { LetterChannel } from '../../features/rituals/letters/letterTypes';
 import type { MemberRole, RefusalReason } from '../allowlist';
 import type { SyncCache } from '../syncCache';
 import type { SignInMethod } from './platform';
@@ -101,6 +102,8 @@ export interface FirebaseSession {
    * (null : tout relire du serveur). La copie est tenue à jour par le runtime.
    */
   openSync(member: Member, cache: SyncCache | null, selectedMonth: string): SyncRuntime;
+  /** V5.2 : marque « lu » des lettres du cercle (features/rituals/letters). */
+  openLetters(member: Member): LetterChannel;
   /** QA seulement (build émulateurs) : faux jeton Google de l'émulateur Auth. */
   signInWithFakeGoogle?: (email: string, emailVerified?: boolean) => Promise<SignInOutcome>;
 }

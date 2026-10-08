@@ -34,6 +34,7 @@ import {
 } from '../types';
 import { firebaseClient } from './client';
 import { ensureHousehold } from './household';
+import { openLetters } from './letters';
 import { openRuntime } from './runtime';
 import { syncSetup } from './setup';
 
@@ -121,6 +122,8 @@ export function openSession(): FirebaseSession {
       runtime = openRuntime(db, member, cache, selectedMonth);
       return runtime;
     },
+
+    openLetters: (member) => openLetters(db, member),
   };
 
   if (FIREBASE_EMULATORS && setup.emulators !== null) {

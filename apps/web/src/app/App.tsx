@@ -54,6 +54,7 @@ import { useNoZoom } from './noZoom';
 import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
+import { LetterWatcher } from '../features/rituals/letters/LetterWatcher';
 
 function Screen({ module }: { module: ModuleId }) {
   if (module === 'budget') return <BudgetScreen />;
@@ -164,6 +165,7 @@ function Shell() {
       </div>
       <UpdatePrompt />
       <BirthdayParty />
+      <LetterWatcher />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
         {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}

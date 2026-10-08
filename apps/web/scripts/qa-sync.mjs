@@ -7,7 +7,8 @@
  * ligne des deux côtés puis fusion (forêt identique), même objet modifié
  * des deux côtés, invité sur un 3e téléphone (aucune requête serveur),
  * compte non invité refusé, session gardée (rechargement, réouverture,
- * ouverture hors ligne).
+ * ouverture hors ligne) ; V5.1 : présence, coucou, bocal partagé
+ * (e2e-sync/presence.spec.ts).
  *
  * Usage (depuis la racine du worktree) :
  *   node apps/web/scripts/qa-sync.mjs [port] [--all] [--no-build]
@@ -28,6 +29,6 @@ function run(command, commandArgs, env = {}) {
 }
 
 if (!args.includes('--no-build')) run('pnpm', ['build:emu']);
-const specs = args.includes('--all') ? [] : ['qa-two-phones'];
+const specs = args.includes('--all') ? [] : ['qa-two-phones', 'presence'];
 run('npx', ['playwright', 'test', '-c', 'playwright.sync.config.ts', ...specs], { E2E_PORT: port });
 console.log('✓ QA deux téléphones : tout est passé.');

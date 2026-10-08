@@ -691,3 +691,26 @@ existante (test unitaire dans `diff.test.ts`).
   30 ouvertures, 120 onglets, 20 coucous, 40 gestes) = 840 écritures + 1 100
   lectures < 2 000 ; journée ordinaire < 700.
 - **QA** : `e2e-sync/presence.spec.ts` (dans `qa-sync.mjs`).
+
+## 19. V5.2 — Avatar de l'autre (local seulement)
+
+- **Serveur** : rien de nouveau. Seule la présence du §18 (« l'autre est sur
+  le même onglet ») décide de l'arrivée et du départ. Aucune position, aucun
+  état d'animation n'est transmis ; zéro lecture ou écriture en plus.
+- **Sur le téléphone** (`presence/avatar/`) : petit automate pur et
+  déterministe (`avatarModel.ts`, testé avec graine) — entrée par un bord
+  (Jiji trottine, Calcifer flotte), errance sur le haut de la barre du bas,
+  poses (assis, regarde ton doigt ou ton compagnon, bâille), sommeil après
+  75 s sans geste, sortie par le bord le plus proche. Boucle
+  `requestAnimationFrame` seulement pendant les déplacements ; sinon minuteur
+  jusqu'à la pose suivante, et rien pendant le sommeil.
+- **Gestes** : toucher → saut + ♡ et le coucou existant (anti-rafale 5 s,
+  1 écriture) ; caresser → ronron (Jiji) ou crépitement (Calcifer), local ;
+  kompeitō → 1 du bocal partagé (`playSpend`, 1 écriture). Coucou reçu
+  pendant qu'il est là : il fait coucou.
+- L'en-tête ne montre plus le compagnon de l'autre (une seule présence
+  visible) ; il garde le saut + ♡ de ton compagnon au coucou reçu.
+- **Calme** (« Immobile », mouvement réduit) : apparaît assis, disparaît
+  d'un coup, poses seulement. Masqué sur ordinateur.
+- **DEV** : « Faire venir Jiji / Calcifer », « Il me fait coucou », « Le
+  faire repartir » (présence simulée en local, invité compris, rien écrit).

@@ -1,5 +1,5 @@
-/* Présence de l'autre (V5.1) : tête sur l'icône de la barre, petits
-   compagnons dans l'en-tête, coucous. Calme (« Immobile », mouvement
+/* Présence de l'autre (V5.1) : tête sur l'icône de la barre, coucou reçu
+   dans l'en-tête (son compagnon vit sur la barre : avatar/, V5.2). Calme (« Immobile », mouvement
    réduit) : pose seulement. */
 
 .app-nav__item {
@@ -38,23 +38,6 @@
   place-items: center;
 }
 
-.presence__partner {
-  appearance: none;
-  display: grid;
-  place-items: center;
-  min-width: 44px;
-  min-height: 44px;
-  margin: -9px -9px -9px -6px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: none;
-  color: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
 .presence__heart {
   position: absolute;
   left: 50%;
@@ -71,12 +54,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .presence:not(.is-calm) .presence__breath {
-    display: block;
-    transform-origin: 50% 100%;
-    animation: cmp-breathe 4.2s ease-in-out infinite;
-  }
-
   .presence:not(.is-calm) .presence__heart {
     animation: presence-heart 2.4s var(--ease-out) forwards;
   }

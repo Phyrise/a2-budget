@@ -101,6 +101,19 @@ export {
   gratitudeSuggestions,
 } from './rituals.js';
 export {
+  normalizeCircle,
+  circlePartId,
+  saveCirclePart,
+  weekRecords,
+  mergeWeek,
+  weeklyCircles,
+  circleWriters,
+  circlePart,
+  letterHasWords,
+  unreadLetter,
+  nextSeenMark,
+} from './circleParts.js';
+export {
   FOCUS_SESSIONS_MAX,
   FOCUS_MINUTES_MAX,
   FOCUS_LABEL_MAX,

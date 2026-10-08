@@ -53,6 +53,7 @@ import { LocalStorageAdapter, type StorageAdapter } from './storage';
 import { buildExportJson, parseImportJson, type ImportSummary } from './exportImport';
 import { useCareActions, type CareActions } from './careActions';
 import { useCalendarActions, type CalendarActions } from './calendarActions';
+import { useQuestActions, type QuestActions } from './questActions';
 import { useBudgetActions, type BudgetActions } from './budgetActions';
 import { useGroceryActions, type GroceryActions } from './groceryActions';
 import { newId } from './ids';
@@ -121,7 +122,7 @@ export interface ToggleHomeTaskResult {
   othersGesture?: true;
 }
 
-export interface AppContextValue extends CareActions, CalendarActions, BudgetActions, GroceryActions {
+export interface AppContextValue extends CareActions, CalendarActions, BudgetActions, GroceryActions, QuestActions {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
@@ -782,6 +783,8 @@ export function AppProvider({
 
   // --- Courses (V5 : l'ajout est signé du compte connecté) ---------------
   const groceries = useGroceryActions(transact, me);
+  // V5.1 — quêtes communes
+  const quests = useQuestActions(transact, me);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -830,6 +833,7 @@ export function AppProvider({
       ...calendar,
       ...budgetV4,
       ...groceries,
+      ...quests,
       saveStatus,
       recovery,
       currentMonth,
@@ -868,6 +872,7 @@ export function AppProvider({
       calendar,
       budgetV4,
       groceries,
+      quests,
       saveStatus,
       recovery,
       currentMonth,

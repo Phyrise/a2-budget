@@ -24,7 +24,7 @@ export interface PlayState {
 }
 
 /** Pourquoi le bocal reçoit des kompeitō (journal, statistiques futures). */
-export type GiveCause = 'soin' | 'virement' | 'attrapee' | 'doree' | 'dev';
+export type GiveCause = 'soin' | 'virement' | 'attrapee' | 'doree' | 'dev' | 'quete';
 
 export type PlayGesture =
   | { kind: 'give'; n: number; cause: GiveCause }

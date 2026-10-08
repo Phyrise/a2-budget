@@ -17,6 +17,7 @@ import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { coursesTheme } from '../../themes/manifest';
 import { Button, Icon, fr, plural, useToast } from '../../ui';
+import { QuestSpot } from '../quests/QuestSpot';
 import { BasketStage } from './BasketStage';
 import { ItemRow, type RowMotion } from './ItemRow';
 import { ItemSheet } from './ItemSheet';
@@ -213,6 +214,7 @@ export function CoursesScreen() {
       </div>
 
       <section className="screen-sheet courses" aria-labelledby="courses-title">
+        <QuestSpot tab="courses" />
         <ShellNotices />
         <SootStage screen="courses" />
 

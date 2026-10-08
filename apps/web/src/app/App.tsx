@@ -35,6 +35,7 @@ import { CalendarScreen } from '../features/calendar/CalendarScreen';
 import { CoursesScreen } from '../features/courses/CoursesScreen';
 import { DevPanel } from '../features/dev/DevPanel';
 import { BirthdayParty } from '../features/fetes/BirthdayParty';
+import { QuestRewards } from '../features/quests/QuestSpot';
 import { HistorySheetContent } from '../features/history/HistorySheetContent';
 import { MaisonScreen } from '../features/maison/MaisonScreen';
 import { SettingsSheetContent } from '../features/settings/SettingsSheetContent';
@@ -164,6 +165,7 @@ function Shell() {
       </div>
       <UpdatePrompt />
       <BirthdayParty />
+      <QuestRewards />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
         {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}

@@ -43,7 +43,8 @@ test('labo Noiraudes : comparaison, scène vivante, toucher, appui long, nuit', 
   await expect(lab.getByRole('heading', { name: 'Labo Noiraudes' })).toBeVisible();
   await expect(lab.getByRole('img', { name: 'Trio de Noiraudes peint' })).toBeVisible();
 
-  // La toile du trio en code est peinte (des pixels sombres au centre).
+  // La toile du trio en code est peinte (des pixels sombres au centre ;
+  // corps plus petits depuis le modèle du film : ~300 échantillons).
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -54,7 +55,7 @@ test('labo Noiraudes : comparaison, scène vivante, toucher, appui long, nuit', 
         return dark;
       }),
     )
-    .toBeGreaterThan(500);
+    .toBeGreaterThan(200);
 
   // La scène : 8 Noiraudes par défaut ; le curseur en met 30.
   await expect.poll(async () => (await creature(page)).count).toBe(8);

@@ -71,6 +71,7 @@ export const SPECS: Record<Exclude<TuneTab, 'scene'>, ParamSpec[]> = {
   eyes: [
     spec('eyes', 'size', 'Taille des yeux', 0.08, 0.32, 0.002),
     spec('eyes', 'cross', 'Strabisme (vers le nez)', 0, 1, 0.01),
+    spec('eyes', 'ring', 'Liseré sombre', 0, 0.3, 0.005),
     spec('eyes', 'aspect', 'Forme des yeux (h / l)', 0.8, 1.6, 0.01),
     spec('eyes', 'gap', 'Écart des yeux', 0.12, 0.45, 0.005),
     spec('eyes', 'lift', 'Hauteur des yeux', -0.2, 0.35, 0.005),
@@ -83,6 +84,7 @@ export const SPECS: Record<Exclude<TuneTab, 'scene'>, ParamSpec[]> = {
     spec('limbs', 'legs', 'Longueur des jambes', 0.1, 0.8, 0.01),
     spec('limbs', 'bow', 'Arc des jambes', 0, 1.5, 0.01),
     spec('limbs', 'mirror', 'Arcs en miroir « ( ) »', 0, 1, 0.05),
+    spec('limbs', 'knee', 'Hauteur du genou', 0.15, 0.85, 0.01),
     spec('limbs', 'stance', 'Écart des pieds', -0.3, 0.8, 0.01),
     spec('limbs', 'hip', 'Écart des hanches', 0, 1, 0.01),
     spec('limbs', 'width', 'Épaisseur des membres', 0.01, 0.16, 0.001),

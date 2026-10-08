@@ -20,7 +20,7 @@ const TRIO = [
 ] as const;
 
 /** Gros plan : sol et centre du corps (fractions de la hauteur), comme le plan du film. */
-const CLOSE = { ground: 0.92, center: 0.375, seed: 3 } as const;
+const CLOSE = { ground: 0.89, center: 0.375, seed: 3 } as const;
 
 export function useCompareTrio(canvasRef: RefObject<HTMLCanvasElement | null>, params: SootSpriteParams, closeUp = false) {
   const layerRef = useRef<SusuwatariLayer | null>(null);

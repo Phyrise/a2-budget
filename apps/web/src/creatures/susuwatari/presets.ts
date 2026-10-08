@@ -1,9 +1,9 @@
 /**
  * Modèles de Noiraudes (onglet « Scène » du Labo) :
  * - `defaut` : le modèle par défaut (DEFAULT_SOOT_PARAMS) ;
- * - `film`   : au plus près du plan du film (gros plan) : poils plus longs
- *              et plus nombreux, jambes plus longues — superbe en grand,
- *              un peu chargé sous 50 px ;
+ * - `film`   : au plus près du plan du film (gros plan) : traits plus fins,
+ *              jambes plus longues ; le défaut en est une version un peu
+ *              plus appuyée, plus lisible à 30–50 px ;
  * - `arthurV1` : le meilleur réglage d'Arthur avec l'ancien moteur, tel quel
  *              (pointes effilées, rien sur le corps, genoux du même côté) ;
  * - `vise`, `porcEpic`, `ronces` : anciens essais (moteur d'avant).
@@ -19,7 +19,8 @@ export function legacy(p: SootSpriteParams): SootSpriteParams {
   out.body.blur = 0;
   Object.assign(out.hair, { taper: 1, cap: 0, over: 0, inner: 0.5, ink: out.body.darkness });
   out.eyes.cross = 0;
-  Object.assign(out.limbs, { bow: 1, mirror: 0, stance: 0.225, toes: 0, spread: 1.2, fine: 0.5 });
+  out.eyes.ring = 0;
+  Object.assign(out.limbs, { bow: 1, mirror: 0, knee: 0.5, stance: 0.225, toes: 0, spread: 1.2, fine: 0.5 });
   return out;
 }
 
@@ -77,11 +78,12 @@ const ARTHUR_V1: SootSpriteParams = legacy({
   shadow: { opacity: 1.5, width: 2, height: 0.22 },
 });
 
-/** Au plus près du plan du film (gros plan). */
+/** Au plus près du plan du film (gros plan) : poils et membres plus fins, jambes plus longues. */
 const FILM: SootSpriteParams = {
   ...cloneParams(DEFAULT_SOOT_PARAMS),
-  hair: { ...DEFAULT_SOOT_PARAMS.hair, count: 56, lenMin: 0.35, lenMax: 0.85, width: 0.026 },
-  limbs: { ...DEFAULT_SOOT_PARAMS.limbs, legs: 0.52, width: 0.026 },
+  hair: { ...DEFAULT_SOOT_PARAMS.hair, width: 0.024 },
+  eyes: { ...DEFAULT_SOOT_PARAMS.eyes, size: 0.17 },
+  limbs: { ...DEFAULT_SOOT_PARAMS.limbs, legs: 0.66, width: 0.034 },
 };
 
 export type PresetId = 'defaut' | 'film' | 'arthurV1' | 'vise' | 'porcEpic' | 'ronces';

@@ -149,9 +149,12 @@ function paintFrame(k: Paint, side: number, frame: number, rim: number, disc: HT
   const ctx = ctx2d(c);
   const { hair, body, glow, palette } = k.p;
   const phi = (frame / FRAMES) * Math.PI * 2;
-  const soft = softness(k);
-  // Duvet d'abord (derrière), translucide, flou si le contour l'est.
-  fillBatch(ctx, k, (h) => h.fine, sootColor(body.darkness, hair.tone), hair.opacity * hair.fuzzAlpha, phi, soft * 0.6);
+  // Corps duveteux (contour flou) : le duvet passe DEVANT le disque, fines
+  // stries d'encre translucides qui débordent du bord (texture du film).
+  // Sinon (ancien rendu) : derrière, de la couleur du disque.
+  const fibres = softness(k) > 0;
+  const fuzz = (h: Hair) => h.fine;
+  if (!fibres) fillBatch(ctx, k, fuzz, sootColor(body.darkness, hair.tone), hair.opacity * hair.fuzzAlpha, phi);
   // Poils du dessous, en trois teintes, puis le disque, puis ceux du dessus.
   const tones = (over: boolean) => {
     for (let tone = 0; tone < 3; tone++) {
@@ -160,6 +163,7 @@ function paintFrame(k: Paint, side: number, frame: number, rim: number, disc: HT
   };
   tones(false);
   ctx.drawImage(disc, 0, 0);
+  if (fibres) fillBatch(ctx, k, fuzz, sootColor(hair.ink, hair.tone), hair.opacity * hair.fuzzAlpha, phi);
   tones(true);
   if (rim > 0) {
     // Pointes éclairées (fonds sombres) : seulement hors du disque.
@@ -205,6 +209,15 @@ function paintEye(p: SootSpriteParams, R: number): HTMLCanvasElement {
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
+  const ring = Math.max(0, p.eyes.ring) * rx;
+  if (ring > 0.3) {
+    // Liseré sombre autour du blanc (il le détache du corps, comme dans le film).
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.max(0.5, rx - ring / 2), Math.max(0.5, ry - ring / 2), 0, 0, Math.PI * 2);
+    ctx.lineWidth = ring;
+    ctx.strokeStyle = p.palette.pupil;
+    ctx.stroke();
+  }
   if (p.eyes.lid > 0) {
     // Ombre de la paupière (le bas de l'œil, sous la fourrure).
     const lid = ctx.createLinearGradient(0, cy + ry * 0.2, 0, cy + ry);

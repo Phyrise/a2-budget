@@ -95,6 +95,8 @@ export interface SootSpriteParams {
     turn: number;
     /** Strabisme : pupilles tirées vers le nez (0–1 de leur course). */
     cross: number;
+    /** Liseré sombre autour du blanc (× demi-largeur de l'œil ; 0 : aucun). */
+    ring: number;
   };
   limbs: {
     /** Longueur d'un segment de jambe, cuisse ou tibia (× R). */
@@ -114,6 +116,8 @@ export interface SootSpriteParams {
     bow: number;
     /** 0 : les deux genoux du même côté (vers l'avant) ; 1 : en miroir, « ( ) » vers l'extérieur. */
     mirror: number;
+    /** Hauteur du genou le long de la jambe (0,5 : au milieu ; moins : arc plus haut, près du corps). */
+    knee: number;
     /** Écart des pieds au-delà des hanches (× segment de jambe). */
     stance: number;
     /** Doigts et orteils : 0 petits pieds ronds et paumes, 1–5 bouts très fins. */
@@ -165,44 +169,45 @@ export type ParamGroup = Exclude<keyof SootSpriteParams, 'palette'>;
 
 /** Le modèle par défaut (d'après le film ; voir presets.ts pour les autres). */
 export const DEFAULT_SOOT_PARAMS: SootSpriteParams = {
-  body: { radius: 0.52, ratio: 0.98, wobble: 0.02, darkness: 0.8, sheen: 0.08, blur: 0.14 },
+  body: { radius: 0.5, ratio: 0.98, wobble: 0.02, darkness: 0.74, sheen: 0.06, blur: 0.09 },
   hair: {
-    count: 46,
+    count: 56,
     rootOut: 0.85,
     depth: 0.15,
-    lenMin: 0.4,
-    lenMax: 0.75,
+    lenMin: 0.32,
+    lenMax: 0.66,
     jitter: 0.06,
-    width: 0.032,
+    width: 0.028,
     opacity: 1,
     bend: 0,
     tufts: 0,
-    under: 0.25,
-    fuzz: 1.2,
-    fuzzLen: 0.4,
-    fuzzAlpha: 0.6,
+    under: 0.2,
+    fuzz: 3,
+    fuzzLen: 0.6,
+    fuzzAlpha: 0.4,
     tone: 0.03,
     taper: 0,
     cap: 1,
     over: 0.55,
-    inner: 0.35,
+    inner: 0.3,
     ink: 1,
   },
-  eyes: { size: 0.175, aspect: 1.1, gap: 0.26, lift: 0.01, pupil: 0.044, blink: 1, lid: 0.05, turn: 0.06, cross: 0.55 },
+  eyes: { size: 0.172, aspect: 1.1, gap: 0.25, lift: 0.01, pupil: 0.043, blink: 1, lid: 0.05, turn: 0.06, cross: 0.55, ring: 0.08 },
   limbs: {
-    legs: 0.48,
+    legs: 0.62,
     arms: 0.6,
-    width: 0.03,
-    feet: 0.1,
-    hands: 0.08,
-    hip: 0.55,
+    width: 0.038,
+    feet: 0.17,
+    hands: 0.14,
+    hip: 0.72,
     shoulder: 0.9,
-    bow: 0.5,
+    bow: 0.4,
     mirror: 1,
-    stance: 0.1,
+    knee: 0.38,
+    stance: 0.08,
     toes: 3,
-    spread: 1.9,
-    fine: 0.45,
+    spread: 2,
+    fine: 0.32,
   },
   shadow: { opacity: 1, width: 2, height: 0.22 },
   anim: { furSpeed: 1, wave: 1, hold: 0.5, bounce: 1 },
@@ -217,7 +222,7 @@ export function cloneParams(p: SootSpriteParams): SootSpriteParams {
 
 /** Clé des sprites : seuls corps, fourrure, yeux pré-rendus, lueur et couleurs les changent. */
 export function spriteKey(p: SootSpriteParams): string {
-  return JSON.stringify([p.body, p.hair, p.eyes.size, p.eyes.aspect, p.eyes.lid, p.anim.wave, p.glow.halo, p.glow.blur, p.glow.tips, p.palette]);
+  return JSON.stringify([p.body, p.hair, p.eyes.size, p.eyes.aspect, p.eyes.lid, p.eyes.ring, p.anim.wave, p.glow.halo, p.glow.blur, p.glow.tips, p.palette]);
 }
 
 /** Proportions dont la physique d'une Noiraude a besoin (× diamètre S). */
@@ -269,6 +274,7 @@ const SAFE: Partial<Record<string, [number, number]>> = {
   'hair.lenMin': [0, 1.5],
   'hair.lenMax': [0, 1.5],
   'limbs.toes': [0, 6],
+  'limbs.knee': [0.1, 0.9],
 };
 
 const isColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);

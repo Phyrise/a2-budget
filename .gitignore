@@ -2,6 +2,8 @@ node_modules/
 dist/
 dev-dist/
 dist-preview/
+dist-emu/
+dist-auth-helper/
 qa-forest/
 *.local
 .DS_Store

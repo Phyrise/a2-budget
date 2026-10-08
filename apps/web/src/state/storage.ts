@@ -34,7 +34,7 @@ export interface StorageAdapter {
  * la même origine : le préfixe évite les collisions, il ne constitue pas une
  * isolation de sécurité.
  */
-const STORAGE_KEY = 'a2-budget:state:v1';
+export const STORAGE_KEY = 'a2-budget:state:v1';
 
 /**
  * Copie brute des données d'avant V3.1 (salaire + compléments). Écrite une

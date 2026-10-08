@@ -1,0 +1,155 @@
+rules_version = '2';
+
+// A² Home — règles Firestore (V5, liste blanche).
+// Conception : docs/SYNC_DESIGN.md §5. Tests : tests/rules (pnpm test:rules).
+// À coller tel quel dans la console : Firestore → Règles → Publier.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Qui entre : la liste blanche ----------
+    // Un seul foyer, deux comptes Google ; le rôle vient de l'e-mail.
+    // Une future logique « par paire » ne changera que ce bloc (et
+    // apps/web/src/sync/allowlist.ts, qui dit la même chose : un test le vérifie).
+    function householdId() { return 'a2home'; }
+    function roleByEmail() {
+      return {
+        'arthur.longuefosse@gmail.com': 'a',
+        'alexia.chaval@free.fr': 'b'
+      };
+    }
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    // E-mail vérifié par Google et présent dans la liste.
+    function invited() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && myEmail() in roleByEmail();
+    }
+    function myRole() { return roleByEmail()[myEmail()]; }
+    function isMember(hid) { return hid == householdId() && invited(); }
+
+    // ---------- Outils ----------
+    function incoming() { return request.resource.data; }
+    function changedKeys() { return incoming().diff(resource.data).affectedKeys(); }
+    // Toute écriture dit qui l'a faite et porte l'heure du serveur (curseur).
+    function stamped() {
+      return incoming().updatedBy == me() && incoming().syncedAt == request.time;
+    }
+    function isDay(s) { return s is string && s.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'); }
+
+    // Rien d'autre n'existe : tout chemin non décrit ici est refusé.
+
+    // ---------- Foyer ----------
+    match /households/{hid} {
+      allow get: if isMember(hid);
+      allow list, delete: if false;
+      allow create, update: if isMember(hid) && stamped();
+
+      // ---------- Objets (dernier qui écrit gagne) et faits (ajout seulement) ----------
+      match /{coll}/{docId} {
+        function isObjectColl() {
+          return coll in ['tasks', 'groceries', 'events', 'months',
+                          'balanceCorrections', 'circles', 'settings'];
+        }
+        function isFactColl() {
+          return coll in ['completions', 'skips', 'forestEvents', 'focusSessions',
+                          'groceryHistory', 'activity'];
+        }
+        // Suppression douce : deletedAt = heure du serveur ; « Annuler » le retire.
+        function objectWrite() {
+          return isObjectColl()
+            && (resource == null
+                  ? !('deletedAt' in incoming())
+                  : ((!('deletedAt' in incoming())
+                      || !changedKeys().hasAny(['deletedAt'])
+                      || incoming().deletedAt == request.time)
+                     && keepsCreation()));
+        }
+        // « Créer si absent » : un objet créé (creationId) ne se recrée pas
+        // par-dessus (même mois ouvert le 1er sur les deux téléphones).
+        function keepsCreation() {
+          return !('creationId' in resource.data)
+            || incoming().get('creationId', null) == resource.data.creationId;
+        }
+        // Création : signée par son auteur, avec son rôle, jamais déjà annulée.
+        function factCreate() {
+          return isFactColl()
+            && resource == null
+            && incoming().createdBy == me()
+            && incoming().role == myRole()
+            && !incoming().keys().hasAny(['undoneAt', 'undoneDay', 'undoneBy', 'devOverride']);
+        }
+        // Seule mise à jour d'un fait : l'annulation douce, une seule fois, signée
+        // du rôle de son auteur (comme `role`). On n'annule que ses propres
+        // gestes ; ceux de l'autre laissent une trace (devOverride, mode dev).
+        function factUndo() {
+          return isFactColl()
+            && resource != null
+            && !('undoneAt' in resource.data)
+            && changedKeys().hasOnly(['undoneAt', 'undoneDay', 'undoneBy', 'devOverride',
+                                      'updatedBy', 'syncedAt'])
+            && incoming().undoneAt is string
+            && isDay(incoming().undoneDay)
+            && incoming().undoneBy == myRole()
+            && (resource.data.get('role', null) == myRole() || incoming().get('devOverride', false) == true);
+        }
+
+        allow read: if isMember(hid) && (isObjectColl() || isFactColl());
+        allow create, update: if isMember(hid) && stamped()
+          && (objectWrite() || factCreate() || factUndo());
+        allow delete: if isMember(hid)
+          && ((isObjectColl()   // purge 30 jours après la suppression douce
+               && resource.data.deletedAt < request.time - duration.value(30, 'd'))
+              || coll in ['groceryHistory', 'activity']);   // élagage
+      }
+
+      // ---------- Points de reprise de la forêt (déterministes) ----------
+      match /checkpoints/{day} {
+        allow read: if isMember(hid);
+        allow create, update: if isMember(hid) && stamped()
+          && isDay(day) && incoming().day == day
+          && (resource == null
+              || incoming().get('genesis', false) == resource.data.get('genesis', false));
+        allow delete: if isMember(hid) && resource.data.get('genesis', false) != true;
+      }
+
+      // ---------- Jalons de la forêt : jamais en baisse ----------
+      match /meta/{docId} {
+        function milestonesShape() {
+          return incoming().growthStage is int
+            && incoming().lifetimeCare is int
+            && incoming().longestStreak is int
+            && incoming().unlockedCreatureIds is list
+            && incoming().unlockedEnvironmentIds is list;
+        }
+        function neverLower() {
+          return incoming().growthStage >= resource.data.growthStage
+            && incoming().lifetimeCare >= resource.data.lifetimeCare
+            && incoming().longestStreak >= resource.data.longestStreak
+            && incoming().unlockedCreatureIds.hasAll(resource.data.unlockedCreatureIds)
+            && incoming().unlockedEnvironmentIds.hasAll(resource.data.unlockedEnvironmentIds);
+        }
+        allow read: if isMember(hid);
+        allow create: if isMember(hid) && stamped()
+          && (docId != 'forestMilestones' || milestonesShape());
+        allow update: if isMember(hid) && stamped()
+          && (docId != 'forestMilestones' || (milestonesShape() && neverLower()));
+        allow delete: if false;
+      }
+
+      // ---------- Par personne (clé = rôle 'a' | 'b') : lu par les deux, écrit par soi ----------
+      match /memberState/{who} {
+        allow read: if isMember(hid);
+        allow create, update: if isMember(hid) && who == myRole() && stamped();
+        allow delete: if isMember(hid) && who == myRole();
+      }
+      match /push/{who} {
+        allow read: if isMember(hid);
+        allow create, update: if isMember(hid) && who == myRole() && stamped();
+        allow delete: if isMember(hid) && who == myRole();
+      }
+    }
+  }
+}

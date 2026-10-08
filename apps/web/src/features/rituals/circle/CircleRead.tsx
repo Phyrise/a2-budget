@@ -12,7 +12,8 @@ function heldOn(circle: Circle): string {
 }
 
 export function CircleWords({ circle, names }: { circle: Circle; names: Names }) {
-  const empty = circle.gratitude.length === 0 && circle.burdens.length === 0 && circle.intentions.length === 0;
+  const notes = circle.notes ?? [];
+  const empty = circle.gratitude.length === 0 && circle.burdens.length === 0 && circle.intentions.length === 0 && notes.length === 0;
   return (
     <div className="circle-words">
       {empty && <p className="circle-words__empty">Un cercle tout en silence — parfois, être là suffit.</p>}
@@ -27,6 +28,24 @@ export function CircleWords({ circle, names }: { circle: Circle; names: Names })
                   <p>«{NB}{typo(g.text)}{NB}»</p>
                   <footer>
                     {names[g.from]} à {names[g.to]}
+                  </footer>
+                </blockquote>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {notes.length > 0 && (
+        <section className="circle-words__group">
+          <h3 className="eyebrow">Petits mots</h3>
+          <ul>
+            {notes.map((n, i) => (
+              <li key={i} className={cx('circle-quote', `circle-quote--${n.from}`)}>
+                <Companion who={n.from} size={30} mood="happy" />
+                <blockquote>
+                  <p>{typo(n.text)}</p>
+                  <footer>
+                    {names[n.from]} à {names[n.to]}
                   </footer>
                 </blockquote>
               </li>

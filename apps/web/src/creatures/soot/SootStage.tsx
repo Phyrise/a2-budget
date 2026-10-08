@@ -2,9 +2,9 @@
  * La scène des Noiraudes d'un écran : UNE toile sur toute la fenêtre (portail
  * dans <body> : aucune transformation d'ancêtre ne capture le
  * `position: fixed`), sous le bandeau et la navigation, au-dessus de la
- * feuille ; et la couche des cibles du doigt (seules les Noiraudes perchées
- * reçoivent des touchers). Montée une fois par écran (Budget, Courses,
- * Calendrier).
+ * feuille ; et la couche des cibles du doigt (une cible transparente par
+ * Noiraude visible, qui la suit : un toucher l'attrape). Montée une fois
+ * par écran (Budget, Courses, Calendrier).
  * - Calme (prefers-reduced-motion, forêt « immobile ») : mouvements doux,
  *   apparitions plus rares, ni procession ni portage.
  * - Nuit (maison en pause, bouton lune) : on ne voit plus que leurs yeux.

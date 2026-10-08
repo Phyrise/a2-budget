@@ -22,6 +22,14 @@ export interface Actor {
   page: boolean;
   /** Objet porté au-dessus de la tête. */
   load: Item | null;
+  /** Objets empilés sur `load` (une porteuse reprend la pièce d'une autre). */
+  extra: Item[];
+  /**
+   * Elle lâche sa charge malgré elle (attrapée, enfuie) : le rôle décide de
+   * ce qu'elle devient (les autres porteuses la reprennent, le bonbon
+   * retombe pour le troupeau…). Sans cela : elle tombe et s'efface.
+   */
+  letGo: (() => void) | null;
   /** Portage à deux : l'autre porteuse du même objet. */
   mate: Actor | null;
   /** Fondu : opacité visée et vitesse (par seconde). */
@@ -29,8 +37,10 @@ export interface Actor {
   fadeRate: number;
   /** Retirée dès qu'elle est effacée. */
   leaving: boolean;
-  /** Cible du doigt (bouton transparent) : Noiraudes perchées seulement. */
+  /** Cible du doigt (bouton transparent qui la suit) : toutes les Noiraudes visibles. */
   hit: HTMLButtonElement | null;
+  /** Dernière place écrite sur la cible (on n'écrit que si elle change). */
+  hitAt: { x: number; y: number; w: number; h: number };
   /** Perchoir : pieds (x, y), bout du trot (x2). */
   perch: { x: number; y: number; x2: number } | null;
   /** Fin de visite, prochaine décision (horloge du calque, s). */
@@ -43,7 +53,7 @@ export interface Actor {
   busy: 'push' | 'climb' | 'herd' | 'flee' | null;
   /** Comportement propre au rôle, à chaque image. */
   tick: ((a: Actor, dt: number, time: number) => void) | null;
-  /** Touchée (après le rebond et le « kyu ») : attraper, etc. */
+  /** Touchée (après le rebond et le « kyu ») : attraper (défaut), etc. */
   tap: (() => void) | null;
 }
 
@@ -53,11 +63,14 @@ export function makeActor(s: Susuwatari, role: Role, page: boolean): Actor {
     role,
     page,
     load: null,
+    extra: [],
+    letGo: null,
     mate: null,
     fadeTo: 1,
     fadeRate: 3,
     leaving: false,
     hit: null,
+    hitAt: { x: NaN, y: NaN, w: NaN, h: NaN },
     perch: null,
     until: Infinity,
     next: 0,

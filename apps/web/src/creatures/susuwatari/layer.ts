@@ -128,7 +128,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
-    dpr = Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
+    dpr = Math.min((globalThis as any).__sootExp?.dpr ?? maxDpr, Math.max(1, window.devicePixelRatio || 1));
     width = rect.width;
     height = rect.height;
     const w = Math.round(width * dpr);
@@ -184,13 +184,13 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!(globalThis as any).__sootExp?.noClear) ctx.clearRect(0, 0, canvas.width, canvas.height);
     options.drawUnder?.(ctx, dpr, time);
     // De l'arrière vers l'avant.
     const order = creatures.filter((s) => s.state !== 'gone').sort((a, b) => a.y - b.y);
     for (const s of order) {
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
-      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
+      if (sprites && !(globalThis as any).__sootExp?.noBodies) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
     }
     options.drawOver?.(ctx, dpr, time);
     ctx.setTransform(1, 0, 0, 1, 0, 0);

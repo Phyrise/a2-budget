@@ -1,6 +1,8 @@
 /* Noiraudes d'un écran : une toile sur toute la fenêtre, au-dessus de la
    feuille, sous le bandeau (30) et la navigation (40). Seules les cibles
-   des Noiraudes perchées reçoivent des touchers. */
+   des Noiraudes (une par Noiraude visible, ≥ 44 px, qui la suit) reçoivent
+   des touchers ; `touch-action: none` : un geste parti d'une Noiraude ne
+   fait pas défiler la page. */
 
 .soot-stage {
   position: fixed;

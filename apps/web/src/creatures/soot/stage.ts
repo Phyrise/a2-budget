@@ -12,6 +12,9 @@ import type { KonpeitoTone } from './items';
 import { porters, runner, type PortTarget } from './porters';
 
 let active: SootDirector | null = null;
+
+/** Dix essais (1,5 s) au plus. */
+const busyForever = (tries: number) => tries >= 10;
 let jarEl: HTMLElement | null = null;
 
 function jarPoint(): Point | null {
@@ -48,9 +51,20 @@ export const soot = {
   porters(origin: Point, paid: boolean, target: PortTarget | null): void {
     if (active) porters(active, origin, paid, target);
   },
-  /** Un montant a changé : une Noiraude traverse avec un kompeitō. */
+  /**
+   * Un montant a changé : une Noiraude traverse avec un kompeitō. Le clavier
+   * met un instant à se fermer : on attend jusqu'à 1,5 s qu'il soit parti.
+   */
   runner(tone: KonpeitoTone): boolean {
-    return active !== null && runner(active, tone) !== null;
+    const d = active;
+    if (d === null || d.calm) return false;
+    let tries = 0;
+    const attempt = () => {
+      if (active !== d || runner(d, tone) !== null || busyForever(++tries)) return;
+      d.later(150, attempt);
+    };
+    attempt();
+    return true;
   },
   /** Kompeitō tiré du bocal : faux s'il n'y a pas de scène. */
   treatStart(p: Point): boolean {

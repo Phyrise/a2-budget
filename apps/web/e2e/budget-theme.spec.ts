@@ -104,10 +104,11 @@ test.describe('Budget — univers Chihiro', () => {
     await setEuros(page, 'salary-a', '2900');
     await expect(noFace(page)).toHaveAttribute('data-reaction', 'gain');
     await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
-    const runner = page.locator('.susu-runner');
-    await expect(runner).toBeVisible();
-    await expect(runner).toHaveAttribute('data-carrier', 'carryYellow');
-    await expect(runner).toHaveCount(0, { timeout: 4_000 });
+    // Dessinée par le code (scène des Noiraudes) : un kompeitō jaune (revenus).
+    const stage = page.locator('.soot-stage[data-screen="budget"]');
+    await expect(stage).toHaveAttribute('data-runner', '1');
+    await expect(stage).toHaveAttribute('data-runner-tone', 'yellow');
+    await expect(stage).not.toHaveAttribute('data-runner', /./, { timeout: 5_000 });
     await expectPose(page, 'offering');
 
     // Moins versé : un peu triste, puis il revient à son humeur.
@@ -124,7 +125,7 @@ test.describe('Budget — univers Chihiro', () => {
     await setEuros(page, 'salary-b', '3700');
     await expect(noFace(page)).toHaveAttribute('data-pose', 'content');
     await page.waitForTimeout(400);
-    await expect(page.locator('.susu-runner')).toHaveCount(0);
+    await expect(page.locator('.soot-stage[data-screen="budget"]')).not.toHaveAttribute('data-runner', /./);
   });
 
   test('chaque dépense a son kompeitō, de couleur stable ; liste vide = Noiraude cachée', async ({ page }) => {

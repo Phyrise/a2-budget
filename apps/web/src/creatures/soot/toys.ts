@@ -1,21 +1,32 @@
 /**
- * Jouets inutiles (Arthur) : ce que le doigt fait aux Noiraudes perchées.
- * - toucher : rebond et petit cri « kyu » (si les petits sons sont
- *   activés), puis ce que veut son rôle (`tap` : attraper) ;
- * - appui long sur elle : elle tremble, puis s'enfuit hors de l'écran ;
- * - glisser contre elle : le doigt la pousse (elle reste juste devant lui),
- *   puis elle se secoue et retourne à son perchoir ;
- * - doigt immobile ~1,5 s PRÈS d'elle (pas sur un contrôle) : elle vient,
- *   grimpe sur le bout du doigt, le suit, et retombe quand on le lève.
- * Écouteurs passifs sur la fenêtre : rien n'est intercepté hors des
- * boutons transparents des Noiraudes.
+ * Jouets inutiles (Arthur) : ce que le doigt fait aux Noiraudes. Le geste
+ * le plus simple gagne : un toucher ATTRAPE (toutes les Noiraudes visibles,
+ * voir catch.ts) ; les autres gestes ne le gênent pas :
+ * - appui long sur elle (≥ LONG_PRESS_MS sans bouger) : elle tremble, puis
+ *   s'enfuit hors de l'écran — elle n'est pas attrapée ;
+ * - glisser contre elle (le doigt part d'elle et bouge de plus de PUSH_PX) :
+ *   le doigt la pousse (elle reste juste devant lui), puis elle se secoue et
+ *   reprend ce qu'elle faisait (perchoir, chemin) ;
+ * - doigt immobile ~1,5 s sur le fond PRÈS d'une vagabonde (pas sur un
+ *   contrôle) : elle vient, grimpe sur le bout du doigt, le suit, et retombe
+ *   quand on le lève.
+ * Au doigt : la cible transparente de chaque Noiraude a `touch-action:
+ * none` (un geste qui part d'elle ne fait pas défiler la page) ; le toucher
+ * est décidé au relâcher (pointerup), pas au `click`, qui n'arrive pas
+ * toujours sur une cible qui bouge. Ailleurs, écouteurs passifs : rien
+ * n'est intercepté, la page défile normalement.
  */
 import { playCue } from '../../app/sound';
 import type { Point } from '../susuwatari';
 import { approach, dist, type Actor } from './cast';
+import { releaseLoad } from './catch';
 import type { SootDirector } from './director';
 
-const LONG_PRESS_MS = 450;
+const LONG_PRESS_MS = 600;
+/** Au-delà, le doigt pousse (un toucher bouge souvent de quelques px). */
+const PUSH_PX = 10;
+/** Un `click` qui suit un toucher déjà compté est ignoré (ms). */
+const CLICK_ECHO_MS = 700;
 const SHIVER_MS = 650;
 const CLIMB_MS = 1500;
 const CLIMB_NEAR = 120;
@@ -70,24 +81,22 @@ function push(a: Actor, p: Point, prev: Point): boolean {
 
 function flee(d: SootDirector, a: Actor, from: Point): void {
   a.busy = 'flee';
+  a.s.setArms('none');
   a.s.shiver(SHIVER_MS, () => {
     playCue('squeak');
     d.dropHit(a);
-    if (a.load) {
-      d.drop(a.load, a.s.x, a.s.y, 16, () => undefined);
-      a.load = null;
-    }
+    releaseLoad(d, a);
+    a.s.held = false;
     a.s.flee(from, { view: d.layer.view(), onGone: () => d.remove(a) });
   });
 }
 
-/** Gestes sur la cible transparente d'une Noiraude perchée. */
+/** Gestes sur la cible transparente d'une Noiraude (elle la suit partout). */
 export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void {
-  let press: { id: number; at: Point; start: Point; timer: number; long: boolean; pushed: boolean } | null = null;
-  let swallow = false;
+  let press: { id: number; at: Point; start: Point; timer: number; long: boolean; pushed: boolean; busy: Actor['busy'] } | null = null;
+  let tappedAt = -Infinity;
   b.addEventListener('pointerdown', (e) => {
-    swallow = false;
-    if (a.caught || a.busy === 'flee' || a.busy === 'climb') return;
+    if (press || a.caught || a.busy === 'flee' || a.busy === 'climb') return;
     try {
       b.setPointerCapture(e.pointerId);
     } catch {
@@ -95,16 +104,16 @@ export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void 
     }
     const p = { x: e.clientX, y: e.clientY };
     const timer = window.setTimeout(() => {
-      if (!press || press.pushed) return;
+      if (!press || press.pushed || a.caught) return;
       press.long = true;
       flee(d, a, press.at);
     }, LONG_PRESS_MS);
-    press = { id: e.pointerId, at: p, start: p, timer, long: false, pushed: false };
+    press = { id: e.pointerId, at: p, start: p, timer, long: false, pushed: false, busy: a.busy };
   });
   b.addEventListener('pointermove', (e) => {
-    if (!press || e.pointerId !== press.id || press.long) return;
+    if (!press || e.pointerId !== press.id || press.long || a.caught) return;
     const p = { x: e.clientX, y: e.clientY };
-    if (!press.pushed && dist(p, press.start) > 7) {
+    if (!press.pushed && dist(p, press.start) > PUSH_PX) {
       press.pushed = true;
       window.clearTimeout(press.timer);
       a.busy = 'push';
@@ -112,26 +121,36 @@ export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void 
     if (press.pushed) push(a, p, press.at);
     press.at = p;
   });
-  const end = (e: PointerEvent) => {
+  const end = (e: PointerEvent, cancel: boolean) => {
     if (!press || e.pointerId !== press.id) return;
-    window.clearTimeout(press.timer);
-    swallow = press.long || press.pushed;
-    if (press.pushed) {
-      a.s.shiver(220);
-      settle(d, a, 0.35);
-    }
+    const was = press;
     press = null;
+    window.clearTimeout(was.timer);
+    if (was.pushed) {
+      if (a.busy !== 'push') return;
+      if (a.role === 'stray' && a.perch && was.busy === null) {
+        a.s.shiver(220);
+        settle(d, a, 0.35);
+      } else {
+        // En chemin (troupeau, porteuse…) : elle reprend sa route.
+        a.busy = was.busy;
+        a.s.eyes = 'open';
+      }
+      return;
+    }
+    if (was.long || cancel || a.busy === 'flee') return;
+    // Un toucher : attrapée.
+    tappedAt = performance.now();
+    tap(a);
   };
-  b.addEventListener('pointerup', end);
-  b.addEventListener('pointercancel', end);
+  b.addEventListener('pointerup', (e) => end(e, false));
+  b.addEventListener('pointercancel', (e) => end(e, true));
   b.addEventListener('contextmenu', (e) => e.preventDefault());
   b.addEventListener('click', (e) => {
     e.preventDefault();
-    if (swallow) {
-      swallow = false;
-      return;
-    }
-    if (a.busy === 'flee') return;
+    // Écho du toucher déjà compté, ou clic après un autre geste.
+    if (performance.now() - tappedAt < CLICK_ECHO_MS || press !== null) return;
+    if (a.busy === 'flee' || a.busy === 'push') return;
     tap(a);
   });
 }
@@ -235,14 +254,18 @@ export function installToys(d: SootDirector): () => void {
       else if (dist(p, hold.start) > 12) stop();
     }
     // Souris (bouton enfoncé) qui glisse contre une Noiraude : elle est poussée.
+    // (Au doigt, glisser sur le fond fait défiler la page : on la pousse en
+    // partant d'elle, voir bindToys.)
     const target = e.target instanceof Element ? e.target : null;
     if (e.pointerType === 'mouse' && (e.buttons & 1) === 1 && last && !target?.closest('.susu-stray')) {
       for (const a of d.actors) {
-        const free = a.busy === null || (a.busy === 'push' && pushed.has(a));
-        if (free && a.role === 'stray' && !a.caught && push(a, p, last)) {
-          a.busy = 'push';
-          pushed.set(a, d.time);
-        }
+        if (a.caught || a.leaving || a.busy === 'flee' || a.busy === 'climb') continue;
+        // Vagabonde au repos : elle se laisse pousser, puis retourne au perchoir ;
+        // les autres sont seulement bousculées sur leur chemin.
+        const perched = a.role === 'stray' && (a.busy === null || (a.busy === 'push' && pushed.has(a)));
+        if (!push(a, p, last) || !perched) continue;
+        a.busy = 'push';
+        pushed.set(a, d.time);
       }
     }
     last = p;

@@ -6,19 +6,21 @@
  * - `bowing` : salut bref pour une modification sans effet sur le compte
  *   (libellé, réserve) ;
  * - `run` : une Noiraude traverse en portant un kompeitō quand un MONTANT
- *   change (couleur de la dépense touchée, or pour les revenus et la réserve).
+ *   change (couleur de la dépense touchée, jaune pour les revenus et la
+ *   réserve) ; dessinée par le code (scène des Noiraudes, soot.runner).
  * Changer de mois ou recharger le même état ne déclenche rien.
  */
 import type { MonthRecord } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
-import { carrierFor, editReaction, konpeitoColorFor, type SusuwatariCarrier } from './mood';
+import { editReaction, konpeitoColorFor, type KonpeitoHue } from './mood';
 import { react } from './reaction';
 
 export const BOW_MS = 1500;
 
 export interface SusuwatariRun {
   id: number;
-  carrier: SusuwatariCarrier;
+  /** Couleur du kompeitō qu'elle porte (celle de la dépense touchée, or sinon). */
+  tone: KonpeitoHue;
 }
 
 interface Snapshot {
@@ -98,7 +100,8 @@ export function useMonthEdits(month: MonthRecord): { bowing: boolean; run: Susuw
     if (prev.amounts !== next.amounts && !prefersReducedMotion()) {
       const label = touchedExpenseLabel(prev.month.expenses, next.month.expenses);
       runId.current += 1;
-      setRun({ id: runId.current, carrier: label === null ? 'carryYellow' : carrierFor(konpeitoColorFor(label)) });
+      const tone = label === null ? 'yellow' : (konpeitoColorFor(label).replace(/-2$/, '') as KonpeitoHue);
+      setRun({ id: runId.current, tone });
     }
   }, [month]);
 

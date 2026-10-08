@@ -5,8 +5,11 @@
  *
  * - Défilement : celles qui sont posées sur la page défilent avec elle
  *   (`shift`), celles de la bande du bas restent à l'écran.
- * - Toile `pointer-events: none` : seuls les boutons transparents des
- *   Noiraudes perchées (et le bocal, ailleurs) reçoivent les touchers.
+ * - Toile `pointer-events: none` : chaque Noiraude visible a son bouton
+ *   transparent (≥ 44 px) qui la suit ; un toucher l'attrape (catch.ts).
+ * - Densité de la toile plafonnée à 2 : à 3, la toile plein écran coûte
+ *   2,25 fois plus de pixels à chaque image, pour une différence invisible
+ *   sur des boules de suie floues.
  * - Une feuille ouverte, le clavier ou un onglet caché : tout s'efface, plus
  *   rien n'apparaît ; la boucle du calque s'arrête quand il n'y a personne.
  * - Les rôles (strays.ts, porters.ts, herd.ts, parade.ts) et les jouets
@@ -15,6 +18,7 @@
 import { isTextEntry } from '../../app/useKeyboardOpen';
 import { createSusuwatariLayer, type Point, type SusuwatariInit, type SusuwatariLayer } from '../susuwatari';
 import { approach, makeActor, type Actor, type Role } from './cast';
+import { catchActor } from './catch';
 import type { Item } from './items';
 import { paintOver, paintUnder } from './paint';
 import { laneOf, type Box } from './perch';
@@ -23,6 +27,9 @@ import { bindToys, installToys } from './toys';
 export type SootScreen = 'budget' | 'courses' | 'calendar';
 
 const GRAVITY = 1800;
+/** Plus petite cible du doigt (px), même pour une Noiraude minuscule. */
+const MIN_HIT = 44;
+const ROLES: readonly Role[] = ['stray', 'porter', 'herd', 'parade', 'runner'];
 
 /** Un objet qui n'est porté par personne. */
 export interface Loose {
@@ -85,6 +92,7 @@ export class SootDirector {
     readonly screen: SootScreen,
   ) {
     this.layer = createSusuwatariLayer(canvas, {
+      maxDpr: 2,
       rim: 1,
       shadow: 0.8,
       idleWhenEmpty: true,
@@ -106,11 +114,14 @@ export class SootDirector {
 
   // ——— Acteurs ———
 
-  add(init: SusuwatariInit, role: Role, page = true): Actor {
+  /** Une Noiraude de plus : visible, elle s'attrape d'un toucher (`tap`). */
+  add(init: SusuwatariInit, role: Role, page = true, label = 'Attraper la Noiraude'): Actor {
     const s = this.layer.spawn(init);
     s.alpha = 0;
     const a = makeActor(s, role, page);
     this.actors.push(a);
+    a.tap = () => catchActor(this, a);
+    this.giveHit(a, label);
     this.layer.wake();
     return a;
   }
@@ -145,10 +156,12 @@ export class SootDirector {
   }
 
   count(role: Role): number {
-    return this.actors.filter((a) => a.role === role && !a.leaving).length;
+    let n = 0;
+    for (const a of this.actors) if (a.role === role && !a.leaving) n++;
+    return n;
   }
 
-  /** Cible du doigt (bouton transparent) d'une Noiraude perchée. */
+  /** Cible du doigt (bouton transparent) d'une Noiraude. */
   giveHit(a: Actor, label: string): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
@@ -166,6 +179,7 @@ export class SootDirector {
     if (a.hit && (force || !a.caught)) {
       a.hit.remove();
       a.hit = null;
+      a.hitAt.w = NaN;
     }
   }
 
@@ -203,6 +217,14 @@ export class SootDirector {
     const dock = boxOf(document.querySelector('.app-nav') ?? document.querySelector('.app-dock'));
     const bottom = dock && dock.top > window.innerHeight * 0.6 ? dock.top : window.innerHeight;
     return { left: 0, right: window.innerWidth, top: (header?.bottom ?? 0) + 8, bottom: bottom - 8 };
+  }
+
+  /** Bords de la feuille (bornés à la fenêtre) : d'où arrive le troupeau. */
+  edges(): { left: number; right: number } {
+    const sheet = boxOf(document.querySelector('.screen-sheet'));
+    const left = Math.max(0, sheet?.left ?? 0);
+    const right = Math.min(window.innerWidth, sheet?.right ?? window.innerWidth);
+    return right - left > 120 ? { left, right } : { left: 0, right: window.innerWidth };
   }
 
   lane(): { y: number; left: number; right: number } {
@@ -256,15 +278,30 @@ export class SootDirector {
     }
     for (const l of [...this.loose]) this.moveLoose(l, dt, time);
 
+    // Les cibles du doigt suivent les Noiraudes (écriture seulement si elles
+    // ont bougé : aucune lecture de mise en page ici).
     for (const a of this.actors) {
       if (!a.hit) continue;
-      const w = a.s.scale * 1.05;
-      const h = a.s.scale * 1.35;
-      a.hit.style.width = `${w}px`;
-      a.hit.style.height = `${h}px`;
-      a.hit.style.transform = `translate3d(${a.s.x - w / 2}px, ${a.s.y + 4 - h}px, 0)`;
+      const S = a.s.scale;
+      const w = Math.round(Math.max(MIN_HIT, S * 1.05));
+      const h = Math.round(Math.max(MIN_HIT, S * 1.35));
+      const b = a.s.body();
+      const x = Math.round((b.x - w / 2) * 2) / 2;
+      const y = Math.round((b.y - h * 0.58) * 2) / 2;
+      const at = a.hitAt;
+      if (w !== at.w || h !== at.h) {
+        a.hit.style.width = `${w}px`;
+        a.hit.style.height = `${h}px`;
+        at.w = w;
+        at.h = h;
+        at.x = NaN;
+      }
+      if (x === at.x && y === at.y) continue;
+      at.x = x;
+      at.y = y;
+      a.hit.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
-    const key = (['stray', 'porter', 'herd', 'parade', 'runner'] as const).map((r) => this.count(r)).join(',');
+    const key = ROLES.map((r) => this.count(r)).join(',');
     if (key !== this.castKey) {
       this.castKey = key;
       this.onCast?.();

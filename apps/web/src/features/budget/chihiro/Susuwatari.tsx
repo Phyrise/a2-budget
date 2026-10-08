@@ -1,63 +1,28 @@
 /**
  * Noiraudes : petites boules de suie de la chaufferie de Kamaji.
- * - `SusuwatariRunner` : après la modification d'un montant, une Noiraude
- *   traverse la feuille en sautillant, un kompeitō sur la tête (≈1,6 s),
- *   juste au-dessus de la barre de navigation (portail dans <body>). Jamais rendue si
- *   prefers-reduced-motion (voir useMonthEdits).
+ * - `useSusuwatariRun` : après la modification d'un montant, une Noiraude
+ *   (dessinée par le code, scène des Noiraudes : soot.runner) traverse en
+ *   bas de la feuille, un kompeitō sur la tête. Jamais au calme
+ *   (prefers-reduced-motion, forêt « immobile »).
  * - `Konpeito` : pastille de couleur stable d'une dépense.
  * - `SusuwatariEmpty` : état vide des dépenses, une Noiraude cachée derrière
  *   son caillou.
  */
-import { useLayoutEffect, useState, type ReactNode, type RefObject } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, type ReactNode } from 'react';
+import { soot } from '../../../creatures/soot';
 import { budgetTheme } from '../../../themes/manifest';
 import { EmptyState } from '../../../ui';
 import { konpeitoColorFor } from './mood';
 import type { SusuwatariRun } from './useMonthEdits';
 
-export const RUN_MS = 1600;
-
-export function SusuwatariRunner({
-  run,
-  areaRef,
-  onDone,
-}: {
-  run: SusuwatariRun | null;
-  areaRef: RefObject<HTMLElement | null>;
-  onDone: () => void;
-}) {
-  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
-
-  useLayoutEffect(() => {
+/** Une course demandée : la scène la joue, puis on l'oublie. */
+export function useSusuwatariRun(run: SusuwatariRun | null, onDone: () => void): void {
+  useEffect(() => {
     if (run === null) return;
-    const rect = areaRef.current?.getBoundingClientRect();
-    const width = rect && rect.width > 0 ? rect.width : window.innerWidth;
-    setBox({ left: rect?.left ?? 0, width });
-    // Filet de sécurité si animationend ne vient pas (onglet caché…).
-    const timer = window.setTimeout(onDone, RUN_MS + 400);
-    return () => window.clearTimeout(timer);
+    soot.runner(run.tone);
+    onDone();
     // onDone est recréé à chaque rendu : seule la course compte.
   }, [run]);
-
-  if (run === null || box === null) return null;
-  // Portail : aucune transformation d'ancêtre ne doit capturer le `position: fixed`.
-  return createPortal(
-    <div className="susu-lane" style={{ left: box.left, width: box.width }} aria-hidden="true">
-      <div
-        key={run.id}
-        className="susu-runner"
-        data-carrier={run.carrier}
-        style={{ ['--lane' as string]: `${box.width}px`, animationDuration: `${RUN_MS}ms` }}
-        onAnimationEnd={(event) => {
-          if (event.target === event.currentTarget) onDone();
-        }}
-      >
-        <img className="susu-runner__img" src={budgetTheme.susuwatari[run.carrier]} alt="" draggable={false} />
-        <span className="susu-runner__dust" />
-      </div>
-    </div>,
-    document.body,
-  );
 }
 
 export function Konpeito({ label }: { label: string }) {

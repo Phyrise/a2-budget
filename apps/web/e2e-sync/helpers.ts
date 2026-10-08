@@ -152,6 +152,13 @@ export async function chooseSetup(page: Page, choice: 'Y mettre mes données' | 
   await expectApp(page);
 }
 
+/**
+ * Première mise « À jour » : le navigateur de test rend la forêt WebGL sans
+ * carte graphique et l'émulateur sert ~20 écoutes une à une ; plus que le
+ * délai par défaut (15 s) sur une machine chargée.
+ */
+export const SYNC_READY = { timeout: 45_000 };
+
 /** Petit nuage de la synchronisation (en-tête). */
 export function syncIndicator(page: Page) {
   return page.locator('.sync-indicator');

@@ -6,7 +6,7 @@
  * Lancer : `node apps/web/scripts/qa-sync.mjs --all` (ou ce fichier seul).
  */
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { ALEXIA, APP, chooseSetup, fakeGoogle, readDoc, resetEmulators, setupScreen, syncIndicator, waitForEmulators } from './helpers';
+import { ALEXIA, APP, chooseSetup, fakeGoogle, readDoc, resetEmulators, setupScreen, syncIndicator, waitForEmulators, SYNC_READY } from './helpers';
 import { closePhones, go, syncedState, twoPhones, type Phone } from './phones';
 
 test.beforeAll(async () => {
@@ -25,7 +25,7 @@ async function anotherDevice(browser: Browser, email: string): Promise<Phone> {
   await fakeGoogle(page, email);
   await expect(setupScreen(page)).toBeVisible();
   await chooseSetup(page, 'La rejoindre');
-  await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour', SYNC_READY);
   return { context, page };
 }
 

@@ -4,26 +4,7 @@
  * refus doux d'un autre compte. Build `dist-emu/` (playwright.sync.config.ts).
  */
 import { expect, test } from '@playwright/test';
-import {
-  ACCOUNT_KEY,
-  ALEXIA,
-  APP,
-  ARTHUR,
-  STATE_KEY,
-  accountSection,
-  authUsers,
-  chooseSetup,
-  expectApp,
-  fakeGoogle,
-  isServerRequest,
-  openSettings,
-  readDoc,
-  recordRequests,
-  resetEmulators,
-  setupScreen,
-  waitForEmulators,
-  welcome,
-} from './helpers';
+import { ACCOUNT_KEY, ALEXIA, APP, ARTHUR, STATE_KEY, accountSection, authUsers, chooseSetup, expectApp, fakeGoogle, isServerRequest, openSettings, readDoc, recordRequests, resetEmulators, setupScreen, waitForEmulators, welcome, SYNC_READY } from './helpers';
 
 test.beforeAll(async () => {
   await waitForEmulators();
@@ -81,7 +62,7 @@ test('connexion Google (faux jeton) d’un compte invité : foyer créé, sessio
   const account = accountSection(page);
   await expect(account.getByText('AL · Jiji')).toBeVisible();
   await expect(account.getByText(ARTHUR)).toBeVisible();
-  await expect(account.getByText('À jour')).toBeVisible();
+  await expect(account.getByText('À jour')).toBeVisible(SYNC_READY);
 
   // Le premier membre crée le foyer unique et sa fiche.
   const [user] = await authUsers();
@@ -117,7 +98,7 @@ test('second membre : rejoint le foyer sans le recréer', async ({ browser }) =>
     await fakeGoogle(page, email);
     await chooseSetup(page, choice);
     await openSettings(page);
-    await expect(accountSection(page).getByText('À jour')).toBeVisible();
+    await expect(accountSection(page).getByText('À jour')).toBeVisible(SYNC_READY);
     expect(await readDoc(`households/a2home/memberState/${role}`)).toMatchObject({ uid: expect.any(String) });
     await context.close();
   }
@@ -161,7 +142,7 @@ test('les données locales ne sont jamais touchées par la connexion', async ({ 
   await chooseSetup(page, 'Y mettre mes données');
   await openSettings(page);
   await expect(accountSection(page).getByText('AC · Calcifer')).toBeVisible();
-  await expect(accountSection(page).getByText('À jour')).toBeVisible();
+  await expect(accountSection(page).getByText('À jour')).toBeVisible(SYNC_READY);
   await accountSection(page).getByRole('button', { name: 'Se déconnecter' }).click();
   await accountSection(page).getByRole('button', { name: 'Mes données d’avant' }).click();
   await expectApp(page);

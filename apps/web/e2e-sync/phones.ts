@@ -3,7 +3,7 @@
  * (docs/SYNC_DESIGN.md §11) : ouverture, gestes courants, copie locale.
  */
 import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { ALEXIA, APP, ARTHUR, SYNC_KEY, chooseSetup, fakeGoogle, setupScreen, syncIndicator } from './helpers';
+import { ALEXIA, APP, ARTHUR, SYNC_KEY, chooseSetup, fakeGoogle, setupScreen, syncIndicator, SYNC_READY } from './helpers';
 
 export interface Phone {
   context: BrowserContext;
@@ -19,7 +19,7 @@ export async function twoPhones(browser: Browser): Promise<{ al: Phone; ac: Phon
     await fakeGoogle(page, email);
     await expect(setupScreen(page)).toBeVisible();
     await chooseSetup(page, choice);
-    await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour');
+    await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour', SYNC_READY);
     return { context, page };
   };
   const al = await open(ARTHUR, 'Y mettre mes données');

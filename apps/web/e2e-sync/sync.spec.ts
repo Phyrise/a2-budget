@@ -5,28 +5,7 @@
  * Build `dist-emu/` (playwright.sync.config.ts).
  */
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import {
-  ALEXIA,
-  APP,
-  ARTHUR,
-  BACKUP_KEY,
-  STATE_KEY,
-  SYNC_KEY,
-  accountSection,
-  chooseSetup,
-  expectApp,
-  fakeGoogle,
-  listDocs,
-  openSettings,
-  quickAdd,
-  readDoc,
-  resetEmulators,
-  setupScreen,
-  syncIndicator,
-  toBuy,
-  waitForEmulators,
-  welcome,
-} from './helpers';
+import { ALEXIA, APP, ARTHUR, BACKUP_KEY, STATE_KEY, SYNC_KEY, accountSection, chooseSetup, expectApp, fakeGoogle, listDocs, openSettings, quickAdd, readDoc, resetEmulators, setupScreen, syncIndicator, toBuy, waitForEmulators, welcome, SYNC_READY } from './helpers';
 
 test.beforeAll(async () => {
   await waitForEmulators();
@@ -96,7 +75,7 @@ test('première connexion : données locales sauvegardées puis envoyées au foy
   await page.goto(`${APP}?module=courses`);
   await expectApp(page);
   await expect(toBuy(page, 'Clémentines')).toBeVisible();
-  await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(page)).toHaveAttribute('title', 'À jour', SYNC_READY);
 
   // Écouteurs « delta » seulement : chaque requête écoutée part d'un curseur sur syncedAt.
   const sent = listens.join('\n');
@@ -140,7 +119,7 @@ test('hors ligne : le geste est gardé, même au rechargement, puis part au reto
   await al.page.reload();
   await expectApp(al.page);
   await al.page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour', SYNC_READY);
 
   await al.context.setOffline(true);
   await expect(syncIndicator(al.page)).toHaveAttribute('title', 'Hors ligne — tout est gardé');
@@ -157,7 +136,7 @@ test('hors ligne : le geste est gardé, même au rechargement, puis part au reto
   await al.context.setOffline(false);
   await expect.poll(labels, { timeout: 30_000 }).toContain('Pain');
   await expect(toBuy(ac.page, 'Pain')).toBeVisible();
-  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour', SYNC_READY);
 
   await al.context.close();
   await ac.context.close();

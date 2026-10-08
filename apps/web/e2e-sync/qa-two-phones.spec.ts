@@ -6,7 +6,7 @@
  * Lancer : `node apps/web/scripts/qa-sync.mjs` (build émulateurs compris).
  */
 import { expect, test } from '@playwright/test';
-import { APP, accountSection, expectApp, fakeGoogle, isServerRequest, openSettings, quickAdd, recordRequests, resetEmulators, setupScreen, syncIndicator, toBuy, waitForEmulators, welcome } from './helpers';
+import { APP, accountSection, expectApp, fakeGoogle, isServerRequest, openSettings, quickAdd, recordRequests, resetEmulators, setupScreen, syncIndicator, toBuy, waitForEmulators, welcome, SYNC_READY } from './helpers';
 import { addEvent, addFreeDailyTask, checkTask, closePhones, dayEvent, go, sameCopies, setEuros, syncedState, todo, transfer, twoPhones } from './phones';
 
 test.beforeAll(async () => {
@@ -177,7 +177,7 @@ test('session gardée : rechargement, réouverture (PWA) et ouverture hors ligne
   await al.page.reload();
   await expectApp(al.page);
   await expect(setupScreen(al.page)).toHaveCount(0);
-  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour', SYNC_READY);
 
   // Réouverture de l'app (onglet fermé, nouvel onglet, comme l'icône de l'écran d'accueil).
   await al.page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
@@ -186,7 +186,7 @@ test('session gardée : rechargement, réouverture (PWA) et ouverture hors ligne
   await again.goto(`${APP}?module=courses`);
   await expectApp(again);
   await expect(toBuy(again, 'Café')).toBeVisible();
-  await expect(syncIndicator(again)).toHaveAttribute('title', 'À jour');
+  await expect(syncIndicator(again)).toHaveAttribute('title', 'À jour', SYNC_READY);
   await openSettings(again);
   await expect(accountSection(again)).toContainText('arthur.longuefosse@gmail.com');
   await again.keyboard.press('Escape');

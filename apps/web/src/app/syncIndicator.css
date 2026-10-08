@@ -1,0 +1,68 @@
+/* Synchronisation (V5) : un petit nuage ; le mot, un instant, en bulle
+   dessous (l'en-tête ne bouge jamais). */
+.sync-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(7, 13, 10, 0.42);
+  color: var(--text-faint);
+  transition: color 260ms var(--ease-soft);
+}
+
+.sync-indicator__word {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: -4px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(7, 13, 10, 0.78);
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: sync-word 220ms var(--ease-soft) both;
+}
+
+.sync-indicator__word:empty {
+  display: none;
+}
+
+.sync-indicator--synced.is-worded {
+  color: var(--moss-300);
+}
+
+.sync-indicator--syncing .icon {
+  animation: sync-breathe 1.6s ease-in-out infinite;
+}
+
+.sync-indicator--offline,
+.sync-indicator--error {
+  color: var(--amber-300);
+}
+
+@keyframes sync-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes sync-word {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-indicator--syncing .icon,
+  .sync-indicator__word {
+    animation: none;
+  }
+}

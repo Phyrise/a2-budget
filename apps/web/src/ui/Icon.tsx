@@ -178,6 +178,13 @@ const PATHS = {
     </>
   ),
   minus: <path d="M5 12h14" />,
+  cloud: <path d="M7.4 18.4h9.4a3.8 3.8 0 0 0 .5-7.6 5.4 5.4 0 0 0-10.4 1.2 3.2 3.2 0 0 0 .5 6.4Z" />,
+  'cloud-off': (
+    <>
+      <path d="M9 6.8a5.4 5.4 0 0 1 8.3 4 3.8 3.8 0 0 1 2.3 6.4M16.4 18.4h-9a3.2 3.2 0 0 1-.5-6.4 5.4 5.4 0 0 1 .5-2" />
+      <path d="M4.6 4.6l14.8 14.8" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

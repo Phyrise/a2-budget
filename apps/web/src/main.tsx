@@ -1,7 +1,9 @@
 import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AccountProvider } from './account/AccountContext';
+import { AccountGate, StoreForMode } from './account/AccountGate';
+import { SyncProvider } from './account/SyncContext';
 import { App } from './app/App';
-import { AppProvider } from './state/store';
 import './styles/tokens.css';
 
 /** Labo Noiraudes (mode développeur) : `?lab=noiraudes`, chargé à part. */
@@ -27,9 +29,15 @@ createRoot(rootElement).render(
         <NoiraudesLab />
       </Suspense>
     ) : (
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <AccountProvider>
+        <SyncProvider>
+          <AccountGate>
+            <StoreForMode>
+              <App />
+            </StoreForMode>
+          </AccountGate>
+        </SyncProvider>
+      </AccountProvider>
     )}
   </StrictMode>,
 );

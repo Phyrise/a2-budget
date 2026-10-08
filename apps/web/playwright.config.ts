@@ -6,8 +6,11 @@ const PORT = Number(process.env.E2E_PORT ?? 4173);
 /**
  * Smoke tests navigateur (lead).
  *
- * Ils tournent contre le BUILD DE PRODUCTION servi par `pnpm preview`
- * (le serveur de développement ne sert pas le service worker).
+ * Ils tournent contre un build de production SANS configuration Firebase,
+ * `dist-e2e/` (`pnpm build:e2e`, mode « e2e » : `.env.production` n'est pas
+ * chargé, l'app reste locale, sans écran d'accueil Google), servi par
+ * `vite preview` (le serveur de développement ne sert pas le service worker).
+ * `pnpm e2e` construit puis lance la suite.
  * Une simulation WebKit/Chromium ne remplace pas un test sur un véritable
  * iPhone/Android : les vérifications réelles sont distinguées dans le
  * compte rendu final.
@@ -36,7 +39,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `pnpm preview --port ${PORT} --strictPort`,
+    command: `pnpm exec vite preview --outDir dist-e2e --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}/a2-budget/`,
     reuseExistingServer: true,
     timeout: 60_000,

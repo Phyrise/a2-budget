@@ -1,6 +1,7 @@
 /**
  * Réglages (feuille), allégés en V4.2 : vous deux (prénom au crayon, salaire
- * habituel sur une ligne), anniversaires (V4.3, au crayon), taux communs au
+ * habituel sur une ligne), compte (V5, seulement si Firebase est configuré :
+ * connecté avec Google ou invité), anniversaires (V4.3, au crayon), taux communs au
  * curseur (globaux : mois courant et suivants), dépenses récurrentes
  * (nouveaux mois), préférences (forêt vivante / immobile, sons), sauvegarde,
  * recommencer à zéro, à propos.
@@ -9,8 +10,12 @@
  */
 import type { PersonSettings } from '@a2/core';
 import { useState, type ReactNode } from 'react';
+import { AccountPanel } from '../../account/AccountPanel';
+import { useSync } from '../../account/SyncContext';
+import { FIREBASE_ENABLED } from '../../sync/firebase/config';
 import { useShell } from '../../app/ShellContext';
 import { exportFilename } from '../../state/exportImport';
+import { saveFile } from '../../ui/download';
 import { useApp } from '../../state/store';
 import {
   AmountInput,
@@ -104,6 +109,7 @@ const MOTION_HELP: Record<ForestChoice, string> = {
 export function SettingsSheetContent() {
   const { state, updateRecurringExpense, removeRecurringExpense, addRecurringExpense, exportJson, confirmReset } = useApp();
   const { prefs, updatePrefs } = useShell();
+  const { mode } = useSync();
   const [adding, setAdding] = useState(false);
   const [confirmReset2, setConfirmReset2] = useState(false);
 
@@ -113,16 +119,7 @@ export function SettingsSheetContent() {
 
   const doExport = () => {
     const json = exportJson();
-    if (json === '') return;
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = exportFilename();
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (json !== '') saveFile(json, exportFilename());
   };
 
   return (
@@ -131,6 +128,12 @@ export function SettingsSheetContent() {
         <PersonSettingsCard person="A" settings={settings.personA} />
         <PersonSettingsCard person="B" settings={settings.personB} />
       </div>
+
+      {FIREBASE_ENABLED && (
+        <Section id="account" icon="user" title="Compte">
+          <AccountPanel />
+        </Section>
+      )}
 
       <Section id="anniversaries" icon="sparkle" title="Anniversaires">
         <AnniversariesEditor />
@@ -178,15 +181,18 @@ export function SettingsSheetContent() {
           <Button variant="quiet" icon="download" onClick={doExport}>
             Exporter une sauvegarde
           </Button>
-          <ImportControl />
+          {/* Copie commune : un import ou un effacement toucherait aussi les données de l'autre. */}
+          {mode !== 'sync' && <ImportControl />}
         </div>
       </Section>
 
-      <Section id="reset" icon="alert" title="Recommencer à zéro" description="Efface toutes les données de cet appareil : budget, maison, forêt et courses.">
-        <Button variant="danger-ghost" icon="trash" onClick={() => setConfirmReset2(true)}>
-          Tout effacer…
-        </Button>
-      </Section>
+      {mode !== 'sync' && (
+        <Section id="reset" icon="alert" title="Recommencer à zéro" description="Efface toutes les données de cet appareil : budget, maison, forêt et courses.">
+          <Button variant="danger-ghost" icon="trash" onClick={() => setConfirmReset2(true)}>
+            Tout effacer…
+          </Button>
+        </Section>
+      )}
 
       <section className="settings-about" aria-label="À propos">
         <div className="settings-about__pair">

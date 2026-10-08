@@ -1,6 +1,8 @@
 /* Noiraudes d'un écran : une toile sur toute la fenêtre, au-dessus de la
-   feuille, sous le bandeau (30) et la navigation (40). Seules les cibles
-   des Noiraudes perchées reçoivent des touchers. */
+   feuille, sous le bandeau (30) et la navigation (40). Rien ici ne reçoit
+   de toucher (pointer-events: none) : le toucher qui attrape est écouté sur
+   la fenêtre (taps.ts) ; la couche du dessus ne porte que les bulles
+   « Noiraudes attrapées : N ». */
 
 .soot-stage {
   position: fixed;
@@ -18,33 +20,10 @@
   pointer-events: none;
 }
 
-.susu-stray {
+/* Bulle au-dessus d'une Noiraude attrapée (left/top : le haut de sa tête). */
+.susu-tally {
   position: absolute;
-  left: 0;
-  top: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 45%;
-  background: transparent;
-  pointer-events: auto;
-  cursor: pointer;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.susu-stray.is-caught {
-  cursor: default;
-  pointer-events: none;
-}
-
-.susu-stray__tally {
-  position: absolute;
-  bottom: calc(100% + 16px);
-  left: 50%;
-  translate: -50% 0;
+  translate: -50% -100%;
   padding: 3px 9px;
   border-radius: var(--radius-pill);
   background: rgba(11, 20, 16, 0.88);
@@ -56,15 +35,12 @@
   animation: susu-tally 1600ms var(--ease-soft) both;
 }
 
-.susu-stray__tally.is-start {
-  left: 0;
-  translate: 0 0;
+.susu-tally.is-start {
+  translate: -18px -100%;
 }
 
-.susu-stray__tally.is-end {
-  left: auto;
-  right: 0;
-  translate: 0 0;
+.susu-tally.is-end {
+  translate: calc(-100% + 18px) -100%;
 }
 
 @keyframes susu-tally {
@@ -83,7 +59,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .susu-stray__tally {
+  .susu-tally {
     animation-name: susu-tally-fade;
   }
 }
@@ -97,12 +73,4 @@
   80% {
     opacity: 1;
   }
-}
-
-/* Doigt immobile près d'une Noiraude : pas de sélection de texte ni de menu. */
-html.soot-holding,
-html.soot-holding * {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }

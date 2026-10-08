@@ -7,7 +7,7 @@
  */
 import type { MonthRecord, MonthSummary } from '@a2/core';
 import { monthFlows, paidFlows } from '@a2/core';
-import type { BudgetTheme, NoFacePose } from '../../../themes/types';
+import type { NoFacePose } from '../../../themes/types';
 
 /** Pose « humeur » du Sans-Visage (hors 'bow' et 'fading', réservées aux transitions). */
 export type NoFaceMood = Extract<NoFacePose, 'offering' | 'calm' | 'content' | 'shy'>;
@@ -123,18 +123,4 @@ export function konpeitoColorFor(label: string): KonpeitoColor {
   const hue = KONPEITO_HUES[h % KONPEITO_HUES.length] ?? 'yellow';
   if (hue === 'pink' || hue === 'white' || ((h >>> 8) & 1) === 0) return hue;
   return `${hue}-2`;
-}
-
-export type SusuwatariCarrier = keyof Pick<
-  BudgetTheme['susuwatari'],
-  'carryPink' | 'carryYellow' | 'carryGreen' | 'carryBlueDuo' | 'jumpWhite'
->;
-
-/** Noiraude qui porte un kompeitō de la couleur la plus proche. */
-export function carrierFor(color: KonpeitoColor): SusuwatariCarrier {
-  if (color.startsWith('pink')) return 'carryPink';
-  if (color.startsWith('yellow')) return 'carryYellow';
-  if (color.startsWith('green')) return 'carryGreen';
-  if (color.startsWith('white')) return 'jumpWhite';
-  return 'carryBlueDuo'; // bleu et violet
 }

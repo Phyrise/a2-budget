@@ -264,85 +264,12 @@
   filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
 }
 
-/* ------------------------------------------------ Noiraude qui traverse */
-
-.susu-lane {
-  position: fixed;
-  bottom: calc(var(--nav-height) + var(--safe-bottom) + 26px);
-  z-index: 35;
-  height: 70px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.susu-runner {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation-name: susu-run;
-  animation-timing-function: cubic-bezier(0.42, 0.1, 0.58, 0.95);
-  animation-fill-mode: forwards;
-}
-
-.susu-runner__img {
-  height: 56px;
-  width: auto;
-  transform-origin: 50% 100%;
-  animation: susu-hop 190ms ease-in-out infinite alternate;
-  filter: drop-shadow(0 0 1.5px rgba(236, 230, 211, 0.4)) drop-shadow(0 0 12px rgba(255, 214, 150, 0.22));
-}
-
-.susu-runner__dust {
-  width: 30px;
-  height: 6px;
-  margin-top: -3px;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent);
-  animation: susu-shadow 190ms ease-in-out infinite alternate;
-}
-
-@keyframes susu-run {
-  from {
-    transform: translateX(-72px);
-  }
-  to {
-    transform: translateX(calc(var(--lane) + 12px));
-  }
-}
-
-@keyframes susu-hop {
-  from {
-    transform: translateY(0) scale(1.04, 0.94);
-  }
-  to {
-    transform: translateY(-9px) scale(0.98, 1.03);
-  }
-}
-
-@keyframes susu-shadow {
-  from {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  to {
-    transform: scaleX(0.7);
-    opacity: 0.6;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .noface__img,
   .noface__glow,
   .gold-gauge__fill,
   .gold-gauge__nugget {
     transition: none !important;
-  }
-
-  .susu-lane {
-    display: none;
   }
 }
 

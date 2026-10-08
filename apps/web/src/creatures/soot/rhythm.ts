@@ -11,7 +11,9 @@
  * Onglet caché : plus de minuterie ; elle reprend au retour.
  */
 import { busy, type SootDirector } from './director';
+import { rain } from './feast';
 import { procession } from './parade';
+import { porters } from './porters';
 import { SCROLL_GAP_MS, WARMUP_MS, WRONG_TAB_CHANCE, nextDelayMs, rollRarity, wrongTabDelayMs } from './perch';
 import { SUMMON_EVENT, type SootSummon, type SummonDetail } from './stage';
 import { spawnStray } from './strays';
@@ -28,6 +30,14 @@ function automated(): boolean {
 
 function summon(d: SootDirector, kind: SootSummon): boolean {
   if (kind === 'procession') return procession(d);
+  // Trois kompeitō tombent du ciel (gratuits) : le troupeau les ramasse tous.
+  if (kind === 'treats') return !busy() && rain(d, 3);
+  if (kind === 'porters') {
+    // Comme un virement coché au milieu de l'écran (Sans-Visage hors champ : bord droit).
+    if (d.calm || busy()) return false;
+    porters(d, { x: window.innerWidth * 0.3, y: window.innerHeight * 0.55 }, true, null);
+    return true;
+  }
   return spawnStray(d, { golden: kind === 'golden', lost: kind === 'lost' }) !== null;
 }
 

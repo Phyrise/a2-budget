@@ -2,8 +2,9 @@
  * La procession (rare, jamais annoncée) : une trentaine de petites
  * Noiraudes traversent l'écran à la file, en bas, en marchant sur le haut de
  * la navigation ; quelques-unes portent un morceau de charbon ou un
- * kompeitō, d'autres sautillent. Aucune ne reçoit de toucher : elles ne
- * gênent jamais un contrôle. Rien au calme.
+ * kompeitō, d'autres sautillent. Chacune s'attrape d'un toucher (au-dessus
+ * de la navigation : un toucher SUR la navigation reste pour elle). Rien
+ * au calme.
  */
 import type { Actor } from './cast';
 import { busy, type SootDirector } from './director';

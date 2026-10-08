@@ -2,8 +2,8 @@
  * Noiraudes vagabondes (le petit jeu, V4.2, désormais dessinées par le
  * code) : de temps en temps, une Noiraude se pose au bord d'un bloc, loin de
  * tout contrôle, trottine, se dresse, somnole, cligne et suit le doigt des
- * yeux, puis s'efface. Un toucher l'attrape : elle saute de joie, un
- * kompeitō s'envole vers le bocal, « Noiraudes attrapées : N » augmente.
+ * yeux, puis s'efface. Un toucher l'attrape (comme toutes les Noiraudes,
+ * voir catch.ts).
  * - parfois elle porte un petit morceau de charbon (la chaufferie) ;
  * - la dorée (rarissime) : attrapée, cinq kompeitō ;
  * - celle qui s'est trompée d'onglet (Courses, Calendrier) regarde partout,
@@ -11,16 +11,10 @@
  * Calme (mouvement réduit, forêt « immobile ») : elle apparaît, reste et
  * s'efface, sans trotter.
  */
-import { playCue } from '../../app/sound';
-import { fr } from '../../ui/format';
-import { getPlay, playCatch } from '../play';
 import type { Actor } from './cast';
 import { busy, type SootDirector } from './director';
-import { makeItem, randomTone } from './items';
+import { makeItem } from './items';
 import { STRAY_SIZE, pickPerch, type Box } from './perch';
-
-/** Durée de la joie d'une Noiraude attrapée, bulle comprise (ms). */
-export const CAUGHT_MS = 1700;
 
 const BLOCKS = '.card, .ledger, .sheet-section, .aisle, .paybook, .balance-card, .cal-month, .kiki-empty__art, .kiki-empty__title, .basket, .event-list';
 const CONTROLS = 'button, input, textarea, select, a[href], label, [role="checkbox"], [role="button"], [tabindex]:not([tabindex="-1"]), .konpeito-jar';
@@ -56,9 +50,7 @@ export function spawnStray(d: SootDirector, opts: StrayOptions = {}): Actor | nu
   a.next = d.time + 0.6;
   if (!d.calm) s.bounce(0.45);
   if (!s.gold && !a.lost && d.rand() < 0.3) a.load = makeItem('coal', 4.2);
-  d.giveHit(a, s.gold ? 'Attraper la Noiraude dorée' : 'Attraper la Noiraude');
   a.tick = (_a, _dt, time) => life(d, a, time);
-  a.tap = () => catchStray(d, a);
   return a;
 }
 
@@ -103,52 +95,4 @@ function life(d: SootDirector, a: Actor, time: number): void {
     s.sleep(1.4 + s.rand() * 1.4);
     a.next = time + 3;
   }
-}
-
-/** Le bocal (ou, sans bocal, un peu au-dessus d'elle). */
-function giftTarget(d: SootDirector, a: Actor) {
-  const jar = d.jar?.();
-  if (jar) return { x: jar.x, y: Math.max(-20, jar.y) };
-  return { x: a.s.x, y: a.s.y - 90 };
-}
-
-/** Attrapée : joie, kompeitō vers le bocal, compteur. */
-export function catchStray(d: SootDirector, a: Actor): void {
-  if (a.caught || a.leaving) return;
-  a.caught = true;
-  const s = a.s;
-  const golden = s.gold;
-  playCatch(golden);
-  const total = getPlay().caught;
-  const hit = a.hit;
-  if (hit) {
-    hit.classList.add('is-caught');
-    const rect = hit.getBoundingClientRect();
-    const align = rect.left < 90 ? 'start' : rect.right > window.innerWidth - 90 ? 'end' : 'center';
-    const tally = document.createElement('span');
-    tally.className = `susu-stray__tally is-${align}`;
-    tally.textContent = fr(`Noiraudes attrapées : ${total}`);
-    hit.appendChild(tally);
-  }
-  if (a.load) {
-    d.drop(a.load, s.x + s.facing * 10, s.y, 14, () => undefined);
-    a.load = null;
-  }
-  s.setArms('cheer');
-  s.eyes = 'happy';
-  const from = s.body();
-  const gifts = golden ? 5 : 1;
-  for (let i = 0; i < gifts; i++) {
-    d.later(120 + i * 140, () => {
-      const item = makeItem('konpeito', 5, randomTone(d.rand));
-      d.fly(item, { x: from.x, y: from.y - s.scale * 0.6 }, giftTarget(d, a), d.calm ? 0.9 : 0.75, () => d.onGift?.(), 70);
-    });
-  }
-  playCue('konpeito', { delayMs: 650 });
-  d.later(CAUGHT_MS - 600, () => d.actors.includes(a) && d.vanish(a, 2.5));
-  d.later(CAUGHT_MS, () => {
-    hit?.remove();
-    if (a.hit === hit) a.hit = null;
-    if (d.actors.includes(a)) d.remove(a);
-  });
 }

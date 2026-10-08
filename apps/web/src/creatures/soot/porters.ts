@@ -7,11 +7,14 @@
  * une autre accourt et elles la portent à deux.
  * Le Sans-Visage hors de l'écran : elles partent (ou arrivent) par le bord
  * droit, là où il vient en visite. Décoratif ; rien au calme.
+ * Une porteuse attrapée lâche sa pièce : sa partenaire la porte
+ * seule, sinon une autre porteuse de l'équipe la pose sur la sienne (pile) ;
+ * s'il n'en reste aucune, la pièce file seule jusqu'au bout du chemin.
  */
 import type { Point } from '../susuwatari';
 import { dist, handsUp, type Actor } from './cast';
 import { busy, type SootDirector } from './director';
-import { makeItem } from './items';
+import { makeItem, type Item } from './items';
 
 /** Le Sans-Visage à l'écran : ses pieds (sol) et sa bouche (fenêtre, px). */
 export interface PortTarget {
@@ -36,6 +39,7 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
   const strain = d.rand() < 0.35;
   const speed = Math.max(75, Math.min(160, dist(start, end) / 3.6));
   const crew: Actor[] = [];
+  const rank = new Map<Actor, number>();
   const offset = (i: number) => ({ x: (i - (n - 1) / 2) * 24, y: (i % 2) * 7 - 3 });
 
   const arrive = (a: Actor) => {
@@ -45,20 +49,27 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
       if (a.mate) d.remove(a.mate);
       return;
     }
-    const item = a.load;
+    const items = [...(a.load ? [a.load] : []), ...a.extra];
     a.load = null;
+    a.extra = [];
+    a.letGo = null;
     const team = a.mate ? [a, a.mate] : [a];
-    if (a.mate) a.mate.load = null;
-    if (item) {
-      const hands = handsUp(s, d.layer.params);
+    if (a.mate) {
+      a.mate.load = null;
+      a.mate.letGo = null;
+      items.push(...a.mate.extra);
+      a.mate.extra = [];
+    }
+    const hands = handsUp(s, d.layer.params);
+    items.forEach((item, i) => {
       if (paid && mouth) {
         // Dans la bouche du Sans-Visage.
-        d.fly(item, { x: hands.x, y: hands.y - item.r }, toView(mouth), 0.45, undefined, 26);
+        d.later(i * 120, () => d.fly(item, { x: hands.x, y: hands.y - item.r * (1 + i * 1.6) }, toView(mouth), 0.45, undefined, 26));
       } else {
         // Posée sur la case : elle s'y efface.
-        const l = d.drop(item, s.x + s.facing * 6, s.y, s.scale * 0.9, () => (l.fading = true));
+        const l = d.drop(item, s.x + s.facing * (6 + i * 7), s.y, s.scale * 0.9, () => (l.fading = true));
       }
-    }
+    });
     for (const t of team) {
       t.s.setArms('cheer');
       t.s.strain = 0;
@@ -83,6 +94,8 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
       const a = d.add({ x: from.x + o.x, y: from.y + o.y, size: 26 + d.rand() * 4 }, 'porter');
       a.fadeRate = 5;
       crew[i] = a;
+      rank.set(a, i);
+      a.letGo = () => handoff(a);
       if (!helper) {
         a.load = makeItem('coin', big ? 9.5 : 5.5);
         a.s.setArms('up');
@@ -93,6 +106,56 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
       a.tick = () => help(a);
     });
   }
+
+  const fine = (c: Actor | undefined): c is Actor => !!c && d.actors.includes(c) && !c.leaving && !c.caught;
+
+  /** La pièce file seule jusqu'au bout du chemin (bouche ou case). */
+  const alone = (item: Item, from: Point) => {
+    const to = toView(paid && mouth ? mouth : end);
+    const dur = Math.max(0.5, Math.min(1.8, dist(from, to) / 320));
+    d.fly(item, from, to, dur, () => {
+      if (paid && mouth) return;
+      const l = d.drop(item, to.x, to.y, 0, () => (l.fading = true));
+    }, 50);
+  };
+
+  /** Attrapée : les autres porteuses continuent avec sa charge. */
+  const handoff = (a: Actor) => {
+    const items = [...(a.load ? [a.load] : []), ...a.extra];
+    const shared = a.mate && a.mate.load === a.load ? a.mate : null;
+    a.load = null;
+    a.extra = [];
+    if (a.mate) a.mate.mate = null;
+    a.mate = null;
+    if (items.length === 0) return;
+    if (shared && fine(shared)) {
+      // Portage à deux : l'autre la porte seule, en peinant un peu.
+      shared.extra.push(...items.slice(1));
+      shared.s.strain = 0.6;
+      if (shared.tick) {
+        shared.tick = null;
+        walk(shared, rank.get(shared) ?? 0, speed * 0.7);
+      }
+      return;
+    }
+    const hands = handsUp(a.s, d.layer.params);
+    const from = { x: hands.x, y: hands.y - 6 };
+    const mates = crew.filter((c) => c !== a && fine(c) && c.load !== null && c.s.state === 'walk');
+    mates.sort((p, q) => dist(p.s, a.s) - dist(q.s, a.s));
+    const other = mates[0];
+    for (const item of items) {
+      if (!other) {
+        alone(item, from);
+        continue;
+      }
+      // Posée sur la pièce d'une autre porteuse (pile).
+      const top = handsUp(other.s, d.layer.params);
+      d.fly(item, from, { x: top.x, y: top.y - item.r * (2 + other.extra.length * 1.6) }, 0.35, () => {
+        if (fine(other) && other.load) other.extra.push(item);
+        else alone(item, { x: item.x, y: item.y });
+      }, 30);
+    }
+  };
 
   /** L'aide accourt sous la grosse pièce, puis elles la portent à deux. */
   const help = (a: Actor) => {

@@ -10,6 +10,20 @@
  *
  * `legacy` remet les champs ajoutés depuis à leur valeur « ancien moteur » :
  * ces modèles se dessinent comme à l'époque.
+ *
+ * Ce qui les rend mignonnes (Arthur) → où le régler dans le Labo :
+ * 1. jambes arquées en « ( ) », en miroir : Membres › Arc, Arcs en miroir,
+ *    Hauteur du genou (limbs.bow, mirror, knee) ;
+ * 2. poils rectilignes, pas pointus : Poils › Effilement 0, Bout arrondi
+ *    (hair.taper, cap) ;
+ * 3. yeux qui louchent vers le nez : Yeux › Strabisme (eyes.cross), Liseré ;
+ * 4. corps moins noir que les poils et flou, poils qui y rentrent : Corps ›
+ *    Flou du contour, Noirceur du corps ; Poils › Noirceur des poils, Poils
+ *    sur le corps, Jusqu'où ils rentrent (body.blur, darkness, hair.ink,
+ *    over, inner) ; le duvet devient alors de fines stries d'encre ;
+ * 5. pieds et mains = trois bouts très fins : Membres › Doigts fins 3,
+ *    Pieds / orteils, Mains / doigts, Éventail, Finesse (limbs.toes…).
+ * Le Labo a un « Gros plan » (case Code) cadré comme le plan du film.
  */
 import { DEFAULT_SOOT_PARAMS, cloneParams, type SootSpriteParams } from './params';
 

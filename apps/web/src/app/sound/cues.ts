@@ -42,6 +42,7 @@
  * - `grumble`     Calcifer agacé (touché trop souvent) → grognement de braise ;
  * - `yawn`        Totoro bâille et s'étire → long souffle grave et doux.
  * - `squeak`      on touche une Noiraude → petit cri aigu « kyu ! ».
+ * - `purr`        on caresse Jiji (avatar de l'autre, V5.2) → ronron grave.
  */
 export type SoundCue =
   | 'done'
@@ -68,7 +69,8 @@ export type SoundCue =
   | 'crackle'
   | 'grumble'
   | 'yawn'
-  | 'squeak';
+  | 'squeak'
+  | 'purr';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -110,4 +112,5 @@ export const ALL_CUES: readonly SoundCue[] = [
   'grumble',
   'yawn',
   'squeak',
+  'purr',
 ];

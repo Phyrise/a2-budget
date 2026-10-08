@@ -13,6 +13,10 @@
  *   Noiraudes (kompeitō au sol, objets portés), sur la même toile.
  * - `idleWhenEmpty` : sans Noiraude (ni `keepAwake`), la boucle s'arrête ;
  *   `spawn` ou `wake` la relancent.
+ * - `prewarm(tailles)` : peint d'avance, quand le navigateur est libre, les
+ *   sprites de ces tailles pour toutes les variantes de fourrure (sinon la
+ *   première Noiraude de chaque variante les peint toutes d'un coup à son
+ *   arrivée : un à-coup visible sur téléphone).
  * - Profondeur : `depth(y)` réduit un peu celles qui sont loin (haut de zone).
  * - Apparence : `params` (SootSpriteParams) ; `setParams` la change en direct :
  *   membres, yeux et tempo tout de suite, sprites reconstruits dès l'image
@@ -30,6 +34,7 @@ import { SpriteCache } from './cache';
 import { Susuwatari, type Point, type Rect, type SusuwatariEnv, type SusuwatariInit } from './creature';
 import { drawSusuwatari } from './draw';
 import { DEFAULT_SOOT_PARAMS, rigOf, type SootSpriteParams } from './params';
+import { VARIANTS } from './sprites';
 
 export interface SusuwatariLayerOptions {
   /** Plafond de densité (défaut 3). */
@@ -71,6 +76,8 @@ export interface SusuwatariLayer {
   setCalm(on: boolean): void;
   /** Relance la boucle (après `idleWhenEmpty`). */
   wake(): void;
+  /** Peint d'avance (temps libre) les sprites de ces diamètres (px CSS), toutes variantes. */
+  prewarm(sizes: readonly number[]): void;
   setRim(rim: number): void;
   /** Change l'apparence de toutes les Noiraudes du calque. */
   setParams(params: SootSpriteParams): void;
@@ -94,6 +101,19 @@ function reducedQuery(): MediaQueryList | null {
 
 /** Délai maximal avant de relancer une reconstruction en cours (s). */
 const REBUILD_S = 0.2;
+
+type IdleDeadlineLike = { timeRemaining(): number };
+
+/** Rappel quand le navigateur est libre (Safari : un peu plus tard). */
+function whenIdle(fn: (deadline?: IdleDeadlineLike) => void): () => void {
+  const w = window as Window & { requestIdleCallback?: (cb: (d: IdleDeadlineLike) => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+  if (w.requestIdleCallback && w.cancelIdleCallback) {
+    const id = w.requestIdleCallback(fn, { timeout: 2000 });
+    return () => w.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(() => fn(), 120);
+  return () => window.clearTimeout(id);
+}
 
 export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: SusuwatariLayerOptions = {}): SusuwatariLayer {
   const ctx = canvas.getContext('2d');
@@ -125,10 +145,19 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
   // Garde-fou de densité : intervalle moyen sur une fenêtre de 90 images.
   let slowSum = 0;
   let slowCount = 0;
+  let cancelIdle: (() => void) | null = null;
+
+  /** Avance les sprites en attente sur le temps libre, puis se rappelle s'il en reste. */
+  const pumpIdle = (deadline?: IdleDeadlineLike) => {
+    cancelIdle = null;
+    if (destroyed || cache.pending === 0) return;
+    cache.pump(deadline ? Math.max(1, deadline.timeRemaining() - 2) : 4, time);
+    if (cache.pending > 0) cancelIdle = whenIdle(pumpIdle);
+  };
 
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
-    dpr = Math.min((globalThis as any).__sootExp?.dpr ?? maxDpr, Math.max(1, window.devicePixelRatio || 1));
+    dpr = Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
     width = rect.width;
     height = rect.height;
     const w = Math.round(width * dpr);
@@ -152,7 +181,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       fps = fps * 0.95 + (1000 / Math.max(1, now - last)) * 0.05;
       // Les images qui suivent la peinture de sprites (et leur envoi au
       // processeur graphique) ne comptent pas : seule la marche courante juge.
-      if (options.adaptive !== false && !(globalThis as any).__sootExp?.noAdapt && time > 2 && dpr > 1.5 && now - cache.builtAt > 600) {
+      if (options.adaptive !== false && time > 2 && dpr > 1.5 && now - cache.builtAt > 600) {
         slowSum += now - last;
         slowCount += 1;
         if (slowCount >= 90) {
@@ -184,13 +213,13 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     }
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (!(globalThis as any).__sootExp?.noClear) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     options.drawUnder?.(ctx, dpr, time);
     // De l'arrière vers l'avant.
     const order = creatures.filter((s) => s.state !== 'gone').sort((a, b) => a.y - b.y);
     for (const s of order) {
       const sprites = cache.get(s.variant, (s.scale / 2) * dpr, time);
-      if (sprites && !(globalThis as any).__sootExp?.noBodies) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
+      if (sprites) drawSusuwatari(ctx, s, sprites, { dpr, night, time, shadow: options.shadow ?? 1, rim, params });
     }
     options.drawOver?.(ctx, dpr, time);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -268,6 +297,10 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     wake() {
       schedule();
     },
+    prewarm(sizes) {
+      for (const size of sizes) for (let v = 0; v < VARIANTS; v++) cache.get(v, (size / 2) * dpr, time);
+      if (cancelIdle === null && cache.pending > 0) cancelIdle = whenIdle(pumpIdle);
+    },
     setRim(value) {
       rim = value;
       cache.setRim(value);
@@ -298,6 +331,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
     destroy() {
       destroyed = true;
       cancelAnimationFrame(raf);
+      cancelIdle?.();
       observer?.disconnect();
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibility);

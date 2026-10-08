@@ -2,8 +2,9 @@
  * La procession (rare, jamais annoncée) : une trentaine de petites
  * Noiraudes traversent l'écran à la file, en bas, en marchant sur le haut de
  * la navigation ; quelques-unes portent un morceau de charbon ou un
- * kompeitō, d'autres sautillent. Chacune s'attrape d'un toucher (sa cible
- * s'arrête à ses pieds : la navigation reste libre). Rien au calme.
+ * kompeitō, d'autres sautillent. Chacune s'attrape d'un toucher (au-dessus
+ * de la navigation : un toucher SUR la navigation reste pour elle). Rien
+ * au calme.
  */
 import type { Actor } from './cast';
 import { busy, type SootDirector } from './director';
@@ -21,7 +22,7 @@ export function procession(d: SootDirector): boolean {
   for (let i = 0; i < n; i++) {
     const size = 19 + d.rand() * 9;
     x -= dir * (size * 0.8 + d.rand() * 9);
-    const a = d.add({ x, y: lane.y + d.rand() * 2, size }, 'parade', false, 'Attraper une Noiraude de la procession');
+    const a = d.add({ x, y: lane.y + d.rand() * 2, size }, 'parade', false);
     a.fadeRate = 8;
     const r = d.rand();
     if (r < 0.22) a.load = makeItem('coal', 3.4);

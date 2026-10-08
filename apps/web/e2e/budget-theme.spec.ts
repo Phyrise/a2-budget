@@ -8,6 +8,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, STORAGE_KEY, openApp, trackErrors } from './helpers';
+import { sootActors, tapNoiraude } from './soot';
 
 test.use({ viewport: PHONE });
 
@@ -213,35 +214,37 @@ test.describe('Budget — univers Chihiro', () => {
   test('Noiraudes vagabondes : jamais d’elles-mêmes en test, sur aucun contrôle, attrapées et comptées', async ({ page }) => {
     const errors = trackErrors(page);
     await openApp(page, 'budget');
-    const stray = page.locator('.susu-stray');
+    const stage = page.locator('.soot-stage[data-screen="budget"]');
     const call = () => page.evaluate(() => window.dispatchEvent(new Event('a2:susuwatari')));
-    await expect(stray).toHaveCount(0);
+    await expect(stage).not.toHaveAttribute('data-stray', /./);
 
     // Pas pendant une feuille (le pavé ouvert).
     await page.locator('#salary-a-value').click();
     await expect(page.locator('#salary-a-pad-display')).toBeFocused();
     await call();
-    await expect(stray).toHaveCount(0);
+    await page.waitForTimeout(200);
+    await expect(stage).not.toHaveAttribute('data-stray', /./);
     await page.keyboard.press('Escape');
     await expect(page.locator('#salary-a-pad-display')).toHaveCount(0);
 
     await call();
-    await expect(stray).toHaveCount(1);
-    const clear = await stray.evaluate((el) => {
-      const r = el.getBoundingClientRect();
-      const controls = [...document.querySelectorAll('button, input, [role="checkbox"], a[href]')].filter((c) => c !== el);
+    await expect(stage).toHaveAttribute('data-stray', '1');
+    await expect.poll(async () => (await sootActors(page)).some((a) => a.alpha > 0.6)).toBe(true);
+    const [stray] = await sootActors(page);
+    // Sa place (boule et pattes) ne chevauche aucun contrôle.
+    const clear = await page.evaluate((r) => {
+      const controls = [...document.querySelectorAll('button, input, [role="checkbox"], a[href]')];
       return controls.every((c) => {
         const b = c.getBoundingClientRect();
         return b.right <= r.left || b.left >= r.right || b.bottom <= r.top || b.top >= r.bottom;
       });
-    });
+    }, { left: stray!.fx - stray!.scale * 0.5, right: stray!.fx + stray!.scale * 0.5, top: stray!.fy - stray!.scale * 1.3, bottom: stray!.fy + 4 });
     expect(clear).toBe(true);
 
     const saved = await page.evaluate((key) => localStorage.getItem(key), STORAGE_KEY);
-    await stray.dispatchEvent('click');
-    await expect(stray).toHaveClass(/is-caught/);
-    await expect(page.locator('.susu-stray__tally')).toHaveText('Noiraudes attrapées\u00a0: 1');
-    await expect(stray).toHaveCount(0, { timeout: 4_000 });
+    await tapNoiraude(page, 'stray');
+    await expect(page.locator('.susu-tally')).toHaveText('Noiraudes attrapées\u00a0: 1');
+    await expect(stage).not.toHaveAttribute('data-stray', /./, { timeout: 4_000 });
     await expect(page.getByTestId('susu-count')).toHaveText('Noiraudes attrapées\u00a0: 1');
     // Jeu hors AppState (creatures/play) : attrapée = +1 au compteur et au bocal.
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('a2-budget:play:v1') ?? 'null'))).toMatchObject({ caught: 1, jar: 21 });

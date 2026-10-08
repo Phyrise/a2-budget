@@ -25,7 +25,7 @@ export interface Actor {
   /** Objets empilés sur `load` (une porteuse reprend la pièce d'une autre). */
   extra: Item[];
   /**
-   * Elle lâche sa charge malgré elle (attrapée, enfuie) : le rôle décide de
+   * Elle lâche sa charge malgré elle (attrapée) : le rôle décide de
    * ce qu'elle devient (les autres porteuses la reprennent, le bonbon
    * retombe pour le troupeau…). Sans cela : elle tombe et s'efface.
    */
@@ -37,10 +37,6 @@ export interface Actor {
   fadeRate: number;
   /** Retirée dès qu'elle est effacée. */
   leaving: boolean;
-  /** Cible du doigt (bouton transparent qui la suit) : toutes les Noiraudes visibles. */
-  hit: HTMLButtonElement | null;
-  /** Dernière place écrite sur la cible (on n'écrit que si elle change). */
-  hitAt: { x: number; y: number; w: number; h: number };
   /** Perchoir : pieds (x, y), bout du trot (x2). */
   perch: { x: number; y: number; x2: number } | null;
   /** Fin de visite, prochaine décision (horloge du calque, s). */
@@ -49,12 +45,10 @@ export interface Actor {
   caught: boolean;
   /** S'est trompée d'onglet (Courses, Calendrier). */
   lost: boolean;
-  /** Occupée (geste, troupeau, fuite) : sa vie ordinaire attend. */
-  busy: 'push' | 'climb' | 'herd' | 'flee' | null;
+  /** Occupée (troupeau des kompeitō) : sa vie ordinaire attend. */
+  busy: 'herd' | null;
   /** Comportement propre au rôle, à chaque image. */
   tick: ((a: Actor, dt: number, time: number) => void) | null;
-  /** Touchée (après le rebond et le « kyu ») : attraper (défaut), etc. */
-  tap: (() => void) | null;
 }
 
 export function makeActor(s: Susuwatari, role: Role, page: boolean): Actor {
@@ -69,8 +63,6 @@ export function makeActor(s: Susuwatari, role: Role, page: boolean): Actor {
     fadeTo: 1,
     fadeRate: 3,
     leaving: false,
-    hit: null,
-    hitAt: { x: NaN, y: NaN, w: NaN, h: NaN },
     perch: null,
     until: Infinity,
     next: 0,
@@ -78,7 +70,6 @@ export function makeActor(s: Susuwatari, role: Role, page: boolean): Actor {
     lost: false,
     busy: null,
     tick: null,
-    tap: null,
   };
 }
 

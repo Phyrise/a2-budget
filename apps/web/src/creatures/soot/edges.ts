@@ -10,8 +10,7 @@ import type { SootDirector } from './director';
 
 /** Bords gauche et droit de la feuille, bornés à la fenêtre. */
 export function sheetEdges(d: SootDirector): { left: number; right: number } {
-  const { left, right } = d.lane();
-  return { left, right };
+  return d.edges();
 }
 
 /** Abscisse d'arrivée (ou de départ) d'une Noiraude de taille `size` par ce bord. */

@@ -7,7 +7,7 @@
  * une autre accourt et elles la portent à deux.
  * Le Sans-Visage hors de l'écran : elles partent (ou arrivent) par le bord
  * droit, là où il vient en visite. Décoratif ; rien au calme.
- * Une porteuse attrapée (ou enfuie) lâche sa pièce : sa partenaire la porte
+ * Une porteuse attrapée lâche sa pièce : sa partenaire la porte
  * seule, sinon une autre porteuse de l'équipe la pose sur la sienne (pile) ;
  * s'il n'en reste aucune, la pièce file seule jusqu'au bout du chemin.
  */
@@ -91,7 +91,7 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
       if (busy()) return;
       const o = offset(i);
       const from = toView(start);
-      const a = d.add({ x: from.x + o.x, y: from.y + o.y, size: 26 + d.rand() * 4 }, 'porter', true, 'Attraper la porteuse');
+      const a = d.add({ x: from.x + o.x, y: from.y + o.y, size: 26 + d.rand() * 4 }, 'porter');
       a.fadeRate = 5;
       crew[i] = a;
       rank.set(a, i);
@@ -107,7 +107,7 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
     });
   }
 
-  const fine = (c: Actor | undefined): c is Actor => !!c && d.actors.includes(c) && !c.leaving && !c.caught && c.busy !== 'flee';
+  const fine = (c: Actor | undefined): c is Actor => !!c && d.actors.includes(c) && !c.leaving && !c.caught;
 
   /** La pièce file seule jusqu'au bout du chemin (bouche ou case). */
   const alone = (item: Item, from: Point) => {
@@ -119,7 +119,7 @@ export function porters(d: SootDirector, origin: Point, paid: boolean, target: P
     }, 50);
   };
 
-  /** Attrapée ou enfuie : les autres porteuses continuent avec sa charge. */
+  /** Attrapée : les autres porteuses continuent avec sa charge. */
   const handoff = (a: Actor) => {
     const items = [...(a.load ? [a.load] : []), ...a.extra];
     const shared = a.mate && a.mate.load === a.load ? a.mate : null;
@@ -189,7 +189,7 @@ export function runner(d: SootDirector, tone: Parameters<typeof makeItem>[2]): A
   if (d.calm || busy()) return null;
   const lane = d.lane();
   const size = 30;
-  const a = d.add({ x: lane.left - size, y: lane.y, size }, 'runner', false, 'Attraper la Noiraude qui traverse');
+  const a = d.add({ x: lane.left - size, y: lane.y, size }, 'runner', false);
   a.fadeRate = 8;
   a.load = makeItem('konpeito', 5.5, tone);
   a.load.page = false;

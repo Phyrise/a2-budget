@@ -63,6 +63,11 @@ export class SpriteCache {
     return this.key;
   }
 
+  /** Sprites encore à peindre. */
+  get pending(): number {
+    return this.jobs.length;
+  }
+
   /** Vrai tant que des sprites des anciens paramètres attendent leur remplaçant. */
   get rebuilding(): boolean {
     return this.stale.size > 0;

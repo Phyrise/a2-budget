@@ -40,8 +40,7 @@ export function spawnStray(d: SootDirector, opts: StrayOptions = {}): Actor | nu
   const { w, h } = STRAY_SIZE;
   const x = perch.x + w / 2;
   const y = perch.y + h - 4;
-  const label = opts.golden ? 'Attraper la Noiraude dorée' : 'Attraper la Noiraude';
-  const a = d.add({ x, y, size: w * (0.94 + d.rand() * 0.06) }, 'stray', true, label);
+  const a = d.add({ x, y, size: w * (0.94 + d.rand() * 0.06) }, 'stray');
   const s = a.s;
   s.gold = opts.golden === true;
   a.lost = opts.lost === true;

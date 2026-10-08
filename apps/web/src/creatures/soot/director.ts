@@ -1,19 +1,21 @@
 /**
  * Chef d'orchestre des Noiraudes d'un écran : UNE toile (le calque
  * Susuwatari) posée sur toute la fenêtre, les acteurs (cast.ts), les objets
- * libres (au sol, en vol, au bout du doigt) et les cibles du doigt.
+ * libres (au sol, en vol, au bout du doigt) et le toucher.
  *
  * - Défilement : celles qui sont posées sur la page défilent avec elle
  *   (`shift`), celles de la bande du bas restent à l'écran.
- * - Toile `pointer-events: none` : chaque Noiraude visible a son bouton
- *   transparent (≥ 44 px) qui la suit ; un toucher l'attrape (catch.ts).
+ * - Toile `pointer-events: none` : un seul écouteur de toucher (taps.ts)
+ *   attrape la Noiraude visible sous le doigt, quelle qu'elle soit (catch.ts).
  * - Densité de la toile plafonnée à 2 : à 3, la toile plein écran coûte
  *   2,25 fois plus de pixels à chaque image, pour une différence invisible
  *   sur des boules de suie floues.
  * - Une feuille ouverte, le clavier ou un onglet caché : tout s'efface, plus
  *   rien n'apparaît ; la boucle du calque s'arrête quand il n'y a personne.
- * - Les rôles (strays.ts, porters.ts, herd.ts, parade.ts) et les jouets
- *   (toys.ts) passent par ses méthodes.
+ * - Les rôles (strays.ts, porters.ts, herd.ts et feast.ts, parade.ts)
+ *   passent par ses méthodes.
+ * - Fluidité : rien n'est lu ni écrit dans la page à chaque image (le
+ *   défilement arrive par l'événement `scroll`), pas de copie de listes.
  */
 import { isTextEntry } from '../../app/useKeyboardOpen';
 import { createSusuwatariLayer, type Point, type SusuwatariInit, type SusuwatariLayer } from '../susuwatari';
@@ -22,13 +24,11 @@ import { catchActor } from './catch';
 import type { Item } from './items';
 import { paintOver, paintUnder } from './paint';
 import { laneOf, type Box } from './perch';
-import { bindToys, installToys } from './toys';
+import { installTaps } from './taps';
 
 export type SootScreen = 'budget' | 'courses' | 'calendar';
 
 const GRAVITY = 1800;
-/** Plus petite cible du doigt (px), même pour une Noiraude minuscule. */
-const MIN_HIT = 44;
 const ROLES: readonly Role[] = ['stray', 'porter', 'herd', 'parade', 'runner'];
 
 /** Un objet qui n'est porté par personne. */
@@ -81,10 +81,12 @@ export class SootDirector {
   jar: (() => Point | null) | null = null;
   /** Un kompeitō gagné vient d'arriver au bocal. */
   onGift: (() => void) | null = null;
+  /** Kompeitō lâchés ramassés (ou mangés en tas), et effacés faute de preneuse (tests, DEV). */
+  readonly score = { picked: 0, expired: 0 };
   private scroll = { x: window.scrollX, y: window.scrollY };
   private readonly timers = new Set<number>();
   private readonly cleanups: Array<() => void> = [];
-  private castKey = '';
+  private readonly cast = ROLES.map(() => 0);
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -101,11 +103,17 @@ export class SootDirector {
       drawUnder: (ctx, dpr) => paintUnder(this, ctx, dpr),
       drawOver: (ctx, dpr, time) => paintOver(this, ctx, dpr, time),
     });
+    // Budget : vagabondes, troupeau, porteuses et celle qui traverse (≈ 26–34 px)
+    // sont peintes d'avance, sur le temps libre : aucune ne fige l'écran en arrivant.
+    if (screen === 'budget') this.layer.prewarm([30, 34]);
     // Le défilement déplace tout de suite celles qui sont posées sur la page.
     const onScroll = () => this.shift(this.scroll.x - window.scrollX, this.scroll.y - window.scrollY);
     window.addEventListener('scroll', onScroll, { passive: true });
     this.cleanups.push(() => window.removeEventListener('scroll', onScroll));
-    this.cleanups.push(this.watchGaze(), installToys(this));
+    this.cleanups.push(
+      this.watchGaze(),
+      installTaps(this, (a) => catchActor(this, a)),
+    );
     const watch = window.setInterval(() => {
       if (busy()) this.dismiss(document.visibilityState !== 'visible');
     }, 400);
@@ -114,14 +122,12 @@ export class SootDirector {
 
   // ——— Acteurs ———
 
-  /** Une Noiraude de plus : visible, elle s'attrape d'un toucher (`tap`). */
-  add(init: SusuwatariInit, role: Role, page = true, label = 'Attraper la Noiraude'): Actor {
+  /** Une Noiraude de plus : visible, elle s'attrape d'un toucher (taps.ts). */
+  add(init: SusuwatariInit, role: Role, page = true): Actor {
     const s = this.layer.spawn(init);
     s.alpha = 0;
     const a = makeActor(s, role, page);
     this.actors.push(a);
-    a.tap = () => catchActor(this, a);
-    this.giveHit(a, label);
     this.layer.wake();
     return a;
   }
@@ -131,14 +137,12 @@ export class SootDirector {
     a.leaving = true;
     a.fadeTo = 0;
     a.fadeRate = rate;
-    this.dropHit(a);
   }
 
   remove(a: Actor): void {
     const i = this.actors.indexOf(a);
     if (i >= 0) this.actors.splice(i, 1);
     this.layer.remove(a.s);
-    this.dropHit(a, true);
     if (a.mate) {
       if (a.mate.load === a.load) a.mate.mate = null;
       a.mate = null;
@@ -159,28 +163,6 @@ export class SootDirector {
     let n = 0;
     for (const a of this.actors) if (a.role === role && !a.leaving) n++;
     return n;
-  }
-
-  /** Cible du doigt (bouton transparent) d'une Noiraude. */
-  giveHit(a: Actor, label: string): HTMLButtonElement {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.tabIndex = -1;
-    b.className = 'susu-stray';
-    b.setAttribute('aria-label', label);
-    this.hits.appendChild(b);
-    a.hit = b;
-    bindToys(this, a, b);
-    return b;
-  }
-
-  dropHit(a: Actor, force = false): void {
-    // Attrapée : le bouton garde sa bulle jusqu'à ce qu'elle disparaisse.
-    if (a.hit && (force || !a.caught)) {
-      a.hit.remove();
-      a.hit = null;
-      a.hitAt.w = NaN;
-    }
   }
 
   // ——— Objets libres ———
@@ -264,10 +246,12 @@ export class SootDirector {
 
   private frame(dt: number, time: number): void {
     this.time = time;
-    this.shift(this.scroll.x - window.scrollX, this.scroll.y - window.scrollY);
     this.tickers.forEach((t) => t(dt, time));
 
-    for (const a of [...this.actors]) {
+    // À rebours : une Noiraude retirée en chemin ne décale pas les suivantes.
+    for (let i = this.actors.length - 1; i >= 0; i--) {
+      const a = this.actors[i];
+      if (!a) continue;
       const s = a.s;
       const step = a.fadeRate * dt;
       s.alpha = s.alpha < a.fadeTo ? Math.min(a.fadeTo, s.alpha + step) : Math.max(a.fadeTo, s.alpha - step);
@@ -276,36 +260,19 @@ export class SootDirector {
       if (a.load && s.armPose !== 'up' && !a.leaving) s.setArms('up');
       if ((a.leaving && s.alpha <= 0.01) || s.state === 'gone') this.remove(a);
     }
-    for (const l of [...this.loose]) this.moveLoose(l, dt, time);
+    for (let i = this.loose.length - 1; i >= 0; i--) {
+      const l = this.loose[i];
+      if (l) this.moveLoose(l, dt, time);
+    }
 
-    // Les cibles du doigt suivent les Noiraudes (écriture seulement si elles
-    // ont bougé : aucune lecture de mise en page ici).
-    for (const a of this.actors) {
-      if (!a.hit) continue;
-      const S = a.s.scale;
-      const w = Math.round(Math.max(MIN_HIT, S * 1.05));
-      const h = Math.round(Math.max(MIN_HIT, S * 1.35));
-      const b = a.s.body();
-      const x = Math.round((b.x - w / 2) * 2) / 2;
-      const y = Math.round((b.y - h * 0.58) * 2) / 2;
-      const at = a.hitAt;
-      if (w !== at.w || h !== at.h) {
-        a.hit.style.width = `${w}px`;
-        a.hit.style.height = `${h}px`;
-        at.w = w;
-        at.h = h;
-        at.x = NaN;
-      }
-      if (x === at.x && y === at.y) continue;
-      at.x = x;
-      at.y = y;
-      a.hit.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-    }
-    const key = ROLES.map((r) => this.count(r)).join(',');
-    if (key !== this.castKey) {
-      this.castKey = key;
-      this.onCast?.();
-    }
+    // Combien par rôle (attributs de la scène) : prévenue seulement si ça change.
+    let changed = false;
+    ROLES.forEach((r, k) => {
+      const n = this.count(r);
+      if (n !== this.cast[k]) changed = true;
+      this.cast[k] = n;
+    });
+    if (changed) this.onCast?.();
   }
 
   private shift(dx: number, dy: number): void {

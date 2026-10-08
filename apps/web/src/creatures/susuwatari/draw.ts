@@ -107,20 +107,19 @@ export function drawSusuwatari(ctx: CanvasRenderingContext2D, s: Susuwatari, sp:
     const sw = (S / 2) * p.shadow.width * (1 - lift * 0.35);
     const sh = sw * p.shadow.height;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const X = (globalThis as any).__sootExp ?? {};
-    if (o.shadow > 0 && p.shadow.opacity > 0 && !X.noShadow) {
+    if (o.shadow > 0 && p.shadow.opacity > 0) {
       ctx.globalAlpha = Math.min(1, p.shadow.opacity * o.shadow * (1 - lift * 0.6)) * A;
       ctx.drawImage(shadow(), s.x + s.jitterX - sw / 2, s.y - sh / 2, sw, sh);
     }
     ctx.globalAlpha = A;
-    if (!X.noLimbs) drawLegs(ctx, s, m, o.rim, p);
-    if (!X.noLimbs) drawArms(ctx, s, m, o.time, o.rim, p);
+    drawLegs(ctx, s, m, o.rim, p);
+    drawArms(ctx, s, m, o.time, o.rim, p);
   }
 
   ctx.setTransform(dpr * m.a, dpr * m.b, dpr * m.c, dpr * m.d, dpr * m.e, dpr * m.f);
   ctx.globalAlpha = A;
   if (!o.night) {
-    if (sp.halo && !(globalThis as any).__sootExp?.noHalo) ctx.drawImage(sp.halo, -half, -half, half * 2, half * 2);
+    if (sp.halo) ctx.drawImage(sp.halo, -half, -half, half * 2, half * 2);
     // Corps : deux images voisines de frisottis (le corps « vit »). La
     // fourrure se pose un moment (hold) puis ondule vers l'image suivante,
     // fondue par union (la suivante apparaît, puis la première s'efface :
@@ -133,9 +132,9 @@ export function drawSusuwatari(ctx: CanvasRenderingContext2D, s: Susuwatari, sp:
     // Dorée : les mêmes images, teintées d'or (copies gardées en cache).
     const a = s.gold ? golden(sp.frames[i]!) : sp.frames[i]!;
     const b = s.gold ? golden(sp.frames[(i + 1) % FRAMES]!) : sp.frames[(i + 1) % FRAMES]!;
-    if (!(globalThis as any).__sootExp?.noFur) ctx.drawImage(k < 0.5 ? a : b, -half, -half, half * 2, half * 2);
+    ctx.drawImage(k < 0.5 ? a : b, -half, -half, half * 2, half * 2);
     const fade = k < 0.5 ? k * 2 : (1 - k) * 2;
-    if (fade > 0.02 && !(globalThis as any).__sootExp?.noFur2) {
+    if (fade > 0.02) {
       ctx.globalAlpha = fade * A;
       ctx.drawImage(k < 0.5 ? b : a, -half, -half, half * 2, half * 2);
       ctx.globalAlpha = A;
@@ -143,7 +142,7 @@ export function drawSusuwatari(ctx: CanvasRenderingContext2D, s: Susuwatari, sp:
   }
   // Yeux : repère du corps, à l'échelle du sprite (px sprite → px CSS).
   ctx.transform(unit, 0, 0, unit, 0, 0);
-  if (!(globalThis as any).__sootExp?.noEyes) drawEyes(ctx, s, sp, sp.radius, o);
+  drawEyes(ctx, s, sp, sp.radius, o);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
 }

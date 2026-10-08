@@ -6,6 +6,7 @@
  * avant l'Historique : Historique et Réglages ne bougent pas d'un onglet à
  * l'autre.
  */
+import { HeaderPresence } from '../presence/HeaderPresence';
 import { IconButton, cx } from '../ui';
 import { HISTORY_TITLES } from './modules';
 import { SaveIndicator } from './SaveIndicator';
@@ -42,6 +43,7 @@ export function Header({ solid }: { solid: boolean }) {
           Home
         </span>
       </p>
+      <HeaderPresence />
       {prefs.devMode && (
         <button type="button" className="dev-chip" aria-label="Mode développeur" onClick={() => openSheet('dev')}>
           DEV

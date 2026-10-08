@@ -54,6 +54,7 @@ import { useNoZoom } from './noZoom';
 import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
+import { LiveProvider } from '../presence/LiveContext';
 
 function Screen({ module }: { module: ModuleId }) {
   if (module === 'budget') return <BudgetScreen />;
@@ -181,7 +182,9 @@ export function App() {
     <WorldProvider>
       <ToastProvider>
         <ShellProvider>
-          <Shell />
+          <LiveProvider>
+            <Shell />
+          </LiveProvider>
         </ShellProvider>
       </ToastProvider>
     </WorldProvider>

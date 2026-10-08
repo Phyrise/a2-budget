@@ -54,6 +54,7 @@ import { TasksFilter } from './TasksFilter';
 import { agendaDays, byDate, taskItemsBetween, tasksCount, type TaskItem } from './taskAgenda';
 import { useTaskToggle } from './useTaskToggle';
 import './calendar.css';
+import { SootStage } from '../../creatures/soot';
 
 const UPCOMING_COUNT = 8;
 /** « À venir » montre les tâches des sept prochains jours. */
@@ -231,6 +232,7 @@ export function CalendarScreen() {
 
       <section className="screen-sheet calendar" aria-labelledby="calendar-title">
         <ShellNotices />
+        <SootStage screen="calendar" />
 
         <div className="cal-month">
           <p id="cal-grid-label" className="visually-hidden">

@@ -21,6 +21,7 @@ import { useWorld } from '../../world/WorldContext';
 import { DevCompanions } from './DevCompanions';
 import { copyText, devData, devSnapshot } from './devData';
 import { DevFetes } from './DevFetes';
+import { DevNoiraudes } from './DevNoiraudes';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevSeasons } from './DevSeasons';
@@ -74,6 +75,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevCompanions onKodama={() => showForest(rattleKodama)} />
           <DevFetes onClose={onClose} />
           <DevSeasons />
+          <DevNoiraudes onClose={onClose} />
           <section className="dev-section" aria-labelledby="dev-labs">
             <h3 id="dev-labs" className="dev-section__title">
               Labos

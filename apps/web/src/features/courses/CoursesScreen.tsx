@@ -26,6 +26,7 @@ import { useIdSet } from './useIdSet';
 import './courses.css';
 import './courses-sweep.css';
 import './courses-kiki.css';
+import { SootStage } from '../../creatures/soot';
 
 export function CoursesScreen() {
   const { appState, today, addGrocery, toggleGrocery, removeGrocery, restoreGrocery, clearDoneGroceries } = useApp();
@@ -213,6 +214,7 @@ export function CoursesScreen() {
 
       <section className="screen-sheet courses" aria-labelledby="courses-title">
         <ShellNotices />
+        <SootStage screen="courses" />
 
         <form
           className="quick-add"

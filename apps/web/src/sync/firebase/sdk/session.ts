@@ -1,6 +1,7 @@
 /**
  * Session Firebase de l'app (chunk à part, chargé par `../loader.ts`) :
- * connexion Google, liste blanche, déconnexion, foyer.
+ * connexion Google, liste blanche, déconnexion, foyer, première connexion
+ * (setup.ts) et synchronisation (runtime.ts).
  *
  * - Fenêtre Google (`signInWithPopup`) ; redirection sur l'app installée
  *   d'un iPhone, seulement si la page de connexion est servie par le site
@@ -23,9 +24,18 @@ import {
 import { accountVerdict, normalizeEmail } from '../../allowlist';
 import { FIREBASE_EMULATORS, buildFirebaseSetup } from '../config';
 import { redirectWorks } from '../platform';
-import { errorCode, outcomeForAuthError, type FirebaseSession, type SessionEvent, type SignInOutcome } from '../types';
+import {
+  errorCode,
+  outcomeForAuthError,
+  type FirebaseSession,
+  type SessionEvent,
+  type SignInOutcome,
+  type SyncRuntime,
+} from '../types';
 import { firebaseClient } from './client';
 import { ensureHousehold } from './household';
+import { openRuntime } from './runtime';
+import { syncSetup } from './setup';
 
 function googleProvider(): GoogleAuthProvider {
   const provider = new GoogleAuthProvider();
@@ -51,6 +61,9 @@ export function openSession(): FirebaseSession {
     () => null,
     (error: unknown) => outcomeForAuthError(errorCode(error)),
   );
+
+  // Une seule synchronisation à la fois (changement de compte, remontage).
+  let runtime: SyncRuntime | null = null;
 
   const attempt = async (run: () => Promise<unknown>): Promise<SignInOutcome> => {
     try {
@@ -92,9 +105,21 @@ export function openSession(): FirebaseSession {
       return attempt(() => signInWithPopup(auth, googleProvider()));
     },
 
-    signOut: () => signOut(auth),
+    signOut: () => {
+      runtime?.dispose();
+      runtime = null;
+      return signOut(auth);
+    },
 
     ensureHousehold: (member) => ensureHousehold(db, member),
+
+    setup: (member) => syncSetup(db, member),
+
+    openSync(member, cache, selectedMonth) {
+      runtime?.dispose();
+      runtime = openRuntime(db, member, cache, selectedMonth);
+      return runtime;
+    },
   };
 
   if (FIREBASE_EMULATORS && setup.emulators !== null) {

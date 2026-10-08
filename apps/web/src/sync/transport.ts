@@ -1,8 +1,8 @@
 /**
  * Transport abstrait du pont (docs/SYNC_DESIGN.md §3–4) : écrire des lots,
- * recevoir des documents. Le transport Firestore (étape suivante, import
- * dynamique) et le faux transport en mémoire des tests l'implémentent ; le
- * reste du pont n'en sait pas plus.
+ * recevoir des documents. Le transport Firestore (`firebase/sdk/transport.ts`,
+ * import dynamique) et le faux transport en mémoire des tests l'implémentent ;
+ * le reste du pont n'en sait pas plus.
  */
 
 import type { DocData, DocKey, WriteOp } from './docs';

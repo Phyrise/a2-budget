@@ -12,6 +12,7 @@ import {
   STATE_KEY,
   accountSection,
   authUsers,
+  chooseSetup,
   expectApp,
   fakeGoogle,
   isServerRequest,
@@ -19,6 +20,7 @@ import {
   readDoc,
   recordRequests,
   resetEmulators,
+  setupScreen,
   waitForEmulators,
   welcome,
 } from './helpers';
@@ -72,13 +74,14 @@ test('connexion Google (faux jeton) d’un compte invité : foyer créé, sessio
   await page.goto(APP);
   await expect(welcome(page)).toBeVisible();
   await fakeGoogle(page, ARTHUR);
-  await expectApp(page);
+  await expect(setupScreen(page)).toBeVisible();
+  await chooseSetup(page, 'Y mettre mes données');
 
   await openSettings(page);
   const account = accountSection(page);
   await expect(account.getByText('AL · Jiji')).toBeVisible();
   await expect(account.getByText(ARTHUR)).toBeVisible();
-  await expect(account.getByText('Foyer prêt')).toBeVisible();
+  await expect(account.getByText('À jour')).toBeVisible();
 
   // Le premier membre crée le foyer unique et sa fiche.
   const [user] = await authUsers();
@@ -93,25 +96,28 @@ test('connexion Google (faux jeton) d’un compte invité : foyer créé, sessio
   await expect(accountSection(page).getByText('AL · Jiji')).toBeVisible();
   expect(await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)).toBe('{"entry":"google"}');
 
-  // Se déconnecter : l'app reste, en invité.
+  // Se déconnecter : l'app reste, en invité (avec les données d'avant).
   await accountSection(page).getByRole('button', { name: 'Se déconnecter' }).click();
+  await accountSection(page).getByRole('button', { name: 'Mes données d’avant' }).click();
+  await expectApp(page);
+  await openSettings(page);
   await expect(accountSection(page).getByText('Invité', { exact: true })).toBeVisible();
   await page.reload();
   await expectApp(page);
 });
 
 test('second membre : rejoint le foyer sans le recréer', async ({ browser }) => {
-  for (const [email, role] of [
-    [ARTHUR, 'a'],
-    [ALEXIA, 'b'],
+  for (const [email, role, choice] of [
+    [ARTHUR, 'a', 'Y mettre mes données'],
+    [ALEXIA, 'b', 'La rejoindre'],
   ] as const) {
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto(APP);
     await fakeGoogle(page, email);
-    await expectApp(page);
+    await chooseSetup(page, choice);
     await openSettings(page);
-    await expect(accountSection(page).getByText('Foyer prêt')).toBeVisible();
+    await expect(accountSection(page).getByText('À jour')).toBeVisible();
     expect(await readDoc(`households/a2home/memberState/${role}`)).toMatchObject({ uid: expect.any(String) });
     await context.close();
   }
@@ -152,9 +158,14 @@ test('les données locales ne sont jamais touchées par la connexion', async ({ 
   const before = await page.evaluate((k) => localStorage.getItem(k), STATE_KEY);
 
   await fakeGoogle(page, ALEXIA);
+  await chooseSetup(page, 'Y mettre mes données');
+  await openSettings(page);
   await expect(accountSection(page).getByText('AC · Calcifer')).toBeVisible();
-  await expect(accountSection(page).getByText('Foyer prêt')).toBeVisible();
+  await expect(accountSection(page).getByText('À jour')).toBeVisible();
   await accountSection(page).getByRole('button', { name: 'Se déconnecter' }).click();
+  await accountSection(page).getByRole('button', { name: 'Mes données d’avant' }).click();
+  await expectApp(page);
+  await openSettings(page);
   await expect(accountSection(page).getByText('Invité', { exact: true })).toBeVisible();
   expect(await page.evaluate((k) => localStorage.getItem(k), STATE_KEY)).toBe(before);
 });

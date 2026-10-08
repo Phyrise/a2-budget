@@ -129,3 +129,41 @@ export async function openSettings(page: Page) {
 export function accountSection(page: Page) {
   return page.getByRole('region', { name: 'Compte' });
 }
+
+/** Documents d'une collection, lus sans les règles : id → champs. */
+export async function listDocs(path: string): Promise<Record<string, Record<string, unknown>>> {
+  const res = await fetch(`${DOCS}/${path}?pageSize=1000`, { headers: { Authorization: 'Bearer owner' } });
+  expect(res.ok).toBe(true);
+  const body = (await res.json()) as { documents?: Array<{ name: string; fields?: Record<string, Value> }> };
+  return Object.fromEntries((body.documents ?? []).map((d) => [d.name.slice(d.name.lastIndexOf('/') + 1), fields(d.fields ?? {})]));
+}
+
+export const SYNC_KEY = 'a2-budget:sync:v1';
+export const BACKUP_KEY = 'a2-budget:backup-pre-sync';
+
+/** L'écran de la première connexion (« Notre maison commune »). */
+export function setupScreen(page: Page) {
+  return page.getByRole('main', { name: 'Notre maison commune' });
+}
+
+/** Première connexion : un choix de l'écran, puis l'app. */
+export async function chooseSetup(page: Page, choice: 'Y mettre mes données' | 'La rejoindre'): Promise<void> {
+  await setupScreen(page).getByRole('button', { name: choice }).click();
+  await expectApp(page);
+}
+
+/** Petit nuage de la synchronisation (en-tête). */
+export function syncIndicator(page: Page) {
+  return page.locator('.sync-indicator');
+}
+
+export async function quickAdd(page: Page, text: string): Promise<void> {
+  const input = page.locator('#grocery-input');
+  await input.fill(text);
+  await input.press('Enter');
+  await expect(input).toHaveValue('');
+}
+
+export function toBuy(page: Page, label: string) {
+  return page.locator('.aisles .item-row').filter({ hasText: label });
+}

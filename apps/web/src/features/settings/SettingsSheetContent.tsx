@@ -11,9 +11,11 @@
 import type { PersonSettings } from '@a2/core';
 import { useState, type ReactNode } from 'react';
 import { AccountPanel } from '../../account/AccountPanel';
+import { useSync } from '../../account/SyncContext';
 import { FIREBASE_ENABLED } from '../../sync/firebase/config';
 import { useShell } from '../../app/ShellContext';
 import { exportFilename } from '../../state/exportImport';
+import { saveFile } from '../../ui/download';
 import { useApp } from '../../state/store';
 import {
   AmountInput,
@@ -107,6 +109,7 @@ const MOTION_HELP: Record<ForestChoice, string> = {
 export function SettingsSheetContent() {
   const { state, updateRecurringExpense, removeRecurringExpense, addRecurringExpense, exportJson, confirmReset } = useApp();
   const { prefs, updatePrefs } = useShell();
+  const { mode } = useSync();
   const [adding, setAdding] = useState(false);
   const [confirmReset2, setConfirmReset2] = useState(false);
 
@@ -116,16 +119,7 @@ export function SettingsSheetContent() {
 
   const doExport = () => {
     const json = exportJson();
-    if (json === '') return;
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = exportFilename();
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (json !== '') saveFile(json, exportFilename());
   };
 
   return (
@@ -187,15 +181,18 @@ export function SettingsSheetContent() {
           <Button variant="quiet" icon="download" onClick={doExport}>
             Exporter une sauvegarde
           </Button>
-          <ImportControl />
+          {/* Copie commune : un import ou un effacement toucherait aussi les données de l'autre. */}
+          {mode !== 'sync' && <ImportControl />}
         </div>
       </Section>
 
-      <Section id="reset" icon="alert" title="Recommencer à zéro" description="Efface toutes les données de cet appareil : budget, maison, forêt et courses.">
-        <Button variant="danger-ghost" icon="trash" onClick={() => setConfirmReset2(true)}>
-          Tout effacer…
-        </Button>
-      </Section>
+      {mode !== 'sync' && (
+        <Section id="reset" icon="alert" title="Recommencer à zéro" description="Efface toutes les données de cet appareil : budget, maison, forêt et courses.">
+          <Button variant="danger-ghost" icon="trash" onClick={() => setConfirmReset2(true)}>
+            Tout effacer…
+          </Button>
+        </Section>
+      )}
 
       <section className="settings-about" aria-label="À propos">
         <div className="settings-about__pair">

@@ -1,9 +1,10 @@
 /**
  * Pont de synchronisation (V5), sans dépendance Firebase : docs/SYNC_DESIGN.md.
  *
- * Rien ici n'est importé par l'app en mode local (invité) : le mode
- * d'aujourd'hui reste strictement inchangé. Le transport Firestore (étape
- * suivante) implémentera `SyncTransport` dans un chunk chargé à la demande.
+ * Le mode local (invité) n'exécute rien d'ici : le mode d'aujourd'hui reste
+ * strictement inchangé. Le transport Firestore (`firebase/sdk/transport.ts`)
+ * implémente `SyncTransport` dans le chunk chargé à la demande ; le store
+ * n'en voit que `SyncLink`.
  */
 
 export type {
@@ -23,10 +24,25 @@ export { diffFields, diffToOps } from './diff';
 export type { DiffContext } from './diff';
 export { projectState } from './project';
 export type { ProjectOptions, ProjectResult } from './project';
-export { migrationDocs, migrationOps } from './migration';
+export { householdContent, migrationBatches, migrationDocs, migrationOps, parseMigrationMark } from './migration';
+export type { MigrationMark } from './migration';
+export { BATCH_LIMIT, CREATION_FIELD, planWrites } from './writePlan';
+export { LocalView } from './localView';
+export { SyncCore } from './syncCore';
+export { SyncLink } from './syncLink';
+export type { LinkTarget } from './syncLink';
 export type { DocChange, SyncTransport } from './transport';
 export { MemoryServer, MemoryTransport } from './memoryTransport';
 export { SyncEngine } from './engine';
 export type { SyncEngineOptions, SyncOrigin } from './engine';
-export { SYNC_STORAGE_KEY, parseSyncCache, serializeSyncCache } from './syncCache';
+export {
+  SYNC_STORAGE_KEY,
+  advanceCursor,
+  listenFrom,
+  needsFullResync,
+  parseSyncCache,
+  readSyncCache,
+  serializeSyncCache,
+  writeSyncCache,
+} from './syncCache';
 export type { SyncCache } from './syncCache';

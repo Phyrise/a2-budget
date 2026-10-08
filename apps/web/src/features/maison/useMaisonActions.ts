@@ -94,7 +94,7 @@ function tracePulse(taskId: string, o: Origin) {
 }
 
 export function useMaisonActions(names: Names, snapshot: Snapshot) {
-  const { toggleHomeTask, skipToday, unskipToday, toggleHomePause } = useApp();
+  const { toggleHomeTask, skipToday, unskipToday, toggleHomePause, me } = useApp();
   const world = useWorld();
   const toast = useToast();
   const voice = useCompanionVoice(names);
@@ -144,6 +144,11 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
     const { actionable, completions, doneTodayCount } = snap.current;
     const planned = nextAssignee(task, completions);
     const result = toggleHomeTask(task, doneBy !== undefined ? { doneBy } : undefined);
+    if (result.othersGesture === true && me !== null) {
+      // V5 : on ne décoche pas le geste de l'autre ; on dit simplement qui l'a fait.
+      toast.show({ message: `C’est ${names[me === 'a' ? 'b' : 'a']} qui l’a cochée.`, icon: 'info' });
+      return;
+    }
     if (result.completionId === null) return;
     const completionId = result.completionId;
     if (!result.completed) {

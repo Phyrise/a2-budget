@@ -89,9 +89,9 @@ describe('diffToOps — écritures minimales, et la projection redonne l’état
     const done = p.act((s) => toggle(s, 'plantes', NOW), NOW, 'b');
     expect(done[0]).toMatchObject({ kind: 'create', collection: 'completions', data: { taskId: 'plantes', localDay: '2026-10-08', creditKey: 'plantes|2026-10-08', role: 'b' } });
     const id = done[0]!.id;
-    const undo = p.act((s) => toggle(s, 'plantes', NOW));
+    const undo = p.act((s) => toggle(s, 'plantes', NOW), NOW, 'b');
     expect(undo).toEqual([{ kind: 'update', collection: 'completions', id, fields: expect.any(Array) }]);
-    expect(p.docs.get(`completions/${id}`)).toMatchObject({ undoneAt: iso, undoneBy: 'a' });
+    expect(p.docs.get(`completions/${id}`)).toMatchObject({ undoneAt: iso, undoneBy: 'b' });
     p.act((s) => toggle(s, 'plantes', NOW)); // nouveau fait, aucun crédit redonné
     expect(p.state.forest.creditLedger['plantes|2026-10-08']?.status).toBe('tombstoned');
   });

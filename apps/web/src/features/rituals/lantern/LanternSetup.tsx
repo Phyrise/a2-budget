@@ -29,10 +29,11 @@ export function LanternSetup({
   onHelp: () => void;
   onStart: (config: LanternConfig) => void;
 }) {
-  const { appState } = useApp();
+  const { appState, me } = useApp();
   const chosen = activeLantern(appState?.focus);
   const [minutes, setMinutes] = useState<Duration>(() => String(lastLanternMinutes()));
-  const [who, setWho] = useState<LanternWho>('both');
+  // V5 : connecté, l'app sait qui tient le téléphone (le choix reste possible).
+  const [who, setWho] = useState<LanternWho>(me ?? 'both');
   const [taskId, setTaskId] = useState<string>('');
   const [label, setLabel] = useState('');
   const task = tasks.find((t) => t.id === taskId) ?? null;

@@ -77,13 +77,13 @@ export function fact(who: { uid: string; role: string }, extra: Record<string, u
   };
 }
 
-/** L'annulation douce d'un fait. */
-export function undo(uid: string, extra: Record<string, unknown> = {}) {
+/** L'annulation douce d'un fait, signée du rôle de celui qui annule. */
+export function undo(who: { uid: string; role: string }, extra: Record<string, unknown> = {}) {
   return {
     undoneAt: '2026-10-08T10:00:00.000Z',
     undoneDay: '2026-10-08',
-    undoneBy: uid,
-    ...stamp(uid),
+    undoneBy: who.role,
+    ...stamp(who.uid),
     ...extra,
   };
 }

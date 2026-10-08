@@ -46,3 +46,15 @@
   font-size: var(--text-sm);
   color: var(--amber-300);
 }
+
+.account__leave-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.account__leave-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

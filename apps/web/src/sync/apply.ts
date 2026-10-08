@@ -26,8 +26,14 @@ import {
 } from './docs';
 
 export interface ApplyOptions {
-  /** Règles du serveur : faits non modifiables (hors annulation), pas de mise à jour d'un absent. */
+  /**
+   * Règles du serveur (firestore.rules) : faits non modifiables hors
+   * annulation, annulés une seule fois et seulement par leur auteur (sauf
+   * `devOverride`) ; pas de mise à jour d'un absent.
+   */
   rules?: boolean;
+  /** Rôle de l'auteur du lot (règles : on n'annule que ses propres faits). */
+  author?: string;
   /** Métadonnées posées sur chaque document écrit (heure serveur, auteur). */
   stamp?: DocData;
 }
@@ -63,8 +69,15 @@ function onlyUndo(fields: readonly FieldWrite[]): boolean {
   return fields.every(([path]) => path.length === 1 && (UNDO_FIELDS as readonly string[]).includes(path[0]!));
 }
 
+function undoRefusal(current: DocData, op: WriteOp & { fields: readonly FieldWrite[] }, author: string | undefined): string | null {
+  if (current.undoneAt !== undefined) return 'already-undone';
+  const override = op.fields.some(([path, value]) => path[0] === 'devOverride' && value === true);
+  if (author !== undefined && current.role !== author && !override) return 'not-yours';
+  return null;
+}
+
 /** Nouvel état d'un document après une opération (undefined : inchangé ; string : refus). */
-function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean): DocData | undefined | string {
+function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean, author?: string): DocData | undefined | string {
   switch (op.kind) {
     case 'create':
       return current === undefined ? { ...op.data } : undefined;
@@ -73,7 +86,11 @@ function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean): Doc
       return { ...op.data };
     case 'update':
       if (current === undefined) return 'not-found';
-      if (rules && isFact(op) && !onlyUndo(op.fields)) return 'fact-immutable';
+      if (rules && isFact(op)) {
+        if (!onlyUndo(op.fields)) return 'fact-immutable';
+        const refusal = undoRefusal(current, op, author);
+        if (refusal !== null) return refusal;
+      }
       return applyFields(current, op.fields);
     case 'merge':
       if (rules && isFact(op)) return 'fact-immutable';
@@ -96,7 +113,7 @@ export function applyBatch(docs: DocStore, ops: readonly WriteOp[], opts: ApplyO
   const changed: DocKey[] = [];
   for (const op of ops) {
     const key = docKey(op.collection, op.id);
-    const next = nextDoc(out.get(key), op, opts.rules === true);
+    const next = nextDoc(out.get(key), op, opts.rules === true, opts.author);
     if (typeof next === 'string') return { ok: false, reason: `${key}: ${next}` };
     if (next === undefined) continue;
     out.set(key, opts.stamp === undefined ? next : { ...next, ...opts.stamp });

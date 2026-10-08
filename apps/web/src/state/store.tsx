@@ -27,24 +27,17 @@ import {
   isoWeekday,
   pauseForest,
   resumeForest,
-  addGroceryItem,
-  toggleGroceryItem,
-  removeGroceryItem,
-  restoreGroceryItem,
-  updateGroceryItem,
-  clearDoneGroceries as coreClearDoneGroceries,
-  rememberGroceryCategory,
-  forgetGroceryCategory,
   prunePaidExpenses,
   openingBalance,
   recordBalanceCorrection as coreRecordBalanceCorrection,
   balanceCorrectionFor,
   balanceStatus,
   BALANCE_ANCHOR_NOTE,
+  findOccurrenceCompletion,
+  nextAssignee,
+  skipDateFor,
   type AppState,
-  type GroceryAuthor,
-  type GroceryItem,
-  type GroceryItemPatch,
+  type Role,
   type ChoreDoer,
   type TaskAssignee,
   type TaskEffort,
@@ -61,12 +54,15 @@ import { buildExportJson, parseImportJson, type ImportSummary } from './exportIm
 import { useCareActions, type CareActions } from './careActions';
 import { useCalendarActions, type CalendarActions } from './calendarActions';
 import { useBudgetActions, type BudgetActions } from './budgetActions';
+import { useGroceryActions, type GroceryActions } from './groceryActions';
 import { newId } from './ids';
 import { mapMonthOrCreate, monthOrVirtual, prepareBudget, selectBudgetMonth } from './budgetMonths';
+import type { SyncLink } from '../sync/syncLink';
 
 export type { CareActions, CircleInput, FocusInput } from './careActions';
 export type { CalendarActions, CalendarActionResult, RemovedCalendarEvent } from './calendarActions';
 export type { BudgetActions } from './budgetActions';
+export type { AddGroceryResult, GroceryActions, RemovedGrocery } from './groceryActions';
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -121,23 +117,11 @@ export interface ToggleHomeTaskResult {
   completionId: string | null;
   /** V3 — qui a fait l'occurrence cochée / décochée (`doneBy ?? assignee`) ; null si rien n'a changé. */
   doneBy: TaskAssignee | null;
+  /** V5 — synchronisé : rien n'a changé, l'occurrence a été cochée par l'autre (lui seul la décoche). */
+  othersGesture?: true;
 }
 
-/** Résultat synchrone d'un ajout aux courses. */
-export interface AddGroceryResult {
-  /** Faux si la saisie était vide ou si l'article était déjà dans la liste. */
-  added: boolean;
-  /** Article ajouté, ou l'article existant (doublon), ou null (saisie vide). */
-  item: GroceryItem | null;
-}
-
-/** Article retiré (à passer à `restoreGrocery` pour annuler). */
-export interface RemovedGrocery {
-  item: GroceryItem;
-  index: number;
-}
-
-export interface AppContextValue extends CareActions, CalendarActions, BudgetActions {
+export interface AppContextValue extends CareActions, CalendarActions, BudgetActions, GroceryActions {
   /** null tant que l'état persisté n'est pas chargé (ou initialisé). */
   /** Compatibility projection for Budget views; persistence is appState V2. */
   state: PersistedState | null;
@@ -145,6 +129,11 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
   appState: AppState | null;
   /** Maintenant (rafraîchi à minuit, au focus et au retour sur l'onglet). */
   today: Date;
+  /**
+   * V5 — qui tient le téléphone : le rôle du compte connecté en mode
+   * synchronisé ('a' = AL, 'b' = AC), null en invité (l'app ne sait pas).
+   */
+  me: Role | null;
 
   // Maison (tâches) — mêmes écritures sérialisées que le budget
   /**
@@ -176,27 +165,6 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
   toggleHomeTask: (task: HouseholdTask, opts?: { doneBy?: ChoreDoer }) => ToggleHomeTaskResult;
   /** « Mettre la maison en pause » / « Réveiller la forêt ». */
   toggleHomePause: () => void;
-
-  // Courses
-  /**
-   * Ajout rapide (« 2 pommes », « lait x2 », « 500 g de farine ») : quantité
-   * extraite, rayon automatique, pas de doublon d'un article non coché.
-   */
-  addGrocery: (label: string, addedBy?: GroceryAuthor) => AddGroceryResult;
-  /** Met au panier / sort du panier (doneAt horodaté). */
-  toggleGrocery: (id: string) => void;
-  /** Retire un article (sans l'archiver). Retourne de quoi annuler, ou null si inconnu. */
-  removeGrocery: (id: string) => RemovedGrocery | null;
-  /** Annule un retrait (remet l'article à sa place). */
-  restoreGrocery: (removed: RemovedGrocery) => void;
-  /**
-   * Renomme / change la quantité / change le rayon (null = rayon automatique).
-   * V4 : un rayon choisi est mémorisé pour ce libellé (prochains ajouts du
-   * même article) ; null l'oublie.
-   */
-  updateGrocery: (id: string, patch: GroceryItemPatch) => void;
-  /** « Vider le panier » : archive les articles cochés dans l'historique. Retourne leur nombre. */
-  clearDoneGroceries: () => number;
 
   saveStatus: SaveStatus;
   /** Mode de récupération actif (données illisibles ou stockage indisponible). */
@@ -288,15 +256,24 @@ function prepareApp(app: AppState): AppState {
 
 export function AppProvider({
   adapter,
+  sync,
   children,
 }: {
   adapter?: StorageAdapter;
+  /**
+   * V5 — mode synchronisé (copie commune) : l'état vient du lien et chaque
+   * transition locale lui est confiée ; `a2-budget:state:v1` n'est ni lu ni
+   * écrit. Absent (invité) : le store d'avant, inchangé. Fixe pour un montage.
+   */
+  sync?: SyncLink;
   children: ReactNode;
 }) {
   const adapterRef = useRef<StorageAdapter | null>(null);
   if (adapterRef.current === null) {
     adapterRef.current = adapter ?? new LocalStorageAdapter();
   }
+  const syncRef = useRef(sync);
+  const me = sync?.role ?? null;
 
   const [appState, setAppState] = useState<AppState | null>(null);
   const [today, setToday] = useState(() => new Date());
@@ -328,7 +305,15 @@ export function AppProvider({
       const { state: next, result } = fn(current);
       if (next !== current) {
         latestRef.current = next;
-        setAppState((prev) => (prev === null ? prev : fn(prev).state));
+        const link = syncRef.current;
+        if (link !== undefined) {
+          // Synchronisé : une seule transition, confiée au lien ; l'état
+          // projeté qui revient (souvent dans le même tour) la remplace.
+          setAppState(next);
+          link.commit(current, next);
+        } else {
+          setAppState((prev) => (prev === null ? prev : fn(prev).state));
+        }
       }
       return result;
     },
@@ -377,6 +362,19 @@ export function AppProvider({
   // garde-fou hydratedRef empêche qu'un état initial vide écrase les données
   // persistées au démarrage.
   useEffect(() => {
+    const link = syncRef.current;
+    if (link !== undefined) {
+      // Copie commune : affichée tout de suite, préparée (mois courant…) comme une transition locale.
+      const prepared = prepareApp(link.initial);
+      latestRef.current = prepared;
+      hydratedRef.current = true;
+      setAppState(prepared);
+      link.commit(link.initial, prepared);
+      return link.listen((projected) => {
+        latestRef.current = projected;
+        setAppState(projected);
+      });
+    }
     let cancelled = false;
     void (async () => {
       const result = await adapterRef.current?.load();
@@ -389,6 +387,7 @@ export function AppProvider({
   }, [applyLoadResult]);
 
   const doLoad = useCallback(async () => {
+    if (syncRef.current !== undefined) return; // copie commune : jamais les données locales
     const result = await adapterRef.current?.load();
     if (result !== undefined) {
       applyLoadResult(result);
@@ -399,7 +398,7 @@ export function AppProvider({
   // Bloquée en mode de récupération : aucune écriture avant action explicite.
   useEffect(() => {
     if (appState === null || !hydratedRef.current) return;
-    if (recoveryRef.current.kind !== 'none') return;
+    if (recoveryRef.current.kind !== 'none' || syncRef.current !== undefined) return;
     setSaveStatus('saving');
     void adapterRef.current?.save(appState).then(
       () => setSaveStatus('saved'),
@@ -408,8 +407,7 @@ export function AppProvider({
   }, [appState]);
 
   const mutate = useCallback((fn: (s: PersistedState) => PersistedState) => {
-    setAppState((prev) => {
-      if (prev === null) return prev;
+    const apply = (prev: AppState): AppState => {
       const budget = fn({ schemaVersion: 1, ...prev.budget });
       return {
         ...prev,
@@ -417,12 +415,16 @@ export function AppProvider({
         budget: { ...prev.budget, settings: budget.settings, months: budget.months, selectedMonth: budget.selectedMonth },
         household: { people: [budget.settings.personA, budget.settings.personB].map(person => ({ id: person.id, name: person.name })) },
       };
-    });
-  }, []);
+    };
+    // Synchronisé : calculée une fois (ids compris), confiée au lien.
+    if (syncRef.current !== undefined) transact((s) => ({ state: apply(s), result: undefined }), undefined);
+    else setAppState((prev) => (prev === null ? prev : apply(prev)));
+  }, [transact]);
 
   // --- Récupération explicite ---------------------------------------------
 
   const confirmReset = useCallback(() => {
+    if (syncRef.current !== undefined) return; // la copie commune ne s'efface pas d'ici
     void adapterRef.current?.clear().then(() => {
       setAppState(prepareApp(emptyAppState()));
       setRecovery({ kind: 'none' });
@@ -639,6 +641,8 @@ export function AppProvider({
 
   const importJson = useCallback(
     (text: string): { ok: true; summary: ImportSummary } | { ok: false; reason: string } => {
+      // Copie commune : un import remplacerait les données des deux (refusé).
+      if (syncRef.current !== undefined) return { ok: false, reason: 'sync' };
       const result = parseImportJson(text);
       if (!result.ok) {
         return result;
@@ -730,9 +734,18 @@ export function AppProvider({
     (task: HouseholdTask, opts?: { doneBy?: ChoreDoer }): ToggleHomeTaskResult => {
       const now = new Date();
       const completionId = newId();
-      const doneBy = opts?.doneBy;
+      const link = syncRef.current;
+      const current = latestRef.current;
+      const live = current === null ? undefined : findOccurrenceCompletion(task, current.chores.completions, now);
+      // Synchronisé : on ne décoche que ses propres gestes (ceux de l'autre restent).
+      if (link !== undefined && live !== undefined && !link.canUndo('completions', task.id, live.dueDate)) {
+        return { completed: false, completionId: null, doneBy: null, othersGesture: true };
+      }
       return transact<ToggleHomeTaskResult>(
         (s) => {
+          // « Qui ? » sans réponse (tâche libre) : le compte connecté.
+          const doneBy = opts?.doneBy ??
+            (me !== null && nextAssignee(task, s.chores.completions) === 'unassigned' ? me : undefined);
           const r = toggleTaskToday(s, task.id, now, completionId, doneBy !== undefined ? { doneBy } : {});
           return {
             state: r.state,
@@ -742,120 +755,42 @@ export function AppProvider({
         { completed: false, completionId: null, doneBy: null },
       );
     },
-    [transact],
+    [transact, me],
   );
 
   const toggleHomePause = useCallback(() => {
     const day = localDateKey(new Date());
-    setAppState(previous => previous ? { ...previous, forest: previous.forest.paused ? resumeForest(previous.forest, day) : pauseForest(advanceDay(previous.forest, day), day) } : previous);
-  }, []);
+    const toggle = (s: AppState): AppState => ({ ...s, forest: s.forest.paused ? resumeForest(s.forest, day) : pauseForest(advanceDay(s.forest, day), day) });
+    if (syncRef.current !== undefined) transact((s) => ({ state: toggle(s), result: undefined }), undefined);
+    else setAppState(previous => previous ? toggle(previous) : previous);
+  }, [transact]);
 
   // --- V3 « Prendre soin ensemble » (passages, suggestions, cercle, lanternes)
-  const care = useCareActions(transact);
+  const careActions = useCareActions(transact);
+  // V5 — « pas aujourd'hui » : signé du compte connecté ; on n'annule que les siens.
+  const care = useMemo<CareActions>(() => {
+    if (syncRef.current === undefined) return careActions;
+    const link = syncRef.current;
+    return {
+      ...careActions,
+      skipToday: (task, by) => careActions.skipToday(task, by ?? me ?? undefined),
+      unskipToday: (task) => link.canUndo('skips', task.id, skipDateFor(task, new Date())) && careActions.unskipToday(task),
+    };
+  }, [careActions, me]);
   const calendar = useCalendarActions(transact);
   const budgetV4 = useBudgetActions(transact);
 
-  // --- Courses ------------------------------------------------------------
-
-  const addGrocery = useCallback(
-    (label: string, addedBy?: GroceryAuthor): AddGroceryResult => {
-      const now = new Date();
-      const id = newId();
-      return transact<AddGroceryResult>(
-        (s) => {
-          const memory = s.groceries.categoryMemory;
-          const r = addGroceryItem(s.groceries.items, label, { id, now, addedBy, ...(memory ? { memory } : {}) });
-          return {
-            state: r.items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items: r.items } },
-            result: { added: r.added, item: r.item },
-          };
-        },
-        { added: false, item: null },
-      );
-    },
-    [transact],
-  );
-
-  const toggleGrocery = useCallback(
-    (id: string) => {
-      const now = new Date();
-      transact((s) => {
-        const items = toggleGroceryItem(s.groceries.items, id, now);
-        return {
-          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
-          result: undefined,
-        };
-      }, undefined);
-    },
-    [transact],
-  );
-
-  const removeGrocery = useCallback(
-    (id: string): RemovedGrocery | null =>
-      transact<RemovedGrocery | null>((s) => {
-        const index = s.groceries.items.findIndex((item) => item.id === id);
-        if (index === -1) return { state: s, result: null };
-        const items = removeGroceryItem(s.groceries.items, id);
-        return {
-          state: { ...s, groceries: { ...s.groceries, items } },
-          result: { item: s.groceries.items[index]!, index },
-        };
-      }, null),
-    [transact],
-  );
-
-  const restoreGrocery = useCallback(
-    (removed: RemovedGrocery) => {
-      transact((s) => {
-        const items = restoreGroceryItem(s.groceries.items, removed.item, removed.index);
-        return {
-          state: items === s.groceries.items ? s : { ...s, groceries: { ...s.groceries, items } },
-          result: undefined,
-        };
-      }, undefined);
-    },
-    [transact],
-  );
-
-  const updateGrocery = useCallback(
-    (id: string, patch: GroceryItemPatch) => {
-      transact((s) => {
-        const before = s.groceries.categoryMemory;
-        const items = updateGroceryItem(s.groceries.items, id, patch, before);
-        // V4 — mémoire des rayons : un rayon choisi est retenu pour ce
-        // libellé ; « rayon automatique » (null) l'oublie.
-        const item = items.find((x) => x.id === id);
-        let memory = before;
-        if (item !== undefined && patch.category === null) {
-          memory = forgetGroceryCategory(before, item.label);
-        } else if (item !== undefined && patch.category !== undefined && item.category === patch.category) {
-          memory = rememberGroceryCategory(before, item.label, patch.category);
-        }
-        if (items === s.groceries.items && memory === before) return { state: s, result: undefined };
-        const groceries = { ...s.groceries, items };
-        if (memory !== undefined) groceries.categoryMemory = memory;
-        return { state: { ...s, groceries }, result: undefined };
-      }, undefined);
-    },
-    [transact],
-  );
-
-  const clearDoneGroceries = useCallback((): number => {
-    const now = new Date();
-    return transact((s) => {
-      const groceries = coreClearDoneGroceries(s.groceries, now);
-      return groceries === s.groceries
-        ? { state: s, result: 0 }
-        : { state: { ...s, groceries }, result: s.groceries.items.length - groceries.items.length };
-    }, 0);
-  }, [transact]);
+  // --- Courses (V5 : l'ajout est signé du compte connecté) ---------------
+  const groceries = useGroceryActions(transact, me);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const refresh = () => {
       const now = new Date();
       setToday(now);
-      setAppState(previous => { if (!previous) return previous; const forest = advanceDay(previous.forest, localDateKey(now)); return forest === previous.forest ? previous : { ...previous, forest }; });
+      // Synchronisé : la forêt est rejouée par le moteur jusqu'au nouveau jour.
+      if (syncRef.current !== undefined) syncRef.current.refresh();
+      else setAppState(previous => { if (!previous) return previous; const forest = advanceDay(previous.forest, localDateKey(now)); return forest === previous.forest ? previous : { ...previous, forest }; });
       clearTimeout(timer);
       const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
       timer = setTimeout(refresh, tomorrow.getTime() - now.getTime() + 100);
@@ -885,6 +820,7 @@ export function AppProvider({
       state,
       appState,
       today,
+      me,
       createHomeTask,
       updateHomeTask,
       deleteHomeTask,
@@ -893,12 +829,7 @@ export function AppProvider({
       ...care,
       ...calendar,
       ...budgetV4,
-      addGrocery,
-      toggleGrocery,
-      removeGrocery,
-      restoreGrocery,
-      updateGrocery,
-      clearDoneGroceries,
+      ...groceries,
       saveStatus,
       recovery,
       currentMonth,
@@ -927,6 +858,7 @@ export function AppProvider({
       state,
       appState,
       today,
+      me,
       createHomeTask,
       updateHomeTask,
       deleteHomeTask,
@@ -935,12 +867,7 @@ export function AppProvider({
       care,
       calendar,
       budgetV4,
-      addGrocery,
-      toggleGrocery,
-      removeGrocery,
-      restoreGrocery,
-      updateGrocery,
-      clearDoneGroceries,
+      groceries,
       saveStatus,
       recovery,
       currentMonth,

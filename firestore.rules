@@ -62,9 +62,16 @@ service cloud.firestore {
           return isObjectColl()
             && (resource == null
                   ? !('deletedAt' in incoming())
-                  : (!('deletedAt' in incoming())
-                     || !changedKeys().hasAny(['deletedAt'])
-                     || incoming().deletedAt == request.time));
+                  : ((!('deletedAt' in incoming())
+                      || !changedKeys().hasAny(['deletedAt'])
+                      || incoming().deletedAt == request.time)
+                     && keepsCreation()));
+        }
+        // « Créer si absent » : un objet créé (creationId) ne se recrée pas
+        // par-dessus (même mois ouvert le 1er sur les deux téléphones).
+        function keepsCreation() {
+          return !('creationId' in resource.data)
+            || incoming().get('creationId', null) == resource.data.creationId;
         }
         // Création : signée par son auteur, avec son rôle, jamais déjà annulée.
         function factCreate() {
@@ -74,8 +81,9 @@ service cloud.firestore {
             && incoming().role == myRole()
             && !incoming().keys().hasAny(['undoneAt', 'undoneDay', 'undoneBy', 'devOverride']);
         }
-        // Seule mise à jour d'un fait : l'annulation douce, une seule fois.
-        // Annuler le geste de l'autre laisse une trace (devOverride, mode dev).
+        // Seule mise à jour d'un fait : l'annulation douce, une seule fois, signée
+        // du rôle de son auteur (comme `role`). On n'annule que ses propres
+        // gestes ; ceux de l'autre laissent une trace (devOverride, mode dev).
         function factUndo() {
           return isFactColl()
             && resource != null
@@ -84,8 +92,8 @@ service cloud.firestore {
                                       'updatedBy', 'syncedAt'])
             && incoming().undoneAt is string
             && isDay(incoming().undoneDay)
-            && incoming().undoneBy == me()
-            && (resource.data.createdBy == me() || incoming().get('devOverride', false) == true);
+            && incoming().undoneBy == myRole()
+            && (resource.data.get('role', null) == myRole() || incoming().get('devOverride', false) == true);
         }
 
         allow read: if isMember(hid) && (isObjectColl() || isFactColl());

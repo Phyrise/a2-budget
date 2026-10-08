@@ -93,7 +93,7 @@ describe('deux téléphones, un foyer', () => {
     expect(task(h.b.state, 'plantes').title).toBe('Arroser le ficus');
     expect(h.remote.b).toBeGreaterThan(0);
     expect(h.server.commits).toBe(commits + 1);
-    h.b.act((s) => toggle(s, 'draps', at(8, 20, 30)));
+    h.b.act((s) => addGrocery(s, 'Riz', at(8, 20, 30), 'b'));
     expect(h.server.commits).toBe(commits + 2);
     expect(h.a.state).toEqual(h.b.state);
   });
@@ -146,7 +146,7 @@ describe('deux téléphones, un foyer', () => {
     expect(ab.a.state.chores).toEqual(ba.b.state.chores);
   });
 
-  it('la même tâche cochée des deux côtés → une complétion « fait ensemble », un crédit ; décocher annule les deux', () => {
+  it('la même tâche cochée des deux côtés → une complétion « fait ensemble », un crédit ; chacun ne décoche que son geste', () => {
     const h = offlineScenario(['b', 'a'], (x) => {
       x.a.act(withTasks('t1'));
       x.tick(at(9, 8));
@@ -158,7 +158,16 @@ describe('deux téléphones, un foyer', () => {
     expect(done).toHaveLength(1);
     expect(done[0]).toMatchObject({ assignee: 'a', doneBy: 'both', completedAt: at(9, 10).toISOString() });
     expect(h.a.state.forest.creditLedger['t1|2026-10-09']?.status).toBe('active');
+    // AC décoche : son geste seulement ; la tâche reste faite par AL.
     h.b.act((s) => toggle(s, 't1', at(9, 12)), at(9, 12));
+    expect(h.server.rejected).toEqual([]);
+    const left = h.b.state.chores.completions.filter((c) => c.taskId === 't1');
+    expect(left).toHaveLength(1);
+    expect(left[0]).toMatchObject({ assignee: 'a', completedAt: at(9, 10).toISOString() });
+    expect(left[0]?.doneBy).toBeUndefined();
+    expect(h.b.state.forest.creditLedger['t1|2026-10-09']?.status).toBe('active');
+    // AL décoche à son tour : plus rien, le crédit est tombstoné.
+    h.a.act((s) => toggle(s, 't1', at(9, 12, 5)), at(9, 12, 5));
     expect(h.a.state.chores.completions.filter((c) => c.taskId === 't1')).toEqual([]);
     expect(h.a.state.forest.creditLedger['t1|2026-10-09']?.status).toBe('tombstoned');
     expect(h.a.state).toEqual(h.b.state);

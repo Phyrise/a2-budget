@@ -1,5 +1,6 @@
 /**
- * En-tête de la coquille : marque, indicateur d'enregistrement, lune de pause
+ * En-tête de la coquille : marque, indicateur d'enregistrement (ou, en copie
+ * commune, le petit nuage de la synchronisation), lune de pause
  * (Maison), Historique, Réglages et, en mode développeur, un petit bouton
  * « DEV » discret qui ouvre le panneau des valeurs cachées. La lune se place
  * avant l'Historique : Historique et Réglages ne bougent pas d'un onglet à
@@ -8,6 +9,7 @@
 import { IconButton, cx } from '../ui';
 import { HISTORY_TITLES } from './modules';
 import { SaveIndicator } from './SaveIndicator';
+import { SyncIndicator } from './SyncIndicator';
 import { useShell } from './ShellContext';
 import { usePauseToggle } from './usePauseToggle';
 
@@ -47,6 +49,7 @@ export function Header({ solid }: { solid: boolean }) {
       )}
       <div className="app-header__end">
         <SaveIndicator />
+        <SyncIndicator />
         {module === 'maison' && <PauseButton />}
         <IconButton icon="history" label={HISTORY_TITLES[module]} variant="glass" onClick={() => openSheet('history')} />
         <IconButton icon="settings" label="Réglages" variant="glass" onClick={() => openSheet('settings')} />

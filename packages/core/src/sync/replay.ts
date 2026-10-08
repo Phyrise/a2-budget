@@ -8,7 +8,9 @@
  * `toggleHomePause`) :
  * - complétion → advanceDay, grantCredit, puis (si crédit) updateStreak,
  *   evaluateRareEvents, evaluateUnlocks ;
- * - annulation → advanceDay, tombstoneCredit (jamais avant sa complétion :
+ * - annulation → advanceDay, tombstoneCredit si plus aucun fait vivant ne
+ *   porte la clé (« fait ensemble » : l'un décoche, l'autre reste ; jamais
+ *   avant sa complétion :
  *   son jour et son heure valent au moins ceux de la complétion) ;
  * - pause → advanceDay, pauseForest ; reprise → resumeForest ;
  * - à la fin, advanceDay(aujourd'hui).
@@ -69,11 +71,29 @@ function compareSteps(x: ReplayStep, y: ReplayStep): number {
   return RANK[x.kind] - RANK[y.kind];
 }
 
+/** Faits vivants qui portent chaque clé de crédit (id), au point de reprise. */
+type Holders = Map<string, Set<string>>;
+
+function hold(holders: Holders, key: string, id: string): void {
+  holders.set(key, (holders.get(key) ?? new Set<string>()).add(id));
+}
+
 /**
  * Étapes du rejeu postérieures au point de reprise, triées. Un fait au jour
  * invalide est ignoré (jamais une exception).
  */
 export function forestTimeline(checkpoint: ForestCheckpoint | null, facts: ReplayFacts): ReplayStep[] {
+  return timeline(checkpoint, facts).steps;
+}
+
+/**
+ * Étapes, et les faits déjà comptés dans le point de reprise mais encore
+ * vivants à ce moment-là (une annulation ne retire le crédit qu'avec le
+ * dernier fait vivant de la clé : « fait ensemble », l'un décoche, l'autre
+ * reste).
+ */
+function timeline(checkpoint: ForestCheckpoint | null, facts: ReplayFacts): { steps: ReplayStep[]; holders: Holders } {
+  const holders: Holders = new Map();
   const after = (step: ReplayStep, imported: boolean): boolean => {
     if (checkpoint === null) return true;
     if (checkpoint.genesis === true) return step.kind !== 'complete' || !imported;
@@ -85,8 +105,12 @@ export function forestTimeline(checkpoint: ForestCheckpoint | null, facts: Repla
     const complete: ReplayStep = {
       kind: 'complete', day: fact.localDay, at: fact.completedAt, id: fact.id, creditKey: fact.creditKey,
     };
-    if (after(complete, fact.imported === true)) steps.push(complete);
-    if (isLive(fact)) continue;
+    const counted = !after(complete, fact.imported === true);
+    if (!counted) steps.push(complete);
+    if (isLive(fact)) {
+      if (counted) hold(holders, fact.creditKey, fact.id);
+      continue;
+    }
     const undoDay = fact.undoneDay !== undefined && isValidLocalDateKey(fact.undoneDay) ? fact.undoneDay : fact.localDay;
     const undo: ReplayStep = {
       kind: 'undo',
@@ -95,7 +119,10 @@ export function forestTimeline(checkpoint: ForestCheckpoint | null, facts: Repla
       id: fact.id,
       creditKey: fact.creditKey,
     };
-    if (after(undo, fact.imported === true)) steps.push(undo);
+    if (after(undo, fact.imported === true)) {
+      steps.push(undo);
+      if (counted) hold(holders, fact.creditKey, fact.id);
+    }
   }
   for (const event of dedupeFacts(facts.forestEvents ?? [])) {
     if (!isLive(event) || !isValidLocalDateKey(event.localDay)) continue;
@@ -103,12 +130,13 @@ export function forestTimeline(checkpoint: ForestCheckpoint | null, facts: Repla
     const step: ReplayStep = { kind: event.kind, day: event.localDay, at: event.at, id: event.id };
     if (after(step, false)) steps.push(step);
   }
-  return steps.sort(compareSteps);
+  return { steps: steps.sort(compareSteps), holders };
 }
 
-function applyStep(forest: ForestState, step: ReplayStep): ForestState {
+function applyStep(forest: ForestState, step: ReplayStep, holders: Holders): ForestState {
   switch (step.kind) {
     case 'complete': {
+      hold(holders, step.creditKey, step.id);
       const before = advanceDay(forest, step.day);
       const credit = grantCredit(before, step.creditKey, step.day);
       if (!credit.granted) return credit.forest;
@@ -116,8 +144,13 @@ function applyStep(forest: ForestState, step: ReplayStep): ForestState {
       next = evaluateRareEvents(next, before.currentStreak, next.currentStreak).forest;
       return evaluateUnlocks(next);
     }
-    case 'undo':
+    case 'undo': {
+      const live = holders.get(step.creditKey);
+      live?.delete(step.id);
+      // Un autre fait vivant porte encore la clé : le crédit reste.
+      if (live !== undefined && live.size > 0) return advanceDay(forest, step.day);
       return tombstoneCredit(advanceDay(forest, step.day), step.creditKey).forest;
+    }
     case 'pause':
       return pauseForest(advanceDay(forest, step.day), step.day);
     case 'resume':
@@ -125,9 +158,9 @@ function applyStep(forest: ForestState, step: ReplayStep): ForestState {
   }
 }
 
-function replaySteps(start: ForestState, steps: readonly ReplayStep[], today: string): ForestState {
+function replaySteps(start: ForestState, steps: readonly ReplayStep[], today: string, holders: Holders): ForestState {
   let forest = start;
-  for (const step of steps) forest = applyStep(forest, step);
+  for (const step of steps) forest = applyStep(forest, step, holders);
   return advanceDay(forest, today);
 }
 
@@ -144,8 +177,8 @@ export function replayForest(
   today: string,
 ): ForestState {
   const horizon = isValidLocalDateKey(today) ? localDateKey(addDays(parseLocalDateKey(today), 1)) : today;
-  const steps = forestTimeline(checkpoint, facts).filter((step) => step.day <= horizon);
-  return replaySteps(checkpoint?.forest ?? emptyForest(), steps, today);
+  const { steps, holders } = timeline(checkpoint, facts);
+  return replaySteps(checkpoint?.forest ?? emptyForest(), steps.filter((step) => step.day <= horizon), today, holders);
 }
 
 /**
@@ -157,8 +190,8 @@ export function buildCheckpoint(
   facts: ReplayFacts,
   day: string,
 ): ForestCheckpoint {
-  const steps = forestTimeline(checkpoint, facts).filter((step) => step.day <= day);
-  return { day, forest: replaySteps(checkpoint?.forest ?? emptyForest(), steps, day) };
+  const { steps, holders } = timeline(checkpoint, facts);
+  return { day, forest: replaySteps(checkpoint?.forest ?? emptyForest(), steps.filter((step) => step.day <= day), day, holders) };
 }
 
 /** Le plus récent point de reprise (à jour égal, l'ordinaire passe avant la genèse). */

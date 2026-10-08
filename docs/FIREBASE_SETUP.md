@@ -163,9 +163,16 @@ dossier suffit à le retirer).
 - `pnpm emulators` : Auth + Firestore en local (interface sur
   <http://127.0.0.1:4180>).
 - `pnpm --filter @a2/web e2e:sync` : build émulateurs (`dist-emu/`) puis
-  tests navigateur du compte (accueil, invité sans aucune requête serveur,
-  connexion par faux jeton Google, refus, foyer). Lance les émulateurs s'ils
-  ne tournent pas ; pas en même temps que `pnpm test:rules` (mêmes ports).
+  tests navigateur du compte et de la synchronisation (accueil, invité sans
+  aucune requête serveur, connexion par faux jeton Google, refus, première
+  connexion, deux téléphones, hors ligne, déconnexion au choix). Lance les
+  émulateurs s'ils ne tournent pas ; pas en même temps que `pnpm test:rules`
+  (mêmes ports).
 - Sur le build émulateurs seulement, `window.__a2qa.signInAs(email)` connecte
   un compte Google factice de l'émulateur Auth (n'existe dans aucun autre build :
   `scripts/check-firebase-split.mjs` le vérifie).
+
+**Règles mises à jour (V5, étape synchro)** : si tu as déjà collé
+`firestore.rules` dans la console, recolle-le (§4). Deux changements :
+l'annulation d'un geste est signée du rôle (`undoneBy` = `a` ou `b`), et un
+objet déjà créé ne peut pas être recréé par-dessus (`creationId`).

@@ -1,6 +1,6 @@
 # A² Home — synchronisation à deux (conception V5)
 
-**Document de conception uniquement : rien n'est implémenté en V4.** Il remplace la piste «
+**Document de conception (V4) ; implémentation V5 : §14 à §16.** Il remplace la piste «
 Fastify + SQLite » de `FUTURE_SYNC.md` (serveur maison, tunnel) par une solution gratuite,
 sans serveur et sans carte bancaire : Firebase (Auth Google + Cloud Firestore, offre Spark).
 Pas à pas console : `docs/FIREBASE_SETUP.md`. Règles : `firestore.rules` (racine du dépôt),
@@ -127,8 +127,8 @@ préférences d'interface restent **par téléphone** (jamais synchronisées).
 - Objets : `updatedAt` (ISO, horloge du téléphone, informatif) ; suppression **douce**
   `deletedAt` (heure serveur), purge définitive après 30 jours.
 - Faits : `createdBy` (UID), `role` (`a`|`b`) ; annulation douce `undoneAt` (ISO),
-  `undoneDay` (« YYYY-MM-DD »), `undoneBy` (UID), `devOverride?: true` (§9). Un fait n'est
-  **jamais** supprimé ni réécrit.
+  `undoneDay` (« YYYY-MM-DD »), `undoneBy` (rôle), `devOverride?: true` (§9). Un fait
+  n'est **jamais** supprimé ni réécrit.
 
 ### 2.2 Faits en ajout seulement → forêt recalculable
 
@@ -506,8 +506,8 @@ Domaine : `packages/core/src/sync/` (`DOMAIN_CONTRACTS.md` §15). Pont :
   Le transport Firestore devra traduire `create` par une transaction « créer
   si absent » (en ligne) et `raise` par une transaction max.
 - **Faits** : `undoneBy` porte le rôle (`'a'|'b'`) ; l'UID de l'auteur est
-  posé par le transport (`updatedBy`). Les règles permettent de réécrire
-  l'annulation (un lot n'échoue pas si l'autre a déjà annulé).
+  posé par le transport (`updatedBy`). Une annulation se pose une fois, par
+  l'auteur du fait (§16).
 - **Projection** (`project.ts`) : un cercle par semaine (le plus récent),
   plafonds de `@a2/core`, validation complète ; en cas d'échec chaque
   document est éprouvé seul, l'invalide est ignoré et signalé.
@@ -561,12 +561,91 @@ Firebase) ; le store n'est pas encore branché sur `SyncEngine`.
   (même origine, jamais exécuté en invité) pour que la connexion marche
   hors ligne une fois membre.
 
-**Écarts entre `firestore.rules` (v5/prep) et le pont (v5/domaine), à régler
-avec le transport Firestore** (règles et `tests/rules` ensemble) :
+**Écarts entre `firestore.rules` (v5/prep) et le pont (v5/domaine)** :
+réglés à l'étape synchro (§16).
 
-1. `undoneBy` : les règles exigent l'UID (`me()`), le pont écrit le rôle.
-2. Réécrire une annulation déjà posée : refusé par les règles (une seule
-   fois), attendu par le pont (§14).
-3. Décocher annule tous les faits vivants de l'occurrence, y compris celui
-   de l'autre (« fait ensemble ») : les règles exigent alors `devOverride`.
-   Décision produit à prendre (n'annuler que son propre fait ?).
+## 16. Implémentation — étapes 4 et 5 (migration, temps réel)
+
+Branche `v5/sync`. Le store est branché ; sans configuration ou en invité,
+rien ne change (aucun code de synchronisation exécuté, aucun chunk chargé).
+
+- **Écarts réglés** (règles, `tests/rules`, pont) : (1) `undoneBy` = le
+  **rôle** (`a`|`b`), comme `role` ; l'UID reste dans `updatedBy`. (2)
+  Une annulation se pose une fois : le plan d'envoi n'annule pas un fait déjà
+  annulé dans la vue et met chaque annulation dans son propre lot (un refus
+  n'emporte rien d'autre). (3) **On ne décoche que ses propres gestes** :
+  `diffToOps` n'annule que les faits de son rôle ; « fait ensemble »
+  redevient « fait par l'autre » ; l'app ne décoche pas le geste de l'autre
+  (« C'est AC qui l'a cochée. ») ; le rejeu ne tombstone la clé qu'avec le
+  dernier fait vivant. Annuler le geste de l'autre reste le mode développeur
+  (`devOverride`, §9, étape 6).
+- **Créer si absent sans transaction** (marche hors ligne) : un objet créé
+  porte un jeton `creationId` ; les règles (`keepsCreation`) refusent de le
+  recréer par-dessus (mois ouvert le 1er sur les deux téléphones) ; la
+  création d'un mois part seule, ses modifications ensuite s'appliquent
+  champ par champ sur le mois de l'autre. Restauration : le jeton est gardé ;
+  recalage du solde : pas de jeton (le dernier gagne).
+- **Plan d'envoi** (`sync/writePlan.ts`, pur, utilisé aussi par le faux
+  transport) : document connu → pas de recréation ; à part : annulations,
+  création d'un mois, jalons (maximum avec la vue), mise à jour d'un
+  inconnu ; le reste par lots de 450 au plus, dans l'ordre.
+- **Transport** (`sync/firebase/sdk/transport.ts`) : vue = cache du SDK
+  (`getDocsFromCache`, gratuit) ou tout relire (`needsFullResync` : jamais
+  relu, cache vidé — `households/a2home` absent du cache —, 25 jours, modèle
+  changé) ; écouteurs delta, un par collection,
+  `orderBy('syncedAt') + startAfter(curseur − 2 min)` : une **borne** et non
+  un filtre `where`, pour que les écritures en attente (heure du serveur
+  inconnue, rangée en dernier par le SDK) restent dans le résultat hors
+  ligne. Curseurs par collection, avancés seulement par des documents
+  confirmés (`fromCache` faux, sans écriture en attente). Un document sorti
+  du résultat (lot refusé) est relu dans le cache. Écouteurs relancés après
+  25 minutes d'absence. Vue locale (`sync/localView.ts`) = reçu + lots en
+  attente, visibles tout de suite (le geste suivant voit le précédent).
+- **Runtime** (`sdk/runtime.ts`) : transport + `SyncCore` (moteur, plusieurs
+  écouteurs, `canUndo`) ; copie `a2-budget:sync:v1` (état projeté, curseurs,
+  `syncedAt`, `schema`) enregistrée 400 ms après chaque changement et en
+  quittant la page ; statut `synced` / `syncing` / `offline` / `error`.
+- **Store** : `AppProvider sync={SyncLink}` (`sync/syncLink.ts`, bundle
+  principal). Chaque transition locale est calculée une fois et confiée au
+  lien (`prev → next`) ; l'état projeté qui revient remplace celui du store.
+  Premier affichage depuis la copie locale ; les gestes faits avant que la
+  synchronisation soit prête partent en une fois au branchement. Jour qui
+  change : la forêt est rejouée par le moteur. Import et « Tout effacer »
+  absents en copie commune. `me` = rôle connecté (null en invité).
+- **Qui a fait quoi** : le rôle connecté signe les gestes sans réponse —
+  tâche « libre » cochée (`doneBy`), article ajouté (`addedBy`), « pas
+  aujourd'hui » (`by`) ; la lanterne présélectionne la personne (le choix
+  reste). Une tâche confiée à quelqu'un garde « comme prévu » ; le menu ⋯
+  garde le choix manuel.
+- **Première connexion** (`account/SyncSetup.tsx`, `sdk/setup.ts`) : copie
+  `a2-budget:backup-pre-sync` d'abord (+ « Garder une copie de mes données
+  », export JSON). `meta/migration` (`running` / `done`, rôle, heure) :
+  vide → « Y mettre mes données » (réclamé par transaction, ce qui est déjà
+  sur le serveur est relu et sauté, lots de 450 avec progression) ; envoi de
+  ce rôle interrompu → « Reprendre l'envoi » ; sinon → « La rejoindre »
+  (rien n'est fusionné, les données du téléphone restent à part). Puis tout
+  est relu du serveur une fois, la copie commune s'affiche.
+- **Mode** (`account/syncMode.ts`, `SyncContext.tsx`) : `local` (invité,
+  sans config), `setup`, `sync` (copie présente). Le store est remonté quand
+  le mode change.
+- **Déconnexion** : « Garder sur ce téléphone : la copie commune / mes
+  données d'avant » (`state/localCopies.ts`) ; la copie commune remplace
+  `a2-budget:state:v1` seulement après avoir mis l'ancienne de côté
+  (`a2-budget:backup-before-switch`, sauf si déjà dans `backup-pre-sync`).
+  La copie `a2-budget:sync:v1` reste : se reconnecter rouvre directement la
+  maison commune.
+- **Indicateur** (`app/SyncIndicator.tsx`) : un petit nuage dans l'en-tête ;
+  le mot (« À jour », « Hors ligne — tout est gardé ») en bulle un instant ;
+  seuls hors ligne et la pause sont annoncés au lecteur d'écran.
+- **Tests** : unitaires (plan d'envoi, vue locale, curseurs, lien store,
+  migration par lots et reprise, mode, copies locales, rejeu « fait
+  ensemble ») ; règles (30) ; e2e émulateurs (`e2e-sync/sync.spec.ts`) :
+  première connexion avec sauvegarde, écouteurs delta vérifiés sur le
+  réseau, deux téléphones en temps réel et après rechargement, hors ligne
+  (geste gardé au rechargement puis envoyé), qui a fait quoi, déconnexion
+  au choix.
+
+Reste : nouvelles (`activity`, étape 6), points de reprise mensuels (§3.3 :
+seule la genèse est écrite), purge des objets supprimés, lecture seule si
+`minApp` dépasse le build, offre d'ajouter ses articles de courses au
+second téléphone (§6.3).

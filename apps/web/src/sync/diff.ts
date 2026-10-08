@@ -9,7 +9,7 @@
  * | champs d'un objet changés                    | update des seuls champs changés  |
  * | objet retiré                                 | deletedAt (suppression douce)    |
  * | fait ajouté                                  | create du fait                   |
- * | complétion / « pas aujourd'hui » retiré      | annulation des faits vivants de l'occurrence |
+ * | complétion / « pas aujourd'hui » retiré      | annulation de SES faits vivants de l'occurrence |
  * | lanterne / achat sorti par le plafond        | rien (élagage, pas une annulation) |
  * | `forest.paused` basculé                      | fait forestEvents                |
  * | autres champs de la forêt                    | rien (dérivés) ; jalons relevés  |
@@ -91,15 +91,32 @@ function undoOps(collection: CollectionName, ids: string[], ctx: DiffContext): W
   return ids.map((id) => ({ kind: 'update', collection, id, fields }));
 }
 
-/** Faits vivants connus de l'occurrence retirée (toutes les versions sont annulées). */
+/** Faits vivants de l'occurrence posés par ce téléphone (on n'annule jamais les gestes de l'autre). Pur. */
+export function ownLiveFacts(
+  docs: DocStore,
+  collection: 'completions' | 'skips',
+  taskId: string,
+  dueDate: string,
+  role: Role,
+): string[] {
+  const known = docsOf(docs, collection).map(([id, data]) => ({ ...data, id }) as unknown as (CompletionFact | SkipFact) & { role?: unknown });
+  return liveFactsOfOccurrence(known, taskId, dueDate).filter((f) => f.role === role).map((f) => f.id);
+}
+
+/**
+ * Décocher (ou annuler « pas aujourd'hui ») : faits vivants de l'occurrence
+ * retirée, posés par ce téléphone. Ceux de l'autre restent (les règles le
+ * refuseraient hors mode développeur) : « fait ensemble » redevient « fait
+ * par l'autre ».
+ */
 function occurrenceUndo(
   collection: 'completions' | 'skips',
   removed: ChoreCompletion | ChoreSkip,
   ctx: DiffContext,
 ): WriteOp[] {
-  const known = docsOf(ctx.docs, collection).map(([id, data]) => ({ ...data, id }) as unknown as CompletionFact | SkipFact);
-  const ids = liveFactsOfOccurrence(known, removed.taskId, removed.dueDate).map((f) => f.id);
-  if (!ids.includes(removed.id) && ctx.docs.has(docKey(collection, removed.id))) ids.push(removed.id);
+  const ids = ownLiveFacts(ctx.docs, collection, removed.taskId, removed.dueDate, ctx.role);
+  const own = ctx.docs.get(docKey(collection, removed.id));
+  if (!ids.includes(removed.id) && own !== undefined && own.undoneAt === undefined && own.role === ctx.role) ids.push(removed.id);
   return undoOps(collection, ids, ctx);
 }
 

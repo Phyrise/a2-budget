@@ -1,0 +1,34 @@
+/* Première connexion (V5) : la mise en page de l'accueil, une barre d'envoi. */
+
+.sync-setup__title {
+  font-size: var(--text-2xl);
+}
+
+.sync-setup__progress {
+  width: 72%;
+  height: 4px;
+  margin: 14px auto 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(244, 238, 222, 0.14);
+}
+
+.sync-setup__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--amber-300);
+  transition: width 260ms ease;
+}
+
+.sync-setup__note {
+  margin: 14px 0 12px;
+}
+
+.sync-setup__actions {
+  margin-top: 18px;
+}
+
+.sync-setup__note + .sync-setup__actions {
+  margin-top: 0;
+}

@@ -911,7 +911,9 @@ le mode local (invité) n'utilise rien de cette section.
 - Projection : `liveCompletions` (une par occurrence, la première par
   `(completedAt, id)` ; « fait ensemble » `doneBy: 'both'` si A et B l'ont
   faite), `liveSkips` (le premier par `(at, id)`), `liveFacts`,
-  `liveFactsOfOccurrence` (décocher annule toutes les versions).
+  `liveFactsOfOccurrence` (faits vivants d'une occurrence ; le pont
+  n'annule que ceux de son rôle : « fait ensemble » redevient « fait par
+  l'autre »).
 
 ### 15.2 Rejeu de la forêt (`replay.ts`)
 
@@ -919,7 +921,10 @@ le mode local (invité) n'utilise rien de cette section.
   étapes triées `(jour, horodatage, id, nature)`, rejouées avec les briques de
   `toggleTaskToday` / pause du store, puis `advanceDay(today)`. Mêmes faits ⇒
   même forêt, quel que soit l'ordre d'arrivée (testé sur toutes les
-  permutations). Plafond, tombstone, recomplétion, pause : inchangés.
+  permutations). Plafond, tombstone, recomplétion, pause : inchangés, sauf
+  qu'une annulation ne tombstone la clé qu'avec le **dernier** fait vivant
+  qui la porte (deux faits pour la même occurrence, l'un décoché : le crédit
+  reste ; un fait déjà compté par le point de reprise compte aussi).
 - Une annulation passe toujours après sa complétion (jour et heure au moins
   ceux de la complétion). Un fait daté de plus d'un jour après `today`
   (horloge fausse) attend son jour.

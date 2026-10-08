@@ -47,7 +47,7 @@ export const FACT_COLLECTIONS: readonly CollectionName[] = [
 export const UNDO_FIELDS = ['undoneAt', 'undoneDay', 'undoneBy', 'devOverride'] as const;
 
 /** Métadonnées de synchronisation, jamais projetées dans l'état. */
-export const META_FIELDS = ['order', 'updatedAt', 'deletedAt', 'syncedAt', 'updatedBy', 'role', 'createdBy'] as const;
+export const META_FIELDS = ['order', 'updatedAt', 'deletedAt', 'syncedAt', 'updatedBy', 'role', 'createdBy', 'creationId'] as const;
 
 /** Données d'un document (JSON, sans `undefined`). */
 export type DocData = Record<string, unknown>;

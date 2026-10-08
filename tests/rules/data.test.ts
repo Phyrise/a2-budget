@@ -75,7 +75,7 @@ describe('faits : ajout seulement, annulation douce', () => {
   });
 
   it('fait déjà annulé à la création, ou signé par un autre : refusé', async () => {
-    await assertFails(setDoc(doc(al(), `${HH}/completions/x`), fact(ARTHUR, undo(ARTHUR.uid))));
+    await assertFails(setDoc(doc(al(), `${HH}/completions/x`), fact(ARTHUR, undo(ARTHUR))));
     await assertFails(setDoc(doc(al(), `${HH}/completions/y`), fact(ARTHUR, { createdBy: ALEXIA.uid })));
   });
 
@@ -87,22 +87,23 @@ describe('faits : ajout seulement, annulation douce', () => {
 
   it('annulation douce : une fois, par son auteur', async () => {
     const ref = doc(al(), `${HH}/completions/al`);
-    await assertSucceeds(updateDoc(ref, undo(ARTHUR.uid)));
-    await assertFails(updateDoc(ref, undo(ARTHUR.uid, { undoneDay: '2026-10-09' })));
+    await assertSucceeds(updateDoc(ref, undo(ARTHUR)));
+    await assertFails(updateDoc(ref, undo(ARTHUR, { undoneDay: '2026-10-09' })));
     await assertFails(updateDoc(ref, { undoneAt: deleteField(), undoneDay: deleteField(), ...stamp(ARTHUR.uid) }));
   });
 
   it('annulation mal formée refusée', async () => {
     const ref = doc(al(), `${HH}/completions/al`);
-    await assertFails(updateDoc(ref, undo(ARTHUR.uid, { undoneDay: '8 octobre' })));
-    await assertFails(updateDoc(ref, undo(ARTHUR.uid, { undoneBy: ALEXIA.uid })));
-    await assertFails(updateDoc(ref, undo(ARTHUR.uid, { localDay: '2026-10-01' })));
+    await assertFails(updateDoc(ref, undo(ARTHUR, { undoneDay: '8 octobre' })));
+    await assertFails(updateDoc(ref, undo(ARTHUR, { undoneBy: 'b' })));
+    await assertFails(updateDoc(ref, undo(ARTHUR, { undoneBy: ARTHUR.uid })));
+    await assertFails(updateDoc(ref, undo(ARTHUR, { localDay: '2026-10-01' })));
   });
 
   it('annuler le geste de l’autre exige la trace du mode développeur', async () => {
     const ref = doc(al(), `${HH}/completions/ac`);
-    await assertFails(updateDoc(ref, undo(ARTHUR.uid)));
-    await assertSucceeds(updateDoc(ref, undo(ARTHUR.uid, { devOverride: true })));
+    await assertFails(updateDoc(ref, undo(ARTHUR)));
+    await assertSucceeds(updateDoc(ref, undo(ARTHUR, { devOverride: true })));
   });
 });
 
@@ -117,6 +118,19 @@ describe('objets : dernier qui écrit gagne, suppression douce', () => {
     await assertFails(updateDoc(ref, { deletedAt: Timestamp.fromMillis(Date.now() - 40 * DAY_MS), ...stamp(ARTHUR.uid) }));
     await assertSucceeds(updateDoc(ref, { deletedAt: serverTimestamp(), ...stamp(ARTHUR.uid) }));
     await assertSucceeds(updateDoc(ref, { deletedAt: deleteField(), ...stamp(ARTHUR.uid) }));
+  });
+
+  it('créer si absent : un objet créé ne se recrée pas par-dessus', async () => {
+    const ref = (d = al()) => doc(d, `${HH}/months/2026-11`);
+    await assertSucceeds(setDoc(ref(), { salaryACents: 1, creationId: 'al-1', ...stamp(ARTHUR.uid) }));
+    // AC ouvre le même mois : sa création (autre jeton) est refusée…
+    await assertFails(setDoc(ref(ac()), { salaryACents: 0, creationId: 'ac-1', ...stamp(ALEXIA.uid) }));
+    // … ses modifications champ par champ passent, et une restauration qui garde le jeton aussi.
+    await assertSucceeds(updateDoc(ref(ac()), { salaryBCents: 2, ...stamp(ALEXIA.uid) }));
+    await assertSucceeds(setDoc(ref(), { salaryACents: 3, creationId: 'al-1', ...stamp(ARTHUR.uid) }));
+    // Sans jeton (recalage du solde : le dernier gagne), le remplacement reste permis.
+    await assertSucceeds(setDoc(doc(al(), `${HH}/balanceCorrections/2026-10`), { balanceCents: 1, ...stamp(ARTHUR.uid) }));
+    await assertSucceeds(setDoc(doc(ac(), `${HH}/balanceCorrections/2026-10`), { balanceCents: 2, ...stamp(ALEXIA.uid) }));
   });
 
   it('création déjà supprimée refusée', async () => {

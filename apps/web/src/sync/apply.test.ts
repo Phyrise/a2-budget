@@ -110,8 +110,13 @@ describe('transport en mémoire et pont', () => {
   it('copie locale du mode synchronisé : clé distincte, relue à l’identique, illisible → null', () => {
     expect(SYNC_STORAGE_KEY).toBe('a2-budget:sync:v1');
     expect(SYNC_STORAGE_KEY).not.toBe('a2-budget:state:v1');
-    const cache = { version: 1 as const, householdId: 'a2home', role: 'b' as const, state: richState(), cursor: 42 };
+    const cache = {
+      version: 1 as const, householdId: 'a2home', role: 'b' as const, state: richState(),
+      cursors: { tasks: 42, completions: 7 }, syncedAt: 1_000, schema: 1,
+    };
     expect(parseSyncCache(serializeSyncCache(cache))).toEqual(cache);
+    expect(parseSyncCache(JSON.stringify({ ...cache, cursors: { tasks: 'x', inconnue: 3 }, syncedAt: 'hier' })))
+      .toEqual({ ...cache, cursors: {}, syncedAt: null });
     expect(parseSyncCache(null)).toBeNull();
     expect(parseSyncCache('{oups')).toBeNull();
     expect(parseSyncCache(JSON.stringify({ ...cache, role: 'c' }))).toBeNull();

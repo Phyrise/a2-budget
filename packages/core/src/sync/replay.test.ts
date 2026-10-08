@@ -177,6 +177,19 @@ describe('replayForest — ordre d’arrivée', () => {
     expect(forest.lifetimeCare).toBe(1);
   });
 
+  it('« fait ensemble » : le crédit reste tant qu’un des deux faits est vivant (dans tous les ordres)', () => {
+    const al = done('a', 't1', at(1, 9));
+    const ac = done('b', 't1', at(1, 9, 30), { by: 'b' });
+    const status = (completions: CompletionFact[]) =>
+      replayForest(null, { completions }, dayKey(1)).creditLedger[`t1|${dayKey(1)}`]?.status;
+    for (const order of permutations([al, undone(ac, at(1, 11), 'b')])) expect(status(order)).toBe('active');
+    expect(status([undone(al, at(1, 12)), undone(ac, at(1, 11), 'b')])).toBe('tombstoned');
+    // Fait importé (déjà compté dans la genèse) + fait nouveau : décocher le nouveau garde le crédit.
+    const genesis: ForestCheckpoint = { day: dayKey(1), forest: replayForest(null, { completions: [al] }, dayKey(1)), genesis: true };
+    const both = [{ ...al, imported: true as const }, undone(ac, at(1, 11), 'b')];
+    expect(replayForest(genesis, { completions: both }, dayKey(1)).creditLedger[`t1|${dayKey(1)}`]?.status).toBe('active');
+  });
+
   it('pause posée par l’un pendant que l’autre coche hors ligne : sans crédit, état valide', () => {
     const forest = replayForest(null, {
       completions: [done('c1', 't1', at(1, 9)), done('c2', 't2', at(2, 10), { by: 'b' })],

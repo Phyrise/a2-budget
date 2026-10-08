@@ -74,22 +74,3 @@ test('le 19 août : Jiji fête AL une fois dans la journée, un toucher la ferme
   await expect(page.locator('.party')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
-
-test.describe('ordinateur', () => {
-  test.use({ viewport: { width: 1280, height: 800 } });
-
-  test('le train des eaux traverse la peinture du Budget à la première ouverture du mois, une fois', async ({ page }) => {
-    const errors = trackErrors(page);
-    await page.clock.setFixedTime(new Date('2026-11-01T09:00:00'));
-    await page.goto(`${APP}?module=budget`);
-    await expect(page.locator('.chihiro-train__run')).toHaveCount(1);
-    await expect(page.locator('.chihiro-train')).toHaveAttribute('aria-hidden', 'true');
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('a2-budget:fetes:v1') ?? '{}').trainSeen)).toBe('2026-11');
-
-    await page.reload();
-    await expect(page.locator('.screen-sheet')).toBeVisible();
-    await page.waitForTimeout(2000);
-    await expect(page.locator('.chihiro-train__run')).toHaveCount(0);
-    expect(errors).toEqual([]);
-  });
-});

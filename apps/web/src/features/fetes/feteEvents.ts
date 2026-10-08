@@ -4,8 +4,7 @@
  * (clé dédiée `a2-budget:fetes:v1`, comme `a2-budget:calendar:v1` :
  * `a2-budget:ui:v1` est réécrite en entier par la coquille).
  *
- * - `a2:fete` (detail 'a' | 'b') : la fête d'AL (Jiji) ou d'AC (Calcifer) ;
- * - `a2:train` : le train des eaux traverse la peinture du Budget.
+ * - `a2:fete` (detail 'a' | 'b') : la fête d'AL (Jiji) ou d'AC (Calcifer).
  *
  * Lecture / écriture protégées (navigation privée, stockage bloqué) : sans
  * stockage, une fête peut se rejouer à la prochaine ouverture, rien de plus.
@@ -15,15 +14,12 @@ import { useEffect, useRef } from 'react';
 
 const KEY = 'a2-budget:fetes:v1';
 const PARTY = 'a2:fete';
-const TRAIN = 'a2:train';
 
 export type PartyWho = 'a' | 'b';
 
 interface FetePrefs {
   /** Dernier jour « YYYY-MM-DD » où la fête d'anniversaire a été montrée. */
   partySeen?: string;
-  /** Dernier mois « YYYY-MM » où le train est passé. */
-  trainSeen?: string;
 }
 
 function read(): FetePrefs {
@@ -33,7 +29,6 @@ function read(): FetePrefs {
     const v = JSON.parse(raw) as Record<string, unknown>;
     return {
       ...(typeof v.partySeen === 'string' ? { partySeen: v.partySeen } : {}),
-      ...(typeof v.trainSeen === 'string' ? { trainSeen: v.trainSeen } : {}),
     };
   } catch {
     return {};
@@ -55,19 +50,8 @@ export function claimPartyDay(dayKey: string): boolean {
   return true;
 }
 
-/** Première ouverture du mois (et la marque) : vrai une seule fois par mois. */
-export function claimTrainMonth(monthKey: string): boolean {
-  if (read().trainSeen === monthKey) return false;
-  write({ trainSeen: monthKey });
-  return true;
-}
-
 export function playParty(who: PartyWho): void {
   window.dispatchEvent(new CustomEvent<PartyWho>(PARTY, { detail: who }));
-}
-
-export function playTrain(): void {
-  window.dispatchEvent(new Event(TRAIN));
 }
 
 function useWindowEvent(name: string, handler: (event: Event) => void): void {
@@ -86,9 +70,4 @@ export function usePartyRequest(handler: (who: PartyWho) => void): void {
     const who = (event as CustomEvent<unknown>).detail;
     if (who === 'a' || who === 'b') handler(who);
   });
-}
-
-/** Train demandé par le panneau DEV. */
-export function useTrainRequest(handler: () => void): void {
-  useWindowEvent(TRAIN, handler);
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { claimPartyDay, claimTrainMonth } from './feteEvents';
+import { claimPartyDay } from './feteEvents';
 
 function memoryStorage() {
   const data = new Map<string, string>();
@@ -11,7 +11,7 @@ function memoryStorage() {
   };
 }
 
-describe('fêtes — une fois par jour, train une fois par mois (préférence locale)', () => {
+describe('fêtes — une fois par jour (préférence locale)', () => {
   let storage: ReturnType<typeof memoryStorage>;
   beforeEach(() => {
     storage = memoryStorage();
@@ -25,21 +25,15 @@ describe('fêtes — une fois par jour, train une fois par mois (préférence lo
     expect(claimPartyDay('2027-08-19')).toBe(true);
   });
 
-  it('le train passe à la première ouverture du mois, pas deux fois', () => {
-    expect(claimTrainMonth('2026-10')).toBe(true);
-    expect(claimTrainMonth('2026-10')).toBe(false);
-    expect(claimTrainMonth('2026-11')).toBe(true);
-  });
-
-  it('fête et train gardent chacun leur marque sous la même clé', () => {
+  it('une ancienne marque du train (retiré) est ignorée', () => {
+    storage.data.set('a2-budget:fetes:v1', JSON.stringify({ trainSeen: '2026-12' }));
     claimPartyDay('2026-12-27');
-    claimTrainMonth('2026-12');
-    expect(JSON.parse(storage.data.get('a2-budget:fetes:v1')!)).toEqual({ partySeen: '2026-12-27', trainSeen: '2026-12' });
+    expect(JSON.parse(storage.data.get('a2-budget:fetes:v1')!)).toEqual({ partySeen: '2026-12-27' });
   });
 
   it('stockage bloqué ou illisible : pas d’exception', () => {
     storage.data.set('a2-budget:fetes:v1', '{oops');
-    expect(claimTrainMonth('2026-10')).toBe(true);
+    expect(claimPartyDay('2026-10-01')).toBe(true);
     vi.stubGlobal('window', {
       localStorage: {
         getItem: () => {

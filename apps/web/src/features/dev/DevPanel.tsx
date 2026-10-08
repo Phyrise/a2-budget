@@ -8,7 +8,7 @@
  * aperçus NON PERSISTANTS de la forêt et l'écoute de chaque son, et copie
  * un instantané JSON pour régler les constantes ensemble, fait réagir les
  * compagnons (Jiji, Calcifer, Totoro, kodama) sans attendre, rejoue les fêtes
- * (V4.3 : matsuri du couple, AL, AC, train) et montre la saison réelle /
+ * (V4.3 : matsuri du couple, AL, AC) et montre la saison réelle /
  * affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part).

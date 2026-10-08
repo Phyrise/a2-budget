@@ -11,12 +11,9 @@
  * Une peinture n'est chargée qu'au premier passage sur son module (rien de
  * plus au démarrage sur Maison), puis gardée pour les fondus. En automne et
  * en hiver, Budget et Courses montrent leur variante de saison, en fondu
- * par-dessus la dernière peinture affichée (UniversePainting). V4.3 : sur
- * ordinateur, le train des eaux traverse la peinture du Budget une fois par
- * mois (ChihiroTrain).
+ * par-dessus la dernière peinture affichée (UniversePainting).
  */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChihiroTrain } from '../features/fetes/ChihiroTrain';
 import { cx } from '../ui';
 import type { Season } from '../world/types';
 import { manifest } from '../world/manifest';
@@ -159,7 +156,6 @@ export function WorldBackdrop({ module, isDesktop }: { module: ModuleId; isDeskt
           />
         );
       })}
-      {isDesktop && <ChihiroTrain shown={module === 'budget'} />}
       <div className="app-world__shade" />
     </div>
   );

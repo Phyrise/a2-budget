@@ -9,6 +9,9 @@
  * L'état est écrit tout de suite (cocher reste instantané) ; seules les
  * animations sont différées : pendant le coup de balai, l'article coché est
  * encore dessiné dans son rayon, puis il apparaît dans le panier.
+ *
+ * V5.2 : la tâche Maison liée aux courses (GroceryTaskDone) — rappel dans le
+ * bandeau ; panier vidé → « qui ? » → l'occurrence en cours est faite.
  */
 import { grocerySuggestions, groupGroceryItems, type GroceryItem } from '@a2/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,6 +21,7 @@ import { useApp } from '../../state/store';
 import { coursesTheme } from '../../themes/manifest';
 import { Button, Icon, fr, plural, useToast } from '../../ui';
 import { BasketStage } from './BasketStage';
+import { GroceryTaskPill, useGroceryTaskDone } from './GroceryTaskDone';
 import { ItemRow, type RowMotion } from './ItemRow';
 import { ItemSheet } from './ItemSheet';
 import { AllInBasket, CoursesEmpty, KikiFlight, KikiGreeting } from './KikiScenes';
@@ -44,6 +48,7 @@ export function CoursesScreen() {
   const [flight, setFlight] = useState<{ reduced: boolean } | null>(null);
   const [greeting, setGreeting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const groceryTask = useGroceryTaskDone();
 
   const items = useMemo(() => appState?.groceries.items ?? [], [appState]);
   const history = appState?.groceries.history;
@@ -180,6 +185,7 @@ export function CoursesScreen() {
     if (n <= 0) return;
     const reduced = prefersReducedMotion();
     const message = `${plural(n, 'article')} rangé${n > 1 ? 's' : ''} dans l’historique`;
+    const askWho = groceryTask.ask;
     setFlight({ reduced });
     if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
     flightTimer.current = window.setTimeout(
@@ -187,6 +193,7 @@ export function CoursesScreen() {
         flightTimer.current = null;
         setFlight(null);
         toast.show({ message, icon: 'check' });
+        askWho();
       },
       reduced ? 700 : FLIGHT_MS,
     );
@@ -210,6 +217,7 @@ export function CoursesScreen() {
           Courses
         </h1>
         <p className="courses-banner__summary">{summary}</p>
+        <GroceryTaskPill view={groceryTask.view} onAsk={groceryTask.ask} />
       </div>
 
       <section className="screen-sheet courses" aria-labelledby="courses-title">
@@ -321,6 +329,7 @@ export function CoursesScreen() {
 
       {flight && <KikiFlight reduced={flight.reduced} />}
       <ItemSheet item={editing} onClose={() => setEditing(null)} onRemove={remove} />
+      {groceryTask.sheet}
     </>
   );
 }

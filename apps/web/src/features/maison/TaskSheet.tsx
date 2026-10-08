@@ -8,6 +8,8 @@
  * défiler ; à l'ouverture le focus va au titre de la feuille, pas dans le
  * champ (le clavier ne s'ouvre pas tout seul : on choisit les options, puis
  * on touche le champ pour écrire) ; « Une fois » par défaut.
+ *
+ * V5.2 : suggestion « Courses » (GroceryLink) — lie la tâche à la liste.
  */
 import {
   isoWeekday,
@@ -22,6 +24,7 @@ import { useApp } from '../../state/store';
 import { Button, Companion, ConfirmDialog, Icon, Segmented, Sheet, TextField, WEEKDAYS, fr, useToast } from '../../ui';
 import { Switch } from '../../ui/Switch';
 import { EFFORTS, EffortArt } from './EffortArt';
+import { GroceryChip } from './GroceryLink';
 
 export type TaskSheetState = { mode: 'create' } | { mode: 'edit'; task: HouseholdTask } | null;
 
@@ -98,6 +101,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
   const [effort, setEffort] = useState<TaskEffort>(1);
   const [rotation, setRotation] = useState(false);
   const [flexible, setFlexible] = useState(false);
+  const [groceries, setGroceries] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -114,12 +118,30 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
     setEffort(t?.effort ?? 1);
     setRotation(t?.rotation === true);
     setFlexible(t?.flexible === true);
+    setGroceries(t?.groceries === true);
     setError(null);
   }, [state]);
 
   const names = {
     a: appState?.budget.settings.personA.name ?? 'AL',
     b: appState?.budget.settings.personB.name ?? 'AC',
+  };
+
+  // V5.2 — une seule tâche liée aux courses : la suggestion n'est offerte
+  // que si aucune autre tâche ne l'est déjà.
+  const linkedElsewhere = (appState?.chores.tasks ?? []).some((t) => t.groceries === true && t.id !== editing?.id);
+  const toggleGroceries = () => {
+    if (groceries) {
+      setGroceries(false);
+      return;
+    }
+    setGroceries(true);
+    if (editing) return;
+    // Nouvelle tâche : un geste suffit (« Courses », dans la semaine).
+    if (title.trim() === '') setTitle('Courses');
+    setRecurrence('weekly');
+    setFlexible(true);
+    if (error) setError(null);
   };
 
   const personChosen = assignee === 'a' || assignee === 'b';
@@ -158,6 +180,7 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
       weeklyDay: recurrence === 'weekly' ? weeklyDay : undefined,
       monthlyDay: recurrence === 'monthly' ? monthlyDay : undefined,
       ...care,
+      groceries,
     };
     if (editing) {
       if (!updateHomeTask(editing.id, fields)) {
@@ -216,21 +239,24 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
             submit();
           }}
         >
-          <TextField
-            ref={titleRef}
-            id="task-title"
-            label="Quoi&#8239;?"
-            value={title}
-            onChange={(value) => {
-              setTitle(value);
-              if (error) setError(null);
-            }}
-            placeholder="Ex. Arroser les plantes"
-            maxLength={80}
-            enterKeyHint="done"
-            error={error}
-            autoCapitalize="sentences"
-          />
+          <div className="task-form__what">
+            <TextField
+              ref={titleRef}
+              id="task-title"
+              label="Quoi&#8239;?"
+              value={title}
+              onChange={(value) => {
+                setTitle(value);
+                if (error) setError(null);
+              }}
+              placeholder="Ex. Arroser les plantes"
+              maxLength={80}
+              enterKeyHint="done"
+              error={error}
+              autoCapitalize="sentences"
+            />
+            {!linkedElsewhere && <GroceryChip linked={groceries} onToggle={toggleGroceries} />}
+          </div>
           <div className="task-form__group">
             <Segmented name="task-who" legend="Qui&#8239;?" options={assigneeOptions} value={assignee} onChange={setAssignee} columns={4} className="task-form__who" />
             {personChosen && (

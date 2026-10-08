@@ -3,7 +3,8 @@
  * Budget, ouverte par `?lab=noiraudes` ou depuis le panneau DEV, pour juger
  * et RÉGLER les Noiraudes dessinées par le code avant de les mettre dans
  * l'app (les Noiraudes peintes du Budget n'en dépendent pas).
- * - Comparaison côte à côte : le trio peint / le même trio en code ;
+ * - Comparaison côte à côte : le trio peint / le même trio en code, ou une
+ *   seule Noiraude en « Gros plan » (cadrée comme le plan du film) ;
  * - aperçu de la même Noiraude à 30, 50, 80 et 140 px ;
  * - une scène où quelques Noiraudes vivent (toucher, appui long, regard) ;
  * - « Réglages » (repliable) : un curseur par paramètre de l'apparence,
@@ -38,9 +39,10 @@ export default function NoiraudesLab() {
   const [size, setSize] = useState(54);
   const [night, setNight] = useState(false);
   const [fps, setFps] = useState<string>('');
+  const [closeUp, setCloseUp] = useState(false);
   const tuning = useTuning();
   const { params, open } = tuning;
-  useCompareTrio(compareRef, params);
+  useCompareTrio(compareRef, params, closeUp);
   useSizesBand(sizesRef, params);
   const layer = useLabScene(sceneRef, bgRef, { count, size, night, params });
 
@@ -95,9 +97,16 @@ export default function NoiraudesLab() {
           <img className="nlab-cell__art" src={budgetTheme.susuwatari.trio} alt="Trio de Noiraudes peint" draggable={false} />
           <figcaption>Peinture</figcaption>
         </figure>
-        <figure className="nlab-cell">
-          <canvas ref={compareRef} className="nlab-cell__art" aria-label="Trio de Noiraudes dessiné par le code" />
+        <figure className={`nlab-cell${closeUp ? ' is-close' : ''}`}>
+          <canvas
+            ref={compareRef}
+            className="nlab-cell__art"
+            aria-label={closeUp ? 'Gros plan d’une Noiraude dessinée par le code' : 'Trio de Noiraudes dessiné par le code'}
+          />
           <figcaption>Code</figcaption>
+          <button type="button" className="nlab-cell__zoom" aria-pressed={closeUp} onClick={() => setCloseUp((v) => !v)}>
+            Gros plan
+          </button>
         </figure>
       </section>
 

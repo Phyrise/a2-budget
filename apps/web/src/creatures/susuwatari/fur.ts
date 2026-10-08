@@ -5,14 +5,18 @@
  * Tout est en unités de Rd, le rayon du disque noir :
  * - le contour du disque : presque un cercle (`ratio`), à peine bosselé
  *   (`wobble`) ;
- * - les poils : des pointes effilées enracinées SOUS le bord (racines entre
- *   rootOut − depth et rootOut), dirigées vers l'extérieur selon la normale au
- *   contour (± jitter), courtes (lenMin–lenMax), droites si bend = 0 ;
- *   répartis régulièrement (un par secteur) : le halo reste dense et égal ;
+ * - les poils : enracinés SOUS le bord (racines entre rootOut − depth et
+ *   rootOut), dirigés vers l'extérieur selon la normale au contour (± jitter),
+ *   de longueur lenMin–lenMax, droits si bend = 0 ; effilés en pointe
+ *   (taper = 1) ou traits d'épaisseur constante au bout net ou arrondi
+ *   (taper = 0, cap) ; répartis régulièrement (un par secteur) ;
+ * - une part d'entre eux (`over`) est peinte PAR-DESSUS le corps : leur
+ *   racine recule le long du poil jusque vers `inner` (la pointe ne bouge
+ *   pas) — on les voit rentrer dans le corps, comme dans le film ;
  * - le duvet : des poils fins et translucides entre les autres (`fuzz`).
- * Le disque est peint PAR-DESSUS les poils (sprites.ts) : on ne voit que
- * leur partie qui dépasse. Chaque poil a une phase : les images de
- * « frisottis » le font osciller un peu (angle, longueur) en boucle.
+ * Les autres poils sont sous le disque (sprites.ts) : on ne voit que leur
+ * partie qui dépasse. Chaque poil a une phase : les images de « frisottis »
+ * le font osciller un peu (angle, longueur) en boucle.
  */
 import { rng } from '../../world/engine/noise';
 import type { SootSpriteParams } from './params';
@@ -35,6 +39,15 @@ export interface Hair {
   fine: boolean;
   /** Sur le dessus : pointe éclairée sur fond sombre. */
   lit: boolean;
+  /** Peint par-dessus le corps (on le voit y rentrer). */
+  over: boolean;
+}
+
+/** Forme des poils au tracé : effilement, bout, demi-largeur minimale (px). */
+export interface HairShape {
+  taper: number;
+  cap: number;
+  minW: number;
 }
 
 export interface FurGenome {
@@ -67,6 +80,9 @@ const HARMONICS = [
 
 export function furGenome(seed: number, p: SootSpriteParams): FurGenome {
   const rand = rng(seed * 7919 + 17);
+  // Tirages des réglages ajoutés depuis (poils sur le corps) : à part, pour
+  // que les anciens modèles gardent exactement leur fourrure.
+  const rand2 = rng(seed * 104729 + 3);
   const { hair, body } = p;
   const waves = HARMONICS.map(([k, w]) => ({ k, w, ph: rand() * TAU }));
   const lump = (a: number) => 1 + body.wobble * waves.reduce((s, h) => s + h.w * Math.sin(h.k * a + h.ph), 0);
@@ -87,7 +103,7 @@ export function furGenome(seed: number, p: SootSpriteParams): FurGenome {
   const nearestTuft = (a: number) => tufts.reduce((best, t) => (Math.abs(angleDiff(a, t.a)) < Math.abs(angleDiff(a, best.a)) ? t : best), tufts[0]!);
 
   const hairs: Hair[] = [];
-  let reach = (1 + body.wobble) * Math.max(1, body.ratio);
+  let reach = (1 + body.wobble) * Math.max(1, body.ratio) + Math.max(0, body.blur) * 1.3;
   const grow = 1 + 0.06 * p.anim.wave;
   const make = (a: number, fine: boolean) => {
     const r0 = hair.rootOut - hair.depth * rand();
@@ -115,7 +131,18 @@ export function furGenome(seed: number, p: SootSpriteParams): FurGenome {
       tone: fine ? 1 : Math.floor(rand() * 3),
       fine,
       lit: !fine && Math.sin(a) < -0.25,
+      over: false,
     };
+    if (!fine && hair.over > 0 && rand2() < hair.over) {
+      // La racine recule le long du poil jusque vers `inner` (pointe fixe).
+      const r = Math.hypot(h.x, h.y);
+      const deep = hair.inner + (r - hair.inner) * rand2() * 0.7;
+      const back = Math.max(0, r - Math.max(0, deep));
+      h.x -= Math.cos(h.dir) * back;
+      h.y -= Math.sin(h.dir) * back;
+      h.len += back;
+      h.over = true;
+    }
     hairs.push(h);
     const tip = Math.hypot(h.x + Math.cos(h.dir) * len * grow, h.y + Math.sin(h.dir) * len * grow);
     reach = Math.max(reach, tip + Math.abs(h.bend) * len * 0.5 + 0.02);
@@ -130,10 +157,11 @@ export function furGenome(seed: number, p: SootSpriteParams): FurGenome {
 }
 
 /**
- * Trace un poil effilé (deux courbes qui se rejoignent en pointe) dans le
- * chemin courant. Centre (cx, cy) et Rd en px ; `phi` : phase du frisottis.
+ * Trace un poil dans le chemin courant : effilé en pointe (taper = 1) ou
+ * trait d'épaisseur constante (taper = 0), bout net ou arrondi (cap).
+ * Centre (cx, cy) et Rd en px ; `phi` : phase du frisottis.
  */
-export function traceHair(ctx: CanvasRenderingContext2D, h: Hair, cx: number, cy: number, Rd: number, phi: number, wave: number): void {
+export function traceHair(ctx: CanvasRenderingContext2D, h: Hair, cx: number, cy: number, Rd: number, phi: number, wave: number, shape: HairShape): void {
   const sway = wave * (0.06 * Math.sin(phi + h.phase) + 0.025 * Math.sin(2 * phi + h.phase * 1.3));
   const grow = 1 + wave * 0.05 * Math.sin(phi + h.phase * 1.7);
   const dir = h.dir + sway;
@@ -144,12 +172,21 @@ export function traceHair(ctx: CanvasRenderingContext2D, h: Hair, cx: number, cy
   const ny = Math.cos(dir);
   const tx = bx + Math.cos(dir) * L;
   const ty = by + Math.sin(dir) * L;
-  const w = h.w * Rd;
+  const taper = h.fine ? 1 : Math.max(0, Math.min(1, shape.taper));
+  // Demi-largeur : jamais sous `minW` px (un poil reste visible en petit).
+  const w = h.fine ? h.w * Rd : Math.max(h.w * Rd, shape.minW);
+  const wt = w * (1 - taper);
+  const wm = w * (1 - 0.55 * taper);
+  const cap = h.fine ? 0 : Math.max(0, Math.min(1, shape.cap));
   const sag = h.bend * L * (1 + 0.25 * wave * Math.sin(phi + h.phase * 0.7));
   const mx = (bx + tx) / 2 + nx * sag;
   const my = (by + ty) / 2 + ny * sag;
   ctx.moveTo(bx + nx * w, by + ny * w);
-  ctx.quadraticCurveTo(mx + nx * w * 0.45, my + ny * w * 0.45, tx, ty);
-  ctx.quadraticCurveTo(mx - nx * w * 0.45, my - ny * w * 0.45, bx - nx * w, by - ny * w);
+  ctx.quadraticCurveTo(mx + nx * wm, my + ny * wm, tx + nx * wt, ty + ny * wt);
+  if (wt > 0 && cap > 0.01) ctx.ellipse(tx, ty, wt * cap, wt, dir, Math.PI / 2, -Math.PI / 2, true);
+  else ctx.lineTo(tx - nx * wt, ty - ny * wt);
+  ctx.quadraticCurveTo(mx - nx * wm, my - ny * wm, bx - nx * w, by - ny * w);
+  // Racine visible (poils sur le corps) : arrondie elle aussi.
+  if (h.over && cap > 0.01) ctx.ellipse(bx, by, w * cap, w, dir, -Math.PI / 2, Math.PI / 2, true);
   ctx.closePath();
 }

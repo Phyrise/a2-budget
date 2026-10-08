@@ -139,6 +139,37 @@
   object-fit: contain;
 }
 
+/* Gros plan : une seule Noiraude sur un plancher brun, comme le plan du film. */
+.nlab-cell.is-close {
+  background: linear-gradient(180deg, #3b2a22 0%, #4f3628 34%, #6a4734 62%, #5d3e2d 100%);
+}
+
+.nlab-cell.is-close figcaption {
+  color: rgba(246, 234, 210, 0.62);
+}
+
+.nlab-cell__zoom {
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid rgba(60, 44, 28, 0.28);
+  border-radius: 999px;
+  background: rgba(246, 234, 210, 0.78);
+  color: rgba(60, 44, 28, 0.85);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.nlab-cell__zoom[aria-pressed='true'] {
+  border-color: rgba(239, 201, 111, 0.7);
+  background: rgba(239, 201, 111, 0.9);
+  color: #2c1e12;
+}
+
 .nlab-cell figcaption {
   position: absolute;
   left: 10px;

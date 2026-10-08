@@ -6,7 +6,7 @@
  * texte à sélectionner), coller un objet, réinitialiser, mémoires A / B / C.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { SOOT_PRESETS, cloneParams, formatParams, parseParams } from '../../../creatures/susuwatari';
+import { SOOT_PRESETS, cloneParams, formatParams, parseParams, type PresetId } from '../../../creatures/susuwatari';
 import { LabRange } from './LabRange';
 import { SPECS, TABS, digitsOf, readParam, writeParam } from './paramSpecs';
 import { SLOTS, type Tuning } from './useTuning';
@@ -14,11 +14,14 @@ import './tunePanel.css';
 
 type TextSheet = { mode: 'copy'; text: string; copied: boolean } | { mode: 'paste'; text: string; error: string };
 
-const PRESETS = [
-  { id: 'vise', label: 'Visé (défaut)' },
+const PRESETS: ReadonlyArray<{ id: PresetId; label: string }> = [
+  { id: 'defaut', label: 'Défaut' },
+  { id: 'film', label: 'Film' },
+  { id: 'arthurV1', label: 'Arthur v1' },
+  { id: 'vise', label: 'Ancien visé' },
   { id: 'porcEpic', label: 'Porc-épic' },
   { id: 'ronces', label: 'Ronces' },
-] as const;
+];
 
 export function TunePanel({ tuning, scene }: { tuning: Tuning; scene: ReactNode }) {
   const { params, setParams, tab, setTab, slots } = tuning;
@@ -146,7 +149,7 @@ export function TunePanel({ tuning, scene }: { tuning: Tuning; scene: ReactNode 
               className="nlab-btn"
               onClick={() => {
                 tuning.reset();
-                setStatus('Réinitialisé : modèle visé');
+                setStatus('Réinitialisé : modèle par défaut');
               }}
             >
               Réinitialiser

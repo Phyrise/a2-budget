@@ -331,7 +331,8 @@ export class Susuwatari {
     // Ressort d'écrasement (+ respiration).
     const breath = Math.sin(t * Math.PI * 2 * (this.state === 'sleep' ? 0.22 : 0.32) + this.fur) * (this.state === 'sleep' ? 0.03 : 0.012);
     const anticip = this.hopAt >= 0 ? 0.2 : 0;
-    const acc = -420 * (this.squash - anticip - breath) - 18 * this.squashV;
+    // Sous une charge trop lourde, elle est tassée.
+    const acc = -420 * (this.squash - anticip - breath - this.strain * 0.14) - 18 * this.squashV;
     this.squashV += acc * dt;
     this.squash = Math.max(-0.3, Math.min(0.35, this.squash + this.squashV * dt));
 
@@ -346,7 +347,7 @@ export class Susuwatari {
         then?.();
       }
     } else {
-      this.shake = approach(this.shake, this.strain * 0.3, 10, dt);
+      this.shake = approach(this.shake, this.strain * 0.6, 10, dt);
     }
     const amp = this.shake * S * (env.reduced ? 0.008 : 0.035);
     this.jitterX = amp * Math.sin(t * 83 + this.fur * 5);

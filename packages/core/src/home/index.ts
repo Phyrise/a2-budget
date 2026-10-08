@@ -257,3 +257,7 @@ export {
   validateAppState,
   migrateState,
 } from './appState.js';
+
+// V5.2 — lien Courses ↔ Maison.
+export { GROCERY_TASK_LOOKAHEAD_DAYS, groceryTaskOf, groceriesLeft, groceryTaskStatus } from './groceryTask.js';
+export type { GroceryTaskStatus } from './groceryTask.js';

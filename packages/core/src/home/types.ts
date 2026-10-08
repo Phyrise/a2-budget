@@ -63,6 +63,12 @@ export interface HouseholdTask {
    * (jour suggéré, conservé si l'on repasse en jour fixe).
    */
   flexible?: boolean;
+  /**
+   * V5.2 — tâche « Courses » liée à la liste de courses : Maison montre les
+   * articles restants, Courses la complète quand le panier est vidé.
+   * Absent = tâche ordinaire (`false` n'est pas stocké).
+   */
+  groceries?: boolean;
 }
 
 /** V3 — effort d'une tâche : 1 petit geste · 2 tâche · 3 corvée. */

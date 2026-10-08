@@ -257,3 +257,24 @@ export {
   validateAppState,
   migrateState,
 } from './appState.js';
+
+// V5.1 — quêtes communes (à deux, le même jour).
+export {
+  QUEST_GIFT,
+  QUEST_KINDS,
+  QUEST_SPOTS,
+  QUEST_TAB,
+  QUESTS_MAX,
+  addQuest,
+  devQuest,
+  doneQuests,
+  helpQuest,
+  isQuestDone,
+  questDaysBetween,
+  questOfDay,
+  questStatus,
+  questWeekdays,
+  scheduledQuest,
+  validateQuests,
+} from './quests.js';
+export type { QuestKind, QuestRole, QuestStatus, QuestTab, QuestsState, SharedQuest } from './quests.js';

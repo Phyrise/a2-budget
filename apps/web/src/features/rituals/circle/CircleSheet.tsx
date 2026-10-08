@@ -3,9 +3,15 @@
  * → ajuster), clôturé par un moment dans la forêt. S'il a déjà été tenu
  * cette semaine, la feuille s'ouvre sur sa relecture (« Le refaire » reste
  * possible : le cercle de la semaine est remplacé, son id conservé).
+ *
+ * V5.2 — connecté, chacun écrit SA part (sa lettre) de son téléphone : les
+ * étapes ne montrent que sa voix, l'autre la reçoit (letters/). Invité : le
+ * cercle se tient à deux sur le même téléphone, comme avant.
  */
 import {
   circleForWeek,
+  circlePart,
+  weeklyCircles,
   gratitudeSuggestions,
   rebalanceSuggestions,
   weeklyBalance,
@@ -14,11 +20,12 @@ import {
   type RebalanceSuggestion,
 } from '@a2/core';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { playCue } from '../../../app/sound';
 import { useApp } from '../../../state/store';
 import { Button, Sheet, cx } from '../../../ui';
 import { ritualWeek, typo, type Names, type Person } from '../ritualText';
 import { CircleClosing, CircleReadback } from './CircleRead';
-import { StepAdjust, StepBurdens, StepThanks, type CircleDraft } from './CircleSteps';
+import { BOTH, StepAdjust, StepBurdens, StepThanks, type CircleDraft } from './CircleSteps';
 
 type View = { kind: 'hold'; step: 0 | 1 | 2 } | { kind: 'closing'; circle: Circle } | { kind: 'read'; circle: Circle };
 
@@ -30,12 +37,18 @@ interface Prepared {
 }
 
 const STEPS = ['Merci', 'Ce qui pèse', 'Ajuster'] as const;
-const EMPTY: CircleDraft = { thanks: { a: '', b: '' }, burdens: { a: '', b: '' }, intention: '' };
+const EMPTY: CircleDraft = { thanks: { a: '', b: '' }, burdens: { a: '', b: '' }, intention: '', notes: { a: '', b: '' } };
 
-function draftFrom(c: Circle): CircleDraft {
+function draftFrom(c: Circle, me: Person | null): CircleDraft {
   const thanks = (p: Person) => c.gratitude.find((g) => g.from === p)?.text ?? '';
   const burden = (p: Person) => c.burdens.find((b) => b.who === p)?.text ?? '';
-  return { thanks: { a: thanks('a'), b: thanks('b') }, burdens: { a: burden('a'), b: burden('b') }, intention: c.intentions[0] ?? '' };
+  const note = (p: Person) => c.notes?.find((n) => n.from === p)?.text ?? '';
+  return {
+    thanks: { a: thanks('a'), b: thanks('b') },
+    burdens: { a: burden('a'), b: burden('b') },
+    intention: (me !== null && c.author !== me ? undefined : c.intentions[0]) ?? '',
+    notes: { a: note('a'), b: note('b') },
+  };
 }
 
 export function CircleSheet({
@@ -50,7 +63,9 @@ export function CircleSheet({
   onHeld: () => void;
   names: Names;
 }) {
-  const { appState, today, saveCircle, applySuggestion } = useApp();
+  const { appState, today, saveCircle, applySuggestion, me } = useApp();
+  // Connecté : sa part seulement ; invité : les deux voix.
+  const voices: readonly Person[] = me === null ? BOTH : [me];
   const [view, setView] = useState<View>({ kind: 'hold', step: 0 });
   const [draft, setDraft] = useState<CircleDraft>(EMPTY);
   const [applied, setApplied] = useState<string[]>([]);
@@ -60,7 +75,7 @@ export function CircleSheet({
 
   const rituals = appState?.rituals;
   const thisWeek = prepared ? circleForWeek(rituals, prepared.weekStart) : null;
-  const past = (rituals?.circles ?? []).filter((c) => c.weekStart !== prepared?.weekStart).slice().reverse();
+  const past = weeklyCircles(rituals).filter((c) => c.weekStart !== prepared?.weekStart).reverse();
 
   const prepare = () => {
     const { ref, weekStart } = ritualWeek(today);
@@ -84,7 +99,9 @@ export function CircleSheet({
     if (!open) return;
     heldRef.current = false;
     const weekStart = prepare();
-    const existing = circleForWeek(appState?.rituals, weekStart);
+    // Connecté : relecture seulement si SA part est écrite (sinon, l'écrire).
+    const mine = me === null || circlePart(appState?.rituals, weekStart, me) !== null;
+    const existing = mine ? circleForWeek(appState?.rituals, weekStart) : null;
     if (draftWeek.current !== weekStart) {
       draftWeek.current = weekStart;
       setDraft(EMPTY);
@@ -113,13 +130,17 @@ export function CircleSheet({
 
   const finish = () => {
     if (!prepared) return;
+    const to = (from: Person): Person => (from === 'a' ? 'b' : 'a');
     const saved = saveCircle({
       weekStart: prepared.weekStart,
-      gratitude: (['a', 'b'] as const).map((from) => ({ from, to: from === 'a' ? 'b' : 'a', text: draft.thanks[from] })),
-      burdens: (['a', 'b'] as const).map((who) => ({ who, text: draft.burdens[who] })),
+      gratitude: voices.map((from) => ({ from, to: to(from), text: draft.thanks[from] })),
+      burdens: voices.map((who) => ({ who, text: draft.burdens[who] })),
       intentions: draft.intention.trim() ? [draft.intention] : [],
+      notes: voices.map((from) => ({ from, to: to(from), text: draft.notes[from] })),
+      ...(me !== null ? { author: me } : {}),
     });
     if (saved) {
+      if (me !== null) playCue('circle'); // sa lettre part (celle de l'autre arrive en silence)
       heldRef.current = true;
       draftWeek.current = null;
       setView({ kind: 'closing', circle: saved });
@@ -172,7 +193,7 @@ export function CircleSheet({
             variant="ghost"
             icon="refresh"
             onClick={() => {
-              setDraft(draftFrom(view.circle));
+              setDraft(draftFrom(me !== null ? (circlePart(rituals, view.circle.weekStart, me) ?? view.circle) : view.circle, me));
               go(0);
             }}
           >
@@ -215,9 +236,9 @@ export function CircleSheet({
           </ol>
         )}
         {view.kind === 'hold' && view.step === 0 && prepared && (
-          <StepThanks names={names} draft={draft} suggestions={prepared.gratitude} onChange={setThanks} />
+          <StepThanks names={names} voices={voices} draft={draft} suggestions={prepared.gratitude} onChange={setThanks} />
         )}
-        {view.kind === 'hold' && view.step === 1 && <StepBurdens names={names} draft={draft} onChange={setBurden} />}
+        {view.kind === 'hold' && view.step === 1 && <StepBurdens names={names} voices={voices} draft={draft} onChange={setBurden} />}
         {view.kind === 'hold' && view.step === 2 && prepared && (
           <StepAdjust
             names={names}
@@ -227,9 +248,12 @@ export function CircleSheet({
             onApply={apply}
             intention={draft.intention}
             onIntention={(v) => setDraft((d) => ({ ...d, intention: v }))}
+            voices={voices}
+            notes={draft.notes}
+            onNote={(p, v) => setDraft((d) => ({ ...d, notes: { ...d.notes, [p]: v } }))}
           />
         )}
-        {view.kind === 'closing' && <CircleClosing circle={view.circle} names={names} />}
+        {view.kind === 'closing' && <CircleClosing circle={view.circle} names={names} sentTo={me === null ? null : me === 'a' ? 'b' : 'a'} />}
         {view.kind === 'read' && (
           <CircleReadback
             circle={view.circle}

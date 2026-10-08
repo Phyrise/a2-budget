@@ -12,7 +12,8 @@ function heldOn(circle: Circle): string {
 }
 
 export function CircleWords({ circle, names }: { circle: Circle; names: Names }) {
-  const empty = circle.gratitude.length === 0 && circle.burdens.length === 0 && circle.intentions.length === 0;
+  const notes = circle.notes ?? [];
+  const empty = circle.gratitude.length === 0 && circle.burdens.length === 0 && circle.intentions.length === 0 && notes.length === 0;
   return (
     <div className="circle-words">
       {empty && <p className="circle-words__empty">Un cercle tout en silence — parfois, être là suffit.</p>}
@@ -27,6 +28,24 @@ export function CircleWords({ circle, names }: { circle: Circle; names: Names })
                   <p>«{NB}{typo(g.text)}{NB}»</p>
                   <footer>
                     {names[g.from]} à {names[g.to]}
+                  </footer>
+                </blockquote>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {notes.length > 0 && (
+        <section className="circle-words__group">
+          <h3 className="eyebrow">Petits mots</h3>
+          <ul>
+            {notes.map((n, i) => (
+              <li key={i} className={cx('circle-quote', `circle-quote--${n.from}`)}>
+                <Companion who={n.from} size={30} mood="happy" />
+                <blockquote>
+                  <p>{typo(n.text)}</p>
+                  <footer>
+                    {names[n.from]} à {names[n.to]}
                   </footer>
                 </blockquote>
               </li>
@@ -106,7 +125,7 @@ export function CircleReadback({
   );
 }
 
-export function CircleClosing({ circle, names }: { circle: Circle; names: Names }) {
+export function CircleClosing({ circle, names, sentTo = null }: { circle: Circle; names: Names; sentTo?: 'a' | 'b' | null }) {
   const lines = circleClosingLine(circle.id);
   return (
     <div className="circle-closing">
@@ -115,7 +134,9 @@ export function CircleClosing({ circle, names }: { circle: Circle; names: Names 
         <Companion who="b" size={68} mood="happy" reactKey="close-b" touchable />
       </div>
       <h3 className="circle-closing__title display">Merci d’avoir pris ce moment.</h3>
-      <p className="circle-closing__sub">Le cercle de la semaine est gardé dans le carnet de la forêt.</p>
+      <p className="circle-closing__sub">
+        {sentTo !== null ? `${names[sentTo]} va recevoir ta lettre.` : 'Le cercle de la semaine est gardé dans le carnet de la forêt.'}
+      </p>
       <div className="circle-closing__bubbles">
         <p className="ritual-bubble ritual-bubble--a">
           <span className="ritual-bubble__who">Jiji</span> {lines.a}

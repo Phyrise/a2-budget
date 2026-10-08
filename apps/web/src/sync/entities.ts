@@ -86,7 +86,9 @@ export const LIST_SPECS: readonly ListSpec[] = [
   spec({ collection: 'groceries', fact: false, list: (s) => s.groceries.items, id: (g) => g.id }),
   spec({ collection: 'groceryHistory', fact: true, list: (s) => s.groceries.history, id: (p) => p.id }),
   spec({ collection: 'events', fact: false, list: (s) => s.calendar?.events, id: (e) => e.id }),
-  spec({ collection: 'circles', fact: false, list: (s) => s.rituals?.circles, id: (c) => c.id }),
+  // Ajout = remplacement : une part du cercle (id déterministe, V5.2) peut
+  // être écrite par deux appareils du même rôle ; le dernier gagne.
+  spec({ collection: 'circles', fact: false, replaceOnAdd: true, list: (s) => s.rituals?.circles, id: (c) => c.id }),
   spec({
     collection: 'months',
     fact: false,

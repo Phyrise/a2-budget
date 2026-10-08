@@ -128,13 +128,27 @@ function validateCircle(c: unknown): Ok<Circle> | Fail {
   if (!c.intentions.every((i) => typeof i === 'string')) {
     return { ok: false, reason: 'circle-invalid-intention' };
   }
-  return {
-    ok: true,
-    state: { id: c.id, weekStart: c.weekStart, heldAt: c.heldAt, gratitude, burdens, intentions: [...c.intentions] },
-  };
+  const state: Circle = { id: c.id, weekStart: c.weekStart, heldAt: c.heldAt, gratitude, burdens, intentions: [...c.intentions] };
+  // V5.2 — part d'une personne, petits mots (optionnels).
+  if (c.author !== undefined) {
+    if (!isPerson(c.author)) return { ok: false, reason: 'circle-invalid-author' };
+    state.author = c.author;
+  }
+  if (c.notes !== undefined) {
+    if (!Array.isArray(c.notes)) return { ok: false, reason: 'circle-invalid-notes' };
+    const notes: Circle['gratitude'] = [];
+    for (const n of c.notes) {
+      if (!isPlainObject(n) || !isPerson(n.from) || !isPerson(n.to) || typeof n.text !== 'string') {
+        return { ok: false, reason: 'circle-invalid-notes' };
+      }
+      notes.push({ from: n.from, to: n.to, text: n.text });
+    }
+    if (notes.length > 0) state.notes = notes;
+  }
+  return { ok: true, state };
 }
 
-/** rituals : { circles } — ids uniques, un cercle par semaine. */
+/** rituals : { circles } — ids uniques ; par semaine, un cercle à deux et une part par personne. */
 export function validateRituals(value: unknown): Ok<RitualsState> | Fail {
   if (!isPlainObject(value)) return { ok: false, reason: 'rituals-not-object' };
   if (!Array.isArray(value.circles)) return { ok: false, reason: 'rituals-circles-not-array' };
@@ -145,9 +159,10 @@ export function validateRituals(value: unknown): Ok<RitualsState> | Fail {
     const r = validateCircle(raw);
     if (!r.ok) return r;
     if (ids.has(r.state.id)) return { ok: false, reason: 'duplicate-circle-id' };
-    if (weeks.has(r.state.weekStart)) return { ok: false, reason: 'duplicate-circle-week' };
+    const slot = `${r.state.weekStart}|${r.state.author ?? ''}`;
+    if (weeks.has(slot)) return { ok: false, reason: 'duplicate-circle-week' };
     ids.add(r.state.id);
-    weeks.add(r.state.weekStart);
+    weeks.add(slot);
     circles.push(r.state);
   }
   return { ok: true, state: { circles } };

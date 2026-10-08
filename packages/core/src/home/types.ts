@@ -139,7 +139,10 @@ export interface BurdenNote {
   text: string;
 }
 
-/** Cercle de la semaine (merci → ce qui pèse → ajuster). Un par semaine ISO. */
+/**
+ * Cercle de la semaine (merci → ce qui pèse → ajuster). Par semaine ISO : un
+ * cercle tenu à deux, et/ou une part par personne (`author`).
+ */
 export interface Circle {
   id: string;
   /** Lundi de la semaine « YYYY-MM-DD ». */
@@ -149,6 +152,14 @@ export interface Circle {
   gratitude: GratitudeNote[];
   burdens: BurdenNote[];
   intentions: string[];
+  /**
+   * V5.2 — « part » d'une seule personne (lettre du cercle, écrite de son
+   * téléphone) : ses mots seulement, id `circle-<lundi>-<rôle>`. Absent :
+   * cercle tenu à deux sur un même téléphone (ancien format, mode invité).
+   */
+  author?: 'a' | 'b';
+  /** V5.2 — un petit mot gentil adressé à l'autre (au plus un par personne). */
+  notes?: GratitudeNote[];
 }
 
 /** État des rituels (optionnel dans AppState). */

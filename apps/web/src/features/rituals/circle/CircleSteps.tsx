@@ -12,7 +12,12 @@ export interface CircleDraft {
   thanks: Record<Person, string>;
   burdens: Record<Person, string>;
   intention: string;
+  /** V5.2 — notes.a = le petit mot de A pour B. */
+  notes: Record<Person, string>;
 }
+
+/** Qui écrit : les deux (même téléphone) ou soi seul (sa part, connecté). */
+export const BOTH: readonly Person[] = ['a', 'b'];
 
 function Chips({ items, value, onPick, label }: { items: string[]; value: string; onPick: (s: string) => void; label: string }) {
   if (items.length === 0) return null;
@@ -60,11 +65,13 @@ const THANKS_FALLBACK = [
 
 export function StepThanks({
   names,
+  voices = BOTH,
   draft,
   suggestions,
   onChange,
 }: {
   names: Names;
+  voices?: readonly Person[];
   draft: CircleDraft;
   suggestions: Record<Person, string[]>;
   onChange: (p: Person, text: string) => void;
@@ -75,7 +82,7 @@ export function StepThanks({
       <p className="circle-step__lead">
         On commence par ce qui a fait du bien. Choisissez une phrase, ou dites-le avec vos mots.
       </p>
-      {(['a', 'b'] as const).map((from) => {
+      {voices.map((from) => {
         const to = other(from);
         const items = suggestions[from].length > 0 ? suggestions[from] : THANKS_FALLBACK;
         return (
@@ -103,7 +110,17 @@ export function StepThanks({
 
 const STARTERS = [`J’ai eu du mal avec `, `J’aurais aimé un coup de main pour `, `Rien de lourd cette semaine.`];
 
-export function StepBurdens({ names, draft, onChange }: { names: Names; draft: CircleDraft; onChange: (p: Person, text: string) => void }) {
+export function StepBurdens({
+  names,
+  voices = BOTH,
+  draft,
+  onChange,
+}: {
+  names: Names;
+  voices?: readonly Person[];
+  draft: CircleDraft;
+  onChange: (p: Person, text: string) => void;
+}) {
   const id = useId();
   return (
     <div className="circle-step">
@@ -111,7 +128,7 @@ export function StepBurdens({ names, draft, onChange }: { names: Names; draft: C
       <p className="circle-step__lead">
         Une phrase chacun, si l’envie est là. Pas de réponse à donner, pas de solution à trouver{NB}: on écoute, c’est tout.
       </p>
-      {(['a', 'b'] as const).map((who) => (
+      {voices.map((who) => (
         <section key={who} className={cx('circle-voice', `circle-voice--${who}`)} aria-labelledby={`${id}-${who}`}>
           <header className="circle-voice__head">
             <Companion who={who} size={40} mood="curious" />
@@ -184,8 +201,14 @@ export function StepAdjust({
   onApply,
   intention,
   onIntention,
+  voices = BOTH,
+  notes,
+  onNote,
 }: {
   names: Names;
+  voices?: readonly Person[];
+  notes: Record<Person, string>;
+  onNote: (p: Person, text: string) => void;
   verdict: BalanceVerdict;
   suggestions: RebalanceSuggestion[];
   applied: string[];
@@ -235,6 +258,25 @@ export function StepAdjust({
         <Chips items={INTENTIONS} value={intention} onPick={onIntention} label="Idées d’intention" />
         <Words id={`${id}-i`} label="Notre intention" value={intention} onChange={onIntention} placeholder="Ce qu’on aimerait s’offrir, ensemble" />
       </section>
+
+      {voices.map((from) => (
+        <section key={from} className={cx('circle-voice', `circle-voice--${from}`)} aria-labelledby={`${id}-n-${from}`}>
+          <header className="circle-voice__head">
+            <Companion who={from} size={36} mood="happy" />
+            <h3 id={`${id}-n-${from}`} className="circle-voice__title">
+              Un petit mot pour {names[other(from)]}
+            </h3>
+            <span className="circle-voice__optional">facultatif</span>
+          </header>
+          <Words
+            id={`${id}-note-${from}`}
+            label="Un mot gentil"
+            value={notes[from]}
+            onChange={(v) => onNote(from, v)}
+            placeholder="Un mot doux, une envie, un bisou…"
+          />
+        </section>
+      ))}
     </div>
   );
 }

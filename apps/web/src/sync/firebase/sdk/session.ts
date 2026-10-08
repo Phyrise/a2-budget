@@ -35,6 +35,7 @@ import {
 import { firebaseClient } from './client';
 import { ensureHousehold } from './household';
 import { openLive } from './live';
+import { openLetters } from './letters';
 import { openRuntime } from './runtime';
 import { syncSetup } from './setup';
 
@@ -124,6 +125,7 @@ export function openSession(): FirebaseSession {
     },
 
     openLive: (member) => openLive(db, member),
+    openLetters: (member) => openLetters(db, member),
   };
 
   if (FIREBASE_EMULATORS && setup.emulators !== null) {

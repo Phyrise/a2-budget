@@ -30,6 +30,6 @@ function run(command, commandArgs, env = {}) {
 }
 
 if (!args.includes('--no-build')) run('pnpm', ['build:emu']);
-const specs = args.includes('--all') ? [] : ['qa-two-phones', 'qa-quests', 'presence'];
+const specs = args.includes('--all') ? [] : ['qa-two-phones', 'qa-quests', 'presence', 'qa-letters'];
 run('npx', ['playwright', 'test', '-c', 'playwright.sync.config.ts', ...specs], { E2E_PORT: port });
 console.log('✓ QA deux téléphones : tout est passé.');

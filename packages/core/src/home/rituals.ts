@@ -6,24 +6,15 @@
  * Fonctions pures.
  */
 
+import { mergeWeek, normalizeCircle, trimCircles, weekRecords } from './circleParts.js';
 import { isoWeekday, isValidLocalDateKey, parseLocalDateKey } from './dates.js';
 import { weekStartKey } from './occurrences.js';
 import { completionsOfWeek, whoDid } from './tasks.js';
-import type { BurdenNote, ChoreCompletion, Circle, GratitudeNote, HouseholdTask, RitualsState } from './types.js';
-import { isIsoTimestamp, isPerson } from './validationHelpers.js';
+import type { ChoreCompletion, Circle, HouseholdTask, RitualsState } from './types.js';
 
-/** Longueur maximale d'un mot du cercle (merci, ce qui pèse, intention). */
-export const CIRCLE_TEXT_MAX = 280;
-/** Nombre maximal de cercles gardés (les plus anciens sont oubliés). */
-export const CIRCLES_MAX = 260;
+export { CIRCLE_TEXT_MAX, CIRCLES_MAX } from './circleParts.js';
 
 const NB = ' ';
-
-function cleanText(text: unknown): string | null {
-  if (typeof text !== 'string') return null;
-  const t = text.trim().replace(/\s+/g, ' ');
-  return t === '' ? null : t.slice(0, CIRCLE_TEXT_MAX);
-}
 
 /** Vrai si la clé « YYYY-MM-DD » est valide et tombe un lundi. */
 export function isWeekStartKey(key: unknown): key is string {
@@ -31,45 +22,24 @@ export function isWeekStartKey(key: unknown): key is string {
 }
 
 /**
- * Enregistre le cercle de sa semaine : remplace celui de la même `weekStart`
- * s'il existe, sinon l'ajoute (tri par semaine croissante, au plus
- * CIRCLES_MAX). Textes nettoyés (espaces réduits, ≤ CIRCLE_TEXT_MAX), entrées
- * vides retirées. Lève une RangeError si `weekStart` n'est pas un lundi
- * valide, `heldAt` pas un horodatage ISO, ou une personne inconnue. Pur.
+ * Enregistre le cercle tenu à deux pour sa semaine : remplace tout ce que
+ * la semaine contenait (cercle et parts), sinon l'ajoute (tri par semaine
+ * croissante, au plus CIRCLES_MAX semaines). Textes nettoyés (espaces
+ * réduits, ≤ CIRCLE_TEXT_MAX), entrées vides retirées. Lève une RangeError
+ * si `weekStart` n'est pas un lundi valide, `heldAt` pas un horodatage ISO,
+ * ou une personne inconnue. Pur. Une part (`author`) : voir saveCirclePart.
  */
 export function saveCircle(rituals: RitualsState | undefined, circle: Circle): RitualsState {
-  if (typeof circle.id !== 'string' || circle.id === '') throw new RangeError('circle id required');
-  if (!isWeekStartKey(circle.weekStart)) throw new RangeError('circle weekStart must be a Monday');
-  if (!isIsoTimestamp(circle.heldAt)) throw new RangeError('circle heldAt must be ISO');
-  const gratitude: GratitudeNote[] = [];
-  for (const g of circle.gratitude) {
-    if (!isPerson(g.from) || !isPerson(g.to)) throw new RangeError('invalid gratitude person');
-    const text = cleanText(g.text);
-    if (text !== null) gratitude.push({ from: g.from, to: g.to, text });
-  }
-  const burdens: BurdenNote[] = [];
-  for (const b of circle.burdens) {
-    if (!isPerson(b.who)) throw new RangeError('invalid burden person');
-    const text = cleanText(b.text);
-    if (text !== null) burdens.push({ who: b.who, text });
-  }
-  const intentions = circle.intentions.map(cleanText).filter((t): t is string => t !== null);
-  const saved: Circle = {
-    id: circle.id,
-    weekStart: circle.weekStart,
-    heldAt: circle.heldAt,
-    gratitude,
-    burdens,
-    intentions,
-  };
+  const { author: _author, ...together } = circle;
+  const saved = normalizeCircle(together);
   const others = (rituals?.circles ?? []).filter((c) => c.weekStart !== saved.weekStart);
-  const circles = [...others, saved].sort((x, y) => (x.weekStart < y.weekStart ? -1 : x.weekStart > y.weekStart ? 1 : 0));
-  return { circles: circles.length > CIRCLES_MAX ? circles.slice(-CIRCLES_MAX) : circles };
+  return { circles: trimCircles([...others, saved]) };
 }
 
 /**
  * Cercle de la semaine contenant `date` (Date, ou clé « YYYY-MM-DD » de
- * n'importe quel jour de la semaine), ou null.
+ * n'importe quel jour de la semaine), ou null. Cercle à deux et parts sont
+ * fusionnés en une seule vue (voir mergeWeek).
  */
 export function circleForWeek(rituals: RitualsState | undefined, date: Date | string): Circle | null {
   let weekStart: string;
@@ -78,7 +48,7 @@ export function circleForWeek(rituals: RitualsState | undefined, date: Date | st
   } catch {
     return null;
   }
-  return rituals?.circles.find((c) => c.weekStart === weekStart) ?? null;
+  return mergeWeek(weekRecords(rituals, weekStart));
 }
 
 // ---------------------------------------------------------------------------

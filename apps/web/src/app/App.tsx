@@ -57,6 +57,7 @@ import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
 import { LiveProvider } from '../presence/LiveContext';
 import { PartnerAvatar } from '../presence/avatar/PartnerAvatar';
+import { LetterWatcher } from '../features/rituals/letters/LetterWatcher';
 
 function Screen({ module }: { module: ModuleId }) {
   if (module === 'budget') return <BudgetScreen />;
@@ -169,6 +170,7 @@ function Shell() {
       <UpdatePrompt />
       <BirthdayParty />
       <QuestRewards />
+      <LetterWatcher />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
         {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}

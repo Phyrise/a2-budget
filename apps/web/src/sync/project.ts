@@ -14,7 +14,7 @@
 import {
   applyMilestones,
   BALANCE_CORRECTIONS_MAX,
-  CIRCLES_MAX,
+  trimCircles,
   compareOrdered,
   defaultSettings,
   emptyMilestones,
@@ -110,11 +110,14 @@ function isCheckpoint(c: DocData): boolean {
   return typeof c.day === 'string' && isPlainRecord(c.forest);
 }
 
-/** Un cercle par semaine : le plus récent (heldAt, puis id). */
+/**
+ * Par semaine, un cercle à deux et une part par personne (V5.2) : en cas de
+ * doublon (deux cercles à deux créés hors ligne), le plus récent (heldAt, puis id).
+ */
 function oneCirclePerWeek(circles: DocData[]): DocData[] {
   const best = new Map<string, DocData>();
   for (const c of circles) {
-    const week = String(c.weekStart);
+    const week = `${String(c.weekStart)}|${typeof c.author === 'string' ? c.author : ''}`;
     const seen = best.get(week);
     const key = (x: DocData) => `${String(x.heldAt)}|${String(x.id)}`;
     if (seen === undefined || key(c) > key(seen)) best.set(week, c);
@@ -151,7 +154,7 @@ function assemble(parts: Parts, opts: ProjectOptions): unknown {
   const history = liveFacts(facts<PurchaseFact>(parts, 'groceryHistory')).slice(0, GROCERY_HISTORY_MAX);
   const memory = memoryFrom(single(parts, 'settings', SETTINGS_GROCERY_MEMORY));
   const events = objects(parts, 'events');
-  const circles = oneCirclePerWeek(objects(parts, 'circles')).slice(-CIRCLES_MAX) as unknown as Circle[];
+  const circles = trimCircles(oneCirclePerWeek(objects(parts, 'circles')) as unknown as Circle[]);
   const lantern = single(parts, 'settings', SETTINGS_FOCUS)?.selectedLantern;
   const anniversaries = single(parts, 'settings', SETTINGS_ANNIVERSARIES);
   const quests = questsFromDocs(parts.get('quests') ?? []);

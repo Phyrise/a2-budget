@@ -8,8 +8,10 @@
  *   forêt. Toucher prépare une lanterne (petite feuille) ; pendant la
  *   session, la forêt l'allume et un bandeau compact garde le temps
  *   (LanternBar, monté ici) ; toucher la carte remonte alors vers la forêt.
+ * - V5.2 (connecté) : chacun écrit sa part ; une lettre de l'autre non lue
+ *   se pose sur la carte du cercle (enveloppe cachetée) : toucher l'ouvre.
  */
-import { activeLantern, circleForWeek } from '@a2/core';
+import { activeLantern, circleForWeek, circleWriters, weeklyCircles } from '@a2/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
@@ -23,6 +25,8 @@ import { LanternSheet } from './lantern/LanternSheet';
 import { lantern, remainingMs, useLantern } from './lantern/lanternStore';
 import { ToroArt } from './lantern/ToroArt';
 import { useLanternController } from './lantern/useLanternController';
+import { Envelope } from './letters/Envelope';
+import { letters, useLetters } from './letters/letterStore';
 import { RitualGlyph } from './RitualGlyph';
 import { NB, isCircleWindow, ritualWeek, typo, type Names } from './ritualText';
 import './rituals.css';
@@ -47,7 +51,8 @@ function LanternStatus() {
 }
 
 export function RitualsBar() {
-  const { appState, today } = useApp();
+  const { appState, today, me } = useApp();
+  const { unread, writeRequest } = useLetters();
   const { pulse } = useWorld();
   const { isDesktop, setForegroundSheet } = useShell();
   const lanternState = useLantern();
@@ -56,6 +61,14 @@ export function RitualsBar() {
   const timers = useRef<number[]>([]);
 
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
+  // « Écrire ma part » depuis une lettre : le cercle s'ouvre.
+  const seenRequest = useRef(writeRequest);
+  useEffect(() => {
+    if (writeRequest === seenRequest.current) return;
+    seenRequest.current = writeRequest;
+    setOpen('circle');
+  }, [writeRequest]);
 
   // Cercle et carnet recouvrent la forêt : elle peut se figer. La lanterne, non.
   useEffect(() => {
@@ -103,9 +116,14 @@ export function RitualsBar() {
 
   const names: Names = { a: appState.budget.settings.personA.name, b: appState.budget.settings.personB.name };
   const week = ritualWeek(today);
-  const held = circleForWeek(appState.rituals, week.weekStart);
+  // Connecté : « tenu » = ma part écrite ; « tenu » tout court quand les deux ont écrit.
+  const writers = circleWriters(appState.rituals, week.weekStart);
+  const mine = me === null ? writers.length > 0 : writers.includes(me);
+  const held = mine ? circleForWeek(appState.rituals, week.weekStart) : null;
+  const both = writers.length === 2;
   const highlight = held === null && isCircleWindow(today);
-  const lastIntention = held === null ? [...(appState.rituals?.circles ?? [])].reverse().find((c) => c.intentions.length > 0)?.intentions[0] : undefined;
+  const lastIntention = held === null ? weeklyCircles(appState.rituals).reverse().find((c) => c.intentions.length > 0)?.intentions[0] : undefined;
+  const letterFrom = unread?.author ?? null;
   const lanternLive = lanternState.phase === 'running' || lanternState.phase === 'paused';
   const chosenLantern = activeLantern(appState.focus);
 
@@ -129,10 +147,21 @@ export function RitualsBar() {
       <div className="rituals__row">
         <button
           type="button"
-          className={cx('ritual-card', 'ritual-card--circle', highlight && 'is-highlight', held && 'is-held')}
-          onClick={() => setOpen('circle')}
-          aria-label={held ? 'Cercle de la semaine, tenu — le relire' : 'Cercle de la semaine'}
+          className={cx('ritual-card', 'ritual-card--circle', highlight && 'is-highlight', held && 'is-held', letterFrom && 'has-letter')}
+          onClick={() => (letterFrom ? letters.open() : setOpen('circle'))}
+          aria-label={
+            letterFrom
+              ? `Cercle de la semaine — une lettre de ${names[letterFrom]}`
+              : held
+                ? 'Cercle de la semaine, tenu — le relire'
+                : 'Cercle de la semaine'
+          }
         >
+          {letterFrom && (
+            <span className="ritual-card__letter" data-testid="circle-letter">
+              <Envelope from={letterFrom} size={40} />
+            </span>
+          )}
           <span className="ritual-card__glyph">
             <RitualGlyph name="circle" />
           </span>
@@ -140,7 +169,7 @@ export function RitualsBar() {
           <span className="ritual-card__sub">
             {held ? (
               <>
-                <Icon name="check" size={14} /> Tenu
+                <Icon name="check" size={14} /> {me === null || both ? 'Tenu' : 'Écrit'}
               </>
             ) : highlight ? (
               'Ce week-end'

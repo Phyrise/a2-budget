@@ -9,7 +9,9 @@ import {
   addFocusSession as coreAddFocusSession,
   findOccurrenceCompletion,
   isDueOn,
+  circleForWeek,
   saveCircle as coreSaveCircle,
+  saveCirclePart,
   skipDateFor,
   skipOccurrence,
   unskipOccurrence,
@@ -32,6 +34,10 @@ export interface CircleInput {
   gratitude: Circle['gratitude'];
   burdens: Circle['burdens'];
   intentions: string[];
+  /** V5.2 — petits mots gentils. */
+  notes?: Circle['notes'];
+  /** V5.2 — la part de cette personne seulement (téléphone connecté) : rien d'autre n'est touché. */
+  author?: 'a' | 'b';
   /** Lundi « YYYY-MM-DD » ; défaut : la semaine en cours. */
   weekStart?: string;
 }
@@ -62,7 +68,10 @@ export interface CareActions {
   unskipToday: (task: HouseholdTask) => boolean;
   /** Applique une suggestion de rééquilibrage (rotate → tour à tour ; reassign → confier). */
   applySuggestion: (suggestion: RebalanceSuggestion) => boolean;
-  /** Enregistre le cercle de la semaine (remplace celui de la même semaine). null si invalide. */
+  /**
+   * Enregistre le cercle de la semaine (remplace celui de la même semaine),
+   * ou seulement sa part (`author`) ; rend la vue de la semaine. null si invalide.
+   */
   saveCircle: (input: CircleInput) => Circle | null;
   /** Mémorise une lanterne terminée. null si invalide. */
   addFocusSession: (input: FocusInput) => FocusSession | null;
@@ -131,8 +140,20 @@ export function useCareActions(transact: Transact): CareActions {
       const id = newId();
       const weekStart = input.weekStart ?? weekStartKey(now);
       return transact<Circle | null>((s) => {
-        const existing = s.rituals?.circles.find((c) => c.weekStart === weekStart);
+        const existing = s.rituals?.circles.find((c) => c.weekStart === weekStart && c.author === undefined);
         try {
+          if (input.author !== undefined) {
+            const parts = saveCirclePart(s.rituals, {
+              author: input.author,
+              weekStart,
+              heldAt: now.toISOString(),
+              gratitude: input.gratitude,
+              burdens: input.burdens,
+              intentions: input.intentions,
+              ...(input.notes ? { notes: input.notes } : {}),
+            });
+            return { state: { ...s, rituals: parts }, result: circleForWeek(parts, weekStart) };
+          }
           const rituals = coreSaveCircle(s.rituals, {
             id: existing?.id ?? id,
             weekStart,
@@ -140,6 +161,7 @@ export function useCareActions(transact: Transact): CareActions {
             gratitude: input.gratitude,
             burdens: input.burdens,
             intentions: input.intentions,
+            ...(input.notes ? { notes: input.notes } : {}),
           });
           const saved = rituals.circles.find((c) => c.weekStart === weekStart) ?? null;
           return { state: { ...s, rituals }, result: saved };

@@ -8,7 +8,7 @@
  * Mode développeur : « Tout voir » montre tout le carnet comme débloqué —
  * état local, rien n'est écrit, une lanterne verrouillée ne se pose pas.
  */
-import { CREATURES, forestProgress, type AppState } from '@a2/core';
+import { CREATURES, forestProgress, weeklyCircles, type AppState } from '@a2/core';
 import { useEffect, useState } from 'react';
 import { useShell } from '../../../app/ShellContext';
 import { useApp } from '../../../state/store';
@@ -58,7 +58,7 @@ function CreatureCard({
 
 function memories(app: AppState, guardianSeen: boolean): Array<{ icon: IconName; text: string }> {
   const f = app.forest;
-  const circles = app.rituals?.circles.length ?? 0;
+  const circles = weeklyCircles(app.rituals).length;
   const sessions = app.focus?.sessions ?? [];
   const minutes = sessions.reduce((sum, s) => sum + s.minutes, 0);
   const out: Array<{ icon: IconName; text: string }> = [];

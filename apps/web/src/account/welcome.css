@@ -115,7 +115,7 @@
   }
 
   .welcome__veil {
-    background: radial-gradient(ellipse 60% 70% at 50% 62%, rgba(11, 20, 16, 0.86) 0%, rgba(11, 20, 16, 0.45) 60%, rgba(11, 20, 16, 0.2) 100%);
+    background: radial-gradient(ellipse 55% 65% at 50% 52%, rgba(11, 20, 16, 0.88) 0%, rgba(11, 20, 16, 0.5) 60%, rgba(11, 20, 16, 0.24) 100%);
   }
 
   .welcome__content {

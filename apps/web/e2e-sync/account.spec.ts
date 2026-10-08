@@ -19,8 +19,13 @@ import {
   readDoc,
   recordRequests,
   resetEmulators,
+  waitForEmulators,
   welcome,
 } from './helpers';
+
+test.beforeAll(async () => {
+  await waitForEmulators();
+});
 
 test.beforeEach(async () => {
   await resetEmulators();

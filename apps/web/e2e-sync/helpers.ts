@@ -16,6 +16,24 @@ const DOCS = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents`
 export const ARTHUR = 'arthur.longuefosse@gmail.com';
 export const ALEXIA = 'alexia.chaval@free.fr';
 
+/** Attend Auth ET Firestore (le serveur web de Playwright n'en surveille qu'un). */
+export async function waitForEmulators(timeoutMs = 90_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const up = await Promise.all(
+      [`${FIRESTORE}/`, `${AUTH}/`].map((url) =>
+        fetch(url).then(
+          () => true,
+          () => false,
+        ),
+      ),
+    );
+    if (up.every(Boolean)) return;
+    if (Date.now() > deadline) throw new Error('Émulateurs Firebase injoignables (ports 8180 / 9180)');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
 /** Base et comptes de l'émulateur vidés (chaque test part de rien). */
 export async function resetEmulators(): Promise<void> {
   const a = await fetch(`${FIRESTORE}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`, { method: 'DELETE' });

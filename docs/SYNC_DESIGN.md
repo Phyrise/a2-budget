@@ -455,7 +455,7 @@ trace dans les données.
 - **QA bout en bout** (`apps/web/scripts/qa-sync.mjs`) : Playwright, deux contextes = deux
   téléphones, émulateurs, connexion par faux jeton Google de l'émulateur Auth,
   `context.setOffline(true)` pour les scénarios hors ligne (cocher des deux côtés, fusion,
-  forêt identique).
+  forêt identique). Fait : voir §17.
 
 ## 12. Plan V5 par étapes
 
@@ -649,3 +649,27 @@ Reste : nouvelles (`activity`, étape 6), points de reprise mensuels (§3.3 :
 seule la genèse est écrite), purge des objets supprimés, lecture seule si
 `minApp` dépasse le build, offre d'ajouter ses articles de courses au
 second téléphone (§6.3).
+
+## 17. QA « deux téléphones »
+
+`node apps/web/scripts/qa-sync.mjs [port] [--all] [--no-build]` : build
+émulateurs puis `e2e-sync/qa-two-phones.spec.ts` (aides : `e2e-sync/phones.ts`).
+
+- Temps réel dans les deux sens : tâche (créée, cochée), article de courses,
+  événement, virements (chacun le sien sur le même mois) ; les deux copies
+  `a2-budget:sync:v1` identiques, forêt comprise.
+- Les deux hors ligne : chacun coche une tâche, ajoute un article, coche son
+  virement et change le même salaire ; AL revient, puis AC → tout est là des
+  deux côtés, le salaire d'AC (arrivée en dernier) gagne, même forêt (deux
+  tâches comptées).
+- Invité sur un 3e téléphone pendant que le foyer vit : aucune requête vers
+  Google, Firebase ou les émulateurs, chunk du SDK jamais chargé par la page ;
+  compte hors liste : « Ce compte n'est pas invité. ».
+- Session gardée : rechargement, onglet fermé puis rouvert (comme l'icône
+  PWA), ouverture sans réseau ; le geste fait hors ligne part au retour.
+
+**Bug trouvé et corrigé** : `diffFields` écrivait en bloc une map qui
+apparaît (`paid` absent du mois → `paid = { transferB: true }`) ; hors ligne,
+le virement coché par l'un effaçait celui de l'autre. Une map nouvelle
+s'écrit désormais feuille par feuille (`paid.transferB`), comme une map
+existante (test unitaire dans `diff.test.ts`).

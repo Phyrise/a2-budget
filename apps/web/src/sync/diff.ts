@@ -62,7 +62,9 @@ export interface DiffContext {
 /**
  * Champs différents, feuille par feuille : une map imbriquée n'est jamais
  * remplacée en bloc (une écriture concurrente d'un champ voisin survit).
- * Un champ retiré → DELETE_FIELD. Pur.
+ * Un champ retiré → DELETE_FIELD. Une map qui apparaît (`paid` absent
+ * jusque-là) s'écrit aussi feuille par feuille : sinon le premier virement
+ * coché d'un côté effacerait celui coché de l'autre, hors ligne. Pur.
  */
 export function diffFields(before: DocData, after: DocData, path: readonly string[] = []): FieldWrite[] {
   const out: FieldWrite[] = [];
@@ -73,8 +75,8 @@ export function diffFields(before: DocData, after: DocData, path: readonly strin
     if (a === undefined) {
       if (isPlainRecord(b)) out.push(...diffFields(b, {}, p));
       else if (b !== undefined) out.push([p, DELETE_FIELD]);
-    } else if (isPlainRecord(a) && isPlainRecord(b)) {
-      out.push(...diffFields(b, a, p));
+    } else if (isPlainRecord(a) && (isPlainRecord(b) || b === undefined)) {
+      out.push(...diffFields(isPlainRecord(b) ? b : {}, a, p));
     } else if (!jsonEqual(a, b)) {
       out.push([p, a]);
     }

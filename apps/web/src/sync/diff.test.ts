@@ -23,7 +23,7 @@ import {
 } from '@a2/core';
 import { applyBatch } from './apply';
 import { DELETE_FIELD, type DocData, type WriteOp } from './docs';
-import { diffToOps } from './diff';
+import { diffFields, diffToOps } from './diff';
 import { migrationOps } from './migration';
 import { projectState } from './project';
 import { NOW, addGrocery, at, canonical, richState, testId, toggle, togglePause } from './testFixtures';
@@ -121,7 +121,10 @@ describe('diffToOps — écritures minimales, et la projection redonne l’état
       },
     }));
     expect(recat.map((op) => `${op.kind} ${op.collection}/${op.id}`)).toEqual(['update groceries/' + id, 'merge settings/groceryMemory']);
-    expect(fieldsOf(recat[1])[0]).toEqual([['memory', 'beurre'], { category: 'epicerie', order: 2 }]);
+    expect(fieldsOf(recat[1]).slice(0, 2)).toEqual([
+      [['memory', 'beurre', 'category'], 'epicerie'],
+      [['memory', 'beurre', 'order'], 2],
+    ]);
     const item = p.state.groceries.items.find((g) => g.id === id)!;
     const index = p.state.groceries.items.indexOf(item);
     const removed = p.act((s) => ({ ...s, groceries: { ...s.groceries, items: removeGroceryItem(s.groceries.items, id) } }));
@@ -145,6 +148,14 @@ describe('diffToOps — écritures minimales, et la projection redonne l’état
       'expenses.rent.label=∅', 'expenses.rent.amountCents=∅', 'expenses.rent.order=∅', 'paid.expenses.rent=∅', `updatedAt=${iso}`,
     ]);
     expect(month(p.state, '2026-10').paid).toEqual({ transferA: true, transferB: true });
+  });
+
+  it('une map qui apparaît s’écrit feuille par feuille (le virement de l’autre survit)', () => {
+    expect(diffFields({ salaryACents: 1 }, { salaryACents: 1, paid: { transferB: true, expenses: { rent: true } } })).toEqual([
+      [['paid', 'transferB'], true],
+      [['paid', 'expenses', 'rent'], true],
+    ]);
+    expect(diffFields({ note: null }, { note: { a: 1 } })).toEqual([[['note'], { a: 1 }]]);
   });
 
   it('mois effacé : suppression douce ; nouveau mois : créé si absent', () => {

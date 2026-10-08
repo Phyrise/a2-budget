@@ -168,6 +168,9 @@ dossier suffit à le retirer).
   connexion, deux téléphones, hors ligne, déconnexion au choix). Lance les
   émulateurs s'ils ne tournent pas ; pas en même temps que `pnpm test:rules`
   (mêmes ports).
+- `node apps/web/scripts/qa-sync.mjs` : QA « deux téléphones » (AL et AC
+  en temps réel, hors ligne des deux côtés puis fusion, invité sur un 3e
+  téléphone, session gardée) ; `--all` pour toute la suite émulateurs.
 - Sur le build émulateurs seulement, `window.__a2qa.signInAs(email)` connecte
   un compte Google factice de l'émulateur Auth (n'existe dans aucun autre build :
   `scripts/check-firebase-split.mjs` le vérifie).

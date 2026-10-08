@@ -6,7 +6,7 @@
  * montée, tout est sans effet.
  */
 import type { Point } from '../susuwatari';
-import type { SootDirector } from './director';
+import type { SootDirector, SootScreen } from './director';
 import { treatCancel, treatDrop, treatMove, treatStart } from './herd';
 import type { KonpeitoTone } from './items';
 import { porters, runner, type PortTarget } from './porters';
@@ -74,7 +74,14 @@ export const soot = {
 export type SootSummon = 'stray' | 'golden' | 'procession' | 'lost';
 export const SUMMON_EVENT = 'a2:noiraudes';
 
+export interface SummonDetail {
+  kind: SootSummon;
+  /** Seule la scène de cet écran répond (sinon celle qui est montée). */
+  screen?: SootScreen;
+}
+
 /** Fait venir une Noiraude (ou la procession) dès qu'aucune feuille n'est ouverte. */
-export function summonNoiraudes(kind: SootSummon): void {
-  window.dispatchEvent(new CustomEvent<{ kind: SootSummon }>(SUMMON_EVENT, { detail: { kind } }));
+export function summonNoiraudes(kind: SootSummon, screen?: SootScreen): void {
+  const detail: SummonDetail = screen ? { kind, screen } : { kind };
+  window.dispatchEvent(new CustomEvent<SummonDetail>(SUMMON_EVENT, { detail }));
 }

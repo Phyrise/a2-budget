@@ -49,12 +49,12 @@ import { AgendaList, DayAgenda } from './EventList';
 import { EventSheet } from './EventSheet';
 import type { EventPrefill, EventSheetState } from './eventForm';
 import { MonthGrid } from './MonthGrid';
+import { SootStage } from '../../creatures/soot';
 import { useShowTasks } from './calendarPrefs';
 import { TasksFilter } from './TasksFilter';
 import { agendaDays, byDate, taskItemsBetween, tasksCount, type TaskItem } from './taskAgenda';
 import { useTaskToggle } from './useTaskToggle';
 import './calendar.css';
-import { SootStage } from '../../creatures/soot';
 
 const UPCOMING_COUNT = 8;
 /** « À venir » montre les tâches des sept prochains jours. */

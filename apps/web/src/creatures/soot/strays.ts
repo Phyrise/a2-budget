@@ -22,7 +22,7 @@ import { STRAY_SIZE, pickPerch, type Box } from './perch';
 /** Durée de la joie d'une Noiraude attrapée, bulle comprise (ms). */
 export const CAUGHT_MS = 1700;
 
-const BLOCKS = '.card, .ledger, .sheet-section, .aisle, .paybook, .balance-card, .cal-month';
+const BLOCKS = '.card, .ledger, .sheet-section, .aisle, .paybook, .balance-card, .cal-month, .kiki-empty__art, .kiki-empty__title, .basket, .event-list';
 const CONTROLS = 'button, input, textarea, select, a[href], label, [role="checkbox"], [role="button"], [tabindex]:not([tabindex="-1"]), .konpeito-jar';
 
 function boxOf(el: Element): Box {

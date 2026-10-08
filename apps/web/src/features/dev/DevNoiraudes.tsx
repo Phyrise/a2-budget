@@ -26,7 +26,7 @@ export function DevNoiraudes({ onClose }: { onClose: () => void }) {
   const call = (kind: SootSummon, module: ModuleId) => {
     onClose();
     setModule(module);
-    window.setTimeout(() => summonNoiraudes(kind), SETTLE_MS);
+    window.setTimeout(() => summonNoiraudes(kind, module === 'maison' ? undefined : module), SETTLE_MS);
   };
   return (
     <section className="dev-section" aria-labelledby="dev-noiraudes">

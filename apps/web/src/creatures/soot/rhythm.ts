@@ -13,7 +13,7 @@
 import { busy, type SootDirector } from './director';
 import { procession } from './parade';
 import { SCROLL_GAP_MS, WARMUP_MS, WRONG_TAB_CHANCE, nextDelayMs, rollRarity, wrongTabDelayMs } from './perch';
-import { SUMMON_EVENT, type SootSummon } from './stage';
+import { SUMMON_EVENT, type SootSummon, type SummonDetail } from './stage';
 import { spawnStray } from './strays';
 
 export const SPAWN_EVENT = 'a2:susuwatari';
@@ -83,7 +83,9 @@ export function startRhythm(d: SootDirector): () => void {
   };
 
   const onSummon = (event: Event) => {
-    const kind = (event as CustomEvent<{ kind?: SootSummon }>).detail?.kind ?? 'stray';
+    const detail = (event as CustomEvent<Partial<SummonDetail> | null>).detail;
+    if (detail?.screen && detail.screen !== d.screen) return;
+    const kind = detail?.kind ?? 'stray';
     const started = performance.now();
     const attempt = () => {
       if (!busy() && summon(d, kind)) return;

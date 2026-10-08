@@ -75,6 +75,7 @@ export function openSession(): FirebaseSession {
   };
 
   const session: FirebaseSession = {
+    preferRedirect: setup.emulators === null && redirectWorks(setup.options.authDomain, window.location.hostname),
     redirectReady:
       setup.emulators !== null || redirectWorks(setup.options.authDomain, window.location.hostname),
 

@@ -76,7 +76,7 @@ describe('membres', () => {
   });
 
   it('l’e-mail est comparé en minuscules', async () => {
-    const d = db(google(env, { uid: ALEXIA.uid, email: 'Alexia.Chaval@Free.FR' }));
+    const d = db(google(env, { uid: ALEXIA.uid, email: 'BlablaDodo24@GMAIL.COM' }));
     await assertSucceeds(getDoc(doc(d, HH)));
     await assertSucceeds(setDoc(doc(d, `${HH}/completions/c3`), fact(ALEXIA)));
   });

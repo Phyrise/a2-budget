@@ -35,7 +35,7 @@ export function startEnv(): Promise<RulesTestEnvironment> {
 
 /** Les deux comptes invités (rôle déduit de l'e-mail) et des intrus. */
 export const ARTHUR = { uid: 'uid-arthur', email: 'arthur.longuefosse@gmail.com', role: 'a' };
-export const ALEXIA = { uid: 'uid-alexia', email: 'alexia.chaval@free.fr', role: 'b' };
+export const ALEXIA = { uid: 'uid-alexia', email: 'blabladodo24@gmail.com', role: 'b' };
 export const STRANGER = { uid: 'uid-stranger', email: 'quelquun@gmail.com', role: 'a' };
 
 /** Un compte connecté avec Google (jeton simulé par l'émulateur). */

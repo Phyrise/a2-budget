@@ -125,8 +125,11 @@ function FirebaseAccountProvider({ children }: { children: ReactNode }) {
   );
 
   const signIn = useCallback(() => {
-    const method = signInMethod(currentPlatform());
+    const preferred = signInMethod(currentPlatform());
     run((loaded) => {
+      // Helper de connexion sur le même site : pas de fenêtre en plus, la
+      // connexion se fait dans la fenêtre en cours (navigateur comme app installée).
+      const method = loaded.preferRedirect ? 'redirect' : preferred;
       if (method === 'redirect' && loaded.redirectReady) {
         // La page va quitter l'app : au retour, la session sera relue.
         writeEntry('google');

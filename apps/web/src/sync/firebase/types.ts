@@ -86,6 +86,8 @@ export interface SyncSetup {
 export interface FirebaseSession {
   /** La redirection peut aboutir (helper auto-hébergé, ou émulateur). */
   readonly redirectReady: boolean;
+  /** Page de connexion sur le même site (hors émulateurs) : redirection dans la fenêtre en cours, partout. */
+  readonly preferRedirect: boolean;
   /** Appelé tout de suite avec l'état restauré, puis à chaque changement. */
   watch(listener: (event: SessionEvent) => void): () => void;
   signIn(method: SignInMethod): Promise<SignInOutcome>;

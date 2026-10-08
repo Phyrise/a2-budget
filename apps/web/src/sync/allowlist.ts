@@ -18,7 +18,8 @@ export const HOUSEHOLD_ID = 'a2home';
 /** E-mails invités (en minuscules) → rôle. */
 export const INVITED_EMAILS: Readonly<Record<string, MemberRole>> = Object.freeze({
   'arthur.longuefosse@gmail.com': 'a',
-  'alexia.chaval@free.fr': 'b',
+  // Provisoire : compte de test d'Arthur (ordinateur) à la place d'alexia.chaval@free.fr.
+  'blabladodo24@gmail.com': 'b',
 });
 
 export function normalizeEmail(email: string): string {

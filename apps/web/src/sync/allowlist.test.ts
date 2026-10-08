@@ -20,13 +20,13 @@ describe('liste blanche', () => {
 
   it('rôle déduit de l’e-mail, sans tenir compte des majuscules', () => {
     expect(roleForAccount({ email: 'arthur.longuefosse@gmail.com', emailVerified: true })).toBe('a');
-    expect(roleForAccount({ email: ' Alexia.Chaval@Free.fr ', emailVerified: true })).toBe('b');
+    expect(roleForAccount({ email: ' BlablaDodo24@Gmail.com ', emailVerified: true })).toBe('b');
   });
 
   it('compte non invité, e-mail absent ou non vérifié : refusé', () => {
     expect(roleForAccount({ email: 'quelquun@gmail.com', emailVerified: true })).toBeNull();
     expect(roleForAccount({ email: 'arthur.longuefosse@gmail.com', emailVerified: false })).toBeNull();
-    expect(roleForAccount({ email: 'alexia.chaval@free.fr' })).toBeNull();
+    expect(roleForAccount({ email: 'blabladodo24@gmail.com' })).toBeNull();
     expect(roleForAccount({ email: null, emailVerified: true })).toBeNull();
     expect(roleForAccount({ email: 'constructor', emailVerified: true })).toBeNull();
   });
@@ -35,9 +35,9 @@ describe('liste blanche', () => {
 describe('verdict d’un compte', () => {
   it('rôle, compte inconnu ou adresse invitée non vérifiée', () => {
     expect(accountVerdict({ email: 'Arthur.Longuefosse@gmail.com', emailVerified: true })).toEqual({ role: 'a' });
-    expect(accountVerdict({ email: 'alexia.chaval@free.fr', emailVerified: true })).toEqual({ role: 'b' });
+    expect(accountVerdict({ email: 'blabladodo24@gmail.com', emailVerified: true })).toEqual({ role: 'b' });
     expect(accountVerdict({ email: 'quelquun@gmail.com', emailVerified: true })).toEqual({ refused: 'not-invited' });
-    expect(accountVerdict({ email: 'alexia.chaval@free.fr', emailVerified: false })).toEqual({ refused: 'unverified' });
+    expect(accountVerdict({ email: 'blabladodo24@gmail.com', emailVerified: false })).toEqual({ refused: 'unverified' });
     expect(accountVerdict({ email: null, emailVerified: true })).toEqual({ refused: 'not-invited' });
   });
 });

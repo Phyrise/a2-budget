@@ -14,7 +14,7 @@ const AUTH = `http://127.0.0.1:9180`;
 const DOCS = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents`;
 
 export const ARTHUR = 'arthur.longuefosse@gmail.com';
-export const ALEXIA = 'alexia.chaval@free.fr';
+export const ALEXIA = 'blabladodo24@gmail.com';
 
 /** Attend Auth ET Firestore (le serveur web de Playwright n'en surveille qu'un). */
 export async function waitForEmulators(timeoutMs = 90_000): Promise<void> {

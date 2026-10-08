@@ -85,7 +85,7 @@ export const soot = {
 };
 
 /** Ce que le panneau DEV peut faire venir sans attendre. */
-export type SootSummon = 'stray' | 'golden' | 'procession' | 'lost';
+export type SootSummon = 'stray' | 'golden' | 'procession' | 'lost' | 'porters';
 export const SUMMON_EVENT = 'a2:noiraudes';
 
 export interface SummonDetail {

@@ -42,7 +42,12 @@ export function tap(a: Actor): void {
 /** Retour au perchoir après un geste (sinon elle reste où elle est). */
 function settle(d: SootDirector, a: Actor, delay = 0.3): void {
   d.later(delay * 1000, () => {
-    if (!d.actors.includes(a) || a.busy === 'flee') return;
+    if (!d.actors.includes(a) || a.busy === 'flee' || a.caught) return;
+    // Encore secouée (horloge du calque plus lente sur un appareil qui peine) : on attend.
+    if (a.s.state === 'shiver') {
+      settle(d, a, 0.15);
+      return;
+    }
     a.s.eyes = 'open';
     a.s.lookAt(null);
     const p = a.perch;
@@ -69,14 +74,33 @@ function push(a: Actor, p: Point, prev: Point): boolean {
     d = Math.hypot(vx, vy) || 1;
   }
   const k = (reach - d) / d;
-  s.x += vx * k;
-  s.y += vy * k * 0.7;
-  if (Math.abs(vx) > 0.5) s.facing = vx > 0 ? 1 : -1;
+  nudge(a, vx * k, vy * k, p);
+  return true;
+}
+
+/**
+ * Le doigt parti d'elle la roule devant lui, dans le sens où il va (sinon
+ * un glissé vers la droite commencé sur sa moitié gauche l'enverrait à
+ * gauche).
+ */
+function shove(a: Actor, p: Point, dir: Point): void {
+  const s = a.s;
+  const b = s.body();
+  const reach = s.scale * 0.6;
+  const tx = p.x + dir.x * reach;
+  const ty = p.y + dir.y * reach;
+  nudge(a, tx - b.x, ty - b.y, p);
+}
+
+function nudge(a: Actor, dx: number, dy: number, p: Point): void {
+  const s = a.s;
+  s.x += dx;
+  s.y += dy * 0.7;
+  if (Math.abs(dx) > 0.5) s.facing = dx > 0 ? 1 : -1;
   s.eyes = 'wide';
   s.lookAt(p);
   s.standFor(0.5);
   s.squashV += 0.4;
-  return true;
 }
 
 function flee(d: SootDirector, a: Actor, from: Point): void {
@@ -93,7 +117,16 @@ function flee(d: SootDirector, a: Actor, from: Point): void {
 
 /** Gestes sur la cible transparente d'une Noiraude (elle la suit partout). */
 export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void {
-  let press: { id: number; at: Point; start: Point; timer: number; long: boolean; pushed: boolean; busy: Actor['busy'] } | null = null;
+  let press: {
+    id: number;
+    at: Point;
+    start: Point;
+    dir: Point;
+    timer: number;
+    long: boolean;
+    pushed: boolean;
+    busy: Actor['busy'];
+  } | null = null;
   let tappedAt = -Infinity;
   b.addEventListener('pointerdown', (e) => {
     if (press || a.caught || a.busy === 'flee' || a.busy === 'climb') return;
@@ -108,7 +141,7 @@ export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void 
       press.long = true;
       flee(d, a, press.at);
     }, LONG_PRESS_MS);
-    press = { id: e.pointerId, at: p, start: p, timer, long: false, pushed: false, busy: a.busy };
+    press = { id: e.pointerId, at: p, start: p, dir: { x: 0, y: 0 }, timer, long: false, pushed: false, busy: a.busy };
   });
   b.addEventListener('pointermove', (e) => {
     if (!press || e.pointerId !== press.id || press.long || a.caught) return;
@@ -118,7 +151,17 @@ export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void 
       window.clearTimeout(press.timer);
       a.busy = 'push';
     }
-    if (press.pushed) push(a, p, press.at);
+    const mx = p.x - press.at.x;
+    const my = p.y - press.at.y;
+    const m = Math.hypot(mx, my);
+    if (m > 0.5) {
+      // Sens du doigt, lissé (un tremblement ne la fait pas sauter de côté).
+      const nx = press.dir.x * 0.6 + (mx / m) * 0.4;
+      const ny = press.dir.y * 0.6 + (my / m) * 0.4;
+      const n = Math.hypot(nx, ny) || 1;
+      press.dir = { x: nx / n, y: ny / n };
+    }
+    if (press.pushed) shove(a, p, press.dir);
     press.at = p;
   });
   const end = (e: PointerEvent, cancel: boolean) => {
@@ -129,8 +172,7 @@ export function bindToys(d: SootDirector, a: Actor, b: HTMLButtonElement): void 
     if (was.pushed) {
       if (a.busy !== 'push') return;
       if (a.role === 'stray' && a.perch && was.busy === null) {
-        a.s.shiver(220);
-        settle(d, a, 0.35);
+        a.s.shiver(220, () => settle(d, a, 0.1));
       } else {
         // En chemin (troupeau, porteuse…) : elle reprend sa route.
         a.busy = was.busy;

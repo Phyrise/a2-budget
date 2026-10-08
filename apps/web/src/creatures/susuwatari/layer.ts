@@ -152,7 +152,7 @@ export function createSusuwatariLayer(canvas: HTMLCanvasElement, options: Susuwa
       fps = fps * 0.95 + (1000 / Math.max(1, now - last)) * 0.05;
       // Les images qui suivent la peinture de sprites (et leur envoi au
       // processeur graphique) ne comptent pas : seule la marche courante juge.
-      if (options.adaptive !== false && time > 2 && dpr > 1.5 && now - cache.builtAt > 600) {
+      if (options.adaptive !== false && !(globalThis as any).__sootExp?.noAdapt && time > 2 && dpr > 1.5 && now - cache.builtAt > 600) {
         slowSum += now - last;
         slowCount += 1;
         if (slowCount >= 90) {

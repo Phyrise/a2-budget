@@ -4,7 +4,7 @@
  * pousse à arroser (Totoro). Les trois états (attente, à moitié, réglée) ne
  * changent que des classes : le CSS (quests.css) fait bouger les pièces.
  */
-import type { QuestKind } from '@a2/core';
+import type { QuestKind, QuestStatus } from '@a2/core';
 
 function Soot() {
   return (
@@ -70,9 +70,9 @@ function Pousse() {
   );
 }
 
-export function QuestArt({ kind }: { kind: QuestKind }) {
+export function QuestArt({ kind, status }: { kind: QuestKind; status: QuestStatus }) {
   return (
-    <svg viewBox="0 0 80 64" className={`quest-art quest-art--${kind}`} aria-hidden="true" focusable="false">
+    <svg viewBox="0 0 80 64" className={`quest-art quest-art--${kind} is-${status}`} aria-hidden="true" focusable="false">
       {kind === 'rocher' ? <Rocher /> : kind === 'tresor' ? <Tresor /> : <Pousse />}
     </svg>
   );

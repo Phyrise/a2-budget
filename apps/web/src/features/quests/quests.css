@@ -67,9 +67,9 @@
   transform-origin: 50% 100%;
   transition: transform 0.9s ease;
 }
-.quest.is-half .quest-art__rock { transform: translateX(-6px) rotate(-9deg); }
-.quest.is-half .quest-art__soot { transform: translateY(-3px); }
-.quest.is-done .quest-art__rock { transform: translateX(-14px) rotate(-38deg); }
+.quest-art.is-half .quest-art__rock { transform: translateX(-6px) rotate(-9deg); }
+.quest-art.is-half .quest-art__soot { transform: translateY(-3px); }
+.quest-art.is-done .quest-art__rock { transform: translateX(-14px) rotate(-38deg); }
 .quest.is-celebrating .quest-art__soot { animation: quest-hop 0.7s ease-in-out 0.3s 3; }
 
 /* ---------- Colis (Kiki) : on le déterre ---------- */
@@ -77,8 +77,8 @@
   transform: translateY(12px);
   transition: transform 0.9s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
-.quest.is-half .quest-art__parcel { transform: translateY(6px) rotate(-4deg); }
-.quest.is-done .quest-art__parcel { transform: translateY(-6px); }
+.quest-art.is-half .quest-art__parcel { transform: translateY(6px) rotate(-4deg); }
+.quest-art.is-done .quest-art__parcel { transform: translateY(-6px); }
 .quest.is-celebrating .quest-art__parcel { animation: quest-hop 0.7s ease-in-out 0.3s 3; }
 
 /* ---------- Pousse (Totoro) : arrosée, elle grandit comme dans la danse ---------- */
@@ -95,10 +95,10 @@
 .quest-art__drops {
   opacity: 0;
 }
-.quest.is-half .quest-art__sprout { transform: scale(0.8); }
-.quest.is-half .quest-art__drops { animation: quest-rain 1.6s ease-in 1; }
-.quest.is-done .quest-art__sprout { transform: scale(1.05); }
-.quest.is-done .quest-art__crown { transform: scale(1); }
+.quest-art.is-half .quest-art__sprout { transform: scale(0.8); }
+.quest-art.is-half .quest-art__drops { animation: quest-rain 1.6s ease-in 1; }
+.quest-art.is-done .quest-art__sprout { transform: scale(1.05); }
+.quest-art.is-done .quest-art__crown { transform: scale(1); }
 .quest.is-celebrating .quest-art__sprout { animation: quest-grow 2.2s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
 
 @keyframes quest-rain {
@@ -184,4 +184,36 @@
   .quest-art__crown {
     transition: none;
   }
+}
+
+/* ---------- Carnet « À deux » : un dessin, une date ---------- */
+.carnet-together {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.carnet-together__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(26, 44, 35, 0.7), rgba(19, 33, 26, 0.7));
+}
+.carnet-together__art {
+  width: 60px;
+  height: 48px;
+}
+.carnet-together__art .quest-art * {
+  transition: none;
+}
+.carnet-together__date {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
 }

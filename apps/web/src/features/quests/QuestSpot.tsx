@@ -136,7 +136,7 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
       data-status={status}
       onClick={touch}
     >
-      <QuestArt kind={shown.kind} />
+      <QuestArt kind={shown.kind} status={status} />
       <Heads quest={shown} />
       {celebrating && <Sparks />}
     </button>

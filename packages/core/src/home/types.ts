@@ -14,6 +14,7 @@
 import type { BudgetBalance, MonthRecord, Settings } from '../types.js';
 import type { CalendarState } from './calendarTypes.js';
 import type { Anniversaries } from './anniversaries.js';
+import type { QuestsState } from './quests.js';
 
 // ---------------------------------------------------------------------------
 // Tâches (Maison)
@@ -400,4 +401,6 @@ export interface AppState {
   calendar?: CalendarState;
   /** V4.3 — anniversaires (couple chaque mois, A et B chaque année) ; `withAnniversaries` les préremplit. */
   anniversaries?: Anniversaries;
+  /** V5.1 — quêtes communes (absent tant qu'aucune n'a été touchée ; voir quests.ts). */
+  quests?: QuestsState;
 }

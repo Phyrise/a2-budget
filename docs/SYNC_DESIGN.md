@@ -673,3 +673,11 @@ apparaît (`paid` absent du mois → `paid = { transferB: true }`) ; hors ligne,
 le virement coché par l'un effaçait celui de l'autre. Une map nouvelle
 s'écrit désormais feuille par feuille (`paid.transferB`), comme une map
 existante (test unitaire dans `diff.test.ts`).
+
+## 18. V5.1 — quêtes communes (collection `quests`)
+
+- Domaine : `packages/core/src/home/quests.ts` (calendrier déterministe ≈ 1 à 2 par semaine, `questOfDay` : jamais plus d'une, `helpQuest`, validation). AppState : `quests?: { items }`, optionnel.
+- Document `households/a2home/quests/{jour-type}` (ou `{jour-type-dXXXX}` pour le mode développeur) : `{ id, kind, day, tab, spot, createdBy (rôle), helpers: { a?, b? }, doneAt? }` + métadonnées. Pont : `apps/web/src/sync/quests.ts` — création SEULE (sans aide), puis l'aide en mise à jour de champ `helpers.<rôle>` ; jamais de suppression.
+- Règles (bloc « Quêtes communes » de firestore.rules, tests/rules/quests.test.ts) : création par un membre (`createdBy` = son rôle, au plus sa propre aide, sans `doneAt`) ; ensuite chacun n'écrit que `helpers.<son rôle>`, une fois ; `doneAt` seulement avec les deux aides ; pas de suppression.
+- Une quête n'est écrite qu'au premier toucher (sinon : 0 lecture/écriture de plus) ; récompense +3 kompeitō dans le bocal LOCAL de chacun, une fois par quête (`a2-budget:quests:v1`).
+- QA : `e2e-sync/qa-quests.spec.ts` (lancé par `qa-sync.mjs`).

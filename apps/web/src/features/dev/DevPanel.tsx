@@ -24,6 +24,7 @@ import { DevFetes } from './DevFetes';
 import { DevNoiraudes } from './DevNoiraudes';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
+import { DevQuests } from './DevQuests';
 import { DevSeasons } from './DevSeasons';
 import './dev.css';
 
@@ -74,6 +75,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
           <DevCompanions onKodama={() => showForest(rattleKodama)} />
           <DevFetes onClose={onClose} />
+          <DevQuests onClose={onClose} />
           <DevSeasons />
           <DevNoiraudes onClose={onClose} />
           <section className="dev-section" aria-labelledby="dev-labs">

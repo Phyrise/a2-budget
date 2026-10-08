@@ -59,6 +59,7 @@ function prepare(op: WriteOp, ctx: PlanContext, written: ReadonlySet<string>): {
   switch (op.kind) {
     case 'create': {
       if (known !== undefined) return null; // déjà là : « créer si absent » ne fait rien
+      if (op.collection === 'quests') return { op, alone: true }; // V5.1 : id déterministe, l'autre a pu la créer
       if (isFact(op.collection) || !OBJECTS.includes(op.collection) || REPLACED.includes(op.collection)) return { op, alone: false };
       return {
         op: { ...op, data: { ...op.data, [CREATION_FIELD]: ctx.newId() } },

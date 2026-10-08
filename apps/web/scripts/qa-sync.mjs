@@ -7,7 +7,8 @@
  * ligne des deux côtés puis fusion (forêt identique), même objet modifié
  * des deux côtés, invité sur un 3e téléphone (aucune requête serveur),
  * compte non invité refusé, session gardée (rechargement, réouverture,
- * ouverture hors ligne).
+ * ouverture hors ligne) ; V5.1 : quêtes communes (e2e-sync/qa-quests.spec.ts :
+ * AL fait apparaître, les deux aident, récompense des deux côtés).
  *
  * Usage (depuis la racine du worktree) :
  *   node apps/web/scripts/qa-sync.mjs [port] [--all] [--no-build]
@@ -28,6 +29,6 @@ function run(command, commandArgs, env = {}) {
 }
 
 if (!args.includes('--no-build')) run('pnpm', ['build:emu']);
-const specs = args.includes('--all') ? [] : ['qa-two-phones'];
+const specs = args.includes('--all') ? [] : ['qa-two-phones', 'qa-quests'];
 run('npx', ['playwright', 'test', '-c', 'playwright.sync.config.ts', ...specs], { E2E_PORT: port });
 console.log('✓ QA deux téléphones : tout est passé.');

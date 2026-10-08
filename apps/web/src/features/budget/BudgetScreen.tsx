@@ -33,6 +33,7 @@ import { KonpeitoJar } from './chihiro/KonpeitoJar';
 import { useSusuwatariRun } from './chihiro/Susuwatari';
 import { SusuwatariGame } from './chihiro/SusuwatariGame';
 import { useMonthEdits } from './chihiro/useMonthEdits';
+import { QuestSpot } from '../quests/QuestSpot';
 import { MonthLedger } from './MonthLedger';
 import { paymentProgress } from './paymentItems';
 import { BreakdownLine, PersonCard } from './PersonCard';
@@ -127,6 +128,7 @@ function BudgetMonth({ currentMonth, s }: { currentMonth: MonthRecord; s: MonthS
       </div>
 
       <section ref={sheetRef} className="screen-sheet budget" aria-labelledby="budget-title">
+        <QuestSpot tab="budget" />
         <ShellNotices />
 
         <div className="sheet-section budget-top">

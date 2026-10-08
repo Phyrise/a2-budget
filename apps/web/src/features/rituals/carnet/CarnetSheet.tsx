@@ -21,6 +21,7 @@ import { silhouettes } from '../../../themes/silhouettes';
 import { CarnetImage } from './CarnetImage';
 import { CarnetLanterns } from './CarnetLanterns';
 import { CarnetProgress } from './CarnetProgress';
+import { CarnetTogether } from './CarnetTogether';
 import { CREATURE_ENTRIES, KODAMA, STAGE_NAMES } from './carnetData';
 
 /**
@@ -184,6 +185,8 @@ export function CarnetSheet({ open, onClose, section }: { open: boolean; onClose
           })}
         </ol>
       </section>
+
+      <CarnetTogether app={appState} />
 
       <section className="carnet-section" aria-labelledby="carnet-memories">
         <h3 id="carnet-memories" className="carnet-section__title display">

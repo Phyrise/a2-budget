@@ -41,6 +41,7 @@ import { ShellNotices } from '../../app/ShellNotices';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
 import { IconButton, fr, shiftMonthKey, useToast } from '../../ui';
+import { QuestSpot } from '../quests/QuestSpot';
 import { CalendarBanner } from './CalendarBanner';
 import { CalendarEmpty, DayEmpty } from './CalendarEmpty';
 import { dayHeading, dayPhrase, displayTitle, eventsCount, monthKeyOf, monthLabel, monthWeeks } from './calendarText';
@@ -231,6 +232,7 @@ export function CalendarScreen() {
       <CalendarBanner monthKey={monthKey} away={away} onPrev={() => showMonth(-1)} onNext={() => showMonth(1)} onToday={backToToday} />
 
       <section className="screen-sheet calendar" aria-labelledby="calendar-title">
+        <QuestSpot tab="calendar" />
         <ShellNotices />
         <SootStage screen="calendar" />
 

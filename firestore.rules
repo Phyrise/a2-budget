@@ -139,6 +139,45 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      // ---------- Quêtes communes (V5.1) : chacun pose SA main, une fois ----------
+      // id = jour-type (calendrier) ou jour-type-dXXXX (mode développeur).
+      // Création par un membre (createdBy = son rôle, au plus sa propre aide) ;
+      // ensuite chacun n'écrit que helpers.<son rôle>, une fois ; doneAt
+      // seulement quand les deux aides sont là ; jamais de suppression.
+      match /quests/{qid} {
+        function questKinds() { return {'rocher': 'budget', 'tresor': 'courses', 'pousse': 'calendar'}; }
+        function questShape() {
+          return incoming().keys().hasOnly(['id', 'kind', 'day', 'tab', 'spot', 'createdBy', 'helpers',
+                                            'doneAt', 'order', 'updatedAt', 'updatedBy', 'syncedAt'])
+            && incoming().kind in questKinds()
+            && incoming().tab == questKinds()[incoming().kind]
+            && isDay(incoming().day)
+            && (qid == incoming().day + '-' + incoming().kind
+                || qid.matches(incoming().day + '-' + incoming().kind + '-d[a-z0-9]{1,8}'))
+            && incoming().spot is int && incoming().spot >= 0 && incoming().spot < 3;
+        }
+        function helpersIn() { return incoming().get('helpers', {}); }
+        function helpersBefore() { return resource.data.get('helpers', {}); }
+        function questCreate() {
+          return questShape()
+            && incoming().createdBy == myRole()
+            && helpersIn() is map && helpersIn().keys().hasOnly([myRole()])
+            && !('doneAt' in incoming());
+        }
+        function questHelp() {
+          return changedKeys().hasOnly(['helpers', 'doneAt', 'order', 'updatedAt', 'updatedBy', 'syncedAt'])
+            && helpersIn() is map
+            && helpersIn().diff(helpersBefore()).affectedKeys().hasOnly([myRole()])
+            && !(myRole() in helpersBefore())
+            && (!changedKeys().hasAny(['doneAt'])
+                || (!('doneAt' in resource.data) && helpersIn().keys().hasAll(['a', 'b'])));
+        }
+        allow read: if isMember(hid);
+        allow create: if isMember(hid) && stamped() && questCreate();
+        allow update: if isMember(hid) && stamped() && questHelp();
+        allow delete: if false;
+      }
+
       // ---------- Par personne (clé = rôle 'a' | 'b') : lu par les deux, écrit par soi ----------
       match /memberState/{who} {
         allow read: if isMember(hid);

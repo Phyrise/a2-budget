@@ -53,6 +53,7 @@ import {
   type DocData,
   type DocStore,
 } from './docs';
+import { questsFromDocs } from './quests';
 
 export interface ProjectOptions {
   /** Mois affiché sur CE téléphone (préférence locale). */
@@ -153,6 +154,7 @@ function assemble(parts: Parts, opts: ProjectOptions): unknown {
   const circles = oneCirclePerWeek(objects(parts, 'circles')).slice(-CIRCLES_MAX) as unknown as Circle[];
   const lantern = single(parts, 'settings', SETTINGS_FOCUS)?.selectedLantern;
   const anniversaries = single(parts, 'settings', SETTINGS_ANNIVERSARIES);
+  const quests = questsFromDocs(parts.get('quests') ?? []);
   const checkpoints = objects(parts, 'checkpoints').filter(isCheckpoint) as unknown as ForestCheckpoint[];
   const milestones = validateMilestones(single(parts, 'meta', META_MILESTONES));
   const replayed = replayForest(
@@ -186,6 +188,7 @@ function assemble(parts: Parts, opts: ProjectOptions): unknown {
       : {}),
     ...(events.length > 0 ? { calendar: { events } } : {}),
     ...(anniversaries !== undefined && Object.keys(anniversaries).length > 0 ? { anniversaries } : {}),
+    ...(quests.length > 0 ? { quests: { items: quests } } : {}),
   };
 }
 

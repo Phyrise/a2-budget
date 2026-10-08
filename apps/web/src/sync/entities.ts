@@ -32,6 +32,7 @@ import {
   type DocKey,
   type DocStore,
 } from './docs';
+import { QUESTS, questList } from './quests';
 
 /** Une liste de l'état vue comme collection. */
 export interface ListSpec {
@@ -100,6 +101,8 @@ export const LIST_SPECS: readonly ListSpec[] = [
     list: (s) => s.budget.balance?.corrections,
     id: (c) => c.monthKey,
   }),
+  // V5.1 — quêtes communes (sync/quests.ts)
+  spec({ collection: QUESTS, fact: false, list: questList, id: (q) => q.id }),
 ];
 
 /** Un document unique (réglages), toujours présent (vide = « absent »). */

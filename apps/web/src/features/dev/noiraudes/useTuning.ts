@@ -2,7 +2,9 @@
  * Labo Noiraudes — l'état du panneau « Réglages » : paramètres courants,
  * trois mémoires (A, B, C), panneau ouvert ou replié, onglet. Gardé dans le
  * localStorage de ce téléphone (relu prudemment : un stockage absent,
- * plein ou abîmé ne casse rien, on repart du modèle visé).
+ * plein ou abîmé ne casse rien, on repart du modèle par défaut). Les
+ * réglages enregistrés avant l'ajout d'un paramètre le reçoivent à sa valeur
+ * par défaut (normalizeParams).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_SOOT_PARAMS, cloneParams, normalizeParams, type SootSpriteParams } from '../../../creatures/susuwatari';

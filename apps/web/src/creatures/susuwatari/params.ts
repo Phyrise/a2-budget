@@ -11,9 +11,14 @@
  * - Rd = rayon du disque noir (`body.radius` × R) : la fourrure est en
  *   « × Rd » (elle part du contour du disque).
  *
- * Modèle par défaut (« Visé ») : un disque noir très sombre presque rond,
- * un halo dense de petits poils courts quasi droits dessinés SOUS le disque
- * (racines cachées) et de grands yeux clairs. À 50 px on lit « ⚫ + 👀 ».
+ * Modèle par défaut (d'après le film, réglé avec Arthur) : un corps de suie
+ * un peu moins noir que les poils et au contour FLOU (duveteux) ; des poils
+ * RECTILIGNES d'épaisseur constante, longs et variés, bien noirs, dont une
+ * partie est dessinée PAR-DESSUS le corps (on les voit y rentrer) ; de grands
+ * yeux ronds clairs qui LOUCHENT un peu vers le nez ; de longues jambes
+ * arquées en « ( ) », en miroir ; pieds et mains = trois bouts très fins.
+ * Les anciens modèles et les réglages collés sans ces champs restent lisibles
+ * (champs manquants = valeurs par défaut ; voir presets.ts).
  */
 
 export interface SootSpriteParams {
@@ -28,6 +33,8 @@ export interface SootSpriteParams {
     darkness: number;
     /** Reflet doux en haut à gauche (volume), 0–1. */
     sheen: number;
+    /** Flou du contour (× Rd) : 0 net, ~0,15 duveteux comme dans le film. */
+    blur: number;
   };
   hair: {
     /** Nombre de poils (fixe : même silhouette à toutes les tailles). */
@@ -41,8 +48,18 @@ export interface SootSpriteParams {
     lenMax: number;
     /** Écart d'angle autour de la normale au contour (± rad). */
     jitter: number;
-    /** Largeur à la base (× Rd), effilée jusqu'à la pointe. */
+    /** Largeur à la base (× Rd). */
     width: number;
+    /** Effilement : 1 pointe fine (ancien rendu), 0 trait droit d'épaisseur constante. */
+    taper: number;
+    /** Bout des poils non effilés : 0 coupé net, 1 arrondi. */
+    cap: number;
+    /** Part des poils dessinés PAR-DESSUS le corps (0–1) : on les voit y rentrer. */
+    over: number;
+    /** Jusqu'où ces poils rentrent : racine la plus profonde (× Rd depuis le centre). */
+    inner: number;
+    /** Noirceur des poils et des membres (même échelle que body.darkness). */
+    ink: number;
     opacity: number;
     /** Courbure (flèche signée au hasard, × longueur du poil ; 0 : droits). */
     bend: number;
@@ -76,6 +93,8 @@ export interface SootSpriteParams {
     lid: number;
     /** Déplacement des yeux avec le regard (× R). */
     turn: number;
+    /** Strabisme : pupilles tirées vers le nez (0–1 de leur course). */
+    cross: number;
   };
   limbs: {
     /** Longueur d'un segment de jambe, cuisse ou tibia (× R). */
@@ -84,13 +103,25 @@ export interface SootSpriteParams {
     arms: number;
     /** Épaisseur des jambes (× R) ; les bras font 80 %. */
     width: number;
-    /** Demi-longueur d'un pied (× R). */
+    /** Demi-longueur d'un pied, ou longueur des orteils si toes > 0 (× R). */
     feet: number;
-    /** Rayon d'une main (× R). */
+    /** Rayon d'une main, ou longueur des doigts si toes > 0 (× R). */
     hands: number;
     /** Écart des hanches et des épaules (× Rd). */
     hip: number;
     shoulder: number;
+    /** Arc des jambes (× ; 0 : droites, 1 : genou plié de tout le mou). */
+    bow: number;
+    /** 0 : les deux genoux du même côté (vers l'avant) ; 1 : en miroir, « ( ) » vers l'extérieur. */
+    mirror: number;
+    /** Écart des pieds au-delà des hanches (× segment de jambe). */
+    stance: number;
+    /** Doigts et orteils : 0 petits pieds ronds et paumes, 1–5 bouts très fins. */
+    toes: number;
+    /** Éventail des doigts et orteils (rad). */
+    spread: number;
+    /** Épaisseur des doigts et orteils (× épaisseur des membres). */
+    fine: number;
   };
   shadow: {
     /** Opacité de l'ombre au sol (multipliée par celle du calque). */
@@ -132,29 +163,48 @@ export interface SootSpriteParams {
 
 export type ParamGroup = Exclude<keyof SootSpriteParams, 'palette'>;
 
-/** Le modèle visé (preset par défaut). */
+/** Le modèle par défaut (d'après le film ; voir presets.ts pour les autres). */
 export const DEFAULT_SOOT_PARAMS: SootSpriteParams = {
-  body: { radius: 0.86, ratio: 0.97, wobble: 0.022, darkness: 0.94, sheen: 0.12 },
+  body: { radius: 0.52, ratio: 0.98, wobble: 0.02, darkness: 0.8, sheen: 0.08, blur: 0.14 },
   hair: {
-    count: 150,
-    rootOut: 0.98,
-    depth: 0.1,
-    lenMin: 0.1,
-    lenMax: 0.2,
-    jitter: 0.08,
-    width: 0.034,
+    count: 46,
+    rootOut: 0.85,
+    depth: 0.15,
+    lenMin: 0.4,
+    lenMax: 0.75,
+    jitter: 0.06,
+    width: 0.032,
     opacity: 1,
     bend: 0,
     tufts: 0,
-    under: 0.3,
-    fuzz: 0.6,
-    fuzzLen: 0.75,
-    fuzzAlpha: 0.45,
-    tone: 0.05,
+    under: 0.25,
+    fuzz: 1.2,
+    fuzzLen: 0.4,
+    fuzzAlpha: 0.6,
+    tone: 0.03,
+    taper: 0,
+    cap: 1,
+    over: 0.55,
+    inner: 0.35,
+    ink: 1,
   },
-  eyes: { size: 0.18, aspect: 1.2, gap: 0.27, lift: 0.07, pupil: 0.062, blink: 1, lid: 0.18, turn: 0.1 },
-  limbs: { legs: 0.3, arms: 0.36, width: 0.07, feet: 0.09, hands: 0.05, hip: 0.36, shoulder: 0.84 },
-  shadow: { opacity: 0.85, width: 1.9, height: 0.22 },
+  eyes: { size: 0.175, aspect: 1.1, gap: 0.26, lift: 0.01, pupil: 0.044, blink: 1, lid: 0.05, turn: 0.06, cross: 0.55 },
+  limbs: {
+    legs: 0.48,
+    arms: 0.6,
+    width: 0.03,
+    feet: 0.1,
+    hands: 0.08,
+    hip: 0.55,
+    shoulder: 0.9,
+    bow: 0.5,
+    mirror: 1,
+    stance: 0.1,
+    toes: 3,
+    spread: 1.9,
+    fine: 0.45,
+  },
+  shadow: { opacity: 1, width: 2, height: 0.22 },
   anim: { furSpeed: 1, wave: 1, hold: 0.5, bounce: 1 },
   glow: { halo: 0.24, blur: 0.22, tips: 0.15, limbs: 0.24 },
   palette: { eye: ['#f8eed8', '#f2e6cb', '#e2d2b0'], pupil: '#1a120f', rim: '#c9b894', halo: '#ecdebe', night: '#ffeec4' },
@@ -164,27 +214,6 @@ export const DEFAULT_SOOT_PARAMS: SootSpriteParams = {
 export function cloneParams(p: SootSpriteParams): SootSpriteParams {
   return JSON.parse(JSON.stringify(p)) as SootSpriteParams;
 }
-
-/**
- * Anciens essais, gardés pour explorer : les aiguilles radiales trop longues
- * (« porc-épic ») et les poils courbes emmêlés (« ronces »).
- */
-export const SOOT_PRESETS: Record<'vise' | 'porcEpic' | 'ronces', SootSpriteParams> = {
-  vise: DEFAULT_SOOT_PARAMS,
-  porcEpic: {
-    ...cloneParams(DEFAULT_SOOT_PARAMS),
-    body: { radius: 0.74, ratio: 1, wobble: 0.04, darkness: 0.92, sheen: 0.1 },
-    hair: { ...DEFAULT_SOOT_PARAMS.hair, count: 520, rootOut: 0.95, depth: 0.2, lenMin: 0.18, lenMax: 0.42, jitter: 0.12, width: 0.026, tufts: 0.5, fuzz: 0.5, fuzzLen: 1.3 },
-    eyes: { ...DEFAULT_SOOT_PARAMS.eyes, size: 0.195, gap: 0.28, lift: 0.08, pupil: 0.068 },
-    limbs: { ...DEFAULT_SOOT_PARAMS.limbs, legs: 0.4, arms: 0.48, width: 0.1, feet: 0.156, hands: 0.08 },
-  },
-  ronces: {
-    ...cloneParams(DEFAULT_SOOT_PARAMS),
-    body: { radius: 0.72, ratio: 1, wobble: 0.05, darkness: 0.9, sheen: 0.05 },
-    hair: { ...DEFAULT_SOOT_PARAMS.hair, count: 380, rootOut: 0.95, depth: 0.25, lenMin: 0.2, lenMax: 0.5, jitter: 0.5, width: 0.018, bend: 0.9, fuzz: 1, fuzzLen: 1.4 },
-    anim: { ...DEFAULT_SOOT_PARAMS.anim, wave: 1.8 },
-  },
-};
 
 /** Clé des sprites : seuls corps, fourrure, yeux pré-rendus, lueur et couleurs les changent. */
 export function spriteKey(p: SootSpriteParams): string {
@@ -239,6 +268,7 @@ const SAFE: Partial<Record<string, [number, number]>> = {
   'body.ratio': [0.4, 1.8],
   'hair.lenMin': [0, 1.5],
   'hair.lenMax': [0, 1.5],
+  'limbs.toes': [0, 6],
 };
 
 const isColor = (v: unknown): v is string => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
@@ -269,6 +299,7 @@ export function normalizeParams(input: unknown, base: SootSpriteParams = DEFAULT
     }
   }
   out.hair.count = Math.round(out.hair.count);
+  out.limbs.toes = Math.round(out.limbs.toes);
   if (out.hair.lenMin > out.hair.lenMax) [out.hair.lenMin, out.hair.lenMax] = [out.hair.lenMax, out.hair.lenMin];
   return out;
 }

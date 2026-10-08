@@ -74,13 +74,13 @@ function drawEyes(ctx: CanvasRenderingContext2D, s: Susuwatari, sp: BodySprites,
     const hh = h * open;
     ctx.drawImage(sp.eye, ex - w - 1, ey - hh - 1, w * 2 + 2, hh * 2 + 2);
     if (open < 0.35) continue;
-    // Pupille : petite, contre le bord, vers ce qu'elle regarde.
+    // Pupille : petite, vers ce qu'elle regarde, tirée vers le nez (strabisme).
     const pr = eyes.pupil * R * (s.eyes === 'wide' ? 0.78 : 1) * persp;
     const lx = Math.max(-1, Math.min(1, s.look.x));
     const ly = Math.max(-1, Math.min(1, s.look.y));
     const reachX = Math.max(0, w - pr * 1.25);
     const reachY = Math.max(0, hh - pr * 1.25);
-    const px = ex + lx * reachX * 0.92;
+    const px = ex + Math.max(-reachX, Math.min(reachX, (lx * 0.92 - side * eyes.cross) * reachX));
     const py = ey + ly * reachY * 0.92;
     ctx.beginPath();
     ctx.ellipse(px, py, pr * 0.92, Math.min(pr * 1.06, hh * 0.9), 0, 0, Math.PI * 2);

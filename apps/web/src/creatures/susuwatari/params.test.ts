@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { furGenome } from './fur';
-import { DEFAULT_SOOT_PARAMS, SOOT_PRESETS, cloneParams, normalizeParams, rigOf, spriteKey } from './params';
+import { DEFAULT_SOOT_PARAMS, cloneParams, normalizeParams, rigOf, spriteKey } from './params';
+import { SOOT_PRESETS } from './presets';
 import { formatParams, parseParams } from './paramsText';
 
 const TAU = Math.PI * 2;

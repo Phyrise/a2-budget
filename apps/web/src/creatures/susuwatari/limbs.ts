@@ -1,9 +1,12 @@
 /**
- * Pattes et bras d'une Noiraude, dessinés en direct (traits fins et courbes,
- * petits pieds, minuscules mains), derrière le corps. Proportions lues dans
- * `SootSpriteParams.limbs` (× R, R = demi-diamètre affiché ; hanches et
- * épaules × Rd, rayon du disque) : les poses restent justes quand on
- * raccourcit les membres.
+ * Pattes et bras d'une Noiraude, dessinés en direct (traits fins et courbes),
+ * derrière le corps. Proportions lues dans `SootSpriteParams.limbs` (× R,
+ * R = demi-diamètre affiché ; hanches et épaules × Rd, rayon du disque) : les
+ * poses restent justes quand on raccourcit les membres.
+ * - jambes arquées (`bow`) : genoux du même côté, vers l'avant (mirror = 0),
+ *   ou en miroir, « ( ) » vers l'extérieur (mirror = 1, comme dans le film) ;
+ * - pieds et mains : petits pieds ronds et paumes (toes = 0), ou trois bouts
+ *   très fins en éventail (toes = 3), posés à plat au sol pour les orteils.
  */
 import type { Susuwatari } from './creature';
 import { sootColor, withAlpha, type SootSpriteParams } from './params';
@@ -34,6 +37,24 @@ function joint(from: Point, to: Point, len: number, bend: number): Point {
   const mx = from.x + ux * (d / 2);
   const my = from.y + uy * (d / 2);
   return { x: mx - uy * h * bend, y: my + ux * h * bend };
+}
+
+/**
+ * Pli du genou (signe et force, pour `joint`) : vers l'avant de la marche
+ * (mirror = 0) ou vers l'extérieur, en miroir (mirror = 1), × bow.
+ */
+export function legBend(p: SootSpriteParams, side: -1 | 1, facing: 1 | -1): number {
+  const m = Math.max(0, Math.min(1, p.limbs.mirror));
+  return p.limbs.bow * ((1 - m) * -facing + m * -side);
+}
+
+/** `n` bouts très fins en éventail depuis (x, y) autour de `dir` ; `flat` aplatit (posés au sol, vus de face). */
+function fan(path: Path2D, x: number, y: number, dir: number, len: number, n: number, spread: number, flat = 1): void {
+  for (let i = 0; i < n; i++) {
+    const a = dir + (n === 1 ? 0 : (i / (n - 1) - 0.5) * spread);
+    path.moveTo(x, y);
+    path.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len * flat);
+  }
 }
 
 /** Membre fin et courbe passant par l'articulation. */
@@ -74,7 +95,7 @@ function ink(ctx: CanvasRenderingContext2D, k: Strokes, rim: number, p: SootSpri
     ctx.lineWidth = halo * 2;
     ctx.stroke(k.blobs);
   }
-  const color = sootColor(p.body.darkness, 0.1);
+  const color = sootColor(p.hair.ink, 0.1);
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = k.width;
@@ -92,17 +113,20 @@ export function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: BodyMa
   const L = seg * (0.45 + 0.55 * s.legs);
   const moving = s.state === 'walk' || s.state === 'flee' || Math.hypot(s.vx, s.vy) > 8;
   const air = s.z > 0;
-  const k = strokes(Math.max(0.8, p.limbs.width * R), 0);
+  const width = Math.max(0.8, p.limbs.width * R);
+  const toes = Math.round(p.limbs.toes);
+  const k = strokes(width, Math.max(0.5, p.limbs.width * R * p.limbs.fine));
   const F = p.limbs.feet * R;
+  const stance = p.limbs.stance * seg;
   for (const side of [-1, 1] as const) {
     const hip = apply(m, side * p.limbs.hip * Rd, 0.7 * Rd * p.body.ratio);
     const ground = s.y - s.z;
-    let fx = hip.x + side * 0.225 * seg;
+    let fx = hip.x + side * stance;
     let fy = ground;
     let toe = 0;
     if (air) {
       // Pattes pendantes, un peu écartées.
-      fx = hip.x + side * 0.35 * seg - s.facing * 0.15 * seg;
+      fx = hip.x + side * (stance + 0.125 * seg) - s.facing * 0.15 * seg;
       fy = hip.y + L * 1.75;
       toe = 0.5;
     } else if (moving) {
@@ -117,13 +141,19 @@ export function drawLegs(ctx: CanvasRenderingContext2D, s: Susuwatari, m: BodyMa
         lift = Math.sin(Math.PI * v) * 0.55 * seg;
         toe = Math.sin(Math.PI * v) * 0.6;
       }
-      fx = hip.x + s.facing * along + side * 0.1 * seg;
+      fx = hip.x + s.facing * along + side * stance * 0.45;
       fy = ground - lift;
     }
     // Si la patte est rentrée, le pied remonte sous la fourrure.
     fy = hip.y + (fy - hip.y) * (0.35 + 0.65 * s.legs);
     const foot = { x: fx, y: fy };
-    limb(k.lines, hip, joint(hip, foot, L, -s.facing), foot);
+    limb(k.lines, hip, joint(hip, foot, L, legBend(p, side, s.facing)), foot);
+    if (toes > 0) {
+      // Orteils : bouts très fins posés à plat au sol (éventail aplati), un peu vers l'extérieur.
+      const out = side * 0.3 * Math.max(0, Math.min(1, p.limbs.mirror));
+      fan(k.fine, fx, fy - 0.15 * F, Math.PI / 2 - out - s.facing * toe * 0.8, F, toes, p.limbs.spread, air || toe > 0.2 ? 0.85 : 0.4);
+      continue;
+    }
     // Petit pied arrondi, pointé vers l'avant.
     const ex = fx + s.facing * 0.51 * F;
     const ey = fy - 0.2 * F;
@@ -138,6 +168,9 @@ function armGoal(s: Susuwatari, side: -1 | 1, time: number): Point {
   switch (s.armPose) {
     case 'up':
       return { x: -side * 0.25, y: -1.92 };
+    case 'cheer':
+      // Bras levés en « V » (comme dans le film).
+      return { x: side * 1.2, y: -1.3 };
     case 'wave':
       if (side < 0) return { x: 0, y: 0 };
       return { x: 1 + 0.21 * Math.sin(time * 12), y: -1.5 + 0.125 * Math.cos(time * 12) };
@@ -156,7 +189,8 @@ export function drawArms(ctx: CanvasRenderingContext2D, s: Susuwatari, m: BodyMa
   const Rd = R * p.body.radius;
   const L = p.limbs.arms * R;
   const width = Math.max(0.7, p.limbs.width * 0.8 * R);
-  const k = strokes(width, Math.max(0.6, width * 0.58));
+  const toes = Math.round(p.limbs.toes);
+  const k = strokes(width, toes > 0 ? Math.max(0.5, p.limbs.width * R * p.limbs.fine) : Math.max(0.6, width * 0.58));
   const H = p.limbs.hands * R;
   for (const side of [-1, 1] as const) {
     const sh = { x: side * p.limbs.shoulder * Rd, y: -0.15 * Rd };
@@ -166,8 +200,13 @@ export function drawArms(ctx: CanvasRenderingContext2D, s: Susuwatari, m: BodyMa
     const hand = apply(m, local.x, local.y);
     const elbow = joint(from, hand, L, side);
     limb(k.lines, from, elbow, hand);
-    // Minuscule main : une paume et quatre doigts (si elle est assez grande pour les voir).
     const dir = Math.atan2(hand.y - elbow.y, hand.x - elbow.x);
+    if (toes > 0) {
+      // Doigts : bouts très fins dans le prolongement du bras.
+      fan(k.fine, hand.x, hand.y, dir, H, toes, p.limbs.spread * 0.8);
+      continue;
+    }
+    // Minuscule main : une paume et quatre doigts (si elle est assez grande pour les voir).
     k.blobs.moveTo(hand.x + Math.cos(dir) * H, hand.y + Math.sin(dir) * H);
     k.blobs.ellipse(hand.x, hand.y, H, H * 0.85, dir, 0, Math.PI * 2);
     if (H > 1.04) {

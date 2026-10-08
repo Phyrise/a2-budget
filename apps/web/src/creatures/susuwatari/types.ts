@@ -13,7 +13,7 @@ export interface Rect {
 }
 
 export type SusuwatariState = 'idle' | 'walk' | 'shiver' | 'flee' | 'sleep' | 'gone';
-export type ArmPose = 'none' | 'up' | 'wave' | 'flail';
+export type ArmPose = 'none' | 'up' | 'cheer' | 'wave' | 'flail';
 export type EyeMood = 'open' | 'happy' | 'closed' | 'wide';
 
 export interface SusuwatariEnv {

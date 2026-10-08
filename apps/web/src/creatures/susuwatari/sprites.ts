@@ -6,13 +6,14 @@
  * sprites quand ces paramètres changent.
  *
  * Un jeu de sprites par (variante de fourrure, rayon en px appareil) :
- * - `frames` : FRAMES images du corps entier — poils et duvet qui ondulent en
- *              boucle, SOUS le disque fixe (racines cachées) — fondues à
- *              l'affichage ;
+ * - `frames` : FRAMES images du corps entier, fondues à l'affichage : duvet
+ *              (flou si le contour l'est) et poils qui ondulent en boucle
+ *              SOUS le disque fixe (racines cachées), le disque (net ou au
+ *              contour flou), puis les poils peints PAR-DESSUS (`over`) ;
  * - `halo`   : lueur douce derrière le corps (fonds sombres, `rim` > 0) ;
  * - `eye`    : blanc de l'œil légèrement ombré ; `glow` : lueur de nuit.
  */
-import { furGenome, traceHair, type FurGenome, type Hair } from './fur';
+import { furGenome, traceHair, type FurGenome, type Hair, type HairShape } from './fur';
 import { sootColor, withAlpha, type SootSpriteParams } from './params';
 
 /** Nombre d'images de frisottis (boucle). */
@@ -52,27 +53,44 @@ interface Paint {
   /** Rayon du disque (px appareil) et centre du sprite. */
   Rd: number;
   m: number;
+  shape: HairShape;
 }
 
-/** Remplit en un seul chemin tous les poils d'un lot (rapide). */
-function fillBatch(ctx: CanvasRenderingContext2D, k: Paint, pick: (h: Hair) => boolean, color: string, alpha: number, phi: number): void {
+/** Flou du contour du corps (px appareil), 0 : net. */
+function softness(k: Paint): number {
+  const blur = Math.max(0, k.p.body.blur) * k.Rd;
+  return blur > 0.4 ? blur : 0;
+}
+
+/**
+ * Remplit en un seul chemin tous les poils d'un lot (rapide). `soft` (px) :
+ * flou, par l'ombre d'un tracé hors champ (pas de filtre : Safari).
+ */
+function fillBatch(ctx: CanvasRenderingContext2D, k: Paint, pick: (h: Hair) => boolean, color: string, alpha: number, phi: number, soft = 0): void {
   if (alpha <= 0) return;
+  const off = soft > 0 ? Math.ceil(k.m * 4) : 0;
   ctx.beginPath();
   let any = false;
   for (const h of k.genome.hairs) {
     if (!pick(h)) continue;
-    traceHair(ctx, h, k.m, k.m, k.Rd, phi, k.p.anim.wave);
+    traceHair(ctx, h, k.m - off, k.m, k.Rd, phi, k.p.anim.wave, k.shape);
     any = true;
   }
   if (!any) return;
+  ctx.save();
   ctx.globalAlpha = Math.min(1, alpha);
-  ctx.fillStyle = color;
+  if (soft > 0) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = soft;
+    ctx.shadowOffsetX = off;
+    ctx.fillStyle = '#000';
+  } else ctx.fillStyle = color;
   ctx.fill();
-  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
-function contour(ctx: CanvasRenderingContext2D, k: Paint, scale: number, dx = 0): void {
-  ctx.beginPath();
+/** Contour du disque ajouté au chemin courant (× scale, décalé de dx). */
+function contourPath(ctx: CanvasRenderingContext2D, k: Paint, scale: number, dx = 0): void {
   for (let i = 0; i <= 120; i++) {
     const e = k.genome.edge((i / 120) * Math.PI * 2);
     const x = k.m + dx + e.x * k.Rd * scale;
@@ -83,20 +101,46 @@ function contour(ctx: CanvasRenderingContext2D, k: Paint, scale: number, dx = 0)
   ctx.closePath();
 }
 
-/** Le disque (fixe), peint par-dessus les poils de chaque image. */
+function contour(ctx: CanvasRenderingContext2D, k: Paint, scale: number, dx = 0): void {
+  ctx.beginPath();
+  contourPath(ctx, k, scale, dx);
+}
+
+/**
+ * Le disque (fixe), peint entre les poils du dessous et ceux du dessus.
+ * Contour flou (`blur`) : l'ombre d'un disque hors champ, centrée sur le
+ * contour (moitié dedans, moitié dehors) — un corps diffus, « poilu ».
+ */
 function paintDisc(ctx: CanvasRenderingContext2D, k: Paint): void {
   const { body } = k.p;
-  contour(ctx, k, 1);
-  ctx.fillStyle = sootColor(body.darkness);
-  ctx.fill();
+  const color = sootColor(body.darkness);
+  const soft = softness(k);
+  if (soft > 0) {
+    const off = Math.ceil(k.m * 4);
+    ctx.save();
+    ctx.shadowColor = color;
+    // shadowBlur = 2σ ; bande 10–90 % ≈ 2,56σ ≈ `soft`.
+    ctx.shadowBlur = soft * 0.8;
+    ctx.shadowOffsetX = off;
+    contour(ctx, k, 1, -off);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+    ctx.restore();
+  } else {
+    contour(ctx, k, 1);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
   if (body.sheen > 0) {
     // Reflet : une lumière très douce en haut à gauche (volume, pas de brillance).
     const g = ctx.createRadialGradient(k.m - k.Rd * 0.38, k.m - k.Rd * 0.45, 0, k.m - k.Rd * 0.2, k.m - k.Rd * 0.25, k.Rd * 1.05);
     g.addColorStop(0, `rgba(120, 104, 92, ${0.32 * body.sheen})`);
     g.addColorStop(0.5, `rgba(90, 78, 70, ${0.12 * body.sheen})`);
     g.addColorStop(1, 'rgba(60, 52, 46, 0)');
+    ctx.globalCompositeOperation = 'source-atop';
     ctx.fillStyle = g;
-    ctx.fill();
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
   }
 }
 
@@ -105,13 +149,28 @@ function paintFrame(k: Paint, side: number, frame: number, rim: number, disc: HT
   const ctx = ctx2d(c);
   const { hair, body, glow, palette } = k.p;
   const phi = (frame / FRAMES) * Math.PI * 2;
-  // Duvet d'abord (derrière), translucide ; puis les poils, en trois teintes.
-  fillBatch(ctx, k, (h) => h.fine, sootColor(body.darkness, hair.tone), hair.opacity * hair.fuzzAlpha, phi);
-  for (let tone = 0; tone < 3; tone++) {
-    fillBatch(ctx, k, (h) => !h.fine && h.tone === tone, sootColor(body.darkness, tone * hair.tone), hair.opacity, phi);
-  }
-  if (rim > 0) fillBatch(ctx, k, (h) => h.lit, palette.rim, glow.tips * rim, phi);
+  const soft = softness(k);
+  // Duvet d'abord (derrière), translucide, flou si le contour l'est.
+  fillBatch(ctx, k, (h) => h.fine, sootColor(body.darkness, hair.tone), hair.opacity * hair.fuzzAlpha, phi, soft * 0.6);
+  // Poils du dessous, en trois teintes, puis le disque, puis ceux du dessus.
+  const tones = (over: boolean) => {
+    for (let tone = 0; tone < 3; tone++) {
+      fillBatch(ctx, k, (h) => !h.fine && h.over === over && h.tone === tone, sootColor(hair.ink, tone * hair.tone), hair.opacity, phi);
+    }
+  };
+  tones(false);
   ctx.drawImage(disc, 0, 0);
+  tones(true);
+  if (rim > 0) {
+    // Pointes éclairées (fonds sombres) : seulement hors du disque.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, side, side);
+    contourPath(ctx, k, 1);
+    ctx.clip('evenodd');
+    fillBatch(ctx, k, (h) => h.lit, palette.rim, glow.tips * rim, phi);
+    ctx.restore();
+  }
   return c;
 }
 
@@ -218,7 +277,8 @@ export function* buildSteps(variant: number, radius: number, rim: number, p: Soo
   // Marge : portée des poils, flou de la lueur, frisottis.
   const extent = Math.max(genome.reach * p.body.radius, rim > 0 ? p.body.radius + p.glow.blur * 1.6 : 0) + 0.04;
   const side = Math.ceil(R * extent * 2) + 4;
-  const k: Paint = { genome, p, Rd, m: side / 2 };
+  // Demi-largeur minimale d'un poil : ~1 px appareil de trait.
+  const k: Paint = { genome, p, Rd, m: side / 2, shape: { taper: p.hair.taper, cap: p.hair.cap, minW: 0.5 } };
   const disc = canvas(side, side);
   made.push(disc);
   paintDisc(ctx2d(disc), k);

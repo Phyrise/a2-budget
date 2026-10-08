@@ -673,3 +673,21 @@ apparaît (`paid` absent du mois → `paid = { transferB: true }`) ; hors ligne,
 le virement coché par l'un effaçait celui de l'autre. Une map nouvelle
 s'écrit désormais feuille par feuille (`paid.transferB`), comme une map
 existante (test unitaire dans `diff.test.ts`).
+
+## 18. V5.1 — Présence, coucous, bocal partagé (connecté seulement)
+
+- **Présence** : `memberState/{rôle}` reçoit `{ tab, visible, at }` (heure
+  serveur, fusion) à chaque changement d'onglet, `visible: false` à la mise
+  en arrière-plan, battement 60 s si visible. L'autre est « là » si
+  `visible` et `at` < 2,5 min. Écoute de la fiche de l'autre seulement
+  quand l'app est visible (`presence/LiveContext.tsx`, `sdk/live.ts`).
+- **Coucou** : `pokeAt` (heure serveur) dans sa propre fiche, anti-rafale
+  5 s ; joué une fois chez l'autre s'il a moins de 20 s.
+- **Bocal** : `play/{rôle}` `{ given, spent, caught, golden, migrated }`,
+  écrit en `increment` par ses propres gestes ; bocal = 20 + Σ given − Σ
+  spent. Migration unique (transaction, marque `migrated`). Règles : écrit
+  par son rôle, entiers ≥ 0, jamais en baisse, marque jamais effacée.
+- **Coût** (`dayCost`, testé) : grosse journée à deux (3 h visibles chacun,
+  30 ouvertures, 120 onglets, 20 coucous, 40 gestes) = 840 écritures + 1 100
+  lectures < 2 000 ; journée ordinaire < 700.
+- **QA** : `e2e-sync/presence.spec.ts` (dans `qa-sync.mjs`).

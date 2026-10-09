@@ -23,6 +23,8 @@ from common import ASSETS, OUT, PIPE, STAGE_SOURCES, WORK, read_json
 
 FX_COUNTS = {"fog": 3, "rays": 3, "drips": 6, "needles": 4, "motes": 6, "halos": 2}
 POSES = ["idle", "happy", "proud", "sleepy", "curious"]
+# Compagnons indexés par identifiant (CompanionId de @a2/core), ordre du sélecteur.
+COMPANIONS = ["jiji", "calcifer", "teto", "hin"]
 CREATURES = ["moss-ling", "seed-spirit", "leaf-sprite", "ember-wisp", "mushroom-pip", "water-drip"]
 LUTS = ["quiet", "peaceful", "lively", "flourishing", "night"]
 SEASONS = ["spring", "autumn", "winter"]
@@ -168,10 +170,10 @@ def main() -> None:
     kodama = [asset(f"sprites/{k}.webp") for k in order]
     creatures = [f"      '{c}': {asset(f'sprites/{c}.webp')}," for c in CREATURES]
     guardian = asset("sprites/guardian.webp")
-    comp = {
-        who: ", ".join(f"{p}: {asset(f'sprites/{name}-{p}.webp')}" for p in POSES)
-        for who, name in (("a", "jiji"), ("b", "calcifer"))
-    }
+    comp = "\n".join(
+        f"    {cid}: {{ " + ", ".join(f"{p}: {asset(f'sprites/{cid}-{p}.webp')}" for p in POSES) + " },"
+        for cid in COMPANIONS
+    )
     fx = []
     for g, n in FX_COUNTS.items():
         names = [asset(f"fx/{g}-{i}.webp") for i in range(1, n + 1)]
@@ -264,8 +266,7 @@ export const manifest: WorldManifest = {{
     {prop('guardian', guardian)},
   }},
   companions: {{
-    a: {{ {comp['a']} }},
-    b: {{ {comp['b']} }},
+{comp}
   }},
   fx: {{
 {chr(10).join(fx)}

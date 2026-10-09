@@ -27,7 +27,8 @@ import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
 import { budgetTheme } from '../../themes/manifest';
 import { cx } from '../../ui';
-import { CalciferArt, JijiArt } from '../../ui/companionArt';
+import { CompanionFigure } from '../../ui/Companion';
+import { useCompanionIds } from '../../ui/companions';
 import { QuestArt } from './QuestArt';
 import { questMemory } from './questMemory';
 import { useQuestPlacement } from './useQuestPlacement';
@@ -38,16 +39,17 @@ const FADE_MS = 1200;
 const LABEL = { rocher: 'Un rocher', tresor: 'Un petit colis', pousse: 'Une pousse' } as const;
 
 function Heads({ quest }: { quest: SharedQuest }) {
+  const ids = useCompanionIds();
   return (
     <span className="quest__heads" aria-hidden="true">
       {quest.helpers.a !== undefined && (
         <span className="quest__head quest__head--a">
-          <JijiArt mood="happy" />
+          <CompanionFigure id={ids.a} role="a" mood="happy" />
         </span>
       )}
       {quest.helpers.b !== undefined && (
         <span className="quest__head quest__head--b">
-          <CalciferArt mood="happy" />
+          <CompanionFigure id={ids.b} role="b" mood="happy" />
         </span>
       )}
     </span>

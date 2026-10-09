@@ -2,7 +2,7 @@
  * Toucher un compagnon, pour rien, juste pour le plaisir (V4.3).
  *
  * - Un toucher : petite réaction (Calcifer crépite et s'élève, Jiji penche
- *   la tête et balance la queue). Anti-rafale : une réaction en cours n'est
+ *   la tête et balance la queue ; Teto et Hin : la pose seulement, V5.6). Anti-rafale : une réaction en cours n'est
  *   jamais relancée, les touchers sont seulement comptés.
  * - Touché trop souvent (≥ 4 fois en 2 s) : Calcifer s'énerve (flamme plus
  *   haute et rouge-orangé, tremblement, bouffée de fumée, grognement), Jiji
@@ -14,14 +14,15 @@
  *
  * Logique pure (`pokeStep`, testée) + hook. Le mode développeur déclenche
  * une réaction sur les compagnons montés (`previewPoke`), sans rien écrire.
+ * V5.6 : tout se règle par compagnon choisi (pose, son : ui/companions.ts).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { readPrefs } from '../app/prefs';
 import { playCue } from '../app/sound/play';
 import type { CompanionMood } from '../world/types';
+import { companionProfile, type CompanionId, type CompanionReaction } from './companions';
 
-export type PokeKind = 'poke' | 'upset';
-export type PokeWho = 'a' | 'b';
+export type PokeKind = CompanionReaction;
 
 export interface PokeState {
   kind: PokeKind | null;
@@ -53,11 +54,9 @@ export function pokeSettle(s: PokeState, now: number): PokeState {
   return s.kind !== null && now >= s.until ? { ...s, kind: null } : s;
 }
 
-/** Pose peinte pendant la réaction (planches v3 : aucune pose « fâché ») ; null = l'humeur du moment. */
-export function pokeMood(who: PokeWho, kind: PokeKind | null): CompanionMood | null {
-  if (kind === 'poke') return who === 'b' ? 'happy' : 'curious';
-  if (kind === 'upset') return who === 'b' ? 'proud' : 'idle';
-  return null;
+/** Pose peinte pendant la réaction (aucune pose « fâché » sur les planches) ; null = l'humeur du moment. */
+export function pokeMood(id: CompanionId, kind: PokeKind | null): CompanionMood | null {
+  return kind === null ? null : companionProfile(id).pokeMoods[kind];
 }
 
 function calmNow(): boolean {
@@ -68,19 +67,19 @@ function calmNow(): boolean {
   }
 }
 
-function sound(who: PokeWho, kind: PokeKind) {
-  if (who !== 'b') return;
-  playCue(kind === 'upset' ? 'grumble' : 'crackle');
+function sound(id: CompanionId, kind: PokeKind) {
+  const cue = companionProfile(id).sounds?.[kind];
+  if (cue !== undefined) playCue(cue);
 }
 
 const PREVIEW_EVENT = 'a2:companion-poke';
 
-/** Mode développeur : la réaction voulue sur chaque compagnon touchable monté. */
-export function previewPoke(who: PokeWho, kind: PokeKind) {
-  window.dispatchEvent(new CustomEvent(PREVIEW_EVENT, { detail: { who, kind } }));
+/** Mode développeur : la réaction voulue sur chaque compagnon `id` touchable monté. */
+export function previewPoke(id: CompanionId, kind: PokeKind) {
+  window.dispatchEvent(new CustomEvent(PREVIEW_EVENT, { detail: { id, kind } }));
 }
 
-export function useCompanionPoke(who: PokeWho | null) {
+export function useCompanionPoke(id: CompanionId | null) {
   const [state, setState] = useState<PokeState>(IDLE_POKE);
   const [calm, setCalm] = useState(false);
   const ref = useRef(state);
@@ -92,12 +91,12 @@ export function useCompanionPoke(who: PokeWho | null) {
       if (next === prev) return;
       ref.current = next;
       setState(next);
-      if (who && next.kind && next.n !== prev.n) {
+      if (id && next.kind && next.n !== prev.n) {
         setCalm(calmNow());
-        sound(who, next.kind);
+        sound(id, next.kind);
       }
     },
-    [who],
+    [id],
   );
 
   const poke = useCallback(() => apply(pokeStep(ref.current, performance.now())), [apply]);
@@ -110,16 +109,16 @@ export function useCompanionPoke(who: PokeWho | null) {
   }, [state, apply]);
 
   useEffect(() => {
-    if (!who) return;
+    if (!id) return;
     const onPreview = (e: Event) => {
-      const d = (e as CustomEvent<{ who: PokeWho; kind: PokeKind }>).detail;
-      if (d?.who !== who) return;
+      const d = (e as CustomEvent<{ id: CompanionId; kind: PokeKind }>).detail;
+      if (d?.id !== id) return;
       const now = performance.now();
       apply({ kind: d.kind, until: now + (d.kind === 'upset' ? UPSET_MS : POKE_MS), taps: [], n: ref.current.n + 1 });
     };
     window.addEventListener(PREVIEW_EVENT, onPreview);
     return () => window.removeEventListener(PREVIEW_EVENT, onPreview);
-  }, [who, apply]);
+  }, [id, apply]);
 
   return { kind: state.kind, n: state.n, calm, poke };
 }

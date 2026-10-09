@@ -11,7 +11,12 @@
  * Position `x` : fraction de la largeur de la scène (0 à 1, hors écran
  * au-delà). Calme (« Immobile », mouvement réduit) : aucun déplacement, il
  * apparaît assis et disparaît d'un coup ; seules les poses changent.
+ *
+ * V5.6 : le compagnon est celui que l'autre a choisi ; sa démarche (`gait`)
+ * et sa pose de caresse viennent du registre (ui/companions.ts), passées à
+ * `arrive` (défaut : Jiji trotte pour `a`, Calcifer flotte pour `b`).
  */
+import type { Gait } from '../../ui/companions';
 
 export type AvatarWho = 'a' | 'b';
 export type AvatarPhase = 'enter' | 'walk' | 'sit' | 'look' | 'yawn' | 'sleep' | 'exit' | 'gone';
@@ -19,8 +24,23 @@ export type AvatarPhase = 'enter' | 'walk' | 'sit' | 'look' | 'yawn' | 'sleep' |
 export type AvatarReact = 'hop' | 'purr' | 'wave';
 export type AvatarMood = 'idle' | 'happy' | 'proud' | 'sleepy' | 'curious';
 
+/** Ce qui distingue le compagnon dans l'automate (registre ui/companions.ts). */
+export interface AvatarBody {
+  gait: Gait;
+  /** Pose pendant une caresse. */
+  caressMood: AvatarMood;
+}
+
+/** Compagnons par défaut des rôles (Jiji, Calcifer). */
+export const DEFAULT_BODY: Record<AvatarWho, AvatarBody> = {
+  a: { gait: 'trot', caressMood: 'happy' },
+  b: { gait: 'float', caressMood: 'proud' },
+};
+
 export interface AvatarState {
   who: AvatarWho;
+  gait: Gait;
+  caressMood: AvatarMood;
   phase: AvatarPhase;
   x: number;
   target: number;
@@ -42,10 +62,16 @@ export const OFF_LEFT = -0.15;
 export const OFF_RIGHT = 1.15;
 /** Zone où il se promène. */
 export const ROAM = [0.1, 0.9] as const;
-/** Vitesses (largeur de scène par seconde). */
-export const SPEED: Record<AvatarWho, { enter: number; walk: number }> = {
-  a: { enter: 0.42, walk: 0.13 },
-  b: { enter: 0.26, walk: 0.09 },
+/**
+ * Vitesses par démarche (largeur de scène par seconde). À régler avec leurs
+ * animations : scurry (Teto) = trot pour l'instant, waddle (Hin) = trot
+ * plus lent.
+ */
+export const GAIT_SPEED: Record<Gait, { enter: number; walk: number }> = {
+  trot: { enter: 0.42, walk: 0.13 },
+  float: { enter: 0.26, walk: 0.09 },
+  scurry: { enter: 0.42, walk: 0.13 },
+  waddle: { enter: 0.3, walk: 0.08 },
 };
 export const SLEEP_AFTER_MS = 75_000;
 export const REACT_MS: Record<AvatarReact, number> = { hop: 900, purr: 1_400, wave: 1_400 };
@@ -69,12 +95,14 @@ function between(seed: number, lo: number, hi: number): [number, number] {
 const toward = (from: number, to: number): 1 | -1 => (to >= from ? 1 : -1);
 
 /** L'autre arrive sur l'onglet : son compagnon entre (ou apparaît assis, calme). */
-export function arrive(who: AvatarWho, now: number, seed: number, calm: boolean): AvatarState {
+export function arrive(who: AvatarWho, now: number, seed: number, calm: boolean, body: AvatarBody = DEFAULT_BODY[who]): AvatarState {
   const [side, s1] = rand(seed);
   const [target, s2] = between(s1, 0.25, 0.75);
   const x = calm ? target : side < 0.5 ? OFF_LEFT : OFF_RIGHT;
   const base: AvatarState = {
     who,
+    gait: body.gait,
+    caressMood: body.caressMood,
     phase: calm ? 'sit' : 'enter',
     x,
     target,
@@ -138,7 +166,7 @@ export function step(s: AvatarState, now: number, dt: number, calm: boolean): Av
   if (cur.phase === 'enter' || cur.phase === 'walk' || cur.phase === 'exit') {
     if (calm && cur.phase !== 'exit') return { ...cur, x: cur.target, phase: 'sit', until: now + 4_000 };
     if (calm) return { ...cur, phase: 'gone' };
-    const speed = cur.phase === 'walk' ? SPEED[cur.who].walk : SPEED[cur.who].enter;
+    const speed = cur.phase === 'walk' ? GAIT_SPEED[cur.gait].walk : GAIT_SPEED[cur.gait].enter;
     const d = cur.target - cur.x;
     const move = (speed * Math.max(0, dt)) / 1000;
     if (Math.abs(d) > move) return { ...cur, x: cur.x + Math.sign(d) * move };
@@ -170,7 +198,7 @@ export function avatarMood(s: AvatarState): AvatarMood {
     case 'wave':
       return 'happy';
     case 'purr':
-      return s.who === 'b' ? 'proud' : 'happy';
+      return s.caressMood;
     default:
   }
   if (s.phase === 'sleep' || s.phase === 'yawn') return 'sleepy';
@@ -178,9 +206,12 @@ export function avatarMood(s: AvatarState): AvatarMood {
   return 'idle';
 }
 
-/** Façon de bouger (classes CSS) : trotte, flotte, respire, dort. */
+/**
+ * Façon de bouger (classes CSS) : trotte, flotte, respire, dort. Scurry et
+ * waddle s'animent comme le trot tant qu'avatar.css ne les connaît pas.
+ */
 export function avatarMotion(s: AvatarState): 'trot' | 'float' | 'rest' | 'sleep' {
   if (s.phase === 'sleep') return 'sleep';
-  if (isMoving(s)) return s.who === 'a' ? 'trot' : 'float';
-  return s.who === 'b' ? 'float' : 'rest';
+  if (isMoving(s)) return s.gait === 'float' ? 'float' : 'trot';
+  return s.gait === 'float' ? 'float' : 'rest';
 }

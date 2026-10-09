@@ -1,12 +1,13 @@
 /**
  * L'avatar de l'autre (V5.2) : quand l'autre est sur le même onglet, son
- * compagnon (Jiji pour AL, Calcifer pour AC) vient vivre sur le haut de la
+ * compagnon (celui qu'il a choisi, V5.6) vient vivre sur le haut de la
  * barre du bas. Le serveur ne dit que « il est là » (présence existante,
  * aucune écriture de plus) ; tout le reste se joue sur ce téléphone.
  *
  * Gestes (seul l'avatar capte le doigt, rien d'autre n'est masqué) :
  * - toucher → petit saut + ♡, et le coucou existant part (anti-rafale) ;
- * - caresser (glisser le doigt dessus) → Jiji ronronne, Calcifer crépite.
+ * - caresser (glisser le doigt dessus) → Jiji ronronne, Calcifer crépite
+ *   (son du registre ui/companions.ts ; aucun son déclaré = silence).
  * Coucou reçu pendant qu'il est là : il fait coucou (saut + ♡).
  *
  * Mode développeur : « faire venir » l'avatar en local (devVisit.ts).
@@ -16,6 +17,7 @@ import { useShell, useMediaQuery } from '../../app/ShellContext';
 import { playCue } from '../../app/sound/play';
 import { HOUSEHOLD_NAMES } from '../../sync/household';
 import { Companion, cx } from '../../ui';
+import { companionProfile, useCompanionIds, type CompanionId } from '../../ui/companions';
 import { useLive } from '../LiveContext';
 import type { AvatarReact, AvatarWho } from './avatarModel';
 import { devVisitLeave, useDevVisit } from './devVisit';
@@ -39,10 +41,18 @@ export function PartnerAvatar() {
   const who: AvatarWho | null = liveWho ?? devWho;
   const simulated = liveWho === null && devWho !== null;
   const pokesIn = simulated ? (dev?.pokes ?? 0) : live.pokesReceived;
+  // Son compagnon : celui qu'il a choisi (mode développeur : celui demandé),
+  // gardé pendant qu'il sort.
+  const ids = useCompanionIds();
+  const chosen: CompanionId | null = who === null ? null : simulated && dev?.companion !== undefined ? dev.companion : ids[who];
+  const lastCompanion = useRef<CompanionId>(chosen ?? ids.a);
+  if (chosen !== null) lastCompanion.current = chosen;
+  const companion = lastCompanion.current;
+  const profile = companionProfile(companion);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const { view, react, finger } = useAvatar(who, calm, stageRef, bodyRef);
+  const { view, react, finger } = useAvatar(who, { gait: profile.gait, caressMood: profile.caressMood }, calm, stageRef, bodyRef);
 
   // Quitter le mode développeur renvoie le visiteur simulé.
   useEffect(() => {
@@ -69,7 +79,8 @@ export function PartnerAvatar() {
   const gesture = useRef<{ id: number; x: number; y: number; dist: number; petAt: number } | null>(null);
   const pet = () => {
     react('purr');
-    playCue(who === 'b' ? 'crackle' : 'purr', { who: who ?? 'none' });
+    const cue = profile.sounds?.caress;
+    if (cue !== undefined) playCue(cue, { who: who ?? 'none' });
   };
   const onDown = (e: PointerEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -109,8 +120,10 @@ export function PartnerAvatar() {
     <div ref={stageRef} className={cx('avatar-stage', calm && 'is-calm')}>
       <div
         ref={bodyRef}
-        className={cx('avatar', `avatar--${view.who}`, `is-${view.motion}`, view.react && `is-${view.react}`)}
+        className={cx('avatar', `avatar--${view.who}`, `avatar--${companion}`, `is-${view.motion}`, view.react && `is-${view.react}`)}
         data-testid="partner-avatar"
+        data-companion={companion}
+        data-gait={profile.gait}
         data-phase={view.phase}
         data-react={view.react ?? ''}
       >
@@ -129,7 +142,7 @@ export function PartnerAvatar() {
         >
           <span className="avatar__flip" style={{ transform: view.facing === 1 ? undefined : 'scaleX(-1)' }}>
             <span key={view.reactN} className="avatar__move">
-              <Companion who={view.who} size={44} mood={view.mood} />
+              <Companion who={view.who} companion={companion} size={44} mood={view.mood} />
             </span>
           </span>
         </button>

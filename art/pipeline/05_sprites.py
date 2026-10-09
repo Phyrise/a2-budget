@@ -1,4 +1,4 @@
-"""Sprites détourés : kodama, créatures, gardien, compagnons (Jiji, Calcifer).
+"""Sprites détourés : kodama, créatures, gardien, compagnons (Jiji, Calcifer, Teto, Hin).
 
 Les planches ont déjà un fond transparent. Pour chaque planche :
   - découpe en composantes connexes de l'alpha (fusion des petits fragments
@@ -35,9 +35,23 @@ CREATURES = ["moss-ling", "seed-spirit", "ember-wisp", "mushroom-pip", "leaf-spr
 #   surpris pattes levées, roulé en boule endormi, regard curieux vers le haut.
 #   13-calcifer-reactions-v3 : pince-sans-rire, bouche grande ouverte, regard en
 #   coin vantard, flamme basse endormie, regard curieux vers le haut.
+#   15-teto-reactions-v2 : renard-écureuil (planche V2, 3×2 comme les V3).
+#   16-hin-reactions-v2 : vieux chien large et bas (planche V2, 3×2) ; une
+#   composante par case, rien de rogné. Plus large que haut : 256 px de haut
+#   suffisent (≈ 340–380 px de large, ~20 Ko par pose au lieu de ~29).
 POSES = ["idle", "happy", "proud", "sleepy", "curious"]
 JIJI_SHEET = "12-jiji-reactions-v3"
 CALCIFER_SHEET = "13-calcifer-reactions-v3"
+TETO_SHEET = "15-teto-reactions-v2"
+HIN_SHEET = "16-hin-reactions-v2"
+# Identifiant (CompanionId de @a2/core) → (planche, hauteur de la pose la plus
+# haute), dans l'ordre du sélecteur.
+COMPANIONS = {
+    "jiji": (JIJI_SHEET, 320),
+    "calcifer": (CALCIFER_SHEET, 320),
+    "teto": (TETO_SHEET, 320),
+    "hin": (HIN_SHEET, 256),
+}
 
 
 def load(name: str) -> np.ndarray:
@@ -239,9 +253,9 @@ def main() -> None:
     info: dict = {}
     info["kodama"] = cut("08-kodama-sheet", KODAMA, [4, 4], 256)
     info["creatures"] = cut("09-small-spirits-sheet", CREATURES, [3, 3], 256)
-    # Même échelle pour toutes les poses d'un personnage : la plus haute = 320 px.
-    info["jiji"] = cut(JIJI_SHEET, [f"jiji-{p}" for p in POSES], [3, 2], 320, uniform=True, pad=8)
-    info["calcifer"] = cut(CALCIFER_SHEET, [f"calcifer-{p}" for p in POSES], [3, 2], 320, uniform=True, pad=8)
+    # Même échelle pour toutes les poses d'un personnage : la plus haute = `top` px.
+    for cid, (sheet, top) in COMPANIONS.items():
+        info[cid] = cut(sheet, [f"{cid}-{p}" for p in POSES], [3, 2], top, uniform=True, pad=8)
 
     g = load("11-guardian-isolated")
     ys, xs = np.nonzero(g[..., 3] > 0.02)
@@ -252,7 +266,7 @@ def main() -> None:
 
     contact(KODAMA, "kodama")
     contact(CREATURES, "creatures")
-    contact([f"jiji-{p}" for p in POSES] + [f"calcifer-{p}" for p in POSES], "companions")
+    contact([f"{cid}-{p}" for cid in COMPANIONS for p in POSES], "companions")
     contact(["guardian"], "guardian", tile=700)
     grid([edge_zoom("guardian"), edge_zoom("kodama-1"), edge_zoom("jiji-idle"), edge_zoom("ember-wisp")], 1).save(
         QA / "05-edges.jpg", quality=90

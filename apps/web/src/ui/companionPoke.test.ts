@@ -38,11 +38,16 @@ describe('toucher un compagnon', () => {
     expect(s.n).toBe(Math.ceil(20000 / 900));
   });
 
-  it('les poses peintes des réactions (planches v3)', () => {
-    expect(pokeMood('b', 'poke')).toBe('happy');
-    expect(pokeMood('b', 'upset')).toBe('proud');
-    expect(pokeMood('a', 'poke')).toBe('curious');
-    expect(pokeMood('a', 'upset')).toBe('idle');
-    expect(pokeMood('a', null)).toBeNull();
+  it('les poses peintes des réactions (planches v3 / v2)', () => {
+    expect(pokeMood('calcifer', 'poke')).toBe('happy');
+    expect(pokeMood('calcifer', 'upset')).toBe('proud');
+    expect(pokeMood('jiji', 'poke')).toBe('curious');
+    expect(pokeMood('jiji', 'upset')).toBe('idle');
+    expect(pokeMood('jiji', null)).toBeNull();
+    // Teto : curieux, puis se renfrogne ; Hin : content, puis s'effondre, blasé.
+    expect(pokeMood('teto', 'poke')).toBe('curious');
+    expect(pokeMood('teto', 'upset')).toBe('idle');
+    expect(pokeMood('hin', 'poke')).toBe('happy');
+    expect(pokeMood('hin', 'upset')).toBe('sleepy');
   });
 });

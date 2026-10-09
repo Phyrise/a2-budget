@@ -4,6 +4,7 @@
  */
 
 import { MAX_AMOUNT_CENTS, MAX_RATE_BPS } from './amounts.js';
+import { isCompanionId } from './companions.js';
 import { normalizeMonthIncome, sharedRates } from './income.js';
 import { currentMonthKey, isValidMonthKey } from './months.js';
 import { prunePaidExpenses } from './payments.js';
@@ -95,9 +96,15 @@ export function createMonthRecord(monthKey: string, settings: Settings): MonthRe
 function withSharedRates(settings: Settings): Pick<Settings, 'personA' | 'personB'> {
   const rates = sharedRates(settings);
   return {
-    personA: { ...settings.personA, ...rates },
-    personB: { ...settings.personB, ...rates },
+    personA: { ...monthPerson(settings.personA), ...rates },
+    personB: { ...monthPerson(settings.personB), ...rates },
   };
+}
+
+/** Copie d'une personne pour un mois : le compagnon (V5.6) reste dans les réglages. */
+function monthPerson(person: PersonSettings): PersonSettings {
+  const { companion: _companion, ...rest } = person;
+  return rest;
 }
 
 /** État initial : réglages par défaut, aucun mois, mois sélectionné = mois courant local. */
@@ -201,16 +208,16 @@ function validatePerson(value: unknown): Ok<PersonSettings> | Fail {
   if (!isRateBps(value.variableRateBps)) {
     return { ok: false, reason: 'person-invalid-variable-rate' };
   }
-  return {
-    ok: true,
-    state: {
-      id: value.id,
-      name: value.name,
-      baseSalaryCents: value.baseSalaryCents,
-      baseRateBps: value.baseRateBps,
-      variableRateBps: value.variableRateBps,
-    },
+  const person: PersonSettings = {
+    id: value.id,
+    name: value.name,
+    baseSalaryCents: value.baseSalaryCents,
+    baseRateBps: value.baseRateBps,
+    variableRateBps: value.variableRateBps,
   };
+  // V5.6 — compagnon : lecture tolérante (inconnu → omis = défaut du rôle).
+  if (isCompanionId(value.companion)) person.companion = value.companion;
+  return { ok: true, state: person };
 }
 
 function validateExpense(value: unknown): Ok<Expense> | Fail {

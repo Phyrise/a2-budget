@@ -1,5 +1,5 @@
 /**
- * Bulle de parole d'un compagnon (Jiji pour `a`, Calcifer pour `b`).
+ * Bulle de parole d'un compagnon (celui choisi par `a` ou `b`, V5.6).
  *
  * - Éphémère et jamais bloquante : aucun focus, aucun clic intercepté
  *   (pointer-events: none) ; le parent décide de la durée.
@@ -12,6 +12,7 @@
  * - prefers-reduced-motion : simple fondu.
  */
 import { Companion } from './Companion';
+import { companionProfile, useCompanionIds } from './companions';
 import { cx } from './format';
 import './companionBubble.css';
 
@@ -29,8 +30,6 @@ export interface CompanionBubbleData {
   quiet?: boolean;
 }
 
-const NAMES = { a: 'Jiji', b: 'Calcifer' } as const;
-
 export function CompanionBubble({
   bubble,
   variant = 'perch',
@@ -40,6 +39,7 @@ export function CompanionBubble({
   variant?: 'perch' | 'floating' | 'inline';
   className?: string;
 }) {
+  const ids = useCompanionIds();
   return (
     <div className={cx('cbubble-region', `cbubble-region--${variant}`, className)} aria-live="polite" aria-atomic="true">
       {bubble && (
@@ -50,7 +50,7 @@ export function CompanionBubble({
         >
           {variant === 'floating' && <Companion who={bubble.who} size={34} mood="happy" className="cbubble__face" />}
           <p className="cbubble__body">
-            <span className="cbubble__name">{NAMES[bubble.who]}</span>
+            <span className="cbubble__name">{companionProfile(ids[bubble.who]).name}</span>
             <span className="visually-hidden">&nbsp;: </span>
             <span className="cbubble__text">{bubble.text}</span>
           </p>

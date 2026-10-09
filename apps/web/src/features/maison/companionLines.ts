@@ -12,6 +12,7 @@
  * du compagnon qui parle, `{autre}` = l'autre personne. La typographie
  * (espaces insécables) est appliquée au moment de l'affichage (fr()).
  */
+import type { CompanionId } from '@a2/core';
 import { fr } from '../../ui';
 
 export type BubbleContext = 'check' | 'chore' | 'allDone' | 'morning' | 'pause' | 'claim' | 'skip' | 'help';
@@ -208,22 +209,34 @@ const CALCIFER: Lines = {
 };
 
 export const COMPANION_LINES: Record<Speaker, Lines> = { a: JIJI, b: CALCIFER };
-export const COMPANION_NAMES: Record<Speaker, string> = { a: 'Jiji', b: 'Calcifer' };
+
+/**
+ * V5.6 — répliques d'un compagnon choisi. Jiji et Calcifer ont les leurs,
+ * quelle que soit la personne ; Teto et Hin (à écrire : ajouter TETO / HIN
+ * ici) parlent pour l'instant comme le compagnon par défaut du rôle.
+ */
+const LINES_BY_COMPANION: Partial<Record<CompanionId, Lines>> = { jiji: JIJI, calcifer: CALCIFER };
+
+export function linesFor(id: CompanionId | undefined, speaker: Speaker): Lines {
+  return (id !== undefined ? LINES_BY_COMPANION[id] : undefined) ?? COMPANION_LINES[speaker];
+}
 
 const lastPicked = new Map<string, number>();
 
 /**
  * Tire une réplique au hasard, jamais la même deux fois de suite pour un
  * même compagnon et un même contexte. `random` injectable (tests).
+ * `companion` : le compagnon choisi par `speaker` (sinon celui du rôle).
  */
 export function pickLine(
   speaker: Speaker,
   context: BubbleContext,
   vars: { humain: string; autre: string },
   random: () => number = Math.random,
+  companion?: CompanionId,
 ): string {
-  const lines = COMPANION_LINES[speaker][context];
-  const key = `${speaker}:${context}`;
+  const lines = linesFor(companion, speaker)[context];
+  const key = `${speaker}:${companion ?? ''}:${context}`;
   const last = lastPicked.get(key);
   let index = Math.floor(random() * lines.length) % lines.length;
   if (lines.length > 1 && index === last) index = (index + 1 + Math.floor(random() * (lines.length - 1))) % lines.length;

@@ -103,3 +103,28 @@ Ordre vertical :
 - `prefers-reduced-motion` : supprimer les mouvements.
 - Pas d'animation de mise en page à chaque frappe ; pas de changement de
   hauteur inattendu.
+
+## Compagnons au choix (V5.6)
+
+- Quatre compagnons : Jiji (chat noir de Kiki), Calcifer (flamme du Château
+  ambulant), Teto (renard-écureuil de Nausicaä), Hin (vieux chien du Château
+  ambulant). Par défaut, AL a Jiji et AC Calcifer.
+- **Choix** : Réglages → carte de la personne → toucher son compagnon (à côté
+  du prénom) : une rangée de quatre (sprite + prénom), le choix actuel cerclé,
+  celui de l'autre grisé et désactivé ; choisir referme la rangée. Connecté,
+  seule sa propre carte propose le choix (rôle de la session) ; en invité,
+  les deux cartes. Ailleurs, la carte garde le compagnon touchable.
+- **Données** : `settings.personA.companion` / `personB.companion`
+  (`CompanionId` de @a2/core), réglages globaux seulement (pas de copie par
+  mois), synchronisés avec la collection `settings` (aucune règle Firestore
+  nouvelle). Lecture tolérante : absent ou inconnu → défaut du rôle.
+- **Anti-doublon** : jamais le même compagnon pour les deux. Si deux choix
+  simultanés se croisent, `companionsOf` garde celui de A et donne à B son
+  défaut s'il est libre, sinon le premier libre (résolu à la lecture, rien
+  n'est réécrit).
+- **Registre** : `apps/web/src/ui/companions.ts`, seule source des
+  différences (prénom, libellé du toucher, poses des réactions, sons,
+  démarche de l'avatar) ; hooks `useCompanionId(who)` / `useCompanionIds()`.
+  Sprites : `manifest.companions[id][pose]` (planches 12, 13, 15, 16 ;
+  art/pipeline/05_sprites.py). Les couleurs de personne restent liées au
+  rôle ; les décors des Courses (Jiji de Kiki) ne changent pas.

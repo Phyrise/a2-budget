@@ -4,10 +4,13 @@
  * n'est écrit, ni dans les données ni sur le serveur.
  */
 import { useSyncExternalStore } from 'react';
+import type { CompanionId } from '@a2/core';
 import type { AvatarWho } from './avatarModel';
 
 export interface DevVisit {
   who: AvatarWho;
+  /** Compagnon à prévisualiser (sinon celui choisi par `who`). */
+  companion?: CompanionId;
   /** Coucous reçus simulés. */
   pokes: number;
 }
@@ -20,8 +23,8 @@ function set(next: DevVisit | null): void {
   for (const l of listeners) l();
 }
 
-export function devVisitCome(who: AvatarWho): void {
-  set({ who, pokes: visit?.pokes ?? 0 });
+export function devVisitCome(who: AvatarWho, companion?: CompanionId): void {
+  set(companion !== undefined ? { who, companion, pokes: visit?.pokes ?? 0 } : { who, pokes: visit?.pokes ?? 0 });
 }
 
 export function devVisitLeave(): void {

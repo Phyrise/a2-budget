@@ -79,6 +79,17 @@ test('mode développeur : Jiji entre, saute au toucher, ronronne, fait coucou, p
   expect(errors).toEqual([]);
 });
 
+test('V5.6 : n’importe quel compagnon peut venir (Hin, sa démarche, son sprite)', async ({ page }) => {
+  await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ module: 'maison', devMode: true })), UI_KEY);
+  await openApp(page);
+  await devAction(page, 'Faire venir Hin');
+  const avatar = page.getByTestId('partner-avatar');
+  await expect(avatar).toHaveAttribute('data-companion', 'hin');
+  await expect(avatar).toHaveAttribute('data-gait', 'waddle');
+  await expect(avatar.locator('img').first()).toHaveAttribute('src', /hin-/);
+  await expect(avatar.getByRole('button', { name: 'Coucou à AC' })).toBeVisible();
+});
+
 test('calme (mouvement réduit) : Calcifer apparaît posé, sans entrer', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ module: 'maison', devMode: true })), UI_KEY);

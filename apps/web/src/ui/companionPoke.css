@@ -1,6 +1,8 @@
 /* Compagnons touchables (V4.3) : Calcifer crépite, Jiji penche la tête ;
    touchés trop souvent, Calcifer s'énerve et Jiji boude (companionPoke.ts).
-   Calme (mouvement réduit, Forêt « Immobile ») : pose et couleur seulement. */
+   Calme (mouvement réduit, Forêt « Immobile ») : pose et couleur seulement.
+   V5.6 : par compagnon choisi (.companion--<id>), pas par personne ; Teto et
+   Hin n'ont encore que leur changement de pose. */
 
 .companion--touch {
   appearance: none;
@@ -64,11 +66,11 @@
 }
 
 /* Calcifer : réaction et colère. */
-.companion--b.is-upset .companion__poke {
+.companion--calcifer.is-upset .companion__poke {
   filter: hue-rotate(-16deg) saturate(1.55) brightness(1.06);
 }
 
-.companion--a.is-upset .companion__poke {
+.companion--jiji.is-upset .companion__poke {
   filter: brightness(0.82);
 }
 
@@ -77,11 +79,11 @@
     transform: scale(0.96);
   }
 
-  .companion--b.is-poke:not(.is-calm) .companion__poke {
+  .companion--calcifer.is-poke:not(.is-calm) .companion__poke {
     animation: cmp-crackle 760ms var(--ease-out);
   }
 
-  .companion--b.is-poke:not(.is-calm) .companion__poke::after {
+  .companion--calcifer.is-poke:not(.is-calm) .companion__poke::after {
     content: '';
     position: absolute;
     left: 22%;
@@ -96,25 +98,25 @@
     animation: cmp-sparks 760ms ease-out forwards;
   }
 
-  .companion--b.is-upset:not(.is-calm) {
+  .companion--calcifer.is-upset:not(.is-calm) {
     animation: cmp-shake 2.8s linear;
   }
 
-  .companion--b.is-upset:not(.is-calm) .companion__poke {
+  .companion--calcifer.is-upset:not(.is-calm) .companion__poke {
     animation: cmp-flare 2.8s var(--ease-soft) forwards;
   }
 
-  .companion--a.is-poke:not(.is-calm) .companion__poke {
+  .companion--jiji.is-poke:not(.is-calm) .companion__poke {
     animation: cmp-curious 760ms var(--ease-out);
   }
 
-  .companion--a.is-upset:not(.is-calm) .companion__poke {
+  .companion--jiji.is-upset:not(.is-calm) .companion__poke {
     animation: cmp-sulk 2.8s var(--ease-soft) forwards;
   }
 }
 
 /* Calme : la pose change, rien ne bouge (Jiji se détourne d'un coup). */
-.companion--a.is-upset.is-calm .companion__poke {
+.companion--jiji.is-upset.is-calm .companion__poke {
   transform: scaleX(-1);
 }
 
@@ -131,7 +133,7 @@
     animation-name: cmp-smoke-still;
   }
 
-  .companion--a.is-upset .companion__poke {
+  .companion--jiji.is-upset .companion__poke {
     transform: scaleX(-1);
   }
 }

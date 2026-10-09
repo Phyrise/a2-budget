@@ -12,11 +12,13 @@ export const NOTICE_TEXT: Record<AccountNotice, string> = {
   'ios-later': 'Depuis l’app installée sur iPhone, la connexion arrive bientôt.',
 };
 
-/** Qui l'on est dans l'app : AL avec Jiji, AC avec Calcifer. */
-export const ROLE_TEXT: Record<MemberRole, string> = {
-  a: 'AL · Jiji',
-  b: 'AC · Calcifer',
-};
+/** Prénoms du foyer (comptes Google) : AL, AC. */
+const ROLE_NAME: Record<MemberRole, string> = { a: 'AL', b: 'AC' };
+
+/** Qui l'on est dans l'app : « AL · Jiji » (V5.6 : avec le compagnon choisi). */
+export function roleText(role: MemberRole, companionName: string): string {
+  return `${ROLE_NAME[role]} · ${companionName}`;
+}
 
 export const HOUSEHOLD_TEXT: Record<HouseholdStatus, string> = {
   pending: 'Foyer : un instant…',

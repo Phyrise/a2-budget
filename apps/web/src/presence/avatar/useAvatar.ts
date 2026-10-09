@@ -17,6 +17,7 @@ import {
   leave,
   lookAt,
   step,
+  type AvatarBody,
   type AvatarMood,
   type AvatarPhase,
   type AvatarReact,
@@ -64,6 +65,7 @@ export interface AvatarControls {
 
 export function useAvatar(
   who: AvatarWho | null,
+  body: AvatarBody,
   calm: boolean,
   stageRef: RefObject<HTMLElement | null>,
   bodyRef: RefObject<HTMLElement | null>,
@@ -74,6 +76,8 @@ export function useAvatar(
   const last = useRef(0);
   const calmRef = useRef(calm);
   calmRef.current = calm;
+  const bodyRef0 = useRef(body);
+  bodyRef0.current = body;
 
   const place = useCallback(() => {
     const s = state.current;
@@ -127,7 +131,8 @@ export function useAvatar(
     const now = performance.now();
     const cur = state.current;
     if (who !== null) {
-      if (cur === null || cur.who !== who) state.current = arrive(who, now, (Math.random() * 2 ** 31) | 0, calm);
+      // Autre visiteur, ou autre compagnon (choix changé, mode développeur) : il entre.
+      if (cur === null || cur.who !== who || cur.gait !== bodyRef0.current.gait) state.current = arrive(who, now, (Math.random() * 2 ** 31) | 0, calm, bodyRef0.current);
       else state.current = comeBack(cur, now);
     } else if (cur !== null) {
       state.current = leave(cur, calm);
@@ -137,7 +142,7 @@ export function useAvatar(
     schedule();
     // `calm` lu au moment du changement seulement.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [who, publish, schedule]);
+  }, [who, body.gait, publish, schedule]);
 
   // Arrêt propre.
   useEffect(

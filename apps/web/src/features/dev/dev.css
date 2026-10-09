@@ -259,6 +259,27 @@
   margin-bottom: 12px;
 }
 
+/* V5.6 : un compagnon par ligne (touchable), puis ses cinq poses. */
+.dev-companions__set {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dev-companions__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dev-companions__poses {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
 .dev-companions__basket {
   position: relative;
   display: inline-flex;

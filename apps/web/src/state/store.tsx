@@ -939,3 +939,11 @@ export function useApp(): AppContextValue {
   }
   return ctx;
 }
+
+/**
+ * Comme `useApp`, mais null hors de <AppProvider> (accueil, première
+ * connexion) : pour les lectures décoratives (compagnon choisi, V5.6).
+ */
+export function useOptionalApp(): AppContextValue | null {
+  return useContext(AppContext);
+}

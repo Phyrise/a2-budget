@@ -6,6 +6,7 @@ import {
   SLEEP_AFTER_MS,
   arrive,
   avatarMood,
+  avatarMotion,
   comeBack,
   interact,
   isMoving,
@@ -53,6 +54,25 @@ describe('avatar de l’autre', () => {
     const a = step(arrive('a', 0, 3, false), 500, 500, false);
     const b = step(arrive('b', 0, 3, false), 500, 500, false);
     expect(Math.abs(a.x - arrive('a', 0, 3, false).x)).toBeGreaterThan(Math.abs(b.x - arrive('b', 0, 3, false).x));
+  });
+
+  it('la démarche suit le compagnon choisi, pas le rôle (V5.6)', () => {
+    const float = { gait: 'float', caressMood: 'proud' } as const;
+    const trot = { gait: 'trot', caressMood: 'happy' } as const;
+    // AL a choisi Calcifer : il flotte (lent), AC a choisi Jiji : il trotte.
+    const a = arrive('a', 0, 3, false, float);
+    const b = arrive('b', 0, 3, false, trot);
+    expect(avatarMotion(a)).toBe('float');
+    expect(avatarMotion(b)).toBe('trot');
+    const da = Math.abs(step(a, 500, 500, false).x - a.x);
+    const db = Math.abs(step(b, 500, 500, false).x - b.x);
+    expect(db).toBeGreaterThan(da);
+    // Caresse : la pose du compagnon (Calcifer fier).
+    expect(avatarMood(interact(a, 'purr', 0))).toBe('proud');
+    expect(avatarMood(interact(b, 'purr', 0))).toBe('happy');
+    // Scurry et waddle s'animent comme le trot en attendant les leurs.
+    expect(avatarMotion(arrive('a', 0, 3, false, { gait: 'scurry', caressMood: 'happy' }))).toBe('trot');
+    expect(avatarMotion(arrive('b', 0, 3, false, { gait: 'waddle', caressMood: 'happy' }))).toBe('trot');
   });
 
   it('erre : marche, s’assoit et regarde, sans quitter la zone', () => {

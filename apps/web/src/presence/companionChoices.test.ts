@@ -94,4 +94,17 @@ describe('compagnons des comptes (V5.7)', () => {
     expect(companionChoices()).toEqual({ b: 'teto' });
     expect(hasPendingCompanion('a')).toBe(false);
   });
+
+  it('changement de compte sur ce téléphone : le choix en attente de l’autre rôle est abandonné, jamais envoyé', () => {
+    fakeStorage();
+    resetCompanionChoicesForTests();
+    pickOwnCompanion('a', 'teto');
+    const sent: string[] = [];
+    attachCompanionWriter('b', (id) => sent.push(id));
+    expect(sent).toEqual([]);
+    expect(hasPendingCompanion('a')).toBe(false);
+    // La fiche de AL (lue par l'écoute de présence) n'est plus masquée.
+    receiveCompanion('a', 'hin');
+    expect(companionChoices().a).toBe('hin');
+  });
 });

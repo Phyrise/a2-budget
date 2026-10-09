@@ -122,6 +122,10 @@ export function attachCompanionWriter(role: MemberRole, write: (id: CompanionId)
     wroteAt = Date.now();
     write(pending.companion);
     commit({ choices: saved.choices });
+  } else if (pending !== undefined) {
+    // Choix laissé par l'autre compte sur ce téléphone (changement de compte) :
+    // jamais envoyé d'ici, et il ne doit plus masquer la fiche de son rôle.
+    commit({ choices: saved.choices });
   }
   return () => {
     if (writer === mine) writer = null;

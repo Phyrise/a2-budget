@@ -100,7 +100,8 @@ export function openLive(db: Firestore, member: Member): LiveChannel {
       // présence attend, le SDK rend une fiche réduite à ses champs (vu sur
       // l'émulateur : ni uid ni compagnon). Une fiche sans `uid` n'est donc
       // jamais prise pour la vérité du serveur (pas de reprise sur elle).
-      // Hors ligne : le cache, pour l'affichage seulement.
+      // Hors ligne, l'attente dure jusqu'au retour du réseau (l'affichage vit
+      // de la copie locale) ; le cache ne sert que si la lecture échoue.
       try {
         await waitForPendingWrites(db);
         const data = (await getDocFromServer(mine)).data();

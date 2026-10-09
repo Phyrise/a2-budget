@@ -57,6 +57,9 @@ test('AL choisit Hin puis recharge : toujours Hin (fiche du compte)', async ({ b
   const { al, ac } = await twoPhones(browser);
   await pick(al.page, 'a', 'Hin');
   await expectStored('hin');
+  // Réglages réécrits sans compagnon et copie locale effacée : seule la fiche du serveur peut le rendre.
+  await oldAppRewrite();
+  await al.page.evaluate(() => window.localStorage.removeItem('a2-budget:companions:v1'));
   await al.page.reload();
   await expect(syncIndicator(al.page)).toHaveAttribute('title', 'À jour', SYNC_READY);
   expect(await shown(al.page, 'a')).toBe('avec Hin');

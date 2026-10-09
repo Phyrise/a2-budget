@@ -828,6 +828,10 @@ restent. Règles Firestore inchangées (elles ne lisent pas `dueDate`).
   `uid`) mais un choix dans les réglages pour mon rôle → écrit une fois dans
   ma fiche par moi seul. L'autre ne reprend jamais mon choix.
 - **Invité** : inchangé (réglages locaux).
+- **Limites assumées** : une fois la fiche remplie, un choix fait depuis un
+  téléphone resté avant V5.7 (il n'écrit que les réglages) n'est plus vu :
+  mettre l'app à jour. Un choix en attente laissé par un autre compte sur le
+  même téléphone est abandonné à l'ouverture du canal (jamais envoyé).
 - **Tests** : `packages/core/src/companions.test.ts` (résolution, reprise),
   `presence/companionChoices.test.ts`, QA deux téléphones
   `e2e-sync/companion.spec.ts` (rechargement, réglages changés par l'autre,

@@ -124,6 +124,12 @@ export function usePlay(): PlayState {
   return useSyncExternalStore(subscribePlay, getPlay, getPlay);
 }
 
+/** Remise à zéro (mode développeur) : l'état en mémoire est oublié, relu au prochain accès. */
+export function reloadPlay(): void {
+  current = null;
+  notify();
+}
+
 /** Tests : oublie l'état en mémoire (relu au prochain accès). */
 export function resetPlayForTests(next: PlayBackend = localPlayBackend): void {
   unsubscribe?.();

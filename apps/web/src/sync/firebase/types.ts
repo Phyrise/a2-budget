@@ -7,6 +7,7 @@ import type { AppState } from '@a2/core';
 import type { LiveChannel } from '../../presence/liveTypes';
 import type { LetterChannel } from '../../features/rituals/letters/letterTypes';
 import type { MemberRole, RefusalReason } from '../allowlist';
+import type { ResetSignal } from '../reset';
 import type { SyncCache } from '../syncCache';
 import type { SignInMethod } from './platform';
 
@@ -63,8 +64,13 @@ export interface SyncRuntime {
   canUndo(collection: 'completions' | 'skips', taskId: string, dueDate: string): boolean;
   /** Statut de la synchronisation ; appelé tout de suite. */
   watchStatus(listener: (status: SyncStatus) => void): () => void;
+  /** Mode développeur : le foyer a été remis à zéro, ou ses lettres effacées (reset.ts). */
+  watchReset(listener: (signal: ResetSignal) => void): () => void;
   dispose(): void;
 }
+
+/** Issue de « Tout remettre à zéro » (mode développeur). */
+export type ResetOutcome = 'done' | 'offline' | 'failed';
 
 /** Contenu du foyer à la première connexion de ce téléphone. */
 export type HouseholdContent =
@@ -107,6 +113,10 @@ export interface FirebaseSession {
   openLive(member: Member): LiveChannel;
   /** V5.2 : marque « lu » des lettres du cercle (features/rituals/letters). */
   openLetters(member: Member): LetterChannel;
+  /** Mode développeur : vide le foyer (le signal d'abord, reset.ts). */
+  resetHousehold(member: Member): Promise<ResetOutcome>;
+  /** Mode développeur : lettres de la semaine effacées, « lu » remis chez les deux. */
+  bumpLetters(member: Member): Promise<void>;
   /** QA seulement (build émulateurs) : faux jeton Google de l'émulateur Auth. */
   signInWithFakeGoogle?: (email: string, emailVerified?: boolean) => Promise<SignInOutcome>;
 }

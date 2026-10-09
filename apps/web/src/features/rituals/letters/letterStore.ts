@@ -15,9 +15,11 @@ export interface LetterView {
   unread: Circle | null;
   reading: Circle | null;
   writeRequest: number;
+  /** Marque « lu » ramenée en arrière (mode développeur) : la relire. */
+  seenResets: number;
 }
 
-let state: LetterView = { unread: null, reading: null, writeRequest: 0 };
+let state: LetterView = { unread: null, reading: null, writeRequest: 0, seenResets: 0 };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<LetterView>): void {
@@ -40,6 +42,10 @@ export const letters = {
   },
   requestWrite(): void {
     set({ reading: null, writeRequest: state.writeRequest + 1 });
+  },
+  /** Mode développeur : la marque locale a été ramenée en arrière. */
+  seenReset(): void {
+    set({ unread: null, reading: null, seenResets: state.seenResets + 1 });
   },
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
@@ -70,6 +76,17 @@ export function writeLocalSeen(role: 'a' | 'b', mark: string): void {
     window.localStorage.setItem(`${SEEN_KEY}:${role}`, mark);
   } catch {
     // stockage indisponible : la fiche partagée suffit
+  }
+}
+
+/** Toutes les marques locales oubliées (remise à zéro, mode développeur). */
+export function forgetLocalSeen(): void {
+  for (const role of ['a', 'b'] as const) {
+    try {
+      window.localStorage.removeItem(`${SEEN_KEY}:${role}`);
+    } catch {
+      // stockage indisponible
+    }
   }
 }
 

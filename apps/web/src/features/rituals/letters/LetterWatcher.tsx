@@ -40,7 +40,7 @@ export function LetterWatcher() {
   const { member } = useAccount();
   const { setModule } = useShell();
   const toast = useToast();
-  const { reading } = useLetters();
+  const { reading, seenResets } = useLetters();
   const visible = useVisible();
   const [channel, setChannel] = useState<LetterChannel | null>(null);
   const [remoteSeen, setRemoteSeen] = useState<string | null>(null);
@@ -58,6 +58,11 @@ export function LetterWatcher() {
     const timer = window.setTimeout(() => setSettled(true), SEEN_WAIT_MS);
     return () => window.clearTimeout(timer);
   }, [me]);
+
+  // Mode développeur : marque locale ramenée en arrière (lettres effacées), relue.
+  useEffect(() => {
+    if (seenResets > 0 && me !== null) setLocalSeen(readLocalSeen(me));
+  }, [seenResets, me]);
 
   // Canal « lu » (chunk Firebase déjà chargé par la synchronisation).
   const uid = member?.uid ?? null;

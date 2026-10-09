@@ -20,6 +20,8 @@ export interface UiPrefs {
   module: ModuleId;
   /** Préférence « Forêt » : vivante / immobile (V4.2 : l'ancienne « douce » se lit « vivante »). */
   forestMotion: WorldMotion;
+  /** Forêt plafonnée à 30 images/s (essai : plus léger, un peu moins fluide). */
+  forestFps30: boolean;
   /** Le gardien a déjà été montré (joué une seule fois). */
   guardianSeen: boolean;
   /** « Disponible hors ligne » déjà annoncé. */
@@ -40,6 +42,7 @@ const KEY = 'a2-budget:ui:v1';
 export const DEFAULT_PREFS: UiPrefs = {
   module: 'maison',
   forestMotion: 'full',
+  forestFps30: false,
   guardianSeen: false,
   offlineAnnounced: false,
   upcomingOpen: false,
@@ -64,6 +67,7 @@ export function readPrefs(): UiPrefs {
     return {
       module: isModuleId(value.module) ? value.module : DEFAULT_PREFS.module,
       forestMotion: readMotion(value.forestMotion),
+      forestFps30: value.forestFps30 === true,
       guardianSeen: value.guardianSeen === true,
       offlineAnnounced: value.offlineAnnounced === true,
       upcomingOpen: value.upcomingOpen === true,

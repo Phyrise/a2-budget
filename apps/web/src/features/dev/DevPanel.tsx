@@ -9,7 +9,8 @@
  * un instantané JSON pour régler les constantes ensemble, fait réagir les
  * compagnons (Jiji, Calcifer, Totoro, kodama) sans attendre, rejoue les fêtes
  * (V4.3 : matsuri du couple, AL, AC) et montre la saison réelle /
- * affichée avec l'état du cache des peintures de saison. Rien n'est écrit
+ * affichée avec l'état du cache des peintures de saison et la cadence
+ * réelle de la forêt (essai « 30 images/s »). Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
  * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part). Seule
  * exception à « rien n'est écrit » : la remise à zéro (DevReset).
@@ -31,6 +32,7 @@ import { DevPreviews } from './DevPreviews';
 import { DevQuests } from './DevQuests';
 import { DevReset } from './DevReset';
 import { DevAccordion, DevSection } from './DevSection';
+import { DevRender } from './DevRender';
 import { DevSeasons } from './DevSeasons';
 import './dev.css';
 
@@ -106,6 +108,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
             </DevSection>
             <DevSection id="seasons" title="Saisons">
               <DevSeasons />
+              <DevRender />
             </DevSection>
             <DevSection id="previews" title="Aperçus et sons">
               <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />

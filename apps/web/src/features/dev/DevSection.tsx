@@ -40,6 +40,12 @@ interface Accordion {
 }
 
 const AccordionContext = createContext<Accordion | null>(null);
+/** La section qui enveloppe est ouverte (lectures en direct seulement à ce moment-là). */
+const SectionOpenContext = createContext(true);
+
+export function useDevSectionOpen(): boolean {
+  return useContext(SectionOpenContext);
+}
 
 /** L'accordéon : une seule section ouverte, la dernière retenue. */
 export function DevAccordion({ children }: { children: ReactNode }) {
@@ -68,7 +74,7 @@ export function DevSection({ id, title, children }: { id: string; title: string;
       onOpenChange={(next) => accordion?.setOpen(next ? id : null)}
     >
       <div className="dev-fold__body" data-dev-section={id}>
-        {children}
+        <SectionOpenContext.Provider value={open}>{children}</SectionOpenContext.Provider>
       </div>
     </Disclosure>
   );

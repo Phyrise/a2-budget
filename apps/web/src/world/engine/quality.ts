@@ -11,6 +11,10 @@ export interface EngineStats {
   frameMs: number;
   tier: number;
   targetFps: number;
+  /** Plafond de cadence (Réglages › « 30 images/s »). */
+  maxFps: number;
+  /** Images/s réelles, toutes cadences (moyenne glissante, gardée pendant un gel). */
+  rate: number;
   memoryMB: number;
   dpr: number;
   /** Images rendues depuis la création (mesure du débit réel). */
@@ -47,6 +51,7 @@ export class QualityMeter {
   sharp = true;
   private slowFor = 0;
   private startAt = 0;
+  private paceMs = 0;
 
   /** Réglage choisi : palier de départ, densité « nette » rétablie. */
   reset(q: QualitySetting): number {
@@ -65,6 +70,16 @@ export class QualityMeter {
   frame(cpuMs: number) {
     this.frames++;
     this.frameMs += (cpuMs - this.frameMs) * 0.1;
+  }
+
+  /** Écart (s) entre deux images rendues, toutes cadences ; une reprise après gel ne compte pas. */
+  pace(sec: number) {
+    if (sec <= 0 || sec > 0.25) return;
+    this.paceMs = this.paceMs ? this.paceMs + (sec * 1000 - this.paceMs) * 0.1 : sec * 1000;
+  }
+
+  get rate() {
+    return this.paceMs ? 1000 / this.paceMs : 0;
   }
 
   /**

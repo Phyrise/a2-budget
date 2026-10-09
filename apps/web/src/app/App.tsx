@@ -129,9 +129,10 @@ function Shell() {
   const live =
     showsLivingForest(module, isDesktop) && visible && !covered && sheet === null && !(foregroundSheet && !isDesktop);
   const motion = reducedMotion ? 'still' : prefs.forestMotion;
+  const maxFps = prefs.forestFps30 ? 30 : 60;
   useEffect(() => {
-    setPresentation({ variant, live, motion });
-  }, [setPresentation, variant, live, motion]);
+    setPresentation({ variant, live, motion, maxFps });
+  }, [setPresentation, variant, live, motion, maxFps]);
 
   // Quitter le mode développeur efface tout aperçu (la vraie forêt revient).
   useEffect(() => {

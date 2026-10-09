@@ -142,6 +142,9 @@ les 25 jours (≈ 1 500 lectures/téléphone après 1 an), point de reprise mens
    effort, risque nul.
 2. **Forêt animée** (84 % du fil à ×4, 34 im/s) : plafonner à 30 im/s quand rien ne bouge
    vite, ou baisser la toile sur les téléphones lents. Gain ≈ moitié du fil ; effort moyen.
+   *V5.5 : essai en place* — Réglages › Préférences › « 30 images/s » (sous « Vivante »,
+   par appareil) plafonne toutes les cadences ; lecture DEV › Saisons › Rendu (images/s
+   réelles, cible / plafond, densité, palier).
 3. **Présence** (60 % du trafic) : battement à 120 s (fenêtre « là » à 5 min) → −180
    écritures et −360 lectures/grosse journée. Écouter les lettres sans recevoir l'écho des
    battements (fiche à part `memberState/{rôle}-letters` ou champ lu à l'ouverture) → −1

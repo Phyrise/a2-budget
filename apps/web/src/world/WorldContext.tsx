@@ -24,6 +24,7 @@ import {
 } from 'react';
 import { useApp } from '../state/store';
 import { LivingForest } from './LivingForest';
+import type { MaxFps } from './engine';
 import type { LivingForestHandle, PulseOptions, WorldMotion, WorldState, WorldVariant, Who } from './types';
 import { applyPreview, isPreviewActive, toWorldState, type WorldPreview } from './worldState';
 
@@ -33,6 +34,8 @@ export interface WorldPresentation {
   live: boolean;
   /** Préférence « Forêt » (réglages). */
   motion: WorldMotion;
+  /** Plafond de cadence (Réglages › « 30 images/s »). */
+  maxFps: MaxFps;
 }
 
 interface WorldContextValue {
@@ -64,14 +67,14 @@ const WorldContext = createContext<WorldContextValue | null>(null);
 export function WorldProvider({ children }: { children: ReactNode }) {
   const { appState, today } = useApp();
   const handleRef = useRef<LivingForestHandle | null>(null);
-  const [presentation, setPresentationState] = useState<WorldPresentation>({ variant: 'hero', live: true, motion: 'full' });
+  const [presentation, setPresentationState] = useState<WorldPresentation>({ variant: 'hero', live: true, motion: 'full', maxFps: 60 });
   const [preview, setPreview] = useState<WorldPreview | null>(null);
   const realState = useMemo(() => (appState ? toWorldState(appState, today) : null), [appState, today]);
   const state = useMemo(() => (realState ? applyPreview(realState, preview) : null), [realState, preview]);
   const previewActive = isPreviewActive(preview);
 
   const setPresentation = useCallback((p: WorldPresentation) => {
-    setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion ? prev : p));
+    setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion && prev.maxFps === p.maxFps ? prev : p));
   }, []);
   const pulse = useCallback<WorldContextValue['pulse']>((opts) => handleRef.current?.pulse(opts), []);
   const expectPulse = useCallback((id: string) => handleRef.current?.expectPulse?.(id), []);
@@ -117,6 +120,7 @@ export function WorldStage({ className, onKodama }: { className?: string; onKoda
       variant={presentation.variant}
       live={presentation.live}
       motion={presentation.motion}
+      maxFps={presentation.maxFps}
       className={className}
       onKodama={onKodama}
     />

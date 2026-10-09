@@ -10,7 +10,7 @@
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { framingFor, imageBoxStyle, type Framing } from './engine/framing';
-import type { EngineStats, QualitySetting, WorldEngine } from './engine';
+import type { EngineStats, MaxFps, QualitySetting, WorldEngine } from './engine';
 import { manifest as defaultManifest } from './manifest';
 import type { GrowthStage, LivingForestHandle, LivingForestProps, Who, WorldManifest, WorldMotion } from './types';
 import { ForestMist } from './engine/ForestMist';
@@ -53,8 +53,11 @@ const layer: CSSProperties = { position: 'absolute', inset: 0, pointerEvents: 'n
  */
 const BASE_CSS = ':where(.living-forest){position:relative;display:block;width:100%;height:100%;}';
 
-export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & { manifest?: WorldManifest; lanterns?: LanternArtSource | null }>(function LivingForest(
-  { state, variant = 'hero', live, motion = 'full', className = '', onReady, onKodama, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS },
+/** Props propres à l'app (hors contrat) : manifest, lanternes, plafond de cadence (Réglages › « 30 images/s »). */
+type ForestExtras = { manifest?: WorldManifest; lanterns?: LanternArtSource | null; maxFps?: MaxFps };
+
+export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & ForestExtras>(function LivingForest(
+  { state, variant = 'hero', live, motion = 'full', className = '', onReady, onKodama, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS, maxFps = 60 },
   ref,
 ) {
   const reduced = usePrefersReducedMotion();
@@ -69,8 +72,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   // Lanterne demandée avant que le moteur soit prêt : appliquée à l'initialisation.
   const focusRef = useRef<{ progress: number | null; who?: Who }>({ progress: null });
   const hourRef = useRef<number | null>(null);
-  const latest = useRef({ state, variant, live: effLive, motion: effMotion });
-  latest.current = { state, variant, live: effLive, motion: effMotion };
+  const latest = useRef({ state, variant, live: effLive, motion: effMotion, maxFps });
+  latest.current = { state, variant, live: effLive, motion: effMotion, maxFps };
   const variantRef = useRef(variant);
   variantRef.current = variant;
   const readyRef = useRef(false);
@@ -139,6 +142,7 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
             variant: cur.variant,
             motion: cur.motion,
             live: cur.live,
+            maxFps: cur.maxFps,
             quality: qualityRef.current,
             lanterns,
             onFirstFrame: () => {
@@ -203,8 +207,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & {
   }, [state]);
 
   useEffect(() => {
-    engineRef.current?.configure({ variant, live: effLive, motion: effMotion });
-  }, [variant, effLive, effMotion]);
+    engineRef.current?.configure({ variant, live: effLive, motion: effMotion, maxFps });
+  }, [variant, effLive, effMotion, maxFps]);
 
   useImperativeHandle(
     ref,

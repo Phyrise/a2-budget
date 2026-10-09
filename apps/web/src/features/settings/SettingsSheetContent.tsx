@@ -172,6 +172,16 @@ export function SettingsSheetContent() {
             onChange={(forestMotion) => updatePrefs({ forestMotion })}
           />
           <p className="field__hint">{MOTION_HELP[motion]}</p>
+          {/* Essai : forêt plafonnée à 30 images/s (plus légère sur un téléphone lent). */}
+          {motion === 'full' && (
+            <Switch
+              id="forest-fps30"
+              checked={prefs.forestFps30}
+              onChange={(forestFps30) => updatePrefs({ forestFps30 })}
+              label="30 images/s"
+              description="Plus léger, un peu moins fluide."
+            />
+          )}
         </div>
         <SoundSetting />
       </Section>

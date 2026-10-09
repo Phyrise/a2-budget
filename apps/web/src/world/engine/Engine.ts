@@ -5,6 +5,7 @@
  * (reprise au toucher / changement d'état) ; arrêt hors écran ou onglet caché ;
  * paliers de qualité automatiques ; « still » / bandeau = images uniques.
  * Lanterne allumée : jamais de gel (≥ 30 fps, 20 sur appareil lent).
+ * Plafond facultatif à 30 fps (Réglages) : politique dans cadence.ts.
  */
 import { Renderer, type OGLRenderingContext } from 'ogl';
 import type { GrowthStage, PulseOptions, ScenePoint, Season, WorldManifest, WorldMotion, WorldState, WorldVariant, Who } from '../types';
@@ -19,6 +20,7 @@ import { DayLights } from './lights';
 import { MOODS, cloneParams, type MoodParams } from './moods';
 import { cloneLook, paintSeason, seasonLook, type SeasonLook } from './paint';
 import { Pipeline } from './pipeline';
+import { cadence, type MaxFps } from './cadence';
 import { QualityMeter, renderDpr, type EngineStats, type QualitySetting } from './quality';
 import { Resources, type StageTextures } from './resources';
 import { SeasonFx } from './seasons';
@@ -28,6 +30,7 @@ import { clearOfLantern } from './toro';
 import { renderWorld } from './frame';
 import { loadSecondary } from './secondary';
 
+export type { MaxFps } from './cadence';
 export { DPR_CAPS, SHARP_DPR, type EngineStats, type QualitySetting } from './quality';
 
 export interface EngineConfig {
@@ -36,6 +39,8 @@ export interface EngineConfig {
   motion: WorldMotion;
   live: boolean;
   quality?: QualitySetting;
+  /** Plafond de cadence (Réglages › « 30 images/s ») ; 60 par défaut. */
+  maxFps?: MaxFps;
   /** Peintures des lanternes de pierre (themes/lanterns.ts) ; null = repli procédural. */
   lanterns?: LanternArtSource | null;
   onFirstFrame?: () => void;
@@ -105,7 +110,7 @@ export class WorldEngine {
     cfg: EngineConfig,
   ) {
     const { lanterns = null, ...rest } = cfg;
-    this.cfg = { quality: 'auto', ...rest };
+    this.cfg = { quality: 'auto', maxFps: 60, ...rest };
     this.tier = typeof this.cfg.quality === 'number' ? this.cfg.quality : 0;
     this.renderer = new Renderer({
       canvas, alpha: false, depth: false, stencil: false, antialias: false, premultipliedAlpha: false,
@@ -262,7 +267,7 @@ export class WorldEngine {
     releaseGuardian(this);
   }
 
-  configure(p: Partial<Pick<EngineConfig, 'variant' | 'motion' | 'live' | 'quality'>>) {
+  configure(p: Partial<Pick<EngineConfig, 'variant' | 'motion' | 'live' | 'quality' | 'maxFps'>>) {
     const prevQ = this.cfg.quality;
     const prevV = this.cfg.variant;
     Object.assign(this.cfg, p);
@@ -328,14 +333,9 @@ export class WorldEngine {
   }
 
   targetFps(n: number, busy: boolean): number {
-    if (!this.animated) return busy ? 60 : 0;
-    const idle = n - this.lastActivity;
-    if (busy || idle < 3) return 60;
-    // Lanterne allumée : la scène ne se fige jamais, coût plafonné.
-    const floor = this.lantern.active ? (this.tier > 0 ? 20 : 30) : 0;
-    if (idle < 15) return 30;
-    if (idle < 45) return Math.max(15, floor);
-    return floor;
+    return cadence({
+      animated: this.animated, busy, idle: n - this.lastActivity, lanternActive: this.lantern.active, slow: this.tier > 0, maxFps: this.cfg.maxFps,
+    });
   }
 
   private tick = (ts: number) => {
@@ -347,6 +347,8 @@ export class WorldEngine {
     const due = !this.lastFrameAt || n - this.lastFrameAt >= 1 / Math.max(1, fps) - 0.004;
     if (due || !this.firstFrame || fps === 0) {
       this.renderOnce(n, fps);
+      if (this.lastFrameAt) this.meter.pace(n - this.lastFrameAt);
+      // Qualité auto mesurée à 60 fps seulement (seuil de 24 ms) : jamais sous le plafond à 30.
       if (fps === 60 && this.lastFrameAt) this.trackQuality(n - this.lastFrameAt);
       this.lastFrameAt = n;
     }
@@ -386,6 +388,7 @@ export class WorldEngine {
     const n = now();
     return {
       fps: m.fps, frameMs: m.frameMs, tier: this.tier, targetFps: this.targetFps(n, this.isBusy(n)),
+      maxFps: this.cfg.maxFps, rate: m.rate,
       memoryMB: this.res.memoryMB, dpr: this.dpr, frames: m.frames,
       paint: this.stage ? `${this.stage.season}:${this.stage.stage}` : '', fading: this.growStart >= 0 || this.loadingKey !== null,
     };

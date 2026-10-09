@@ -35,6 +35,16 @@ export class MemoryServer {
     return this.docs;
   }
 
+  /**
+   * Remise à zéro (mode développeur) : tout est supprimé. Comme les écouteurs
+   * delta de Firestore, les téléphones n'en voient RIEN (seul le signal du
+   * foyer le leur dit, reset.ts).
+   */
+  wipe(): void {
+    this.docs = new Map();
+    this.clock += 1;
+  }
+
   attach(client: MemoryTransport): void {
     this.clients.add(client);
   }

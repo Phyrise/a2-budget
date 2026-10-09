@@ -77,4 +77,18 @@ describe('cercle à deux téléphones', () => {
     expect(mine).toHaveLength(1);
     expect(unreadLetter(h.b.state.rituals, 'b', null, at(9, 20))?.author).toBe('a');
   });
+
+  it('mode développeur : lettres de la semaine effacées chez les deux, puis réécrites et reçues', () => {
+    const h = household();
+    h.a.act(write('a', at(9, 10), 'premier'));
+    expect(unreadLetter(h.b.state.rituals, 'b', null, at(9, 20))?.author).toBe('a');
+    const lu = at(9, 10).toISOString(); // AC l'a lue
+    h.a.act((s) => ({ ...s, rituals: { circles: s.rituals!.circles.filter((c) => c.weekStart !== W) } }));
+    expect(h.server.rejected).toEqual([]);
+    expect(h.b.state.rituals?.circles.filter((c) => c.weekStart === W) ?? []).toEqual([]);
+    h.a.act(write('a', at(9, 11), 'encore'));
+    expect(h.server.rejected).toEqual([]);
+    const letter = unreadLetter(h.b.state.rituals, 'b', lu, at(9, 20));
+    expect(letter?.gratitude.map((g) => g.text)).toEqual(['encore']);
+  });
 });

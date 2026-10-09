@@ -13,8 +13,8 @@ import type { Transact } from './careActions';
 export interface QuestActions {
   /** Toucher la quête (une fois par personne) ; rend le rôle qui a aidé, ou null. */
   helpQuest: (quest: SharedQuest, as?: QuestRole) => QuestRole | null;
-  /** Mode développeur : fait apparaître une quête aujourd'hui (partagée si synchronisé). */
-  spawnQuest: (kind: QuestKind) => SharedQuest | null;
+  /** Mode développeur : fait apparaître une quête aujourd'hui (partagée si synchronisé), à l'emplacement voulu. */
+  spawnQuest: (kind: QuestKind, spot?: number) => SharedQuest | null;
 }
 
 function withItems(s: AppState, items: SharedQuest[]): AppState {
@@ -37,9 +37,10 @@ export function useQuestActions(transact: Transact, me: QuestRole | null): Quest
   );
 
   const spawn = useCallback(
-    (kind: QuestKind): SharedQuest | null => {
+    (kind: QuestKind, spot?: number): SharedQuest | null => {
       const now = new Date();
-      const quest = devQuest(kind, localDateKey(now), me ?? 'a', now.getTime().toString(36).slice(-6));
+      const made = devQuest(kind, localDateKey(now), me ?? 'a', now.getTime().toString(36).slice(-6));
+      const quest = spot === undefined ? made : { ...made, spot };
       return transact<SharedQuest | null>((s) => {
         const items = s.quests?.items ?? [];
         const next = addQuest(items, quest);

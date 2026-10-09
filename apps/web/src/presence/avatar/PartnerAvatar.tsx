@@ -6,8 +6,7 @@
  *
  * Gestes (seul l'avatar capte le doigt, rien d'autre n'est masqué) :
  * - toucher → petit saut + ♡, et le coucou existant part (anti-rafale) ;
- * - caresser (glisser le doigt dessus) → Jiji ronronne, Calcifer crépite ;
- * - le petit kompeitō à côté de lui → il le croque (1 du bocal partagé).
+ * - caresser (glisser le doigt dessus) → Jiji ronronne, Calcifer crépite.
  * Coucou reçu pendant qu'il est là : il fait coucou (saut + ♡).
  *
  * Mode développeur : « faire venir » l'avatar en local (devVisit.ts).
@@ -15,7 +14,6 @@
 import { useEffect, useRef, type PointerEvent } from 'react';
 import { useShell, useMediaQuery } from '../../app/ShellContext';
 import { playCue } from '../../app/sound/play';
-import { playSpend, usePlay } from '../../creatures/play';
 import { HOUSEHOLD_NAMES } from '../../sync/household';
 import { Companion, cx } from '../../ui';
 import { useLive } from '../LiveContext';
@@ -28,22 +26,6 @@ import './avatar.css';
 const PET_PX = 26;
 /** Une caresse continue relance le ronron au plus toutes les… */
 const PET_EVERY_MS = 1_300;
-const NAMES: Record<AvatarWho, string> = { a: 'Jiji', b: 'Calcifer' };
-
-/** Petit kompeitō (étoile à pointes douces). */
-function Konpeito() {
-  let d = '';
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2;
-    const r = i % 2 === 0 ? 6 : 4.4;
-    d += `${i === 0 ? 'M' : 'L'}${(8 + Math.cos(a) * r).toFixed(2)} ${(8 + Math.sin(a) * r).toFixed(2)}`;
-  }
-  return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <path d={`${d}Z`} fill="#f4b6c6" stroke="rgba(120, 60, 80, 0.35)" strokeWidth="0.6" />
-    </svg>
-  );
-}
 
 export function PartnerAvatar() {
   const live = useLive();
@@ -51,7 +33,6 @@ export function PartnerAvatar() {
   const { module, prefs } = useShell();
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)');
   const calm = reduced || prefs.forestMotion === 'still';
-  const { jar } = usePlay();
 
   const liveWho = live.partner !== null && live.partnerTab === module ? live.partner : null;
   const devWho = prefs.devMode && dev !== null ? dev.who : null;
@@ -62,7 +43,6 @@ export function PartnerAvatar() {
   const stageRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const { view, react, finger } = useAvatar(who, calm, stageRef, bodyRef);
-  const present = view !== null && view.phase !== 'exit' && view.phase !== 'enter';
 
   // Quitter le mode développeur renvoie le visiteur simulé.
   useEffect(() => {
@@ -123,14 +103,7 @@ export function PartnerAvatar() {
     if (g.petAt === 0) tap();
   };
 
-  const feed = () => {
-    if (!simulated && !playSpend(1)) return;
-    react('munch');
-    playCue('konpeito', { who: who ?? 'none' });
-  };
-
   if (view === null || who === null) return <div ref={stageRef} className="avatar-stage" aria-hidden="true" />;
-  const name = NAMES[view.who];
   const hearts: readonly (AvatarReact | null)[] = ['hop', 'wave'];
   return (
     <div ref={stageRef} className={cx('avatar-stage', calm && 'is-calm')}>
@@ -169,16 +142,6 @@ export function PartnerAvatar() {
           <span className="avatar__zz" aria-hidden="true">
             z
           </span>
-        )}
-        {view.react === 'munch' && (
-          <span key={`c${view.reactN}`} className="avatar__candy" aria-hidden="true">
-            <Konpeito />
-          </span>
-        )}
-        {present && (jar > 0 || simulated) && view.react !== 'munch' && (
-          <button type="button" className="avatar__treat" aria-label={`Donner un kompeitō à ${name}`} onClick={feed}>
-            <Konpeito />
-          </button>
         )}
       </div>
     </div>

@@ -15,8 +15,8 @@
 
 export type AvatarWho = 'a' | 'b';
 export type AvatarPhase = 'enter' | 'walk' | 'sit' | 'look' | 'yawn' | 'sleep' | 'exit' | 'gone';
-/** Réactions courtes : toucher (saut + ♡), caresse, kompeitō croqué, coucou reçu. */
-export type AvatarReact = 'hop' | 'purr' | 'munch' | 'wave';
+/** Réactions courtes : toucher (saut + ♡), caresse, coucou reçu. */
+export type AvatarReact = 'hop' | 'purr' | 'wave';
 export type AvatarMood = 'idle' | 'happy' | 'proud' | 'sleepy' | 'curious';
 
 export interface AvatarState {
@@ -48,7 +48,7 @@ export const SPEED: Record<AvatarWho, { enter: number; walk: number }> = {
   b: { enter: 0.26, walk: 0.09 },
 };
 export const SLEEP_AFTER_MS = 75_000;
-export const REACT_MS: Record<AvatarReact, number> = { hop: 900, purr: 1_400, munch: 1_300, wave: 1_400 };
+export const REACT_MS: Record<AvatarReact, number> = { hop: 900, purr: 1_400, wave: 1_400 };
 const YAWN_MS = 1_800;
 const LOOK_MS = 2_600;
 
@@ -167,7 +167,6 @@ export function lookAt(s: AvatarState, fingerX: number, now: number): AvatarStat
 export function avatarMood(s: AvatarState): AvatarMood {
   switch (s.react) {
     case 'hop':
-    case 'munch':
     case 'wave':
       return 'happy';
     case 'purr':

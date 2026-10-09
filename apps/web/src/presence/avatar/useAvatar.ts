@@ -56,7 +56,7 @@ const sameView = (a: AvatarView | null, b: AvatarView): boolean =>
 
 export interface AvatarControls {
   view: AvatarView | null;
-  /** Réaction locale (toucher, caresse, kompeitō, coucou reçu). */
+  /** Réaction locale (toucher, caresse, coucou reçu). */
   react: (kind: AvatarReact) => void;
   /** Ton doigt touche l'écran à `clientX`. */
   finger: (clientX: number) => void;

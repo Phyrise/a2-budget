@@ -681,6 +681,7 @@ existante (test unitaire dans `diff.test.ts`).
 - Règles (bloc « Quêtes communes » de firestore.rules, tests/rules/quests.test.ts) : création par un membre (`createdBy` = son rôle, au plus sa propre aide, sans `doneAt`) ; ensuite chacun n'écrit que `helpers.<son rôle>`, une fois ; `doneAt` seulement avec les deux aides ; pas de suppression.
 - Une quête n'est écrite qu'au premier toucher (sinon : 0 lecture/écriture de plus) ; récompense +3 kompeitō dans le bocal LOCAL de chacun, une fois par quête (`a2-budget:quests:v1`).
 - QA : `e2e-sync/qa-quests.spec.ts` (lancé par `qa-sync.mjs`).
+- V5.3 : `spot` (0..2) choisit un emplacement DANS la scène de l'onglet (`features/quests/questPlacement.ts` : perchoirs près du bocal, entre deux rayons, à côté de Totoro…), calculé sur chaque téléphone ; jamais sur un bouton, un champ, un montant ou du texte ; repli sur le bord de la feuille. Données et règles inchangées.
 
 ## 19. V5.1 — Présence, coucous, bocal partagé (connecté seulement)
 
@@ -713,8 +714,8 @@ existante (test unitaire dans `diff.test.ts`).
   `requestAnimationFrame` seulement pendant les déplacements ; sinon minuteur
   jusqu'à la pose suivante, et rien pendant le sommeil.
 - **Gestes** : toucher → saut + ♡ et le coucou existant (anti-rafale 5 s,
-  1 écriture) ; caresser → ronron (Jiji) ou crépitement (Calcifer), local ;
-  kompeitō → 1 du bocal partagé (`playSpend`, 1 écriture). Coucou reçu
+  1 écriture) ; caresser → ronron (Jiji) ou crépitement (Calcifer), local (V5.3 :
+  plus d'offrande de kompeitō, réservés aux Noiraudes). Coucou reçu
   pendant qu'il est là : il fait coucou.
 - L'en-tête ne montre plus le compagnon de l'autre (une seule présence
   visible) ; il garde le saut + ♡ de ton compagnon au coucou reçu.

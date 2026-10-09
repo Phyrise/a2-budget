@@ -1,6 +1,7 @@
 /**
- * V5.1 — la quête du jour dans la fenêtre sur le monde d'un onglet, jamais
- * annoncée. Un toucher = sa main posée (effet partiel, petite tête de Jiji
+ * V5.1 — la quête du jour, jamais annoncée ; V5.3 : posée DANS la scène de
+ * l'onglet (près du bocal, entre deux rayons, à côté de Totoro…), selon son
+ * emplacement (useQuestPlacement), repli sur le bord de la feuille. Un toucher = sa main posée (effet partiel, petite tête de Jiji
  * ou de Calcifer, vus des deux côtés) ; quand les deux ont aidé, petite fête
  * commune (une fois par téléphone), puis l'objet s'en va. Pas réglée dans la
  * journée : à minuit, elle s'efface en douceur.
@@ -20,6 +21,7 @@ import {
   type SharedQuest,
 } from '@a2/core';
 import { useEffect, useRef, useState } from 'react';
+import { useMediaQuery, useShell } from '../../app/ShellContext';
 import { playCue } from '../../app/sound';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
@@ -28,6 +30,7 @@ import { cx } from '../../ui';
 import { CalciferArt, JijiArt } from '../../ui/companionArt';
 import { QuestArt } from './QuestArt';
 import { questMemory } from './questMemory';
+import { useQuestPlacement } from './useQuestPlacement';
 import './quests.css';
 
 const CELEBRATE_MS = 2800;
@@ -64,6 +67,8 @@ function Sparks() {
 
 export function QuestSpot({ tab }: { tab: QuestTab }) {
   const { appState, today, me, helpQuest } = useApp();
+  const { prefs } = useShell();
+  const calm = useMediaQuery('(prefers-reduced-motion: reduce)') || prefs.forestMotion === 'still';
   const found = questOfDay(appState?.quests?.items, localDateKey(today), { scheduled: me !== null });
   const quest = found !== null && found.tab === tab ? found : null;
   const done = quest !== null && isQuestDone(quest);
@@ -74,6 +79,7 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
   const [wiggle, setWiggle] = useState(false);
   const [fading, setFading] = useState<SharedQuest | null>(null);
   const last = useRef<SharedQuest | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
 
   // La fête commune : une fois par téléphone, puis l'objet s'en va.
   const celebrateId = celebrating ? quest.id : null;
@@ -109,6 +115,7 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
   }, [wiggle]);
 
   const shown = visible ?? fading;
+  const place = useQuestPlacement(button, tab, shown?.spot ?? 0, shown?.id ?? null, celebrating || visible === null);
   if (shown === null) return null;
   const status = questStatus(shown);
 
@@ -124,18 +131,23 @@ export function QuestSpot({ tab }: { tab: QuestTab }) {
 
   return (
     <button
+      ref={button}
       type="button"
       className={cx(
         'quest',
         `quest--${shown.kind}`,
-        `quest--spot${shown.spot}`,
         `is-${status}`,
         celebrating && 'is-celebrating',
         wiggle && 'is-wiggle',
         visible === null && 'is-fading',
+        place === null && 'is-measuring',
+        calm && 'is-calm',
       )}
+      style={place === null ? undefined : { left: place.x, top: place.y }}
+      data-perch={place?.perch ?? ''}
       aria-label={LABEL[shown.kind]}
       data-quest={shown.id}
+      data-spot={shown.spot}
       data-status={status}
       onClick={touch}
     >

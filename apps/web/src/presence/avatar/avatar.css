@@ -1,5 +1,5 @@
-/* Avatar de l'autre (V5.2) : il vit sur le haut de la barre du bas. Seuls
-   lui et son kompeitō captent le doigt. Calme (« Immobile », mouvement
+/* Avatar de l'autre (V5.2) : il vit sur le haut de la barre du bas. Seul
+   lui capte le doigt. Calme (« Immobile », mouvement
    réduit) : poses seulement, rien ne bouge. */
 
 .avatar-stage {
@@ -85,33 +85,6 @@
   font-weight: 700;
 }
 
-.avatar__treat {
-  appearance: none;
-  position: absolute;
-  left: 18px;
-  bottom: 0;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 220, 230, 0.22), transparent 68%);
-  cursor: pointer;
-  pointer-events: auto;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.avatar__candy {
-  position: absolute;
-  left: 4px;
-  bottom: 22px;
-  pointer-events: none;
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .avatar-stage:not(.is-calm) .is-trot .avatar__move {
     animation: avatar-trot 340ms ease-in-out infinite;
@@ -141,10 +114,6 @@
     animation: avatar-purr 1.4s ease-in-out;
   }
 
-  .avatar-stage:not(.is-calm) .avatar.is-munch .avatar__move {
-    animation: avatar-munch 1.3s ease-in-out;
-  }
-
   .avatar-stage:not(.is-calm) .avatar__heart {
     animation: presence-heart 1.4s var(--ease-out) forwards;
   }
@@ -153,13 +122,6 @@
     animation: avatar-zz 2.8s ease-in-out infinite;
   }
 
-  .avatar-stage:not(.is-calm) .avatar__treat svg {
-    animation: avatar-twinkle 3.2s ease-in-out infinite;
-  }
-
-  .avatar-stage:not(.is-calm) .avatar__candy {
-    animation: avatar-candy 520ms var(--ease-out) forwards;
-  }
 }
 
 @keyframes avatar-trot {
@@ -217,39 +179,6 @@
   }
 }
 
-@keyframes avatar-munch {
-  0%,
-  30%,
-  100% {
-    transform: none;
-  }
-  40%,
-  60%,
-  80% {
-    transform: scale(1.05, 0.93);
-  }
-  50%,
-  70%,
-  90% {
-    transform: scale(0.98, 1.03);
-  }
-}
-
-@keyframes avatar-candy {
-  0% {
-    opacity: 1;
-    transform: translate(22px, 10px) scale(1);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(6px, -14px) scale(0.9);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-4px, -4px) scale(0.4);
-  }
-}
-
 @keyframes avatar-zz {
   0%,
   100% {
@@ -262,12 +191,3 @@
   }
 }
 
-@keyframes avatar-twinkle {
-  0%,
-  100% {
-    transform: rotate(0) scale(1);
-  }
-  50% {
-    transform: rotate(22deg) scale(1.12);
-  }
-}

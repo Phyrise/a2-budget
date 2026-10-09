@@ -1,7 +1,7 @@
 /**
  * Avatar de l'autre (V5.2), en invité via le mode développeur (présence
- * simulée en local) : il entre, on le touche (saut + ♡), on le caresse, on
- * lui donne un kompeitō, il fait coucou, il suit l'onglet, puis il sort.
+ * simulée en local) : il entre, on le touche (saut + ♡), on le caresse,
+ * il fait coucou, il suit l'onglet, puis il sort.
  * Il ne prend pas les clics de la barre du bas. Rien n'est écrit.
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -17,7 +17,7 @@ async function devAction(page: Page, name: string) {
   await expect(page.locator('.toast')).toHaveCount(0, { timeout: 10_000 });
 }
 
-test('mode développeur : Jiji entre, saute au toucher, ronronne, croque, fait coucou, puis sort', async ({ page }) => {
+test('mode développeur : Jiji entre, saute au toucher, ronronne, fait coucou, puis sort', async ({ page }) => {
   const errors = trackErrors(page);
   await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ module: 'budget', devMode: true })), UI_KEY);
   await openApp(page);
@@ -60,11 +60,6 @@ test('mode développeur : Jiji entre, saute au toucher, ronronne, croque, fait c
   await page.mouse.up();
   await expect(avatar).toHaveAttribute('data-react', 'purr');
   await expect(page.getByTestId('partner-avatar-heart')).toHaveCount(0);
-  await expect(avatar).toHaveAttribute('data-react', '', { timeout: 4_000 });
-
-  // Kompeitō : il le croque.
-  await avatar.getByRole('button', { name: 'Donner un kompeitō à Jiji' }).click({ force: true });
-  await expect(avatar).toHaveAttribute('data-react', 'munch');
   await expect(avatar).toHaveAttribute('data-react', '', { timeout: 4_000 });
 
   // L'autre fait coucou : Jiji fait coucou.

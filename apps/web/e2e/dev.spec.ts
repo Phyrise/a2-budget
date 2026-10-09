@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { STORAGE_KEY, PHONE, UI_KEY, openApp, sheet, trackErrors } from './helpers';
+import { openDev, openDevSection } from './devPanel';
 
 test.use({ viewport: PHONE });
 
@@ -25,8 +26,9 @@ test('mode développeur : panneau, aperçus non persistants, remise à zéro en 
   await page.keyboard.press('Escape');
 
   // Le panneau : chiffres cachés et constantes.
-  await header.getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = sheet(page, 'Mode développeur');
+  // Rangé en accordéon : tout fermé par défaut, une seule partie ouverte.
+  const dev = await openDev(page, 'Chiffres');
+  await expect(dev.locator('.dev-fold.is-open')).toHaveCount(1);
   await expect(dev.getByText('La forêt, en chiffres')).toBeVisible();
   await expect(dev.getByText('1 / 7')).toBeVisible();
   for (const name of ['DAILY_CREDIT_CAP', 'VITALITY_PER_CREDIT', 'DAILY_DECAY', 'INACTIVITY_GRACE_DAYS', 'GUARDIAN_STREAK', 'VITALITY_STATE_THRESHOLDS', 'WEEKLY_GOAL_LEVELS']) {
@@ -36,6 +38,8 @@ test('mode développeur : panneau, aperçus non persistants, remise à zéro en 
   await expect(dev.getByText('Partage de la semaine')).toBeVisible();
 
   // Aperçu : stade 5, la forêt change, les données non.
+  await openDevSection(page, 'Aperçus et sons');
+  await expect(dev.getByRole('button', { name: 'Chiffres', exact: true })).toHaveAttribute('aria-expanded', 'false');
   const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
   await dev.locator('fieldset', { hasText: 'Stade' }).getByRole('button', { name: '5', exact: true }).click();
   await expect(dev.locator('fieldset', { hasText: 'Stade' }).getByRole('button', { name: '5', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -45,8 +49,9 @@ test('mode développeur : panneau, aperçus non persistants, remise à zéro en 
   await page.getByRole('button', { name: 'Revenir à la vraie forêt' }).click();
   await expect(page.locator('.preview-banner')).toHaveCount(0);
 
-  // Quitter le mode : bouton et aperçu disparaissent.
+  // Quitter le mode : bouton et aperçu disparaissent (la partie ouverte est retenue).
   await header.getByRole('button', { name: 'Mode développeur' }).click();
+  await expect(dev.getByRole('button', { name: 'Aperçus et sons', exact: true })).toHaveAttribute('aria-expanded', 'true');
   await dev.locator('fieldset', { hasText: 'Saison' }).getByRole('button', { name: 'Hiver' }).click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.preview-banner')).toBeVisible();
@@ -77,8 +82,7 @@ test('mode développeur : rejouer les fêtes sans attendre la date, sans rien é
   await expect.poll(async () => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '{}').anniversaries, STORAGE_KEY)).toBeTruthy();
   const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
 
-  await header.getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = sheet(page, 'Mode développeur');
+  const dev = await openDev(page, 'Fêtes');
   await dev.getByRole('button', { name: 'Fête d’AC' }).click();
   await expect(page.getByRole('button', { name: 'Joyeux anniversaire, AC (fermer)' })).toBeVisible();
   await expect(page.locator('.party-cake')).toHaveCount(1);
@@ -94,4 +98,36 @@ test('mode développeur : rejouer les fêtes sans attendre la date, sans rien é
   expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBe(before);
   expect(await page.evaluate(() => localStorage.getItem('a2-budget:fetes:v1'))).toBeNull();
   expect(errors, `erreurs page : ${errors.join(' | ')}`).toHaveLength(0);
+});
+
+test('panneau DEV rangé : accordéon, rien ne déborde à 360 px, cibles ≥ 44 px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.addInitScript((key) => localStorage.setItem(key, JSON.stringify({ module: 'maison', devMode: true })), UI_KEY);
+  await openApp(page);
+  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  const dev = sheet(page, 'Mode développeur');
+  await expect(dev.locator('.dev-fold')).toHaveCount(9);
+  await expect(dev.locator('.dev-fold.is-open')).toHaveCount(0);
+  const titles = await dev.locator('.dev-fold .disclosure__summary').allInnerTexts();
+  expect(titles).toEqual(['Quêtes', 'Avatar', 'Compagnons', 'Noiraudes', 'Fêtes', 'Saisons', 'Aperçus et sons', 'Chiffres', 'Remise à zéro']);
+  for (const title of titles) {
+    await openDevSection(page, title as Parameters<typeof openDevSection>[1]);
+    await expect(dev.locator('.dev-fold.is-open')).toHaveCount(1);
+    const fit = await dev.locator('.sheet__body').evaluate((body) => {
+      const box = body.getBoundingClientRect();
+      const open = body.querySelector('.dev-fold.is-open .dev-fold__body') as HTMLElement;
+      const wide = [...open.querySelectorAll<HTMLElement>('*')].filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && (r.right > box.right + 0.5 || r.left < box.left - 0.5);
+      });
+      const small = [...open.querySelectorAll<HTMLElement>('button')].filter((b) => b.getBoundingClientRect().height < 43.5);
+      return { scroll: body.scrollWidth - body.clientWidth, wide: wide.map((el) => el.className || el.tagName), small: small.map((b) => b.textContent) };
+    });
+    expect(fit, title).toEqual({ scroll: 0, wide: [], small: [] });
+  }
+  // La dernière ouverte est retenue.
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  await expect(dev.getByRole('button', { name: 'Remise à zéro', exact: true })).toHaveAttribute('aria-expanded', 'true');
 });

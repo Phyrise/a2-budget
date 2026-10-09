@@ -13,6 +13,8 @@
  * dans les données ; tout se réinitialise en quittant le mode.
  * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part). Seule
  * exception à « rien n'est écrit » : la remise à zéro (DevReset).
+ * V5.4 : chaque partie dans une section repliable (DevSection), le plus
+ * utilisé en haut, la remise à zéro en dernier.
  */
 import { useMemo } from 'react';
 import { useShell } from '../../app/ShellContext';
@@ -28,6 +30,7 @@ import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevQuests } from './DevQuests';
 import { DevReset } from './DevReset';
+import { DevAccordion, DevSection } from './DevSection';
 import { DevSeasons } from './DevSeasons';
 import './dev.css';
 
@@ -74,26 +77,46 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
               Copier l’état (JSON)
             </Button>
           </div>
-          <DevNumbers data={data} />
-          <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
-          <DevCompanions onKodama={() => showForest(rattleKodama)} />
-          <DevAvatar onClose={onClose} />
-          <DevFetes onClose={onClose} />
-          <DevQuests onClose={onClose} />
-          <DevReset onClose={onClose} />
-          <DevSeasons />
-          <DevNoiraudes onClose={onClose} />
-          <section className="dev-section" aria-labelledby="dev-labs">
-            <h3 id="dev-labs" className="dev-section__title">
-              Labos
-            </h3>
-            <p className="dev-section__lead">Les Noiraudes dessinées par le code : comparaison avec les peintures, scène vivante, réglages de l’apparence.</p>
-            <div className="dev-actions">
-              <Button size="sm" variant="quiet" icon="sparkle" onClick={openNoiraudesLab}>
-                Labo Noiraudes
-              </Button>
-            </div>
-          </section>
+          <DevAccordion>
+            <DevSection id="quests" title="Quêtes">
+              <DevQuests onClose={onClose} />
+            </DevSection>
+            <DevSection id="avatar" title="Avatar">
+              <DevAvatar onClose={onClose} />
+            </DevSection>
+            <DevSection id="companions" title="Compagnons">
+              <DevCompanions onKodama={() => showForest(rattleKodama)} />
+            </DevSection>
+            <DevSection id="noiraudes" title="Noiraudes">
+              <DevNoiraudes onClose={onClose} />
+              <section className="dev-section" aria-labelledby="dev-labs">
+                <h3 id="dev-labs" className="dev-section__title">
+                  Labos
+                </h3>
+                <p className="dev-section__lead">Les Noiraudes dessinées par le code : comparaison avec les peintures, scène vivante, réglages de l’apparence.</p>
+                <div className="dev-actions">
+                  <Button size="sm" variant="quiet" icon="sparkle" onClick={openNoiraudesLab}>
+                    Labo Noiraudes
+                  </Button>
+                </div>
+              </section>
+            </DevSection>
+            <DevSection id="fetes" title="Fêtes">
+              <DevFetes onClose={onClose} />
+            </DevSection>
+            <DevSection id="seasons" title="Saisons">
+              <DevSeasons />
+            </DevSection>
+            <DevSection id="previews" title="Aperçus et sons">
+              <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
+            </DevSection>
+            <DevSection id="numbers" title="Chiffres">
+              <DevNumbers data={data} />
+            </DevSection>
+            <DevSection id="reset" title="Remise à zéro">
+              <DevReset onClose={onClose} />
+            </DevSection>
+          </DevAccordion>
         </div>
       )}
     </Sheet>

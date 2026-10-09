@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, STORAGE_KEY, goTo, openApp, sheet, trackErrors } from './helpers';
+import { openDev, openDevSection } from './devPanel';
 
 /**
  * Saisons (contre le build de production, `pnpm preview`, service worker
@@ -141,13 +142,14 @@ test('mode développeur : l’aperçu de saison change les peintures, sans écri
   await page.keyboard.press('Escape');
   const before = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
 
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = sheet(page, 'Mode développeur');
+  const dev = await openDev(page, 'Saisons');
   const row = (label: string) => dev.locator('.dev-row', { has: page.getByText(label, { exact: true }) });
   await expect(row('Saison réelle')).toContainText('Été (base)');
   await expect(row('Saison affichée')).toContainText('Été (base)');
   await expect(row('Cache des saisons')).toContainText(/\d+ \/ 32/);
+  await openDevSection(page, 'Aperçus et sons');
   await dev.locator('fieldset', { hasText: 'Saison' }).getByRole('button', { name: 'Hiver' }).click();
+  await openDevSection(page, 'Saisons');
   await expect(row('Saison affichée')).toContainText('Hiver');
   await expect(row('Saison affichée')).toContainText('aperçu');
   await expect(row('Saison réelle')).toContainText('Été (base)');

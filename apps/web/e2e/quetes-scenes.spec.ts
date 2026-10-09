@@ -6,6 +6,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { APP, PHONE, UI_KEY, trackErrors } from './helpers';
+import { openDev } from './devPanel';
 
 test.use({ viewport: PHONE });
 
@@ -29,8 +30,7 @@ async function open(page: Page) {
 }
 
 async function spawn(page: Page, label: string, spot: number) {
-  const dev = page.getByRole('dialog', { name: 'Mode développeur' });
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  const dev = await openDev(page, 'Quêtes');
   await dev.getByRole('button', { name: `Place ${spot + 1}` }).click();
   await dev.getByRole('button', { name: label }).click();
   await expect(dev).toHaveCount(0);

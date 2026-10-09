@@ -6,12 +6,12 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, STORAGE_KEY, UI_KEY, goTo, nav, openApp, sheet, trackErrors } from './helpers';
+import { openDev } from './devPanel';
 
 test.use({ viewport: PHONE });
 
 async function devAction(page: Page, name: string) {
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await sheet(page, 'Mode développeur').getByRole('button', { name }).click();
+  await (await openDev(page, 'Avatar')).getByRole('button', { name }).click();
   await expect(sheet(page, 'Mode développeur')).toBeHidden();
   // Un message éphémère passe au même endroit, au-dessus de lui : on le laisse partir.
   await expect(page.locator('.toast')).toHaveCount(0, { timeout: 10_000 });
@@ -71,8 +71,7 @@ test('mode développeur : Jiji entre, saute au toucher, ronronne, fait coucou, p
   await expect(avatar).toHaveCount(1);
 
   // Il repart : il sort par un bord, puis disparaît.
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await sheet(page, 'Mode développeur').getByRole('button', { name: 'Le faire repartir' }).click();
+  await (await openDev(page, 'Avatar')).getByRole('button', { name: 'Le faire repartir' }).click();
   await page.keyboard.press('Escape');
   await expect(avatar).toHaveCount(0, { timeout: 10_000 });
 

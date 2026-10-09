@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP, PHONE, UI_KEY, openApp, sheet, trackErrors } from './helpers';
+import { APP, PHONE, UI_KEY, openApp, trackErrors } from './helpers';
+import { openDev } from './devPanel';
 
 test.use({ viewport: PHONE });
 
@@ -224,8 +225,7 @@ test('labo Noiraudes : ouvert depuis le panneau DEV', async ({ page }) => {
     }
   }, UI_KEY);
   await openApp(page);
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = sheet(page, 'Mode développeur');
+  const dev = await openDev(page, 'Noiraudes');
   await dev.getByRole('button', { name: 'Labo Noiraudes' }).click();
   await expect(page.getByTestId('noiraudes-lab')).toBeVisible();
   await expect(page).toHaveURL(/\?lab=noiraudes/);

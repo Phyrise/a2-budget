@@ -6,6 +6,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { APP, PHONE, UI_KEY, trackErrors } from './helpers';
+import { openDev as openDevPanel } from './devPanel';
 
 test.use({ viewport: PHONE });
 
@@ -32,15 +33,14 @@ test('quête à deux en invité : apparition, deux aides, fête, Carnet', async 
   await expect(page.locator('.quest')).toHaveCount(0);
   const before = await jarCount(page);
 
-  const dev = page.getByRole('dialog', { name: 'Mode développeur' });
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  const dev = await openDevPanel(page, 'Quêtes');
   await dev.getByRole('button', { name: 'Rocher (Budget)' }).click();
   const quest = page.locator('.screen-sheet.budget .quest');
   await expect(quest).toHaveAttribute('data-status', 'waiting');
   await expect(quest.locator('.quest__head')).toHaveCount(0);
 
   // AL aide (panneau) : effet partiel, tête de Jiji.
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
+  await openDevPanel(page, 'Quêtes');
   await dev.getByRole('button', { name: 'Aide AL' }).click();
   await expect(quest).toHaveAttribute('data-status', 'half');
   await expect(quest.locator('.quest__head--a')).toHaveCount(1);

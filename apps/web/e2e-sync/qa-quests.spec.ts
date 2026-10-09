@@ -8,6 +8,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { listDocs, openSettings, resetEmulators, waitForEmulators } from './helpers';
 import { closePhones, go, twoPhones } from './phones';
+import { openDev } from '../e2e/devPanel';
 
 test.beforeAll(async () => {
   await waitForEmulators();
@@ -37,8 +38,7 @@ test('quête à deux : AL la fait apparaître, les deux aident, récompense des 
 
   // AL fait apparaître une pousse (Calendrier) : écrite dans le foyer partagé.
   await enableDev(al.page);
-  await al.page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await al.page.getByRole('dialog', { name: 'Mode développeur' }).getByRole('button', { name: 'Pousse (Calendrier)' }).click();
+  await (await openDev(al.page, 'Quêtes')).getByRole('button', { name: 'Pousse (Calendrier)' }).click();
   await expect(al.page.getByRole('navigation', { name: 'Modules de la maison' }).getByRole('button', { name: 'Calendrier', exact: true })).toHaveAttribute('aria-current', 'page');
   await go(ac.page, 'Calendrier');
   await expect(quest(al.page)).toHaveAttribute('data-status', 'waiting');

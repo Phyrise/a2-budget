@@ -9,6 +9,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { listDocs, readDoc, resetEmulators, syncIndicator, waitForEmulators, SYNC_READY } from './helpers';
 import { addFreeDailyTask, closePhones, go, syncedState, todo, twoPhones } from './phones';
+import { openDev } from '../e2e/devPanel';
 
 test.beforeAll(async () => {
   await waitForEmulators();
@@ -57,8 +58,7 @@ async function devMode(page: Page) {
 }
 
 async function devTwice(page: Page, label: string) {
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = page.getByRole('dialog', { name: 'Mode développeur', exact: true });
+  const dev = await openDev(page, 'Remise à zéro');
   await dev.getByRole('button', { name: label }).click();
   await dev.getByRole('button', { name: 'Sûr ?' }).click();
 }

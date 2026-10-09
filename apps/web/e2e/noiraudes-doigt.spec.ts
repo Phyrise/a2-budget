@@ -5,8 +5,9 @@
  * de vrais gestes tactiles (CDP) — pas la souris.
  */
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { UI_KEY, openApp, sheet, trackErrors } from './helpers';
+import { UI_KEY, openApp, trackErrors } from './helpers';
 import { sootActors, treats } from './soot';
+import { openDev } from './devPanel';
 
 test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 }, deviceScaleFactor: 3 });
 
@@ -30,8 +31,7 @@ async function slowPhone(page: Page): Promise<Touch> {
 }
 
 async function devCall(page: Page, label: string) {
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await sheet(page, 'Mode développeur').getByRole('button', { name: label }).click();
+  await (await openDev(page, 'Noiraudes')).getByRole('button', { name: label }).click();
 }
 
 /** Glisse au doigt un kompeitō du bocal de (dx, dy), en quelques pas. */

@@ -7,7 +7,8 @@
  */
 import { addDays, createTask, emptyAppState, localDateKey, validateAppState, weekStartKey, type Circle } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
-import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, sheet, trackErrors } from './helpers';
+import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, trackErrors } from './helpers';
+import { openDev as openDevPanel } from './devPanel';
 
 test.use({ viewport: PHONE });
 
@@ -49,9 +50,8 @@ async function openSeeded(page: Page) {
 }
 
 async function openDev(page: Page) {
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  const dev = sheet(page, 'Mode développeur');
-  await expect(dev.getByRole('heading', { name: 'Remise à zéro' })).toBeVisible();
+  const dev = await openDevPanel(page, 'Remise à zéro');
+  await expect(dev.getByRole('button', { name: 'Tout remettre à zéro' })).toBeVisible();
   return dev;
 }
 

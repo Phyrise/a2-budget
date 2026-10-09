@@ -6,15 +6,15 @@
  * apparaître dans Courses. Jeu hors AppState.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { UI_KEY, openApp, sheet, trackErrors } from './helpers';
+import { UI_KEY, openApp, trackErrors } from './helpers';
 import { sootActors, tapNoiraude, treats } from './soot';
+import { openDev } from './devPanel';
 
 const SHOTS = process.env.NOIRAUDES_SHOTS;
 const stage = (page: Page, screen = 'budget') => page.locator(`.soot-stage[data-screen="${screen}"]`);
 
 async function devCall(page: Page, label: string) {
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await sheet(page, 'Mode développeur').getByRole('button', { name: label }).click();
+  await (await openDev(page, 'Noiraudes')).getByRole('button', { name: label }).click();
 }
 
 test.beforeEach(async ({ page }) => {

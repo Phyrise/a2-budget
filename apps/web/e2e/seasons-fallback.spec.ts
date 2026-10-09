@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, goTo, openApp, sheet } from './helpers';
+import { openDev } from './devPanel';
 
 /**
  * Saisons — replis (contre le build de production) :
@@ -70,8 +71,7 @@ test('bandeau : automne → hiver sans repasser par la base', async ({ page, con
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
   await sheet(page, 'Réglages').getByRole('switch', { name: 'Mode développeur' }).click();
   await page.keyboard.press('Escape');
-  await page.locator('.app-header').getByRole('button', { name: 'Mode développeur' }).click();
-  await sheet(page, 'Mode développeur').locator('fieldset', { hasText: 'Saison' }).getByRole('button', { name: 'Hiver' }).click();
+  await (await openDev(page, 'Aperçus et sons')).locator('fieldset', { hasText: 'Saison' }).getByRole('button', { name: 'Hiver' }).click();
   await page.keyboard.press('Escape');
   await goTo(page, 'Budget');
 

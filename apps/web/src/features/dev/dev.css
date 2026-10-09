@@ -211,7 +211,7 @@
 }
 
 .dev-choice {
-  min-height: 36px;
+  min-height: 44px;
   min-width: 40px;
   padding: 0 12px;
   border: 1px solid var(--line-strong);
@@ -236,7 +236,7 @@
 }
 
 .dev-sound {
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .dev-actions {
@@ -291,4 +291,84 @@
 
 .dev-choice:disabled {
   opacity: 0.6;
+}
+
+/* V5.4 — rangement en accordéon (DevSection) : une partie ouverte à la
+   fois ; rien ne déborde à 360 px (boutons qui passent à la ligne). */
+.dev-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dev-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dev-fold .disclosure__toggle {
+  min-height: 52px;
+  color: var(--ivory-100);
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 520;
+}
+
+.dev-fold.is-open {
+  border-color: rgba(221, 179, 106, 0.35);
+}
+
+.dev-fold__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 2px 0 16px;
+  min-width: 0;
+}
+
+/* Les sections enveloppées perdent leur carte ; leur titre ne reste que
+   s'il y a plusieurs sous-parties (Chiffres, Aperçus, Noiraudes). */
+.dev-fold__body > .dev-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  min-width: 0;
+}
+
+.dev-fold__body > .dev-section:only-child > .dev-section__title {
+  display: none;
+}
+
+.dev-fold__body .dev-section__title {
+  font-size: 14.5px;
+  color: var(--text-muted);
+}
+
+.dev-panel .btn {
+  min-height: 44px;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+
+.dev-panel .dev-actions > *,
+.dev-panel .dev-choices__list > * {
+  max-width: 100%;
+}
+
+.dev-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(118px, 100%), 1fr));
+}
+
+.dev-thresholds {
+  flex-wrap: wrap;
+}
+
+.dev-threshold {
+  min-width: 36px;
+}
+
+.dev-unlock {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
 }

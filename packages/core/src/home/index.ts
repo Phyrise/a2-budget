@@ -298,5 +298,5 @@ export {
 } from './quests.js';
 export type { QuestKind, QuestRole, QuestStatus, QuestTab, QuestsState, SharedQuest } from './quests.js';
 // V5.2 — lien Courses ↔ Maison.
-export { groceryTaskOf, groceriesLeft, lastGroceryRun } from './groceryTask.js';
+export { groceryRunDue, groceryTaskOf, groceriesLeft, lastGroceryRun } from './groceryTask.js';
 export type { GroceryRun } from './groceryTask.js';

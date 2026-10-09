@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { emptyAppState, validateAppState } from './appState.js';
 import { toggleTaskToday, undoCompletion } from './choreActions.js';
-import { groceriesLeft, groceryTaskOf, lastGroceryRun } from './groceryTask.js';
+import { groceriesLeft, groceryRunDue, groceryTaskOf, lastGroceryRun } from './groceryTask.js';
 import { anytimeDueDate, dueDay, isAnytimeDueDate } from './occurrences.js';
 import { actionableTasksToday, isActionableToday } from './tasks.js';
 import { upcomingOccurrences } from './upcoming.js';
@@ -131,3 +131,41 @@ describe('V5.3 — tâche Courses permanente', () => {
     expect(validateAppState(bad).ok).toBe(false);
   });
 });
+
+describe('V5.4 — Courses « à faire » ou « fait »', () => {
+  const t = courses();
+  const run = (id: string, at: Date) => ({ id, taskId: 'c', dueDate: anytimeDueDate(localKey(at), id), taskTitle: 'Courses', completedAt: at.toISOString(), assignee: 'both' as const });
+  const item = (id: string, addedAt: Date, done = false): GroceryItem => ({ id, label: id, done, addedAt: addedAt.toISOString() });
+  const earlier = new Date(2026, 9, 15, 8, 0, 0);
+  const later = new Date(2026, 9, 15, 9, 30, 0);
+
+  it('jamais faite → à faire', () => {
+    expect(groceryRunDue(t, [], [], NOW)).toBe(true);
+  });
+
+  it('faite, liste vide → plus à faire ; annuler la ramène', () => {
+    const state = { ...emptyAppState(), chores: { ...emptyAppState().chores, tasks: [t] } };
+    const done = toggleTaskToday(state, 'c', NOW, 'r1');
+    expect(groceryRunDue(t, done.state.chores.completions, [], NOW)).toBe(false);
+    const undone = undoCompletion(done.state, 'r1', NOW);
+    expect(groceryRunDue(t, undone.state.chores.completions, [], NOW)).toBe(true);
+  });
+
+  it('article ajouté après la dernière fois → revient, même le jour même', () => {
+    const c = [run('r1', earlier)];
+    expect(groceryRunDue(t, c, [item('lait', new Date(2026, 9, 14))], NOW)).toBe(false);
+    expect(groceryRunDue(t, c, [item('pain', later)], NOW)).toBe(true);
+    expect(groceryRunDue(t, [run('r1', earlier), run('r2', later)], [item('pain', later)], NOW)).toBe(false);
+  });
+
+  it('faite un autre jour : à faire seulement s’il reste des articles', () => {
+    const c = [run('r1', new Date(2026, 9, 13, 18, 0, 0))];
+    expect(groceryRunDue(t, c, [], NOW)).toBe(false);
+    expect(groceryRunDue(t, c, [item('riz', new Date(2026, 9, 12), true)], NOW)).toBe(false);
+    expect(groceryRunDue(t, c, [item('riz', new Date(2026, 9, 12))], NOW)).toBe(true);
+  });
+});
+
+function localKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

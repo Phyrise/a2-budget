@@ -13,7 +13,7 @@
  * puis une ligne `JSON:` (résultat complet, pour comparer deux versions).
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync, brotliCompressSync } from 'node:zlib';
 import { kb, mb } from './perf-storage.mjs';
@@ -155,7 +155,7 @@ function printBundle(r) {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'bundle') {
-  const r = bundle(args[0] ? join(process.cwd(), args[0]) : undefined);
+  const r = bundle(args[0] ? resolve(args[0]) : undefined);
   printBundle(r);
   console.log(`JSON:${JSON.stringify({ ...r, images: undefined })}`);
 } else if (cmd === 'runtime') {
@@ -163,7 +163,7 @@ if (cmd === 'bundle') {
   await runtime(args);
 } else if (cmd === 'composition') {
   const { composition, printComposition } = await import('./perf-composition.mjs');
-  const list = composition(join(process.cwd(), args[0] ?? 'dist'));
+  const list = composition(resolve(args[0] ?? 'dist'));
   printComposition(list);
   console.log(`JSON:${JSON.stringify(list)}`);
 } else if (cmd === 'household') {

@@ -6,6 +6,8 @@
  *                                                     images, polices, précache du SW)
  *   node scripts/perf-probe.mjs runtime [options]    exécution, téléphone émulé (voir perf-runtime.mjs)
  *   node scripts/perf-probe.mjs household [mois]     foyer réaliste (JSON sur la sortie)
+ *   node scripts/perf-probe.mjs composition <dist>   octets par source (build avec cartes, perf-composition.mjs)
+ *   node scripts/perf-emu.mjs                         connecté, sur les émulateurs (sous verrou)
  *
  * Prérequis : `pnpm --filter @a2/web build` (dist/). Sortie : texte lisible
  * puis une ligne `JSON:` (résultat complet, pour comparer deux versions).
@@ -159,6 +161,11 @@ if (cmd === 'bundle') {
 } else if (cmd === 'runtime') {
   const { runtime } = await import('./perf-runtime.mjs');
   await runtime(args);
+} else if (cmd === 'composition') {
+  const { composition, printComposition } = await import('./perf-composition.mjs');
+  const list = composition(join(process.cwd(), args[0] ?? 'dist'));
+  printComposition(list);
+  console.log(`JSON:${JSON.stringify(list)}`);
 } else if (cmd === 'household') {
   const { householdState } = await import('./perf-household.mjs');
   process.stdout.write(JSON.stringify(await householdState(Number(args[0] ?? 6))));

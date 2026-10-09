@@ -3,6 +3,7 @@
  */
 import type { Circle } from '@a2/core';
 import { Companion, Icon, cx } from '../../../ui';
+import { companionProfile, useCompanionIds } from '../../../ui/companions';
 import { NB, typo, weekLabel, type Names } from '../ritualText';
 import { circleClosingLine } from '../voices';
 
@@ -127,6 +128,7 @@ export function CircleReadback({
 
 export function CircleClosing({ circle, names, sentTo = null }: { circle: Circle; names: Names; sentTo?: 'a' | 'b' | null }) {
   const lines = circleClosingLine(circle.id);
+  const ids = useCompanionIds();
   return (
     <div className="circle-closing">
       <div className="circle-closing__pair">
@@ -139,10 +141,10 @@ export function CircleClosing({ circle, names, sentTo = null }: { circle: Circle
       </p>
       <div className="circle-closing__bubbles">
         <p className="ritual-bubble ritual-bubble--a">
-          <span className="ritual-bubble__who">Jiji</span> {lines.a}
+          <span className="ritual-bubble__who">{companionProfile(ids.a).name}</span> {lines.a}
         </p>
         <p className="ritual-bubble ritual-bubble--b">
-          <span className="ritual-bubble__who">Calcifer</span> {lines.b}
+          <span className="ritual-bubble__who">{companionProfile(ids.b).name}</span> {lines.b}
         </p>
       </div>
       <CircleWords circle={circle} names={names} />

@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { CompanionBubbleData } from '../../ui/CompanionBubble';
+import { useCompanionIds } from '../../ui/companions';
 import { pickLine, type BubbleContext, type Speaker } from './companionLines';
 
 const BASE_MS = 2800;
@@ -22,6 +23,10 @@ export function useCompanionVoice(names: { a: string; b: string }) {
   const timers = useRef<number[]>([]);
   const namesRef = useRef(names);
   namesRef.current = names;
+  // V5.6 : chacun parle avec les répliques du compagnon qu'il a choisi.
+  const ids = useCompanionIds();
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
 
   const clearTimers = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -32,7 +37,7 @@ export function useCompanionVoice(names: { a: string; b: string }) {
 
   const say = useCallback((context: BubbleContext, speaker: Speaker, opts: { quiet?: boolean } = {}) => {
     const n = namesRef.current;
-    const text = pickLine(speaker, context, { humain: n[speaker], autre: speaker === 'a' ? n.b : n.a });
+    const text = pickLine(speaker, context, { humain: n[speaker], autre: speaker === 'a' ? n.b : n.a }, Math.random, idsRef.current[speaker]);
     clearTimers();
     seq.current += 1;
     const key = seq.current;
@@ -73,7 +78,7 @@ export function useInView(ref: RefObject<HTMLElement | null>): boolean {
   return inView;
 }
 
-/** Alterne Jiji / Calcifer quand personne en particulier n'a agi. */
+/** Alterne les deux compagnons quand personne en particulier n'a agi. */
 let alternate: Speaker = 'b';
 export function speakerFor(who: string): Speaker {
   if (who === 'a' || who === 'b') return who;

@@ -82,6 +82,16 @@ export {
   monthKeyToLabel,
 } from './months.js';
 
+// V5.6 — compagnon choisi par chaque personne (réglages globaux).
+export {
+  COMPANION_IDS,
+  isCompanionId,
+  defaultCompanion,
+  companionOf,
+  companionsOf,
+} from './companions.js';
+export type { CompanionId, CompanionRole } from './companions.js';
+
 export {
   defaultSettings,
   createMonthRecord,

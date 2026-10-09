@@ -197,6 +197,95 @@
   color: color-mix(in srgb, var(--who) 70%, var(--fog-300));
 }
 
+/* V5.6 — son compagnon, à toucher pour en choisir un autre. */
+.settings-person__companion-button {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-person__companion-button.is-open,
+.settings-person__companion-button:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--who) 55%, transparent);
+  outline: none;
+}
+
+.companion-pick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border-top: 1px dashed rgba(236, 230, 211, 0.14);
+}
+
+.companion-pick__choice {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--fog-300);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.companion-pick__ring {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  transition: border-color 200ms var(--ease-soft), background-color 200ms var(--ease-soft);
+}
+
+.companion-pick__choice[aria-checked='true'] .companion-pick__ring {
+  border-color: var(--who);
+  background: color-mix(in srgb, var(--who) 12%, transparent);
+}
+
+.companion-pick__choice[aria-checked='true'] {
+  color: var(--ivory-50);
+}
+
+.companion-pick__choice:focus-visible {
+  outline: none;
+}
+
+.companion-pick__choice:focus-visible .companion-pick__ring {
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.companion-pick__choice:disabled {
+  cursor: default;
+  opacity: 0.38;
+  filter: grayscale(0.9);
+}
+
+.companion-pick__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
 .settings-person__rates {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

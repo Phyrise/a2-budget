@@ -3,7 +3,7 @@
  * Ne pas éditer à la main : modifier le pipeline (art/pipeline/README.md) puis
  * régénérer (`art/pipeline/remote.sh all`).
  *
- * Poids total : 5.14 Mo (74 fichiers) — stages 3059 Ko · sprites 597 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · foreground 164 Ko · masks 146 Ko · luts 54 Ko · masks-light 34 Ko · placeholder 1 Ko.
+ * Poids total : 5.34 Mo (84 fichiers) — stages 3059 Ko · sprites 805 Ko · banners 492 Ko · depth 375 Ko · fx 345 Ko · foreground 164 Ko · masks 146 Ko · luts 54 Ko · masks-light 34 Ko · placeholder 1 Ko.
  *
  * Saisons (hors précache) : spring 4104 Ko (0/7 profondeurs propres) · autumn 4129 Ko (0/7 profondeurs propres) · winter 3887 Ko (0/7 profondeurs propres).
  * - Fichiers sous assets/seasons/<saison>/, nom de fichier « season-<saison>-… »,
@@ -95,6 +95,16 @@ import calciferHappy from './assets/sprites/calcifer-happy.webp';
 import calciferProud from './assets/sprites/calcifer-proud.webp';
 import calciferSleepy from './assets/sprites/calcifer-sleepy.webp';
 import calciferCurious from './assets/sprites/calcifer-curious.webp';
+import tetoIdle from './assets/sprites/teto-idle.webp';
+import tetoHappy from './assets/sprites/teto-happy.webp';
+import tetoProud from './assets/sprites/teto-proud.webp';
+import tetoSleepy from './assets/sprites/teto-sleepy.webp';
+import tetoCurious from './assets/sprites/teto-curious.webp';
+import hinIdle from './assets/sprites/hin-idle.webp';
+import hinHappy from './assets/sprites/hin-happy.webp';
+import hinProud from './assets/sprites/hin-proud.webp';
+import hinSleepy from './assets/sprites/hin-sleepy.webp';
+import hinCurious from './assets/sprites/hin-curious.webp';
 import fxFog1 from './assets/fx/fog-1.webp';
 import fxFog2 from './assets/fx/fog-2.webp';
 import fxFog3 from './assets/fx/fog-3.webp';
@@ -215,8 +225,10 @@ export const manifest: WorldManifest = {
     guardian,
   },
   companions: {
-    a: { idle: jijiIdle, happy: jijiHappy, proud: jijiProud, sleepy: jijiSleepy, curious: jijiCurious },
-    b: { idle: calciferIdle, happy: calciferHappy, proud: calciferProud, sleepy: calciferSleepy, curious: calciferCurious },
+    jiji: { idle: jijiIdle, happy: jijiHappy, proud: jijiProud, sleepy: jijiSleepy, curious: jijiCurious },
+    calcifer: { idle: calciferIdle, happy: calciferHappy, proud: calciferProud, sleepy: calciferSleepy, curious: calciferCurious },
+    teto: { idle: tetoIdle, happy: tetoHappy, proud: tetoProud, sleepy: tetoSleepy, curious: tetoCurious },
+    hin: { idle: hinIdle, happy: hinHappy, proud: hinProud, sleepy: hinSleepy, curious: hinCurious },
   },
   fx: {
     fog: [fxFog1, fxFog2, fxFog3],

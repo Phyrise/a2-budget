@@ -7,6 +7,8 @@
  *   33,33 % = 3333). Plage valide : 0 à 10000.
  */
 
+import type { CompanionId } from './companions.js';
+
 /** Paramètres d'une personne (copiés dans chaque mois). */
 export interface PersonSettings {
   /** Identifiant stable, ex. "a" ou "b". */
@@ -26,6 +28,11 @@ export interface PersonSettings {
   baseRateBps: number;
   /** Taux appliqué aux compléments (heures sup, astreintes, gardes), en bps (20 % = 2000). Commun au couple. */
   variableRateBps: number;
+  /**
+   * V5.6 — compagnon choisi (réglages globaux seulement, jamais copié dans
+   * les mois). Absent ou inconnu = défaut du rôle ; lire avec `companionOf`.
+   */
+  companion?: CompanionId;
 }
 
 /** Une dépense commune. */

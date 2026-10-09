@@ -4,6 +4,8 @@
  * d'assets (world/manifest.ts) et les écrans qui affichent la forêt.
  */
 
+import type { CompanionId } from '@a2/core';
+
 /** Humeur visible de la forêt (dérivée de vitalityState, jamais de nombre). */
 export type Mood = 'quiet' | 'peaceful' | 'lively' | 'flourishing';
 
@@ -187,10 +189,12 @@ export interface WorldManifest {
     guardian: string;
   };
   /**
-   * Compagnons de l'interface : a = Jiji (AL), b = Calcifer (AC).
-   * Source : planches V3 uniquement (12-jiji-reactions-v3, 13-calcifer-reactions-v3).
+   * Compagnons de l'interface, par identifiant (V5.6 : chacun choisit le sien,
+   * `companionOf` de @a2/core ; défauts Jiji pour AL, Calcifer pour AC).
+   * Sources : 12-jiji-reactions-v3, 13-calcifer-reactions-v3,
+   * 15-teto-reactions-v2, 16-hin-reactions-v2.
    */
-  companions: Record<'a' | 'b', Record<CompanionMood, string>>;
+  companions: Record<CompanionId, Record<CompanionMood, string>>;
   /**
    * Effets peints (planche 14-effects-sheet, fond noir → mélange additif) :
    * nappes de brume, rayons, gouttes, aiguilles de cèdre, spores, halos de kodama.

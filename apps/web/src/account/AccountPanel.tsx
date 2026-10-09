@@ -10,7 +10,8 @@ import './account.css';
 import { useState } from 'react';
 import { Button, Companion } from '../ui';
 import { useAccount } from './AccountContext';
-import { HOUSEHOLD_TEXT, NOTICE_TEXT, ROLE_TEXT, SYNC_STATUS_TEXT } from './accountText';
+import { companionProfile, useCompanionIds } from '../ui/companions';
+import { HOUSEHOLD_TEXT, NOTICE_TEXT, SYNC_STATUS_TEXT, roleText } from './accountText';
 import { useSync } from './SyncContext';
 
 function LeaveChoice({ onCancel }: { onCancel: () => void }) {
@@ -39,6 +40,7 @@ export function AccountPanel() {
   const { phase, member, household, notice, signIn, prepareSignIn, continueAsGuest } = useAccount();
   const { mode, status, hasSharedCopy } = useSync();
   const [leaving, setLeaving] = useState(false);
+  const ids = useCompanionIds();
   const leave = () => (mode === 'sync' && hasSharedCopy ? setLeaving(true) : continueAsGuest());
 
   if (leaving && mode === 'sync') return <LeaveChoice onCancel={() => setLeaving(false)} />;
@@ -49,7 +51,7 @@ export function AccountPanel() {
         <div className="account__who">
           <Companion who={member.role} size={36} mood="happy" />
           <div className="account__text">
-            <p className="account__name">{ROLE_TEXT[member.role]}</p>
+            <p className="account__name">{roleText(member.role, companionProfile(ids[member.role]).name)}</p>
             <p className="account__email">{member.email}</p>
             <p className="account__status">
               {mode === 'sync' && status !== null ? SYNC_STATUS_TEXT[status] : HOUSEHOLD_TEXT[household]}

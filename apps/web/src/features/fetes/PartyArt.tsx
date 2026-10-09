@@ -5,11 +5,13 @@
  * - Calcifer (AC) assis sur un gâteau à la crème, deux bougies qui
  *   vacillent de chaque côté : c'est lui, la grande flamme.
  * Sprites détourés du manifest (mêmes images que <Companion>), repli dessiné
- * sinon. Toujours décoratif : le texte est porté par le parent.
+ * sinon. V5.6 : la mise en scène suit la personne fêtée (chapeau pour AL,
+ * gâteau pour AC), le compagnon est celui qu'elle a choisi.
+ * Toujours décoratif : le texte est porté par le parent.
  */
 import { useId } from 'react';
-import { manifest } from '../../world/manifest';
-import { CalciferArt, JijiArt } from '../../ui/companionArt';
+import { CompanionFigure, companionSprite } from '../../ui/Companion';
+import { useCompanionId } from '../../ui/companions';
 
 function useSvgId(): (name: string) => string {
   const base = useId().replace(/[^a-zA-Z0-9_-]/g, '');
@@ -90,18 +92,18 @@ function Cake() {
   );
 }
 
-function sprite(who: 'a' | 'b'): string {
-  const set = manifest.companions?.[who];
-  return set?.happy || set?.idle || '';
-}
-
 function Figure({ who }: { who: 'a' | 'b' }) {
-  const src = sprite(who);
-  if (src) return <img className="party__sprite" src={src} alt="" draggable={false} decoding="async" />;
-  return <span className="party__drawn">{who === 'a' ? <JijiArt mood="happy" /> : <CalciferArt mood="happy" />}</span>;
+  const id = useCompanionId(who);
+  const src = companionSprite(id, 'happy');
+  if (src) return <img className="party__sprite" src={src} alt="" draggable={false} decoding="async" data-companion={id} />;
+  return (
+    <span className="party__drawn">
+      <CompanionFigure id={id} role={who} mood="happy" />
+    </span>
+  );
 }
 
-/** Jiji au chapeau pointu. */
+/** Jiji (ou le compagnon d'AL) au chapeau pointu. */
 export function JijiParty() {
   return (
     <span className="party-figure party-figure--a">
@@ -111,7 +113,7 @@ export function JijiParty() {
   );
 }
 
-/** Calcifer sur son gâteau, entre deux bougies. */
+/** Calcifer (ou le compagnon d'AC) sur son gâteau, entre deux bougies. */
 export function CalciferParty() {
   return (
     <span className="party-figure party-figure--b">

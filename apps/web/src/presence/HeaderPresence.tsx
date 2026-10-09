@@ -1,8 +1,9 @@
 /**
  * En-tête, mode connecté : coucou reçu → ton compagnon fait un petit saut
  * avec une bulle « ♡ » (et un son léger si les sons sont permis : le son
- * « touché » de ton compagnon, sinon une note de bois), où que tu sois. Le compagnon de l'autre n'est plus ici : il vit sur la barre du bas
- * quand l'autre est sur le même onglet (avatar/PartnerAvatar.tsx, V5.2).
+ * « touché » de ton compagnon, sinon une note de bois), où que tu sois. Le
+ * compagnon de l'autre n'est plus ici : il vit sur la barre du bas quand
+ * l'autre est sur le même onglet (avatar/PartnerAvatar.tsx, V5.2).
  * Calme (« Immobile », mouvement réduit) : pose seulement, rien ne bouge.
  */
 import { useEffect, useRef, useState } from 'react';

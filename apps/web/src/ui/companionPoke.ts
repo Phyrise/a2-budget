@@ -2,8 +2,9 @@
  * Toucher un compagnon, pour rien, juste pour le plaisir (V4.3).
  *
  * - Un toucher : petite réaction (Calcifer crépite et s'élève, Jiji penche
- *   la tête et balance la queue ; Teto et Hin : la pose seulement, V5.6). Anti-rafale : une réaction en cours n'est
- *   jamais relancée, les touchers sont seulement comptés.
+ *   la tête et balance la queue ; V5.6 : Teto pépie, Hin fait « hin », la
+ *   pose change). Anti-rafale : une réaction en cours n'est jamais relancée,
+ *   les touchers sont seulement comptés.
  * - Touché trop souvent (≥ 4 fois en 2 s) : Calcifer s'énerve (flamme plus
  *   haute et rouge-orangé, tremblement, bouffée de fumée, grognement), Jiji
  *   boude (il se détourne), puis ils se calment ; pendant ce temps, plus

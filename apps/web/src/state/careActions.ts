@@ -8,6 +8,7 @@ import { useCallback, useMemo } from 'react';
 import {
   addFocusSession as coreAddFocusSession,
   findOccurrenceCompletion,
+  isAnytimeTask,
   isDueOn,
   circleForWeek,
   saveCircle as coreSaveCircle,
@@ -85,6 +86,7 @@ export function useCareActions(transact: Transact): CareActions {
       return transact((s) => {
         const t = s.chores.tasks.find((x) => x.id === task.id);
         if (t === undefined || (t.recurrence !== 'none' && !isDueOn(t, now))) return { state: s, result: false };
+        if (isAnytimeTask(t)) return { state: s, result: false }; // V5.3 : Courses, jamais « pas aujourd'hui ».
         if (findOccurrenceCompletion(t, s.chores.completions, now) !== undefined) return { state: s, result: false };
         const r = skipOccurrence(s.chores.skips, {
           id,

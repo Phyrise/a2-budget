@@ -24,6 +24,7 @@ import {
   updateTask,
   deleteTask,
   toggleTaskToday,
+  undoCompletion,
   isoWeekday,
   pauseForest,
   resumeForest,
@@ -166,6 +167,12 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
    * passée (« pas aujourd'hui ») n'est pas cochable (unskipToday d'abord).
    */
   toggleHomeTask: (task: HouseholdTask, opts?: { doneBy?: ChoreDoer }) => ToggleHomeTaskResult;
+  /**
+   * V5.3 — annule UN fait précis (tâche Courses « à tout moment » : deux
+   * courses le même jour, on n'annule que celle-ci). Synchronisé : seulement
+   * ses propres gestes. Faux si rien n'a changé.
+   */
+  undoHomeCompletion: (completionId: string) => boolean;
   /** « Mettre la maison en pause » / « Réveiller la forêt ». */
   toggleHomePause: () => void;
 
@@ -762,6 +769,20 @@ export function AppProvider({
     [transact, me],
   );
 
+  const undoHomeCompletion = useCallback(
+    (completionId: string): boolean => {
+      const live = latestRef.current?.chores.completions.find((c) => c.id === completionId);
+      if (live === undefined) return false;
+      const link = syncRef.current;
+      if (link !== undefined && !link.canUndo('completions', live.taskId, live.dueDate)) return false;
+      return transact((s) => {
+        const r = undoCompletion(s, completionId, new Date());
+        return { state: r.state, result: r.completionId !== null };
+      }, false);
+    },
+    [transact],
+  );
+
   const toggleHomePause = useCallback(() => {
     const day = localDateKey(new Date());
     const toggle = (s: AppState): AppState => ({ ...s, forest: s.forest.paused ? resumeForest(s.forest, day) : pauseForest(advanceDay(s.forest, day), day) });
@@ -831,6 +852,7 @@ export function AppProvider({
       updateHomeTask,
       deleteHomeTask,
       toggleHomeTask,
+      undoHomeCompletion,
       toggleHomePause,
       ...care,
       ...calendar,
@@ -870,6 +892,7 @@ export function AppProvider({
       updateHomeTask,
       deleteHomeTask,
       toggleHomeTask,
+      undoHomeCompletion,
       toggleHomePause,
       care,
       calendar,

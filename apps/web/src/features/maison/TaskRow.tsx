@@ -3,22 +3,23 @@
  * aujourd'hui (annulable), tâche laissée « pas aujourd'hui » (repliée,
  * annulable). Qui s'en charge = nextAssignee (« Tour d’AL » en tour à tour).
  */
-import type { ChoreCompletion, HouseholdTask, TaskAssignee } from '@a2/core';
+import type { ChoreCompletion, GroceryRun, HouseholdTask, TaskAssignee } from '@a2/core';
 import { useId } from 'react';
 import { Checkbox, Companion, Icon, clockTime, cx } from '../../ui';
 import type { CompanionMood } from '../../world/types';
 import { CairnMark } from './EffortArt';
+import { GroceryLast } from '../courses/GroceryTaskDone';
 import { GroceryBadge } from './GroceryLink';
 import { assigneeName, recurrenceLabel, turnLabel } from './taskText';
 
 export type Names = { a: string; b: string };
 export type Origin = { x: number; y: number };
 
-export function TaskMeta({ task, turn, names, id }: { task: HouseholdTask; turn: TaskAssignee; names: Names; id?: string }) {
+export function TaskMeta({ task, turn, names, id, last }: { task: HouseholdTask; turn: TaskAssignee; names: Names; id?: string; last?: GroceryRun }) {
   const rotating = task.rotation === true && (turn === 'a' || turn === 'b');
   return (
     <span className="task-row__meta" id={id}>
-      <span>{recurrenceLabel(task)}</span>
+      {last ? <GroceryLast last={last} size={15} /> : <span>{recurrenceLabel(task)}</span>}
       <span className="task-row__dot" aria-hidden="true">
         ·
       </span>
@@ -51,8 +52,11 @@ export function TaskRow({
   mood,
   onToggle,
   onMenu,
+  last,
 }: {
   task: HouseholdTask;
+  /** V5.3 — tâche Courses : la dernière fois (repère discret à la place de « quand »). */
+  last?: GroceryRun;
   /** À qui revient cette occurrence (nextAssignee). */
   turn: TaskAssignee;
   checked: boolean;
@@ -66,7 +70,7 @@ export function TaskRow({
   const metaId = `${uid}-meta`;
   return (
     <li
-      className={cx('task-row', checked && 'is-done', celebrating && 'is-leaving', task.effort === 3 && 'is-chore')}
+      className={cx('task-row', checked && 'is-done', celebrating && 'is-leaving', task.effort === 3 && 'is-chore', task.groceries === true && 'is-anytime')}
       data-task-id={task.id}
     >
       <Checkbox
@@ -92,7 +96,7 @@ export function TaskRow({
           <span id={`${uid}-title`} className="task-row__title">
             {task.title}
           </span>
-          <TaskMeta task={task} turn={turn} names={names} id={metaId} />
+          <TaskMeta task={task} turn={turn} names={names} id={metaId} last={last} />
         </span>
         <Companion who={turn} size={34} mood={mood} reactKey={celebrating ? 'go' : 'rest'} />
         <span className="task-row__more" aria-hidden="true">
@@ -113,7 +117,7 @@ export function DoneRow({
   completion: ChoreCompletion;
   task: HouseholdTask | null;
   names: Names;
-  onUndo: (task: HouseholdTask, origin: Origin) => void;
+  onUndo: (task: HouseholdTask, origin: Origin, completionId: string) => void;
 }) {
   const who = completion.doneBy ?? completion.assignee;
   const helped =
@@ -124,7 +128,7 @@ export function DoneRow({
   return (
     <li className="task-row task-row--done">
       {task ? (
-        <Checkbox checked label={`${completion.taskTitle} (annuler)`} tone={who} onToggle={(origin) => onUndo(task, origin)} size="sm" />
+        <Checkbox checked label={`${completion.taskTitle} (annuler)`} tone={who} onToggle={(origin) => onUndo(task, origin, completion.id)} size="sm" />
       ) : (
         <span className="task-row__spacer" aria-hidden="true">
           <Icon name="check" size={18} />

@@ -129,18 +129,20 @@ export function TaskActions({ task, open, turn, names, onClose, onDone, onSkip, 
           </ActionList>
           <ActionList label="Autres actions">
             <LanternChoice key={task.id} task={task} busy={lanternBusy} onLantern={onLantern} />
-            <ActionItem
-              tone="soft"
-              icon={<Icon name="moon" size={20} />}
-              label={week ? 'Pas cette semaine' : 'Pas aujourd’hui'}
-              hint={week ? 'elle reviendra la semaine prochaine' : 'sans rattrapage, sans compter'}
-              onClick={() => onSkip(task)}
-            />
+            {task.groceries !== true && (
+              <ActionItem
+                tone="soft"
+                icon={<Icon name="moon" size={20} />}
+                label={week ? 'Pas cette semaine' : 'Pas aujourd’hui'}
+                hint={week ? 'elle reviendra la semaine prochaine' : 'sans rattrapage, sans compter'}
+                onClick={() => onSkip(task)}
+              />
+            )}
             <ActionItem
               tone="soft"
               icon={<Icon name="edit" size={20} />}
               label="Modifier"
-              hint="nom, qui, effort, quand"
+              hint={task.groceries === true ? 'nom, qui, effort' : 'nom, qui, effort, quand'}
               onClick={() => onEdit(task)}
             />
           </ActionList>

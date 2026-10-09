@@ -1,19 +1,21 @@
 /**
- * V5.2 — lien Courses ↔ Maison, côté Courses :
- * - `GroceryTaskPill` : rappel discret de la tâche courses (« Cette semaine »,
- *   « Samedi »…) ; quand elle est à faire, le toucher demande « qui ? » ;
+ * Lien Courses ↔ Maison, côté Courses (V5.2 ; V5.3 : tâche permanente) :
+ * - `GroceryTaskPill` : dans le bandeau, toujours là tant qu'une tâche
+ *   Courses existe — balai, repère de la dernière fois (« hier » + tête du
+ *   compagnon), coche ; le toucher demande « qui ? » ;
+ * - `GroceryLast` : ce repère, partagé avec la ligne Maison ;
  * - `WhoDidSheet` : Jiji, Calcifer ou les deux, sans phrase ;
- * - `useGroceryTaskDone` : complète l'occurrence en cours avec le geste de
- *   Maison (`toggleHomeTask` : forêt, équilibre, calendrier) + kompeitō,
- *   luciole et toast annulable, comme depuis le Calendrier.
+ * - `useGroceryTaskDone` : une complétion de plus à chaque fois (geste de
+ *   Maison `toggleHomeTask` : forêt, équilibre, historique) + kompeitō,
+ *   luciole et toast « Annuler » (annule CE fait seulement).
  * Sans tâche liée : rien n'est affiché, aucune question.
  */
-import { findOccurrenceCompletion, groceryTaskOf, groceryTaskStatus, parseLocalDateKey, type ChoreDoer, type GroceryTaskStatus, type HouseholdTask } from '@a2/core';
+import { addDays, groceryTaskOf, lastGroceryRun, localDateKey, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
 import { coursesTheme } from '../../themes/manifest';
-import { Companion, Icon, Sheet, fr, relativeDayLabel, useToast, weekdayName } from '../../ui';
+import { Companion, Icon, Sheet, dayMonth, fr, useToast, weekdayName } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
 import './grocery-task.css';
 
@@ -22,31 +24,37 @@ const SHEET_WAIT_MS = 900;
 
 export interface GroceryTaskView {
   task: HouseholdTask | undefined;
-  status: GroceryTaskStatus;
-  /** L'occurrence en cours est déjà faite. */
-  doneNow: boolean;
+  /** La dernière fois (undefined : jamais). */
+  last: GroceryRun | undefined;
 }
 
 export function useGroceryTask(): GroceryTaskView {
-  const { appState, today } = useApp();
+  const { appState } = useApp();
   return useMemo(() => {
     const task = groceryTaskOf(appState?.chores.tasks ?? []);
-    if (!task || !appState) return { task: undefined, status: { kind: 'none' } as const, doneNow: false };
-    const { completions, skips } = appState.chores;
-    return {
-      task,
-      status: groceryTaskStatus(task, completions, skips, today),
-      doneNow: findOccurrenceCompletion(task, completions, today) !== undefined,
-    };
-  }, [appState, today]);
+    if (!task || !appState) return { task: undefined, last: undefined };
+    return { task, last: lastGroceryRun(task, appState.chores.completions) };
+  }, [appState]);
 }
 
-function whenLabel(task: HouseholdTask, status: GroceryTaskStatus, today: Date): string | null {
-  const week = task.recurrence === 'weekly' && task.flexible === true;
-  if (status.kind === 'open') return week ? 'Cette semaine' : 'Aujourd’hui';
-  if (status.kind === 'none') return null;
-  if (week) return status.daysFromNow <= 7 ? 'La semaine prochaine' : relativeDayLabel(status.date, today);
-  return status.daysFromNow <= 6 && status.daysFromNow > 1 ? weekdayName(parseLocalDateKey(status.date)) : relativeDayLabel(status.date, today);
+/** « aujourd’hui », « hier », « lundi » (cette semaine), sinon « 3 octobre ». */
+export function lastRunLabel(at: string, today: Date): string {
+  const day = localDateKey(new Date(at));
+  if (day === localDateKey(today)) return 'aujourd’hui';
+  if (day === localDateKey(addDays(today, -1))) return 'hier';
+  if (day > localDateKey(addDays(today, -7))) return weekdayName(new Date(at)).toLowerCase();
+  return dayMonth(new Date(at));
+}
+
+/** Repère discret de la dernière fois : « hier » + tête de qui l'a fait. */
+export function GroceryLast({ last, size = 16 }: { last: GroceryRun; size?: number }) {
+  const { today } = useApp();
+  return (
+    <span className="grocery-last">
+      <span>{lastRunLabel(last.at, today)}</span>
+      <Companion who={last.who} size={size} />
+    </span>
+  );
 }
 
 function Broom() {
@@ -54,27 +62,16 @@ function Broom() {
 }
 
 export function GroceryTaskPill({ view, onAsk }: { view: GroceryTaskView; onAsk: () => void }) {
-  const { task, status, doneNow } = view;
+  const { task, last } = view;
   const { today } = useApp();
   if (!task) return null;
-  const when = whenLabel(task, status, today);
-  if (when === null) return null;
-  if (status.kind === 'open') {
-    return (
-      <button type="button" id={PILL_ID} className="grocery-task-pill is-open" onClick={onAsk} aria-label={fr(`${task.title} : ${when.toLowerCase()}. Courses faites ?`)}>
-        <Broom />
-        <span>{when}</span>
-        <Icon name="check" size={15} strokeWidth={2.2} />
-      </button>
-    );
-  }
+  const lastText = last ? `, dernière fois : ${lastRunLabel(last.at, today)}` : '';
   return (
-    <p id={PILL_ID} className="grocery-task-pill">
+    <button type="button" id={PILL_ID} className="grocery-task-pill is-open" onClick={onAsk} aria-label={fr(`${task.title} faites ?${lastText}`)}>
       <Broom />
-      {doneNow && <Icon name="check" size={14} strokeWidth={2.2} />}
-      <span className="visually-hidden">{fr(`${task.title}${doneNow ? ' faites' : ''}, prochaine fois : `)}</span>
-      <span>{when}</span>
-    </p>
+      {last && <GroceryLast last={last} />}
+      <Icon name="check" size={15} strokeWidth={2.2} />
+    </button>
   );
 }
 
@@ -102,18 +99,18 @@ export function WhoDidSheet({ open, onPick, onClose }: { open: boolean; onPick: 
   );
 }
 
-/** Feuille « qui ? » + geste de Maison. `ask()` l'ouvre si une occurrence est à faire. */
+/** Feuille « qui ? » + geste de Maison. `ask()` l'ouvre dès qu'une tâche Courses existe. */
 export function useGroceryTaskDone() {
-  const { toggleHomeTask } = useApp();
+  const { toggleHomeTask, undoHomeCompletion } = useApp();
   const world = useWorld();
   const toast = useToast();
   const view = useGroceryTask();
-  const { task, status } = view;
+  const { task } = view;
   const [asking, setAsking] = useState(false);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const canAsk = task !== undefined && status.kind === 'open';
+  const canAsk = task !== undefined;
   const ask = useCallback(() => {
     if (canAsk) setAsking(true);
   }, [canAsk]);
@@ -125,7 +122,7 @@ export function useGroceryTaskDone() {
 
   const pick = (who: ChoreDoer) => {
     setAsking(false);
-    if (!task || status.kind !== 'open') return;
+    if (!task) return;
     const result = toggleHomeTask(task, { doneBy: who });
     if (!result.completed || result.completionId === null) return;
     const completionId = result.completionId;
@@ -140,7 +137,7 @@ export function useGroceryTaskDone() {
     toast.show({
       message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
       icon: 'check',
-      action: { label: 'Annuler', onClick: () => toggleHomeTask(task) },
+      action: { label: 'Annuler', onClick: () => undoHomeCompletion(completionId) },
     });
   };
 

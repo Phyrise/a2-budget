@@ -14,8 +14,10 @@ import {
   ONCE,
   actionableTasksToday,
   findOccurrenceCompletion,
+  isAnytimeTask,
   isDueOn,
   isSkipped,
+  lastGroceryRun,
   localDateKey,
   nextAssignee,
   upcomingOccurrences,
@@ -32,6 +34,7 @@ import { Button, Companion, Disclosure, EmptyState, Icon, IconButton, cx, longDa
 import { CompanionBubble } from '../../ui/CompanionBubble';
 import type { CompanionMood } from '../../world/types';
 import { useWorld } from '../../world/WorldContext';
+import { WhoDidSheet } from '../courses/GroceryTaskDone';
 import { RitualsBar } from '../rituals/RitualsBar';
 import { lanternWhoFor, startLantern } from '../rituals/lantern/lanternActions';
 import { useLantern } from '../rituals/lantern/lanternStore';
@@ -63,13 +66,15 @@ export function MaisonScreen() {
   const lanternBusy = lanternPhase === 'running' || lanternPhase === 'paused';
   const [sheet, setSheet] = useState<TaskSheetState>(null);
   const [menu, setMenu] = useState<{ task: HouseholdTask; open: boolean; turn: TaskAssignee } | null>(null);
+  // V5.3 — Courses : cocher la ligne demande « qui ? » (elle reste là).
+  const [asking, setAsking] = useState<HouseholdTask | null>(null);
   const perchRef = useRef<HTMLDivElement>(null);
   const perchVisible = useInView(perchRef);
 
   useEffect(() => {
-    setForegroundSheet(sheet !== null || menu?.open === true);
+    setForegroundSheet(sheet !== null || menu?.open === true || asking !== null);
     return () => setForegroundSheet(false);
-  }, [sheet, menu, setForegroundSheet]);
+  }, [sheet, menu, asking, setForegroundSheet]);
 
   // Gardien : joué une seule fois quand forest.lastRareEvent devient « guardian ».
   const lastRare = appState?.forest.lastRareEvent ?? null;
@@ -93,6 +98,8 @@ export function MaisonScreen() {
 
   const actionable = useMemo(() => actionableTasksToday(tasks, today, completions, skips), [tasks, today, completions, skips]);
   const actionableIds = useMemo(() => new Set(actionable.map((t) => t.id)), [actionable]);
+  // Ce qui reste vraiment à faire (la ligne Courses, permanente, ne compte pas).
+  const pending = useMemo(() => actionable.filter((t) => !isAnytimeTask(t)), [actionable]);
   const skippedToday = useMemo(
     () =>
       tasks.filter(
@@ -105,10 +112,12 @@ export function MaisonScreen() {
     [completions, todayKey],
   );
 
-  const actions = useMaisonActions(names, { actionable, completions, doneTodayCount: completedToday.length, paused });
+  const actions = useMaisonActions(names, { actionable: pending, completions, doneTodayCount: completedToday.length, paused });
   const { lingering, reaction, bubble } = actions;
 
-  const todayList = tasks.filter((t) => actionableIds.has(t.id) || lingering[t.id] !== undefined);
+  const todayList = tasks
+    .filter((t) => actionableIds.has(t.id) || lingering[t.id] !== undefined)
+    .sort((x, y) => Number(isAnytimeTask(x)) - Number(isAnytimeTask(y)));
   const doneToday = useMemo(
     () => completedToday.filter((c) => lingering[c.taskId] !== c.id).sort((x, y) => y.completedAt.localeCompare(x.completedAt)),
     [completedToday, lingering],
@@ -121,6 +130,7 @@ export function MaisonScreen() {
   const findUndoable = (c: ChoreCompletion): HouseholdTask | null => {
     const task = tasks.find((t) => t.id === c.taskId);
     if (!task) return null;
+    if (isAnytimeTask(task)) return task;
     if (task.recurrence === 'none') return c.dueDate === ONCE ? task : null;
     return findOccurrenceCompletion(task, completions, today)?.id === c.id ? task : null;
   };
@@ -157,7 +167,7 @@ export function MaisonScreen() {
   };
 
   // Humeur des compagnons perchés sur la feuille.
-  const allDone = tasks.length > 0 && actionable.length === 0 && doneToday.length > 0;
+  const allDone = tasks.length > 0 && pending.length === 0 && doneToday.length > 0;
   const baseMood: CompanionMood = paused ? 'sleepy' : sheet !== null || menu?.open ? 'curious' : allDone ? 'proud' : 'idle';
   const reacts = (who: 'a' | 'b') => reaction !== null && (reaction.who === who || reaction.who === 'both');
   const perchedMood = (who: 'a' | 'b'): CompanionMood => (reacts(who) ? reaction!.mood : baseMood);
@@ -195,7 +205,7 @@ export function MaisonScreen() {
             <h1 id="maison-title" tabIndex={-1} className="section-title maison__title">
               <span className="visually-hidden">Maison, </span>Aujourd’hui
             </h1>
-            {actionable.length > 0 && <span className="section-head__meta">{actionable.length} à faire</span>}
+            {pending.length > 0 && <span className="section-head__meta">{pending.length} à faire</span>}
             <IconButton icon="plus" label="Ajouter une tâche" variant="accent" onClick={() => setSheet({ mode: 'create' })} />
           </div>
 
@@ -212,7 +222,8 @@ export function MaisonScreen() {
                     celebrating={celebrating}
                     names={names}
                     mood={celebrating ? (task.effort === 3 ? 'proud' : 'happy') : 'idle'}
-                    onToggle={actions.toggle}
+                    onToggle={isAnytimeTask(task) ? () => setAsking(task) : actions.toggle}
+                    last={isAnytimeTask(task) ? lastGroceryRun(task, completions) : undefined}
                     onMenu={(t) => setMenu({ task: t, open: true, turn: nextAssignee(t, completions) })}
                   />
                 );
@@ -245,7 +256,7 @@ export function MaisonScreen() {
             <Disclosure summary="Fait aujourd’hui" meta={doneToday.length} variant="card" className="done-today">
               <ul className="task-list task-list--done">
                 {doneToday.map((c) => (
-                  <DoneRow key={c.id} completion={c} task={findUndoable(c)} names={names} onUndo={actions.toggle} />
+                  <DoneRow key={c.id} completion={c} task={findUndoable(c)} names={names} onUndo={(t, origin, id) => (isAnytimeTask(t) ? actions.undoRun(id) : actions.toggle(t, origin))} />
                 ))}
               </ul>
             </Disclosure>
@@ -291,6 +302,15 @@ export function MaisonScreen() {
         lanternBusy={lanternBusy}
       />
       <TaskSheet state={sheet} onClose={() => setSheet(null)} />
+      <WhoDidSheet
+        open={asking !== null}
+        onClose={() => setAsking(null)}
+        onPick={(who) => {
+          const task = asking;
+          setAsking(null);
+          if (task) actions.toggle(task, checkCenter(task.id), who, { from: () => checkCenter(task.id) });
+        }}
+      />
     </>
   );
 }

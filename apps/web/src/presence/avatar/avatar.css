@@ -57,6 +57,13 @@
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
 }
 
+/* Hin, large et bas : un peu plus large que la case pour garder la même
+   présence (sa hauteur reste sous celle de Jiji). */
+.avatar--hin .avatar__body .companion {
+  width: 56px;
+  margin-inline: -6px;
+}
+
 .avatar__heart,
 .avatar__zz {
   position: absolute;
@@ -88,6 +95,21 @@
 @media (prefers-reduced-motion: no-preference) {
   .avatar-stage:not(.is-calm) .is-trot .avatar__move {
     animation: avatar-trot 340ms ease-in-out infinite;
+  }
+
+  /* Teto : petits bonds vifs, penché vers l'avant. */
+  .avatar-stage:not(.is-calm) .is-scurry .avatar__move {
+    animation: avatar-scurry 210ms ease-out infinite;
+  }
+
+  /* Arrêt net : il se pose d'un coup, oreilles dressées. */
+  .avatar-stage:not(.is-calm) .is-halt .avatar__move {
+    animation: avatar-halt 300ms var(--ease-out);
+  }
+
+  /* Hin : balancement lourd, d'une patte sur l'autre. */
+  .avatar-stage:not(.is-calm) .is-waddle .avatar__move {
+    animation: avatar-waddle 1.15s ease-in-out infinite;
   }
 
   .avatar-stage:not(.is-calm) .is-float .avatar__move {
@@ -131,6 +153,44 @@
   }
   50% {
     transform: translateY(-4px) rotate(2deg);
+  }
+}
+
+@keyframes avatar-scurry {
+  0%,
+  100% {
+    transform: translateY(0) rotate(3deg) scale(1.03, 0.97);
+  }
+  45% {
+    transform: translateY(-6px) rotate(5deg) scale(0.98, 1.03);
+  }
+}
+
+@keyframes avatar-halt {
+  0% {
+    transform: translateY(-3px) rotate(6deg);
+  }
+  45% {
+    transform: scale(1.06, 0.92);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes avatar-waddle {
+  0%,
+  100% {
+    transform: rotate(-4deg) translateY(0);
+  }
+  25% {
+    transform: rotate(0deg) translateY(1.5px) scale(1.02, 0.98);
+  }
+  50% {
+    transform: rotate(4deg) translateY(0);
+  }
+  75% {
+    transform: rotate(0deg) translateY(1.5px) scale(1.02, 0.98);
   }
 }
 

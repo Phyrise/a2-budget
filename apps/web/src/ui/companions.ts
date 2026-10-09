@@ -15,20 +15,15 @@
  * hors du store : défauts) ; `companionProfile(id)` partout ailleurs (les
  * appelants hors React reçoivent l'id en paramètre).
  *
- * À COMPLÉTER (agents suivants) :
- * - SONS de Teto et Hin : `sounds` ci-dessous (nouveaux SoundCue dans
- *   app/sound/cues.ts + synthèse dans app/sound/companionVoices.ts). Sans son
- *   déclaré, rien ne joue (companionPoke.ts, caresse de PartnerAvatar.tsx).
- * - DÉMARCHES `scurry` (Teto) et `waddle` (Hin) : vitesses dans
- *   presence/avatar/avatarModel.ts (GAIT_SPEED), animation dans avatar.css
- *   (classes `is-trot` / `is-float` aujourd'hui ; avatarMotion renvoie
- *   « trot » pour scurry et waddle). En attendant : scurry = trot, waddle =
- *   trot plus lent.
- * - RÉPLIQUES : écrites pour les quatre (features/maison/companionLines.ts,
- *   `linesFor` ; rituels : features/rituals/voices.ts).
- * - ANIMATIONS au toucher de Teto et Hin : ui/companionPoke.css
- *   (`.companion--teto.is-poke`, `.companion--hin.is-upset`…) ; en attendant,
- *   seule la pose change (pokeMoods).
+ * Spécificités de chacun :
+ * - SONS : `sounds` ci-dessous (app/sound/cues.ts, synthèse dans
+ *   app/sound/companionVoices.ts) ; sans son déclaré, rien ne joue.
+ * - DÉMARCHES : `scurry` (Teto : bonds, arrêts nets) et `waddle` (Hin : lent,
+ *   se couche souvent) dans presence/avatar/avatarModel.ts, animations
+ *   `is-scurry` / `is-halt` / `is-waddle` dans avatar.css.
+ * - RÉPLIQUES : features/maison/companionLines.ts (`linesFor`) ; rituels :
+ *   features/rituals/voices.ts.
+ * - Toucher : pose seulement pour Teto et Hin (pokeMoods), son du registre.
  */
 import {
   COMPANION_IDS,

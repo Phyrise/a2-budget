@@ -3,9 +3,11 @@
  * (présence simulée, il suit l'onglet), lui faire envoyer un coucou, le
  * faire repartir. Rien n'est écrit, ni dans les données ni sur le serveur.
  * V5.6 : n'importe quel compagnon (Jiji et Teto viennent pour AL, Calcifer
- * et Hin pour AC : la couleur de personne suit le rôle).
+ * et Hin pour AC : la couleur de personne suit le rôle), ou AL / AC avec le
+ * compagnon qu'il a choisi dans les Réglages.
  */
 import { devVisitCome, devVisitLeave, devVisitPoke, useDevVisit } from '../../presence/avatar/devVisit';
+import { HOUSEHOLD_NAMES } from '../../sync/household';
 import { COMPANION_IDS, companionProfile, type CompanionId } from '../../ui/companions';
 
 const VISITOR: Record<CompanionId, 'a' | 'b'> = { jiji: 'a', calcifer: 'b', teto: 'a', hin: 'b' };
@@ -18,6 +20,19 @@ export function DevAvatar({ onClose }: { onClose: () => void }) {
         Avatar de l’autre
       </h3>
       <div className="dev-actions">
+        {(['a', 'b'] as const).map((who) => (
+          <button
+            key={who}
+            type="button"
+            className="dev-choice"
+            onClick={() => {
+              devVisitCome(who);
+              onClose();
+            }}
+          >
+            Faire venir {HOUSEHOLD_NAMES[who]}
+          </button>
+        ))}
         {COMPANION_IDS.map((id) => (
           <button
             key={id}

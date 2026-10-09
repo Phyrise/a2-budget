@@ -1,8 +1,9 @@
 /**
  * Fête d'anniversaire d'AL ou d'AC (V4.3), à la première ouverture du jour
  * (préférence locale : une fois par jour) ou à la demande du panneau DEV :
- * - AL : Jiji au chapeau pointu, pluie de kompeitō ;
- * - AC : Calcifer sur un gâteau entre deux bougies, étincelles qui montent.
+ * - AL : pluie de kompeitō ; AC : étincelles qui montent ;
+ * - le compagnon choisi par la personne fêtée (V5.6) : Calcifer sur un
+ *   gâteau entre deux bougies, Jiji, Teto ou Hin au chapeau pointu.
  * Au plus « Joyeux anniversaire, <prénom> » (prénom des réglages). Un vrai
  * bouton : le toucher ferme la fête, sinon elle s'efface seule. Sans
  * mouvement (prefers-reduced-motion, Forêt « Immobile ») : ni pluie ni
@@ -17,7 +18,7 @@ import { useApp } from '../../state/store';
 import { budgetTheme } from '../../themes/manifest';
 import { cx } from '../../ui';
 import { claimPartyDay, usePartyRequest, type PartyWho } from './feteEvents';
-import { CalciferParty, JijiParty } from './PartyArt';
+import { CompanionParty } from './PartyArt';
 import './party.css';
 
 /** Attente après l'ouverture (l'app se pose), durée de la fête, sortie. */
@@ -140,7 +141,7 @@ export function BirthdayParty() {
       {!still && party.who === 'a' && <KonpeitoRain seed={party.key} />}
       <button type="button" className="party__card" aria-label={`${message} (fermer)`} onClick={() => setLeaving(true)}>
         <span className="party__stage" aria-hidden="true">
-          {party.who === 'a' ? <JijiParty /> : <CalciferParty />}
+          <CompanionParty who={party.who} />
           {!still && party.who === 'b' && <Sparks seed={party.key} />}
         </span>
         <span className="party__text" aria-hidden="true">

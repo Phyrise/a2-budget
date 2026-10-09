@@ -1,6 +1,7 @@
 /**
- * La petite tête du compagnon de l'autre (Jiji pour AL, Calcifer pour AC),
- * posée sur l'icône de l'onglet où il se trouve, avec un léger halo.
+ * La petite tête du compagnon de l'autre (celui qu'il a choisi, V5.6 ; Hin,
+ * large et bas, est élargi dans presence.css), posée sur l'icône de l'onglet
+ * où il se trouve, avec un léger halo.
  * Décorative : elle vit dans un bouton de la barre, dont le nom ne change pas.
  */
 import type { ModuleId } from '../app/prefs';

@@ -1,6 +1,7 @@
 /**
- * « Qui l'a fait ? » (V5.3 Courses, V5.4 toutes les tâches) : Jiji,
- * Calcifer ou les deux, un seul toucher. La personne la plus probable
+ * « Qui l'a fait ? » (V5.3 Courses, V5.4 toutes les tâches) : le compagnon
+ * de chacun (celui qu'il a choisi, V5.6) ou les deux, un seul toucher ;
+ * libellés = prénoms des Réglages. La personne la plus probable
  * (prévue, sinon soi) est mise en avant et reçoit le focus. Fermer sans
  * choisir : rien n'est coché.
  */

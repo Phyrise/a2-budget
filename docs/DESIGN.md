@@ -128,3 +128,14 @@ Ordre vertical :
   Sprites : `manifest.companions[id][pose]` (planches 12, 13, 15, 16 ;
   art/pipeline/05_sprites.py). Les couleurs de personne restent liées au
   rôle ; les décors des Courses (Jiji de Kiki) ne changent pas.
+- **Avatar de l'autre** : le compagnon qu'il a choisi, avec sa démarche
+  (avatarModel.ts, pur et testé). Teto *détale* : petits bonds vifs, arrêts
+  nets, un regard de côté une fois sur deux. Hin *se dandine* : très lent,
+  courts trajets, il se couche souvent quelques secondes (pose endormie).
+  Toujours : toucher et caresser seulement.
+- **Petits dessins** : la tête dans la barre, les têtes « main posée » des
+  quêtes, le cachet des lettres et « Qui l'a fait ? » suivent le choix ; Hin
+  (large et bas) est élargi dans les pastilles rondes. Fête : Calcifer garde
+  son gâteau, Jiji, Teto et Hin portent le chapeau pointu (posé entre les
+  oreilles de Teto, sur la tête basse de Hin) ; kompeitō pour AL, étincelles
+  pour AC.

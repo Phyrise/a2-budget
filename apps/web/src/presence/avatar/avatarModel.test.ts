@@ -14,8 +14,13 @@ import {
   lookAt,
   rand,
   step,
+  wakeAt,
+  WADDLE_REACH,
   type AvatarState,
 } from './avatarModel';
+
+const TETO = { gait: 'scurry', caressMood: 'happy' } as const;
+const HIN = { gait: 'waddle', caressMood: 'happy' } as const;
 
 /** Fait tourner l'automate à 60 images/s pendant `ms`. */
 function run(s: AvatarState, from: number, ms: number, calm = false): { s: AvatarState; now: number; phases: Set<string> } {
@@ -70,9 +75,87 @@ describe('avatar de l’autre', () => {
     // Caresse : la pose du compagnon (Calcifer fier).
     expect(avatarMood(interact(a, 'purr', 0))).toBe('proud');
     expect(avatarMood(interact(b, 'purr', 0))).toBe('happy');
-    // Scurry et waddle s'animent comme le trot en attendant les leurs.
-    expect(avatarMotion(arrive('a', 0, 3, false, { gait: 'scurry', caressMood: 'happy' }))).toBe('trot');
-    expect(avatarMotion(arrive('b', 0, 3, false, { gait: 'waddle', caressMood: 'happy' }))).toBe('trot');
+    // Scurry et waddle ont leurs propres animations.
+    expect(avatarMotion(arrive('a', 0, 3, false, TETO))).toBe('scurry');
+    expect(avatarMotion(arrive('b', 0, 3, false, HIN))).toBe('waddle');
+  });
+
+  it('Teto (scurry) : petits bonds et arrêts nets, regards de côté, déterministe', () => {
+    const go = () => {
+      let s = arrive('a', 0, 21, false, TETO);
+      let now = 0;
+      let halts = 0;
+      let glances = 0;
+      let frozen = true;
+      for (let t = 0; t < 40_000; t += 16) {
+        now += 16;
+        const prev = s;
+        s = step(s, now, 16, false);
+        if (s.halted && !prev.halted) {
+          halts += 1;
+          if (s.facing !== prev.facing) glances += 1;
+        }
+        // Pendant un arrêt : il ne bouge pas, ne relance pas la boucle d'images, regarde.
+        if (prev.halted && s.halted) {
+          frozen &&= s.x === prev.x && !isMoving(s) && avatarMotion(s) === 'halt' && avatarMood(s) === 'curious';
+        }
+      }
+      return { s, halts, glances, frozen };
+    };
+    const a = go();
+    expect(a).toEqual(go());
+    expect(a.halts).toBeGreaterThanOrEqual(2);
+    expect(a.glances).toBeGreaterThan(0);
+    expect(a.frozen).toBe(true);
+    // Un arrêt finit : il repart vers sa cible, à pleine vitesse.
+    const s = arrive('a', 0, 21, false, TETO);
+    const dash = step(s, 16, 16, false);
+    expect(dash.burst).toBeGreaterThan(0);
+    const halted = step(dash, dash.burst + 1, 16, false);
+    expect(halted.halted).toBe(true);
+    expect(wakeAt(halted, dash.burst + 1)).toBe(halted.burst);
+    const off = step(halted, halted.burst + 1, 16, false);
+    expect(off.halted).toBe(false);
+    expect(off.facing).toBe(off.target >= off.x ? 1 : -1);
+    // Il sort sans s'arrêter.
+    const out = leave({ ...halted, x: 0.3 }, false);
+    expect(out.halted).toBe(false);
+    expect(run(out, 0, 3_000).phases.has('gone')).toBe(true);
+  });
+
+  it('Hin (waddle) : très lent, courts trajets, se couche souvent', () => {
+    const trot = arrive('a', 0, 3, false);
+    const hin = arrive('b', 0, 3, false, HIN);
+    const dt = (s: AvatarState) => Math.abs(step(s, 500, 500, false).x - s.x);
+    expect(dt(hin)).toBeLessThan(dt(trot));
+    const lies = (body?: typeof HIN, seed = 8) => {
+      let s = arrive('b', 0, seed, false, body);
+      let now = 0;
+      let n = 0;
+      let longest = 0;
+      let from = 0;
+      for (let t = 0; t < 70_000; t += 16) {
+        now += 16;
+        const prev = s;
+        s = step(s, now, 16, false);
+        if (s.phase === 'lie' && prev.phase !== 'lie') n += 1;
+        if (s.phase === 'walk' && prev.phase !== 'walk') from = s.x;
+        if (prev.phase === 'walk' && s.phase !== 'walk') longest = Math.max(longest, Math.abs(s.x - from));
+      }
+      return { n, longest };
+    };
+    const h = lies(HIN);
+    expect(h).toEqual(lies(HIN));
+    expect(h.n).toBeGreaterThan(1);
+    expect(h.longest).toBeLessThanOrEqual(WADDLE_REACH + 1e-9);
+    expect(lies(undefined).n).toBe(0);
+    // Couché : pose endormie, il respire ; un toucher le relève.
+    const lying: AvatarState = { ...hin, phase: 'lie', until: 10_000 };
+    expect(avatarMood(lying)).toBe('sleepy');
+    expect(avatarMotion(lying)).toBe('sleep');
+    expect(interact(lying, 'hop', 0).phase).toBe('sit');
+    // …puis il reprend sa vie (jamais coincé couché).
+    expect(step(lying, 10_001, 16, false).phase).not.toBe('lie');
   });
 
   it('erre : marche, s’assoit et regarde, sans quitter la zone', () => {

@@ -1,4 +1,4 @@
-/* Fête d'anniversaire d'AL (Jiji) ou d'AC (Calcifer), V4.3. */
+/* Fête d'anniversaire d'AL ou d'AC (V4.3), avec le compagnon choisi (V5.6). */
 
 .party {
   position: fixed;
@@ -88,28 +88,59 @@
   width: auto;
 }
 
+/* Chapeau pointu : sa base (88 % de sa hauteur) posée au point (--hat-x,
+   --hat-y) du sprite happy, penché de --hat-tilt. Valeurs mesurées sur
+   l'alpha des sprites (sommet de la tête entre les oreilles). */
+.party-hat {
+  position: absolute;
+  left: var(--hat-x);
+  top: var(--hat-y);
+  width: var(--hat-w);
+  transform: translate(-50%, -88%) rotate(var(--hat-tilt));
+  transform-origin: 50% 100%;
+}
+
+.party:not(.party--still) .party-hat {
+  animation: party-hat 1.6s 0.5s var(--ease-soft) 2 both;
+}
+
 /* Jiji : sprite 195 × 301, la tête en haut ; le chapeau entre les oreilles. */
-.party-figure--a {
+.party-figure--jiji {
+  --hat-x: 47%;
+  --hat-y: 17%;
+  --hat-w: 40%;
+  --hat-tilt: -12deg;
   height: 112px;
   aspect-ratio: 195 / 301;
   filter: drop-shadow(0 0 14px rgba(154, 132, 214, 0.45));
 }
 
-.party-hat {
-  position: absolute;
-  left: 47%;
-  top: 17%;
-  width: 40%;
-  transform: translate(-50%, -88%) rotate(-12deg);
-  transform-origin: 50% 100%;
+/* Teto : sprite 265 × 318, la queue à gauche, la tête à droite ; le
+   chapeau entre ses grandes oreilles (pointes à 55 % et 91 %). */
+.party-figure--teto {
+  --hat-x: 73%;
+  --hat-y: 31%;
+  --hat-w: 26%;
+  --hat-tilt: -6deg;
+  height: 112px;
+  aspect-ratio: 265 / 318;
+  filter: drop-shadow(0 0 14px rgba(232, 176, 96, 0.4));
 }
 
-.party--a:not(.party--still) .party-hat {
-  animation: party-hat 1.6s 0.5s var(--ease-soft) 2 both;
+/* Hin : sprite 360 × 272, large et bas, la tête à droite (sommet à 85 %) ;
+   le chapeau tout petit, crânement penché vers l'avant. */
+.party-figure--hin {
+  --hat-x: 85%;
+  --hat-y: 8%;
+  --hat-w: 20%;
+  --hat-tilt: 14deg;
+  height: 90px;
+  aspect-ratio: 360 / 272;
+  filter: drop-shadow(0 0 14px rgba(214, 196, 150, 0.4));
 }
 
 /* Calcifer : la grande flamme, posée sur le gâteau. */
-.party-figure--b {
+.party-figure--calcifer {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -123,7 +154,7 @@
   margin-bottom: -26px;
 }
 
-.party--b:not(.party--still) .party-figure__flame {
+.party:not(.party--still) .party-figure__flame {
   animation: party-bounce 900ms var(--ease-soft) infinite alternate;
 }
 
@@ -138,7 +169,7 @@
   transform: translateX(-50%);
 }
 
-.party--b:not(.party--still) .party-figure__glow {
+.party:not(.party--still) .party-figure__glow {
   animation: party-glow 1.3s ease-in-out infinite alternate;
 }
 
@@ -151,16 +182,16 @@
   transform-box: view-box;
 }
 
-.party--b:not(.party--still) .party-candle__flame {
+.party:not(.party--still) .party-candle__flame {
   animation: party-flicker 520ms ease-in-out infinite alternate;
 }
 
-.party--b:not(.party--still) .party-candle + .party-candle .party-candle__flame {
+.party:not(.party--still) .party-candle + .party-candle .party-candle__flame {
   animation-delay: -260ms;
   animation-duration: 610ms;
 }
 
-/* Étincelles de Calcifer. */
+/* Étincelles (AC). */
 .party__sparks {
   position: absolute;
   left: 50%;
@@ -219,10 +250,10 @@
 @keyframes party-hat {
   0%,
   100% {
-    transform: translate(-50%, -88%) rotate(-12deg);
+    transform: translate(-50%, -88%) rotate(var(--hat-tilt));
   }
   40% {
-    transform: translate(-50%, -100%) rotate(-3deg);
+    transform: translate(-50%, -100%) rotate(calc(var(--hat-tilt) + 9deg));
   }
 }
 

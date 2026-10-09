@@ -4,6 +4,7 @@
  * il fait coucou, il suit l'onglet, puis il sort.
  * Il ne prend pas les clics de la barre du bas. Rien n'est écrit.
  */
+import { emptyAppState } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, STORAGE_KEY, UI_KEY, goTo, nav, openApp, sheet, trackErrors } from './helpers';
 import { openDev } from './devPanel';
@@ -88,6 +89,34 @@ test('V5.6 : n’importe quel compagnon peut venir (Hin, sa démarche, son sprit
   await expect(avatar).toHaveAttribute('data-gait', 'waddle');
   await expect(avatar.locator('img').first()).toHaveAttribute('src', /hin-/);
   await expect(avatar.getByRole('button', { name: 'Coucou à AC' })).toBeVisible();
+});
+
+test('V5.6 : AC a choisi Hin dans les Réglages → c’est Hin qui vient (sprite hin-*)', async ({ page }) => {
+  const errors = trackErrors(page);
+  const base = emptyAppState();
+  const state = {
+    ...base,
+    budget: { ...base.budget, settings: { ...base.budget.settings, personB: { ...base.budget.settings.personB, companion: 'hin' as const } } },
+  };
+  await page.addInitScript(
+    ({ key, ui, value }) => {
+      if (sessionStorage.getItem('avatar-seeded')) return;
+      localStorage.setItem(key, value);
+      localStorage.setItem(ui, JSON.stringify({ module: 'maison', devMode: true }));
+      sessionStorage.setItem('avatar-seeded', '1');
+    },
+    { key: STORAGE_KEY, ui: UI_KEY, value: JSON.stringify(state) },
+  );
+  await openApp(page);
+  await devAction(page, 'Faire venir AC');
+  const avatar = page.getByTestId('partner-avatar');
+  await expect(avatar).toHaveAttribute('data-companion', 'hin');
+  await expect(avatar).toHaveAttribute('data-gait', 'waddle');
+  await expect(avatar.locator('img').first()).toHaveAttribute('src', /hin-/);
+  // Toucher : il saute quand même (interactions inchangées).
+  await avatar.getByRole('button', { name: 'Coucou à AC' }).click({ force: true });
+  await expect(avatar).toHaveAttribute('data-react', 'hop');
+  expect(errors).toEqual([]);
 });
 
 test('calme (mouvement réduit) : Calcifer apparaît posé, sans entrer', async ({ page }) => {

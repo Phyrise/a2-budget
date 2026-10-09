@@ -2,8 +2,8 @@
  * Fait vivre l'avatar de l'autre : l'automate (avatarModel) tourne ici, en
  * local. Pendant un déplacement : une image par rafraîchissement
  * (requestAnimationFrame), la position écrite directement dans le style
- * (aucun rendu React par image). Au repos : un simple minuteur jusqu'à la
- * prochaine pose ; endormi : plus rien jusqu'au prochain geste. React ne
+ * (aucun rendu React par image). Au repos (et pendant les arrêts nets de
+ * Teto) : un simple minuteur jusqu'à la prochaine pose ; endormi : plus rien jusqu'au prochain geste. React ne
  * rend que quand la pose change.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
@@ -17,6 +17,7 @@ import {
   leave,
   lookAt,
   step,
+  wakeAt,
   type AvatarBody,
   type AvatarMood,
   type AvatarPhase,
@@ -119,7 +120,7 @@ export function useAvatar(
     }
     if (s.phase === 'sleep' && s.react === null) return;
     const now = performance.now();
-    const wake = Math.min(s.react !== null ? s.reactUntil : Infinity, s.until > now ? s.until : now + 50);
+    const wake = wakeAt(s, now);
     t.to = window.setTimeout(() => {
       last.current = performance.now();
       tick();

@@ -1,7 +1,7 @@
 /**
  * Petite enveloppe cachetée (dessinée par le code) : papier ivoire, rabat,
- * cachet de cire à la couleur de l'expéditeur et tête de son compagnon
- * (Jiji pour AL, Calcifer pour AC). `opened` : le rabat se soulève et le
+ * cachet de cire à la couleur de l'expéditeur et tête du compagnon qu'il a
+ * choisi (V5.6 : Jiji, Calcifer, Teto ou Hin, via <Companion>). `opened` : le rabat se soulève et le
  * cachet s'efface (animation CSS, coupée si le mouvement est réduit).
  * Décorative : le nom accessible est porté par le bouton qui la contient.
  */

@@ -14,12 +14,11 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync, brotliCompressSync } from 'node:zlib';
+import { kb, mb } from './perf-storage.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const webRoot = join(here, '..');
 
-export const kb = (n) => `${(n / 1024).toFixed(1)} Kio`;
-export const mb = (n) => `${(n / 1024 / 1024).toFixed(2)} Mio`;
 
 function walk(dir) {
   return readdirSync(dir).flatMap((name) => {

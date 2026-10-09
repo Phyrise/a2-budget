@@ -5,7 +5,7 @@
  * Build `dist-emu/` (playwright.sync.config.ts).
  */
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { ALEXIA, APP, ARTHUR, BACKUP_KEY, STATE_KEY, SYNC_KEY, accountSection, chooseSetup, expectApp, fakeGoogle, listDocs, openSettings, quickAdd, readDoc, resetEmulators, setupScreen, syncIndicator, toBuy, waitForEmulators, welcome, SYNC_READY } from './helpers';
+import { ALEXIA, APP, ARTHUR, BACKUP_KEY, STATE_KEY, SYNC_KEY, accountSection, chooseSetup, expectApp, fakeGoogle, listDocs, openSettings, pickWho, quickAdd, readDoc, resetEmulators, setupScreen, syncIndicator, toBuy, waitForEmulators, welcome, SYNC_READY } from './helpers';
 
 test.beforeAll(async () => {
   await waitForEmulators();
@@ -192,10 +192,11 @@ test('qui a fait quoi : le compte connecté signe ses gestes ; chacun ne décoch
   await sheet.locator('#task-recurrence-daily').check();
   await sheet.getByRole('button', { name: 'Ajouter', exact: true }).click();
 
-  // AC la coche sur son téléphone : c'est elle qui l'a faite (« qui ? » sans réponse → son compte).
+  // AC la coche sur son téléphone : « Qui ? » met son compte en avant (tâche libre).
   await ac.page.goto(`${APP}?module=maison`);
   await expectApp(ac.page);
   await ac.page.getByRole('checkbox', { name: 'Sortir le compost', exact: true }).click();
+  await pickWho(ac.page);
   await expect.poll(async () => (await completions()).length).toBe(1);
   expect((await completions())[0]).toMatchObject({ doneBy: 'b', role: 'b' });
 

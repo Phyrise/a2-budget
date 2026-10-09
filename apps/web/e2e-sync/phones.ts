@@ -3,7 +3,7 @@
  * (docs/SYNC_DESIGN.md §11) : ouverture, gestes courants, copie locale.
  */
 import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { ALEXIA, APP, ARTHUR, SYNC_KEY, chooseSetup, fakeGoogle, setupScreen, syncIndicator, SYNC_READY } from './helpers';
+import { ALEXIA, APP, ARTHUR, SYNC_KEY, chooseSetup, fakeGoogle, pickWho, setupScreen, syncIndicator, SYNC_READY } from './helpers';
 
 export interface Phone {
   context: BrowserContext;
@@ -57,6 +57,7 @@ export function todo(page: Page, title: string) {
 /** Coche une tâche à faire et attend qu'elle quitte la liste. */
 export async function checkTask(page: Page, title: string): Promise<void> {
   await page.getByRole('checkbox', { name: title, exact: true }).click();
+  await pickWho(page);
   await expect(todo(page, title)).toHaveCount(0);
 }
 

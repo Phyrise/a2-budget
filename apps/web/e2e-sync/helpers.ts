@@ -174,3 +174,15 @@ export async function quickAdd(page: Page, text: string): Promise<void> {
 export function toBuy(page: Page, label: string) {
   return page.locator('.aisles .item-row').filter({ hasText: label });
 }
+
+/**
+ * V5.4 — cocher une tâche ouvre « Qui ? » : choisit `who`, sinon la
+ * personne mise en avant (prévue, sinon le compte connecté).
+ */
+export async function pickWho(page: Page, who?: 'a' | 'b' | 'both'): Promise<void> {
+  const dialog = page.getByRole('dialog', { name: 'Qui ?', exact: true });
+  await expect(dialog).toBeVisible();
+  const choice = who ? dialog.locator(`.who-did__choice[data-who="${who}"]`) : dialog.locator('.who-did__choice.is-suggested');
+  await choice.click();
+  await expect(dialog).toBeHidden();
+}

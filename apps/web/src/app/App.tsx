@@ -149,7 +149,7 @@ function Shell() {
 
   return (
     <div
-      className={cx('app', `app--${module}`, isDesktop && 'app--desktop', keyboardOpen && 'app--keyboard')}
+      className={cx('app', `app--${module}`, isDesktop && 'app--desktop', keyboardOpen && 'app--keyboard', motion === 'still' && 'app--still')}
       style={{ '--world-ratio': WORLD_RATIO[module] } as CSSProperties}
     >
       <WorldBackdrop module={module} isDesktop={isDesktop} />

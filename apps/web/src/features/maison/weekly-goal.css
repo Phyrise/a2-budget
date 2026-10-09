@@ -44,6 +44,11 @@
   }
 }
 
+/* « Immobile » : pas de respiration (elle repeint à chaque image). */
+.app--still .weekly-goal--flourishing .weekly-goal__glow {
+  animation: none;
+}
+
 @keyframes weekly-goal-breathe {
   50% {
     opacity: 0.72;

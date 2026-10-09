@@ -126,6 +126,11 @@
   animation: ritual-breathe 5.5s var(--ease-soft) infinite;
 }
 
+/* « Immobile » : la carte reste mise en avant, sans respirer (box-shadow repeint à chaque image). */
+.app--still .ritual-card.is-highlight {
+  animation: none;
+}
+
 .ritual-card.is-highlight .ritual-card__glyph {
   background: rgba(221, 179, 106, 0.16);
   color: var(--amber-300);

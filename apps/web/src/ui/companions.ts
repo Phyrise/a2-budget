@@ -24,8 +24,8 @@
  *   (classes `is-trot` / `is-float` aujourd'hui ; avatarMotion renvoie
  *   « trot » pour scurry et waddle). En attendant : scurry = trot, waddle =
  *   trot plus lent.
- * - RÉPLIQUES de Teto et Hin : features/maison/companionLines.ts (`linesFor`) ;
- *   en attendant, celles du compagnon par défaut du rôle.
+ * - RÉPLIQUES : écrites pour les quatre (features/maison/companionLines.ts,
+ *   `linesFor` ; rituels : features/rituals/voices.ts).
  * - ANIMATIONS au toucher de Teto et Hin : ui/companionPoke.css
  *   (`.companion--teto.is-poke`, `.companion--hin.is-upset`…) ; en attendant,
  *   seule la pose change (pokeMoods).

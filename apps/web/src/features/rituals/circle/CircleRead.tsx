@@ -127,8 +127,8 @@ export function CircleReadback({
 }
 
 export function CircleClosing({ circle, names, sentTo = null }: { circle: Circle; names: Names; sentTo?: 'a' | 'b' | null }) {
-  const lines = circleClosingLine(circle.id);
   const ids = useCompanionIds();
+  const lines = circleClosingLine(circle.id, ids);
   return (
     <div className="circle-closing">
       <div className="circle-closing__pair">

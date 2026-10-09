@@ -8,6 +8,7 @@ import { isActionableToday, type HouseholdTask } from '@a2/core';
 import { useState } from 'react';
 import { useApp } from '../../../state/store';
 import { Button, Companion, Icon, IconButton, fr } from '../../../ui';
+import { useCompanionIds } from '../../../ui/companions';
 import { useWorld } from '../../../world/WorldContext';
 import { NB, capitalizeFirst, durationWords, type Names } from '../ritualText';
 import { lanternDoneLine } from '../voices';
@@ -54,7 +55,8 @@ export function LanternBarDone({ names, lanternId, onOpenCarnet }: { names: Name
   const task: HouseholdTask | null = config.taskId ? tasks.find((t) => t.id === config.taskId) ?? null : null;
   const canCheck =
     task !== null && state === 'no' && isActionableToday(task, today, appState?.chores.completions ?? [], appState?.chores.skips);
-  const line = lanternDoneLine(config.who, s.minutesSpent, s.completed, s.sessionId ?? '');
+  const companions = useCompanionIds();
+  const line = lanternDoneLine(config.who, s.minutesSpent, s.completed, s.sessionId ?? '', companions);
   const mark = (next: 'done' | 'dismissed') => setChecked({ session: s.sessionId, state: next });
 
   const check = (origin: HTMLElement) => {

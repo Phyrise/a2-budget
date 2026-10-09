@@ -1,5 +1,5 @@
 /** V5.1 : présence (memberState) et bocal partagé (play/{rôle}). */
-import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { deleteDoc, doc, getDoc, increment, serverTimestamp, setDoc } from 'firebase/firestore';
 import { ALEXIA, ARTHUR, HH, STRANGER, db, google, stamp, startEnv } from './setup';
@@ -35,6 +35,23 @@ describe('présence', () => {
     await assertFails(setDoc(doc(al, `${HH}/memberState/b`), { tab: 'budget', visible: true, at: serverTimestamp(), ...stamp(ARTHUR.uid) }, { merge: true }));
     await assertFails(setDoc(doc(al, `${HH}/memberState/a`), { tab: 'budget', visible: true }, { merge: true }));
     await assertFails(getDoc(doc(db(google(env, STRANGER)), `${HH}/memberState/a`)));
+  });
+});
+
+describe('compagnon lié au compte (V5.7)', () => {
+  it('chacun écrit SON compagnon dans sa fiche (fusion), l’autre le lit ; la présence ne l’efface pas', async () => {
+    const al = db(google(env, ARTHUR));
+    const ac = db(google(env, ALEXIA));
+    await assertSucceeds(setDoc(doc(al, `${HH}/memberState/a`), { uid: ARTHUR.uid, joinedAt: 'x', ...stamp(ARTHUR.uid) }));
+    await assertSucceeds(setDoc(doc(al, `${HH}/memberState/a`), { companion: 'teto', ...stamp(ARTHUR.uid) }, { merge: true }));
+    await assertSucceeds(setDoc(doc(al, `${HH}/memberState/a`), { tab: 'budget', visible: true, at: serverTimestamp(), ...stamp(ARTHUR.uid) }, { merge: true }));
+    const read = await assertSucceeds(getDoc(doc(ac, `${HH}/memberState/a`)));
+    expect(read.data()).toMatchObject({ uid: ARTHUR.uid, companion: 'teto', tab: 'budget' });
+  });
+
+  it('personne n’écrit le compagnon de l’autre', async () => {
+    const ac = db(google(env, ALEXIA));
+    await assertFails(setDoc(doc(ac, `${HH}/memberState/a`), { companion: 'hin', ...stamp(ALEXIA.uid) }, { merge: true }));
   });
 });
 

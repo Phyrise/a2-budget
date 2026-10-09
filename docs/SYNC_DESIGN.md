@@ -113,7 +113,7 @@ chemin est refusé.
 | `…/activity/{id}` | **fait** | fil des nouvelles (§7) |
 | `…/checkpoints/{YYYY-MM-DD}` | dérivé | `ForestState` figé à ce jour (§3.3) |
 | `…/meta/forestMilestones` | monotone | plus hauts stade / soins / déblocages vus |
-| `…/memberState/{role}` | par personne (`a`\|`b`) | `{ activitySeenAt }` ; V5.2 : `circleSeen` (§18) |
+| `…/memberState/{role}` | par personne (`a`\|`b`) | `{ activitySeenAt }` ; V5.2 : `circleSeen` (§18) ; V5.7 : `companion` (§24) |
 | `…/push/{role}` | par personne | abonnement Web Push (option, §8) |
 
 Unités inchangées : montants en **centimes** entiers (l'affichage à l'euro reste un rendu,
@@ -797,3 +797,39 @@ fusionnés en « fait ensemble ». Annuler vise un fait précis (`undoCompletion
 `undoHomeCompletion` côté store). Une tâche Courses de V5.2 le devient sans
 écriture : sa récurrence enregistrée est ignorée, ses anciens faits datés
 restent. Règles Firestore inchangées (elles ne lisent pas `dueDate`).
+
+## 24. V5.7 — compagnon lié au compte
+
+- **Où** : connecté, le compagnon choisi vit dans la fiche du compte,
+  `memberState/{rôle}.companion`, écrite par son seul propriétaire en **fusion**
+  (`setDoc(…, { merge: true })`, comme la présence, `circleSeen` et la fiche
+  d'appartenance : aucune n'efface les autres champs). Règles inchangées
+  (`who == myRole() && stamped()`).
+- **Pourquoi** : en V5.6 il ne vivait que dans `settings/budget`, document
+  partagé et réécrit par d'autres chemins : la remise à zéro le supprime
+  (reproduit : le choix revenait au défaut), une réécriture entière sans
+  `companion` (ancienne version, document recréé) l'efface, et un téléphone
+  resté sur une version d'avant V5.6 (mise à jour volontaire du service
+  worker) ne le lit pas. La fiche, elle, n'est touchée que par son
+  propriétaire, et la remise à zéro la garde.
+- **Lecture** (`presence/companionChoices.ts`, résolution `companionsOf(settings,
+  fiches)` de @a2/core) : fiche > `settings.personX.companion` > défaut du rôle ;
+  doublon toujours résolu à la lecture (A garde le sien). Celle de l'autre arrive
+  avec l'écoute de présence déjà ouverte (aucune lecture en plus) ; la mienne
+  est lue une fois du serveur à l'ouverture et au retour sur l'app (une
+  lecture), **après** mes écritures en attente : sinon le SDK rend une fiche
+  réduite aux champs de la dernière fusion de présence (vu sur l'émulateur).
+  Copie locale `a2-budget:companions:v1` pour le premier affichage.
+- **Écriture** : choisir écrit les réglages (invité ; repli des téléphones V5.6)
+  et, connecté, la fiche. Affichage immédiat ; un choix fait avant l'ouverture
+  du canal est gardé (copie locale comprise) et part à l'ouverture ; hors
+  ligne, le SDK le garde jusqu'au retour du réseau.
+- **Migration douce** : fiche sans choix (lue du serveur, fiche complète avec
+  `uid`) mais un choix dans les réglages pour mon rôle → écrit une fois dans
+  ma fiche par moi seul. L'autre ne reprend jamais mon choix.
+- **Invité** : inchangé (réglages locaux).
+- **Tests** : `packages/core/src/companions.test.ts` (résolution, reprise),
+  `presence/companionChoices.test.ts`, QA deux téléphones
+  `e2e-sync/companion.spec.ts` (rechargement, réglages changés par l'autre,
+  réglages réécrits sans compagnon, nouvel appareil, reprise V5.6, remise à zéro).
+

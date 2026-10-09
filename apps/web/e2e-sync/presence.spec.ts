@@ -5,7 +5,7 @@
  * Lancer : `node apps/web/scripts/qa-sync.mjs` (build émulateurs compris).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { resetEmulators, waitForEmulators } from './helpers';
+import { readDoc, resetEmulators, waitForEmulators } from './helpers';
 import { closePhones, go, transfer, twoPhones } from './phones';
 
 test.beforeAll(async () => {
@@ -96,6 +96,8 @@ test('V5.6 : AL choisit Teto dans ses Réglages, AC voit Teto (tête, avatar) et
   await settingsAl.locator('.settings-person--a').getByRole('button', { name: /^Changer de compagnon/ }).click();
   await settingsAl.getByRole('radio', { name: 'Teto', exact: true }).click();
   await expect(settingsAl.locator('.settings-person--a .settings-person__companion')).toHaveText('avec Teto');
+  // V5.7 : le choix est écrit dans la fiche du compte d'AL.
+  await expect.poll(async () => (await readDoc('households/a2home/memberState/a'))?.companion).toBe('teto');
 
   // Chez AC : la tête d'AL sur l'icône Maison est Teto.
   await expect(navButton(ac.page, 'Maison').locator('.partner-head img')).toHaveAttribute('src', /teto-/);

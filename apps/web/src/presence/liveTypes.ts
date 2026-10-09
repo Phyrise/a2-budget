@@ -4,6 +4,7 @@
  * kompeitō partagé. Types seulement (aucun Firebase). Mode connecté
  * seulement : en invité, rien de tout cela n'est ouvert.
  */
+import type { CompanionId } from '@a2/core';
 import type { ModuleId } from '../app/prefs';
 import type { MemberRole } from '../sync/allowlist';
 import type { PresenceInfo } from './presenceModel';
@@ -27,8 +28,18 @@ export interface LiveChannel {
   publish(tab: ModuleId, visible: boolean): void;
   /** Un coucou à l'autre (heure du serveur dans `pokeAt`). */
   poke(): void;
-  /** Fiche de l'autre (null : pas encore de présence connue). */
-  watchPartner(listener: (presence: PresenceInfo | null) => void): () => void;
+  /**
+   * Fiche de l'autre (null : pas encore de présence connue) ; V5.7 :
+   * `companion` brut de sa fiche (son compagnon choisi, à valider).
+   */
+  watchPartner(listener: (presence: PresenceInfo | null, companion: unknown) => void): () => void;
+  /**
+   * V5.7 — compagnon de MA fiche, lu du serveur ; `fromServer` faux si lu
+   * du cache (hors ligne) ou fiche incomplète. null : fiche illisible.
+   */
+  readMyCompanion(): Promise<{ companion: unknown; fromServer: boolean } | null>;
+  /** V5.7 — mon compagnon, dans MA fiche (fusion ; hors ligne : part au retour du réseau). */
+  setCompanion(id: CompanionId): void;
   /** Les deux documents du bocal ; `confirmed` : vus du serveur (pas seulement du cache). */
   watchPlay(listener: (docs: PlayDocs, confirmed: boolean) => void): () => void;
   /** Incréments de MES compteurs (gestes faits ici seulement). */

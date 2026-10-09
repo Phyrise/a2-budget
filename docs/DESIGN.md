@@ -118,6 +118,8 @@ Ordre vertical :
   (`CompanionId` de @a2/core), réglages globaux seulement (pas de copie par
   mois), synchronisés avec la collection `settings` (aucune règle Firestore
   nouvelle). Lecture tolérante : absent ou inconnu → défaut du rôle.
+  V5.7 : connecté, le choix est lié au compte (fiche `memberState/{rôle}`,
+  prioritaire ; réglages en repli) — docs/SYNC_DESIGN.md §24.
 - **Anti-doublon** : jamais le même compagnon pour les deux. Si deux choix
   simultanés se croisent, `companionsOf` garde celui de A et donne à B son
   défaut s'il est libre, sinon le premier libre (résolu à la lecture, rien

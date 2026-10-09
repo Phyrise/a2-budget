@@ -89,8 +89,10 @@ export {
   defaultCompanion,
   companionOf,
   companionsOf,
+  chosenCompanion,
+  companionToMigrate,
 } from './companions.js';
-export type { CompanionId, CompanionRole } from './companions.js';
+export type { AccountCompanions, CompanionId, CompanionRole } from './companions.js';
 
 export {
   defaultSettings,

@@ -7,8 +7,13 @@
  * - Ce téléphone publie son onglet à chaque changement, `visible: false`
  *   quand l'app passe en arrière-plan, et un battement toutes les 60 s tant
  *   qu'elle est visible. Cachée : ni écriture ni écoute.
- * - Monté sous ShellProvider (l'onglet affiché).
+ * - V5.7 : compagnons liés aux comptes (companionChoices.ts) : celui de
+ *   l'autre arrive avec sa fiche ; le mien est lu de ma fiche à l'ouverture
+ *   et au retour sur l'app, repris une fois des réglages s'il n'y est pas
+ *   encore (lu du serveur seulement), écrit par le canal quand je choisis.
+ * - Monté sous ShellProvider (l'onglet affiché) et le store (réglages).
  */
+import { companionToMigrate } from '@a2/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useAccount } from '../account/AccountContext';
 import { useSync } from '../account/SyncContext';
@@ -19,6 +24,8 @@ import { sharedPlayBackend } from '../creatures/play/shared';
 import type { MemberRole } from '../sync/allowlist';
 import { FIREBASE_ENABLED } from '../sync/firebase/config';
 import { loadFirebaseSession } from '../sync/firebase/loader';
+import { useOptionalApp } from '../state/store';
+import { attachCompanionWriter, hasPendingCompanion, pickOwnCompanion, receiveCompanion, receiveOwnCompanion } from './companionChoices';
 import type { LiveChannel } from './liveTypes';
 import { HEARTBEAT_MS, canPoke, freshPoke, hereTab, partnerOf, type PresenceInfo } from './presenceModel';
 
@@ -68,6 +75,10 @@ function FirebaseLiveProvider({ children }: { children: ReactNode }) {
   moduleRef.current = module;
   const lastSent = useRef<number | null>(null);
   const lastSeen = useRef(0);
+  // Réglages (repli et reprise du compagnon), lus au moment voulu sans relancer d'effet.
+  const settings = useOptionalApp()?.appState?.budget.settings ?? null;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   // Ouverture du canal (connecté, copie commune) ; bocal partagé branché.
   const uid = member?.uid ?? null;
@@ -107,10 +118,40 @@ function FirebaseLiveProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(beat);
   }, [channel, module, visible]);
 
+  // V5.7 — mon compagnon : mes choix partent par le canal (et celui fait avant son ouverture).
+  useEffect(() => {
+    if (channel === null) return;
+    return attachCompanionWriter(channel.role, (id) => channel.setCompanion(id));
+  }, [channel]);
+
+  // V5.7 — ma fiche, lue à l'ouverture et au retour sur l'app (un autre de mes appareils a pu choisir).
+  useEffect(() => {
+    if (channel === null || !visible) return;
+    let cancelled = false;
+    const role = channel.role;
+    const readAt = Date.now();
+    void channel.readMyCompanion().then((mine) => {
+      if (cancelled || mine === null || hasPendingCompanion(role)) return;
+      const person = settingsRef.current?.[role === 'a' ? 'personA' : 'personB'];
+      // Reprise douce : seulement si le SERVEUR dit que ma fiche n'a pas encore de choix.
+      const migrate = mine.fromServer ? companionToMigrate(mine.companion, person?.companion) : null;
+      if (migrate !== null) {
+        pickOwnCompanion(role, migrate);
+        return;
+      }
+      receiveOwnCompanion(role, mine.companion, readAt);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [channel, visible]);
+
   // La fiche de l'autre, écoutée seulement quand l'app est visible.
   useEffect(() => {
     if (channel === null || !visible) return;
-    const stop = channel.watchPartner((p) => {
+    const partner = partnerOf(channel.role);
+    const stop = channel.watchPartner((p, companion) => {
+      receiveCompanion(partner, companion);
       setPresence(p);
       setNow(Date.now());
       if (p !== null && freshPoke(lastSeen.current, p.pokeAt, Date.now())) {

@@ -5,6 +5,9 @@
  * - Présence : `memberState/{mon rôle}` reçoit { tab, visible, at } (fusion,
  *   heure du serveur) ; on écoute seulement la fiche de l'autre. L'appelant
  *   arrête l'écoute quand l'app est cachée (aucune lecture en arrière-plan).
+ * - V5.7 — compagnon : `memberState/{mon rôle}.companion` (fusion, comme la
+ *   présence : aucun autre champ touché) ; celui de l'autre arrive avec sa
+ *   présence, le mien est lu une fois (presence/companionChoices.ts).
  * - Bocal : chaque rôle écrit SON document `play/{rôle}` en incréments
  *   (`increment`) ; on écoute les deux. La migration unique de l'état local
  *   passe par une transaction (marque `migrated`), qui garde les gestes
@@ -13,11 +16,14 @@
  */
 import {
   doc,
+  getDocFromCache,
+  getDocFromServer,
   increment,
   onSnapshot,
   runTransaction,
   serverTimestamp,
   setDoc,
+  waitForPendingWrites,
   type DocumentData,
   type Firestore,
 } from 'firebase/firestore';
@@ -80,10 +86,37 @@ export function openLive(db: Firestore, member: Member): LiveChannel {
         onSnapshot(
           theirs,
           { includeMetadataChanges: false },
-          (snap) => listener(parsePresence(presenceData(snap.data({ serverTimestamps: 'estimate' })))),
-          () => listener(null),
+          (snap) => {
+            const data = snap.data({ serverTimestamps: 'estimate' });
+            listener(parsePresence(presenceData(data)), data?.companion);
+          },
+          () => listener(null, undefined),
         ),
       );
+    },
+
+    async readMyCompanion() {
+      // Du serveur, après mes écritures en attente : tant qu'une fusion de
+      // présence attend, le SDK rend une fiche réduite à ses champs (vu sur
+      // l'émulateur : ni uid ni compagnon). Une fiche sans `uid` n'est donc
+      // jamais prise pour la vérité du serveur (pas de reprise sur elle).
+      // Hors ligne : le cache, pour l'affichage seulement.
+      try {
+        await waitForPendingWrites(db);
+        const data = (await getDocFromServer(mine)).data();
+        return { companion: data?.companion, fromServer: typeof data?.uid === 'string' };
+      } catch {
+        try {
+          return { companion: (await getDocFromCache(mine)).data()?.companion, fromServer: false };
+        } catch {
+          return null;
+        }
+      }
+    },
+
+    setCompanion(id) {
+      if (disposed) return;
+      quiet(setDoc(mine, { companion: id, ...stamp() }, { merge: true }));
     },
 
     watchPlay(listener) {

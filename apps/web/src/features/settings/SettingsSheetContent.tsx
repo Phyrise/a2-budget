@@ -29,7 +29,7 @@ import {
   Switch,
   type IconName,
 } from '../../ui';
-import { COMPANION_IDS, companionProfile, useCompanionIds } from '../../ui/companions';
+import { COMPANION_IDS, companionProfile, useChooseCompanion, useCompanionIds } from '../../ui/companions';
 import type { WorldMotion } from '../../world/types';
 import { ExpenseAddForm, ExpenseEditorList } from '../budget/ExpenseList';
 import { AnniversariesEditor } from './AnniversariesEditor';
@@ -108,6 +108,7 @@ function PersonSettingsCard({ person, settings, canPick }: { person: 'A' | 'B'; 
   const { updatePersonSettings, renamePerson } = useApp();
   const who = person === 'A' ? 'a' : 'b';
   const ids = useCompanionIds();
+  const choose = useChooseCompanion();
   const companion = companionProfile(ids[who]);
   const [picking, setPicking] = useState(false);
   const open = canPick && picking;
@@ -155,7 +156,7 @@ function PersonSettingsCard({ person, settings, canPick }: { person: 'A' | 'B'; 
           current={ids[who]}
           taken={ids[who === 'a' ? 'b' : 'a']}
           onPick={(id) => {
-            updatePersonSettings(person, { companion: id });
+            choose(who, id);
             setPicking(false);
           }}
         />

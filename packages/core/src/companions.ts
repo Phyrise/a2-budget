@@ -1,8 +1,12 @@
 /**
  * V5.6 — compagnon choisi par chaque personne (Réglages).
  *
- * - Stocké dans les réglages GLOBAUX (`settings.personA.companion`,
- *   `settings.personB.companion`), synchronisé avec eux ; les copies par
+ * - V5.7 : connecté, le choix est lié au COMPTE : fiche
+ *   `memberState/{rôle}.companion`, écrite par son seul propriétaire
+ *   (docs/SYNC_DESIGN.md §24). Elle passe avant les réglages.
+ * - Aussi dans les réglages GLOBAUX (`settings.personA.companion`,
+ *   `settings.personB.companion`) : seule source en invité, repli connecté
+ *   (fiche pas encore reprise, ancienne version de l'app) ; les copies par
  *   mois ne le portent pas.
  * - Lecture tolérante : absent ou inconnu → compagnon par défaut du rôle
  *   (A → Jiji, B → Calcifer). Les anciens états restent valides tels quels.
@@ -35,12 +39,27 @@ type CompanionSettings = {
   personB: Pick<Settings['personB'], 'companion'>;
 };
 
-/** Compagnons des deux personnes, doublon résolu (A garde le sien). Pur. */
-export function companionsOf(settings: CompanionSettings | null | undefined): Record<CompanionRole, CompanionId> {
-  const rawA = settings?.personA?.companion;
-  const rawB = settings?.personB?.companion;
-  const a = isCompanionId(rawA) ? rawA : defaultCompanion('a');
-  let b = isCompanionId(rawB) ? rawB : defaultCompanion('b');
+/** V5.7 — choix lus des fiches des comptes (`memberState/{rôle}.companion`), bruts. */
+export type AccountCompanions = Partial<Record<CompanionRole, unknown>>;
+
+/** Choix d'un rôle : fiche du compte, sinon réglages, sinon rien (défaut). Pur. */
+export function chosenCompanion(account: unknown, fromSettings: unknown): CompanionId | undefined {
+  if (isCompanionId(account)) return account;
+  return isCompanionId(fromSettings) ? fromSettings : undefined;
+}
+
+/**
+ * Compagnons des deux personnes, doublon résolu (A garde le sien). La fiche
+ * du compte (`accounts`, V5.7) passe avant les réglages. Pur.
+ */
+export function companionsOf(
+  settings: CompanionSettings | null | undefined,
+  accounts: AccountCompanions = {},
+): Record<CompanionRole, CompanionId> {
+  const rawA = chosenCompanion(accounts.a, settings?.personA?.companion);
+  const rawB = chosenCompanion(accounts.b, settings?.personB?.companion);
+  const a = rawA ?? defaultCompanion('a');
+  let b = rawB ?? defaultCompanion('b');
   if (b === a) {
     const fallback = defaultCompanion('b');
     b = fallback !== a ? fallback : COMPANION_IDS.find((id) => id !== a)!;
@@ -49,6 +68,19 @@ export function companionsOf(settings: CompanionSettings | null | undefined): Re
 }
 
 /** Compagnon d'une personne (doublon résolu). Pur. */
-export function companionOf(settings: CompanionSettings | null | undefined, role: CompanionRole): CompanionId {
-  return companionsOf(settings)[role];
+export function companionOf(
+  settings: CompanionSettings | null | undefined,
+  role: CompanionRole,
+  accounts: AccountCompanions = {},
+): CompanionId {
+  return companionsOf(settings, accounts)[role];
+}
+
+/**
+ * V5.7 — reprise douce : fiche du compte sans choix (lue du serveur) mais un
+ * choix dans les réglages → à écrire une fois dans la fiche. Sinon null. Pur.
+ */
+export function companionToMigrate(account: unknown, fromSettings: unknown): CompanionId | null {
+  if (isCompanionId(account)) return null;
+  return isCompanionId(fromSettings) ? fromSettings : null;
 }

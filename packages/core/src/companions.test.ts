@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   COMPANION_IDS,
   applySettingsToMonth,
+  chosenCompanion,
   companionOf,
+  companionToMigrate,
   companionsOf,
   createMonthRecord,
   defaultCompanion,
@@ -112,5 +114,38 @@ describe('compagnons (V5.6)', () => {
     let state = ensureMonth({ ...emptyState(), settings: s }, '2026-10');
     state = applySettingsToMonth(state, '2026-10');
     expect('companion' in state.months[0]!.personA).toBe(false);
+  });
+});
+
+describe('compagnons liés au compte (V5.7)', () => {
+  it('fiche du compte > réglages > défaut du rôle', () => {
+    const s = withCompanions('teto', 'hin');
+    expect(companionsOf(s, { a: 'calcifer' })).toEqual({ a: 'calcifer', b: 'hin' });
+    expect(companionsOf(s, {})).toEqual({ a: 'teto', b: 'hin' });
+    expect(companionsOf(defaultSettings(), { b: 'teto' })).toEqual({ a: 'jiji', b: 'teto' });
+    expect(companionOf(s, 'b', { b: 'jiji' })).toBe('jiji');
+  });
+
+  it('réglages réécrits sans compagnon (ancienne version) : la fiche tient', () => {
+    expect(companionsOf(defaultSettings(), { a: 'teto' })).toEqual({ a: 'teto', b: 'calcifer' });
+  });
+
+  it('fiche illisible : repli sur les réglages, puis le défaut', () => {
+    expect(chosenCompanion('ponyo', 'hin')).toBe('hin');
+    expect(chosenCompanion(null, 42)).toBeUndefined();
+    expect(companionsOf(withCompanions(undefined, 'hin'), { a: 7, b: 'ponyo' })).toEqual({ a: 'jiji', b: 'hin' });
+  });
+
+  it('doublon entre fiches : A garde le sien', () => {
+    expect(companionsOf(null, { a: 'hin', b: 'hin' })).toEqual({ a: 'hin', b: 'calcifer' });
+  });
+
+  it('reprise : un choix des réglages va dans une fiche qui n’en a pas', () => {
+    expect(companionToMigrate(undefined, 'teto')).toBe('teto');
+    expect(companionToMigrate('ponyo', 'hin')).toBe('hin');
+    // Fiche déjà choisie : jamais écrasée par les réglages.
+    expect(companionToMigrate('hin', 'teto')).toBeNull();
+    // Rien à reprendre.
+    expect(companionToMigrate(undefined, undefined)).toBeNull();
   });
 });

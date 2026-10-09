@@ -16,6 +16,8 @@ function fakeServer() {
       publish: () => undefined,
       poke: () => undefined,
       watchPartner: () => () => undefined,
+      readMyCompanion: () => Promise.resolve(null),
+      setCompanion: () => undefined,
       watchPlay(listener) {
         const l = () => listener({ ...docs }, true);
         listeners.add(l);

@@ -1,8 +1,10 @@
 /**
  * Registre des compagnons (V5.6) : SEULE source de ce qui distingue Jiji,
  * Calcifer, Teto et Hin dans l'interface. Chacun choisit le sien dans les
- * Réglages (`settings.personX.companion`, synchronisé) ; `companionsOf` de
- * @a2/core résout le choix (défaut du rôle, jamais deux fois le même).
+ * Réglages ; connecté (V5.7), le choix vit dans la fiche de son compte
+ * (presence/companionChoices.ts), sinon dans les réglages
+ * (`settings.personX.companion`) ; `companionsOf` de @a2/core résout le
+ * choix (fiche > réglages > défaut du rôle, jamais deux fois le même).
  *
  * - Sprites : `manifest.companions[id][mood]` (world/manifest.ts, 5 poses).
  * - Repli dessiné (companionArt.tsx) : Jiji et Calcifer seulement ; Teto et
@@ -28,11 +30,15 @@
  */
 import {
   COMPANION_IDS,
+  chosenCompanion,
   companionsOf,
   type CompanionId,
   type CompanionRole,
 } from '@a2/core';
+import { useSyncExternalStore } from 'react';
+import { useSync } from '../account/SyncContext';
 import type { SoundCue } from '../app/sound/cues';
+import { companionChoices, pickOwnCompanion, subscribeCompanionChoices, type CompanionChoices } from '../presence/companionChoices';
 import { useOptionalApp } from '../state/store';
 import type { CompanionMood } from '../world/types';
 
@@ -106,13 +112,31 @@ export function companionProfile(id: CompanionId): CompanionProfile {
   return COMPANIONS[id];
 }
 
-/** Compagnons choisis des deux personnes (défauts hors du store). */
+const NO_ACCOUNTS: CompanionChoices = {};
+
+/** Compagnons choisis des deux personnes : fiches des comptes (connecté), réglages, défauts. */
 export function useCompanionIds(): Record<CompanionRole, CompanionId> {
   const settings = useOptionalApp()?.appState?.budget.settings ?? null;
-  const a = settings?.personA.companion;
-  const b = settings?.personB.companion;
+  const connected = useSync().mode === 'sync';
+  const fiches = useSyncExternalStore(subscribeCompanionChoices, companionChoices, () => NO_ACCOUNTS);
+  const accounts = connected ? fiches : NO_ACCOUNTS;
+  const a = chosenCompanion(accounts.a, settings?.personA.companion);
+  const b = chosenCompanion(accounts.b, settings?.personB.companion);
   // Mémo léger : mêmes choix → même objet (dépendances d'effets stables).
   return stableIds(a, b);
+}
+
+/**
+ * Choisir le compagnon de `who` : réglages (invité ; repli des téléphones
+ * d'avant V5.7) et, connecté, la fiche de son compte (source de vérité).
+ */
+export function useChooseCompanion(): (who: CompanionRole, id: CompanionId) => void {
+  const app = useOptionalApp();
+  const connected = useSync().mode === 'sync';
+  return (who, id) => {
+    app?.updatePersonSettings(who === 'a' ? 'A' : 'B', { companion: id });
+    if (connected) pickOwnCompanion(who, id);
+  };
 }
 
 /** Compagnon choisi par `who` (AL = 'a', AC = 'b'). */

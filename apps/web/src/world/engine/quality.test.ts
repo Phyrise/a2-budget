@@ -36,3 +36,26 @@ describe('QualityMeter.step', () => {
     expect(new QualityMeter().step(0, 1.5)).toBe(1);
   });
 });
+
+describe('QualityMeter.interval', () => {
+  /** Images régulières pendant `secs` ; vrai si le moteur doit descendre d'un palier. */
+  const run = (m: QualityMeter, gapMs: number, fps: number, secs = 6) => {
+    let at = 0;
+    for (let t = 0; t < secs; t += gapMs / 1000) {
+      at += gapMs / 1000;
+      if (m.interval(gapMs / 1000, at, true, fps)) return true;
+    }
+    return false;
+  };
+
+  it('60 fps : 33 ms entre images, trop lent', () => {
+    expect(run(new QualityMeter(), 33, 60)).toBe(true);
+  });
+
+  it('plafond à 30 : 33 ms est la cadence normale, 55 ms trop lent', () => {
+    const m = new QualityMeter();
+    m.retarget(30);
+    expect(run(m, 33, 30)).toBe(false);
+    expect(run(new QualityMeter(), 55, 30)).toBe(true);
+  });
+});

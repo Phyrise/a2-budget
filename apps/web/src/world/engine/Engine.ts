@@ -270,7 +270,9 @@ export class WorldEngine {
   configure(p: Partial<Pick<EngineConfig, 'variant' | 'motion' | 'live' | 'quality' | 'maxFps'>>) {
     const prevQ = this.cfg.quality;
     const prevV = this.cfg.variant;
+    const prevMax = this.cfg.maxFps;
     Object.assign(this.cfg, p);
+    if (this.cfg.maxFps !== prevMax) this.meter.retarget(this.cfg.maxFps ?? 60);
     if (p.quality !== undefined && p.quality !== prevQ) this.tier = this.meter.reset(p.quality);
     if (this.cfg.quality !== prevQ || this.cfg.variant !== prevV) this.applySize();
     this.requestFrame(true);
@@ -348,8 +350,8 @@ export class WorldEngine {
     if (due || !this.firstFrame || fps === 0) {
       this.renderOnce(n, fps);
       if (this.lastFrameAt) this.meter.pace(n - this.lastFrameAt);
-      // Qualité auto mesurée à 60 fps seulement (seuil de 24 ms) : jamais sous le plafond à 30.
-      if (fps === 60 && this.lastFrameAt) this.trackQuality(n - this.lastFrameAt);
+      // Qualité auto mesurée à la cadence la plus haute permise (60, ou 30 sous le plafond).
+      if (fps === this.cfg.maxFps && this.lastFrameAt) this.trackQuality(n - this.lastFrameAt, fps);
       this.lastFrameAt = n;
     }
     // Images uniques : on continue seulement tant qu'une transition est en cours.
@@ -376,8 +378,8 @@ export class WorldEngine {
     }
   }
 
-  private trackQuality(interval: number) {
-    if (this.meter.interval(interval, this.lastNow, this.cfg.quality === 'auto' && this.tier < 2)) {
+  private trackQuality(interval: number, fps: number) {
+    if (this.meter.interval(interval, this.lastNow, this.cfg.quality === 'auto' && this.tier < 2, fps)) {
       this.tier = this.meter.step(this.tier, this.dpr);
       this.applySize();
     }

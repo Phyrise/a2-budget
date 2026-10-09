@@ -48,9 +48,10 @@
  * - `chirp`       Teto touché → pépiement, deux notes vives ;
  * - `hiss`        Teto agacé → petit crachotement ;
  * - `trill`       Teto caressé → trille doux ;
- * - `huff`        Hin touché → « hin » respiré, une fois ;
- * - `sigh`        Hin agacé → « hin… hin », deux soupirs sifflants ;
- * - `snuffle`     Hin caressé → long souffle satisfait.
+ * - `huff`        Hin touché → son « hin », une fois ;
+ * - `sigh`        Hin agacé → « hin… hin », le second plus grave ;
+ * - `snuffle`     Hin caressé → « hin » ralenti, souffle satisfait.
+ *   (V5.7 : le vrai « hin » du film, échantillon — samples.ts.)
  */
 export type SoundCue =
   | 'done'

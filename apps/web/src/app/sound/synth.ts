@@ -1,5 +1,6 @@
 /**
- * Briques de synthèse WebAudio (aucun fichier audio) : cloche FM
+ * Briques de synthèse WebAudio (aucun fichier audio ; le seul échantillon,
+ * le « hin » de Hin, passe par samples.ts puis route()) : cloche FM
  * cristalline, sinus / triangle à enveloppe, corde pincée (koto), souffle
  * de bruit filtré. Chaque brique ne crée que quelques nœuds légers
  * (oscillateurs, gains, filtres) qui se déconnectent à la fin ; le bruit et

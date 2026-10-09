@@ -38,6 +38,7 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
 };
 
 function createServer(root: string): http.Server {
@@ -92,7 +93,9 @@ async function readPrecache(page: import('@playwright/test').Page): Promise<Prec
       ok:
         urls.some((u) => /\/assets\/index-.*\.js/.test(u)) &&
         urls.some((u) => /\.(jpe?g|webp|avif)$/.test(u)) &&
-        urls.some((u) => /\.woff2$/.test(u)),
+        urls.some((u) => /\.woff2$/.test(u)) &&
+        // V5.7 : le « hin » de Hin (seul fichier audio) marche hors ligne.
+        urls.some((u) => /\.mp3$/.test(u)),
     };
   });
 }

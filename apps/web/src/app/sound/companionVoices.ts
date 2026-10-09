@@ -9,7 +9,13 @@
  * - Teto (V5.6) : pépiement de renard-écureuil, petit crachotement agacé,
  *   trille doux à la caresse ;
  * - Hin (V5.6) : « hin » respiré, double soupir sifflant, souffle satisfait.
+ *   V5.7 : son vrai « hin » asthmatique, extrait du film — le seul son de
+ *   l'app qui soit un fichier audio (samples.ts) ; la synthèse V5.6 reste
+ *   le repli tant que l'échantillon n'est pas décodé.
+ *
+ * Tous les autres sons sont synthétisés (WebAudio, synth.ts).
  */
+import { playSample, withSample } from './samples';
 import { breath, route, tone, type Bus } from './synth';
 
 const N = {
@@ -242,13 +248,47 @@ function hinBreath(bus: Bus, t: number, f: number, len: number, level: number): 
   nasal(bus, t, f, len * 0.75, level);
 }
 
-/** Hin touché : « hin », une seule fois, sans s'émouvoir. */
+/**
+ * V5.7 : le vrai « hin » de Hin, extrait du film (échantillon, samples.ts).
+ * Gain de voix réglé pour une crête comparable aux autres compagnons au
+ * niveau de l'app (mesure hors ligne, bus maître : toucher et agacé
+ * ≈ −28 dBFS, caresse ≈ −29,5, modes doux −31 à −32 ; Jiji ≈ −30,
+ * Calcifer ≈ −25, l'ancien « hin » synthétisé ≈ −31). La synthèse ci-dessus reste le repli tant que
+ * l'échantillon n'est pas décodé.
+ */
+export const HIN_GAIN = 0.06;
+
+/** Hin touché : son « hin », une seule fois, sans s'émouvoir. Doux : plus bas. */
 export function huff(bus: Bus, t: number, gentle: boolean): void {
-  hinBreath(bus, t, N.E3, 0.3, gentle ? 0.7 : 1);
+  withSample(
+    bus,
+    'hin',
+    t,
+    (buffer, at) => playSample(bus, buffer, at, { gain: HIN_GAIN * (gentle ? 0.7 : 1) }),
+    (at) => hinBreath(bus, at, N.E3, 0.3, gentle ? 0.7 : 1),
+  );
 }
 
-/** Hin agacé : « hin… hin », deux soupirs sifflants, le second plus bas et plus long. */
+/** Hin agacé : « hin… hin », le second plus grave et un peu traîné. Doux : un seul, plus bas. */
 export function sigh(bus: Bus, t: number, gentle: boolean): void {
+  withSample(
+    bus,
+    'hin',
+    t,
+    (buffer, at) => {
+      if (gentle) {
+        playSample(bus, buffer, at, { gain: HIN_GAIN * 0.7, rate: 0.94 });
+        return;
+      }
+      playSample(bus, buffer, at, { gain: HIN_GAIN });
+      playSample(bus, buffer, at + 0.45, { gain: HIN_GAIN * 0.85, rate: 0.9, wet: 0.24 });
+    },
+    (at) => sighSynth(bus, at, gentle),
+  );
+}
+
+/** Repli synthétisé du soupir (V5.6) : deux soupirs sifflants, le second plus bas et plus long. */
+function sighSynth(bus: Bus, t: number, gentle: boolean): void {
   if (gentle) {
     hinBreath(bus, t, N.E3, 0.42, 0.75);
     return;
@@ -257,16 +297,38 @@ export function sigh(bus: Bus, t: number, gentle: boolean): void {
   hinBreath(bus, t + 0.52, N.E3, 0.6, 0.85);
 }
 
-/** Hin caressé : un long souffle satisfait par le nez, qui retombe lentement. */
+/**
+ * Hin caressé : le « hin » ralenti et plus doux, puis un souffle satisfait
+ * très bas par le nez. Doux : le « hin » seul, plus bas.
+ */
 export function snuffle(bus: Bus, t: number, gentle: boolean): void {
-  const level = gentle ? 0.65 : 1;
+  withSample(
+    bus,
+    'hin',
+    t,
+    (buffer, at) => {
+      playSample(bus, buffer, at, { gain: HIN_GAIN * (gentle ? 0.6 : 0.8), rate: 0.87, wet: 0.26 });
+      if (!gentle) contentBreath(bus, at + 0.28, 0.75, 0.35);
+    },
+    (at) => snuffleSynth(bus, at, gentle),
+  );
+}
+
+/** Souffle satisfait par le nez : passe-bas qui s'ouvre puis retombe lentement. */
+function contentBreath(bus: Bus, t: number, len: number, level: number): void {
   breath(bus, t, {
     type: 'lowpass',
-    sweep: [[0, 420], [0.3, 900], [1.05, 320]],
+    sweep: [[0, 420], [len * 0.29, 900], [len, 320]],
     q: 0.8,
-    shape: [[0.22, 0.09 * level], [0.55, 0.06 * level], [1.05, 0]],
+    shape: [[len * 0.21, 0.09 * level], [len * 0.52, 0.06 * level], [len, 0]],
     wet: 0.25,
   });
+}
+
+/** Repli synthétisé de la caresse (V5.6) : un long souffle satisfait, qui retombe lentement. */
+function snuffleSynth(bus: Bus, t: number, gentle: boolean): void {
+  const level = gentle ? 0.65 : 1;
+  contentBreath(bus, t, 1.05, level);
   breath(bus, t + 0.05, { sweep: [[0, 2300], [0.8, 2000]], q: 8, shape: [[0.25, 0.018 * level], [0.8, 0]], wet: 0.25 });
   tone(bus, t + 0.04, N.E2, { peak: 0.03 * level, attack: 0.2, hold: 0.45, decay: 1.05, wet: 0.15, type: 'triangle' });
 }

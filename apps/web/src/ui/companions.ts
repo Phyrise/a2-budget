@@ -17,7 +17,8 @@
  *
  * Spécificités de chacun :
  * - SONS : `sounds` ci-dessous (app/sound/cues.ts, synthèse dans
- *   app/sound/companionVoices.ts) ; sans son déclaré, rien ne joue.
+ *   app/sound/companionVoices.ts ; Hin, V5.7 : son vrai « hin » du film,
+ *   app/sound/samples.ts) ; sans son déclaré, rien ne joue.
  * - DÉMARCHES : `scurry` (Teto : bonds, arrêts nets) et `waddle` (Hin : lent,
  *   se couche souvent) dans presence/avatar/avatarModel.ts, animations
  *   `is-scurry` / `is-halt` / `is-waddle` dans avatar.css.

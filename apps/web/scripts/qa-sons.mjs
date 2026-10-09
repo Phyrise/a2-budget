@@ -54,6 +54,7 @@ import { AppProvider, useApp } from '../../src/state/store';
 import { SoundSetting, useSoundEvents, soundEngine } from '../../src/app/sound';
 import { buildBus } from '../../src/app/sound/engine';
 import { renderCue } from '../../src/app/sound/voices';
+import { loadSample } from '../../src/app/sound/samples';
 
 const w = window as unknown as Record<string, unknown>;
 w.__core = core;
@@ -65,6 +66,8 @@ w.__measure = async (cue: string, who: string, gentle: boolean) => {
   const rate = 44100;
   const ctx = new OfflineAudioContext(2, rate * 4, rate);
   const bus = buildBus(ctx, ctx.destination);
+  // Échantillons décodés d'avance (hors ligne, pas d'attente : sinon repli synthétisé).
+  await loadSample(ctx, 'hin');
   renderCue(bus, cue as never, 0.01, { who: who as never, gentle });
   const buf = await ctx.startRendering();
   let peak = 0, sum = 0, end = 0, nan = false;

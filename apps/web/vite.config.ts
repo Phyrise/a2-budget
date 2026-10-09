@@ -43,14 +43,14 @@ export default defineConfig({
       },
       workbox: {
         // Précache uniquement la coquille de l'app et les assets locaux.
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,mp3,webmanifest}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       // En mode injectManifest, c'est ce bloc qui configure le manifest de
       // précache (le bloc workbox ci-dessus ne le fait pas) : jpg/png inclus
-      // (forêt, avatars) pour le mode hors ligne.
+      // (forêt, avatars) et mp3 (le « hin » de Hin, V5.7) pour le mode hors ligne.
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,avif,woff2,mp3,webmanifest}'],
         // Hors précache : la scène du pont (budgetTheme.scene) et l'ancien
         // bandeau forestier des Courses (manifest.banners.courses), émis par
         // les manifests générés mais jamais affichés ; les peintures portrait

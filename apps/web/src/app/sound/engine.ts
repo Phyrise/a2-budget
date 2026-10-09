@@ -1,5 +1,6 @@
 /**
- * Moteur des petits sons (WebAudio, aucun fichier audio).
+ * Moteur des petits sons (WebAudio, synthétisés ; un seul fichier audio,
+ * le « hin » de Hin, V5.7 — samples.ts).
  *
  * - AudioContext **paresseux** : créé au premier geste (pointerdown,
  *   touchend, keydown…) si les sons sont activés — c'est ce qui le débloque
@@ -12,6 +13,8 @@
  *   prévu, ou d'un réveil par un geste resté sans son), et tout de suite
  *   quand les petits sons sont coupés : rien ne tourne pour rien sur le
  *   téléphone. Le geste suivant le réveille avant que le son ne soit joué.
+ * - Le contexte créé, les échantillons sont décodés aussitôt (sans être
+ *   joués) : prêts pour le premier toucher.
  * - Ne lève jamais d'erreur : sans WebAudio, tout devient sans effet.
  *
  * Contexte distinct de l'ambiance de la lanterne (features/rituals/lantern),
@@ -19,6 +22,7 @@
  */
 import type { SoundCue, SoundVoice } from './cues';
 import { getSoundPrefs, subscribeSoundPrefs } from './prefs';
+import { preloadSamples } from './samples';
 import { createImpulse, createNoise, type Bus } from './synth';
 import { renderCue } from './voices';
 
@@ -106,6 +110,7 @@ function ensure(): AudioContext | null {
     const c = new Ctor({ latencyHint: 'interactive' });
     bus = buildBus(c, c.destination);
     ctx = c;
+    preloadSamples(c);
   } catch {
     failed = true;
     ctx = null;

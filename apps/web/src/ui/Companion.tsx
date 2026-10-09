@@ -17,6 +17,7 @@
  */
 import { useEffect, type CSSProperties } from 'react';
 import { defaultCompanion, type CompanionId } from '@a2/core';
+import { prefetchSample } from '../app/sound/samples';
 import type { CompanionMood, Who } from '../world/types';
 import { manifest } from '../world/manifest';
 import { CalciferArt, JijiArt, KodamaArt } from './companionArt';
@@ -84,6 +85,10 @@ export function Companion({
       if (src) new Image().src = src;
     }
   }, [pokeId]);
+  // V5.7 : un Hin à l'écran → son « hin » (fichier audio) récupéré d'avance, sans être joué.
+  useEffect(() => {
+    if (id === 'hin') prefetchSample('hin');
+  }, [id]);
   const a11y = label ? { role: 'img' as const, 'aria-label': label } : { 'aria-hidden': true as const };
   const style = { '--cmp-size': `${size}px` } as CSSProperties;
   // Petites tailles : Jiji (chat noir) reçoit un liseré clair pour rester

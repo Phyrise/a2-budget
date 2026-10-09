@@ -72,7 +72,7 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   chirp: 'Teto pépie',
   hiss: 'Teto crache',
   trill: 'Teto trille',
-  huff: 'Hin : « hin »',
+  huff: 'Hin : « hin » (film)',
   sigh: 'Hin soupire',
   snuffle: 'Hin, content',
 };

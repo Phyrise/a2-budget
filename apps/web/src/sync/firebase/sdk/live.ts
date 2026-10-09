@@ -124,12 +124,14 @@ export function openLive(db: Firestore, member: Member): LiveChannel {
     async migratePlay(local) {
       if (disposed) return;
       await runTransaction(db, async (tx) => {
-        const snap = await tx.get(myPlay);
+        const [snap, house] = await Promise.all([tx.get(myPlay), tx.get(home)]);
         const current = playOf(snap.data());
         if (current?.migrated) return;
+        // Foyer déjà remis à zéro (mode développeur) : l'ancien bocal local ne revient jamais.
+        const fresh = typeof house.data()?.resetEpoch === 'number';
         const next: Record<string, unknown> = { migrated: true, ...stamp() };
         // Gestes déjà comptés (écrits avant la migration) + état local d'avant.
-        for (const f of PLAY_FIELDS) next[f] = (current?.[f] ?? 0) + count(local[f]);
+        for (const f of PLAY_FIELDS) next[f] = (current?.[f] ?? 0) + (fresh ? 0 : count(local[f]));
         tx.set(myPlay, next, { merge: true });
       });
     },

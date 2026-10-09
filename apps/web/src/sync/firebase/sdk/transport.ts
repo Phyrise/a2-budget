@@ -25,12 +25,14 @@ import {
   startAfter,
   Timestamp,
   writeBatch,
+  type DocumentData,
   type Firestore,
   type QuerySnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { COLLECTIONS, docKey, type CollectionName, type DocData, type DocKey, type WriteOp } from '../../docs';
 import { LocalView } from '../../localView';
+import { aboveFloor } from '../../reset';
 import { advanceCursor, listenFrom, type SyncCache } from '../../syncCache';
 import type { DocChange, SyncTransport } from '../../transport';
 import { planWrites } from '../../writePlan';
@@ -61,6 +63,8 @@ export class FirestoreTransport implements SyncTransport {
   failure: string | null = null;
   /** Heure de démarrage des écouteurs (relancés après une longue absence). */
   listeningSince = 0;
+  /** Remise à zéro (reset.ts) : les documents d'avant `resetAt` (ms) ne sont plus montrés. */
+  floor = 0;
 
   constructor(
     private readonly db: Firestore,
@@ -91,6 +95,7 @@ export class FirestoreTransport implements SyncTransport {
       const snap = full ? await getDocsFromServer(ref) : await getDocsFromCache(ref);
       const times: number[] = [];
       for (const d of snap.docs) {
+        if (!this.kept(d.data(), d.metadata.hasPendingWrites)) continue;
         all.set(docKey(name, d.id), fromFirestore(d.data({ serverTimestamps: 'estimate' })));
         const t = syncedAtOf(d.data());
         if (full && t !== undefined && !d.metadata.hasPendingWrites) times.push(t);
@@ -178,12 +183,13 @@ export class FirestoreTransport implements SyncTransport {
     for (const change of snap.docChanges({ includeMetadataChanges: true })) {
       // Sorti du résultat : un lot refusé l'a ramené en arrière (rien n'est jamais vraiment supprimé).
       if (change.type === 'removed') void this.reread(name, change.doc.id);
+      else if (!this.kept(change.doc.data(), change.doc.metadata.hasPendingWrites)) this.queue({ key: docKey(name, change.doc.id), data: null });
       else this.queue({ key: docKey(name, change.doc.id), data: fromFirestore(change.doc.data({ serverTimestamps: 'estimate' })) });
     }
     if (snap.metadata.fromCache) {
       this.inSync.delete(name);
     } else {
-      const times = snap.docs.filter((d) => !d.metadata.hasPendingWrites).flatMap((d) => syncedAtOf(d.data()) ?? []);
+      const times = snap.docs.filter((d) => !d.metadata.hasPendingWrites && this.kept(d.data(), false)).flatMap((d) => syncedAtOf(d.data()) ?? []);
       const next = advanceCursor(this.cursors[name], times);
       if (next !== undefined && next !== this.cursors[name]) {
         this.cursors[name] = next;
@@ -209,11 +215,17 @@ export class FirestoreTransport implements SyncTransport {
     });
   }
 
+  /** Au-dessus du plancher de la dernière remise à zéro (sinon : comme supprimé). */
+  private kept(data: DocumentData | undefined, pending: boolean): boolean {
+    return data !== undefined && aboveFloor(syncedAtOf(data), pending, this.floor);
+  }
+
   /** Relit un document dans le cache du SDK (vérité locale après un refus). */
   private async reread(name: CollectionName, id: string): Promise<void> {
     try {
       const snap = await getDocFromCache(doc(collectionRef(this.db, name), id));
-      this.queue({ key: docKey(name, id), data: snap.exists() ? fromFirestore(snap.data({ serverTimestamps: 'estimate' })) : null });
+      const live = snap.exists() && this.kept(snap.data(), snap.metadata.hasPendingWrites);
+      this.queue({ key: docKey(name, id), data: live ? fromFirestore(snap.data({ serverTimestamps: 'estimate' })!) : null });
     } catch {
       this.queue({ key: docKey(name, id), data: null });
     }

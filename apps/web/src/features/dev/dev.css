@@ -277,3 +277,18 @@
   height: 48px;
   margin-left: -6px;
 }
+
+/* Remise à zéro (DevReset) : terre cuite ; armé (« Sûr ? ») : plein. */
+.dev-choice--danger {
+  border-color: rgba(217, 138, 108, 0.45);
+  color: var(--danger);
+}
+
+.dev-choice--danger[aria-pressed='true'] {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+.dev-choice:disabled {
+  opacity: 0.6;
+}

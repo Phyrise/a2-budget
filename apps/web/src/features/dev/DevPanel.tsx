@@ -11,7 +11,8 @@
  * (V4.3 : matsuri du couple, AL, AC) et montre la saison réelle /
  * affichée avec l'état du cache des peintures de saison. Rien n'est écrit
  * dans les données ; tout se réinitialise en quittant le mode.
- * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part).
+ * Ouvre aussi le Labo Noiraudes (`?lab=noiraudes`, page à part). Seule
+ * exception à « rien n'est écrit » : la remise à zéro (DevReset).
  */
 import { useMemo } from 'react';
 import { useShell } from '../../app/ShellContext';
@@ -26,6 +27,7 @@ import { DevNoiraudes } from './DevNoiraudes';
 import { DevNumbers } from './DevNumbers';
 import { DevPreviews } from './DevPreviews';
 import { DevQuests } from './DevQuests';
+import { DevReset } from './DevReset';
 import { DevSeasons } from './DevSeasons';
 import './dev.css';
 
@@ -78,6 +80,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
           <DevAvatar onClose={onClose} />
           <DevFetes onClose={onClose} />
           <DevQuests onClose={onClose} />
+          <DevReset onClose={onClose} />
           <DevSeasons />
           <DevNoiraudes onClose={onClose} />
           <section className="dev-section" aria-labelledby="dev-labs">

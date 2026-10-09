@@ -31,6 +31,9 @@ export interface SyncCache {
   syncedAt: number | null;
   /** Version du modèle du foyer vue à ce passage. */
   schema: number;
+  /** Remise à zéro (mode développeur, reset.ts) : compteurs du foyer vus ; absents = à adopter. */
+  resetEpoch?: number;
+  lettersEpoch?: number;
 }
 
 export function serializeSyncCache(cache: SyncCache): string {
@@ -63,6 +66,8 @@ export function parseSyncCache(text: string | null): SyncCache | null {
       cursors,
       syncedAt: finite(raw.syncedAt) ? raw.syncedAt : null,
       schema: finite(raw.schema) ? raw.schema : 0,
+      ...(finite(raw.resetEpoch) ? { resetEpoch: raw.resetEpoch } : {}),
+      ...(finite(raw.lettersEpoch) ? { lettersEpoch: raw.lettersEpoch } : {}),
     };
   } catch {
     return null;

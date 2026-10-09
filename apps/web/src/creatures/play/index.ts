@@ -10,6 +10,7 @@ export {
   playCatch,
   playGive,
   playSpend,
+  reloadPlay,
   setPlayBackend,
   subscribePlay,
   usePlay,

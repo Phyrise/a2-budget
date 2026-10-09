@@ -9,14 +9,21 @@
  *   session est relue et sa vue chargée.
  * - Se déconnecter : retour au mode local avec, au choix, la copie commune
  *   ou les données d'avant (state/localCopies.ts : rien n'est perdu).
+ * - Remise à zéro (mode développeur, sync/reset.ts) : signalée par le
+ *   foyer, elle arrête la synchronisation, efface la copie et les mémoires
+ *   locales, puis remonte le store sur une copie vide (aucune écriture
+ *   d'avant ne repart) ; tout est relu une fois le foyer vidé.
  */
 import { currentMonthKey } from '@a2/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { keepSharedCopyLocally } from '../state/localCopies';
 import { FIREBASE_ENABLED } from '../sync/firebase/config';
 import { loadFirebaseSession } from '../sync/firebase/loader';
-import type { Member, SyncRuntime, SyncSetup, SyncStatus } from '../sync/firebase/types';
-import { readSyncCache, type SyncCache } from '../sync/syncCache';
+import type { Member, ResetOutcome, SyncRuntime, SyncSetup, SyncStatus } from '../sync/firebase/types';
+import { rewindLocalSeen } from '../features/rituals/letters/letterReset';
+import { wipeLocalMemories } from '../state/localMemories';
+import { freshCacheAfterReset, type ResetSignal } from '../sync/reset';
+import { readSyncCache, writeSyncCache, type SyncCache } from '../sync/syncCache';
 import { SyncLink } from '../sync/syncLink';
 import { useAccount } from './AccountContext';
 import { syncMode, syncRole, type KeepOnSignOut, type SyncMode } from './syncMode';
@@ -35,6 +42,10 @@ export interface SyncValue {
   join: () => Promise<boolean>;
   /** Se déconnecter en gardant, sur ce téléphone, la copie commune ou les données d'avant. */
   signOut: (keep: KeepOnSignOut) => void;
+  /** Mode développeur : vider le foyer commun (les deux téléphones repartent de zéro). */
+  resetHousehold: () => Promise<ResetOutcome>;
+  /** Mode développeur : lettres de la semaine effacées → « lu » remis chez les deux. */
+  signalLettersCleared: () => Promise<boolean>;
 }
 
 const LOCAL_SYNC: SyncValue = {
@@ -45,6 +56,8 @@ const LOCAL_SYNC: SyncValue = {
   setup: () => Promise.resolve(null),
   join: () => Promise.resolve(false),
   signOut: () => undefined,
+  resetHousehold: () => Promise.resolve('failed'),
+  signalLettersCleared: () => Promise.resolve(false),
 };
 
 const SyncContext = createContext<SyncValue>(LOCAL_SYNC);
@@ -58,6 +71,8 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
   const { member, continueAsGuest } = account;
   const [cache, setCache] = useState<SyncCache | null>(() => readSyncCache());
   const [status, setStatus] = useState<SyncStatus | null>(null);
+  // Remise à zéro : un nouveau lien (store remonté sur la copie vide).
+  const [generation, setGeneration] = useState(0);
   const running = useRef<{ uid: string; runtime: SyncRuntime } | null>(null);
   const memberRef = useRef<Member | null>(member);
   memberRef.current = member;
@@ -68,7 +83,8 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
   const link = useMemo(
     () => (mode === 'sync' && cache !== null && role !== null ? new SyncLink(role, cache.state) : null),
     // La copie ne sert qu'au premier affichage : elle n'est pas une dépendance.
-    [mode, role],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, role, generation],
   );
 
   const stop = useCallback(() => {
@@ -88,6 +104,41 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
     return runtime;
   }, []);
 
+  /** Ma marque « lu » des lettres ramenée au début de la semaine (ici et sur mes autres appareils). */
+  const rewindLetters = useCallback((m: Member | null) => {
+    const mark = rewindLocalSeen(m?.role ?? null);
+    if (m === null) return;
+    void loadFirebaseSession()
+      .then((session) => {
+        const channel = session.openLetters(m);
+        channel.markSeen(mark);
+        channel.dispose();
+      })
+      .catch(() => undefined);
+  }, []);
+
+  /** Le foyer a été remis à zéro (d'ici ou d'ailleurs) : rien d'avant ne doit repartir. */
+  const onReset = useCallback(
+    (signal: ResetSignal) => {
+      const m = memberRef.current;
+      if (signal.kind === 'letters') {
+        rewindLetters(m);
+        return;
+      }
+      const current = readSyncCache();
+      const who = m?.role ?? current?.role;
+      if (who === undefined) return;
+      stop(); // plus aucune écriture de l'ancienne copie
+      wipeLocalMemories();
+      const fresh = freshCacheAfterReset(who, signal.epochs);
+      writeSyncCache(fresh);
+      setCache(fresh);
+      setGeneration((g) => g + 1);
+      rewindLetters(m);
+    },
+    [stop, rewindLetters],
+  );
+
   // Copie commune + membre connu : la synchronisation se branche au store.
   const uid = member?.uid ?? null;
   useEffect(() => {
@@ -95,10 +146,15 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
     if (mode !== 'sync' || link === null || m === null) return;
     let cancelled = false;
     let stopStatus: () => void = () => undefined;
+    let stopReset: () => void = () => undefined;
     void runtimeFor(m)
       .then(async (runtime) => {
+        if (cancelled) return;
         stopStatus = runtime.watchStatus((next) => {
           if (!cancelled) setStatus(next);
+        });
+        stopReset = runtime.watchReset((signal) => {
+          if (!cancelled) onReset(signal);
         });
         await runtime.ready;
         if (!cancelled) link.attach(runtime);
@@ -107,9 +163,10 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
       stopStatus();
+      stopReset();
       link.detach();
     };
-  }, [mode, link, uid, runtimeFor]);
+  }, [mode, link, uid, runtimeFor, onReset]);
 
   // Retour au mode local (invité, refus, déconnexion) : la synchronisation s'arrête.
   useEffect(() => {
@@ -149,9 +206,38 @@ function FirebaseSyncProvider({ children }: { children: ReactNode }) {
     [stop, continueAsGuest],
   );
 
+  const resetHousehold = useCallback(async (): Promise<ResetOutcome> => {
+    const m = memberRef.current;
+    if (m === null) return 'failed';
+    const session = await loadFirebaseSession();
+    return session.resetHousehold(m);
+  }, []);
+
+  const signalLettersCleared = useCallback(async () => {
+    const m = memberRef.current;
+    if (m === null) return false;
+    try {
+      const session = await loadFirebaseSession();
+      await session.bumpLetters(m);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const value = useMemo<SyncValue>(
-    () => ({ mode, link, status: mode === 'sync' ? status : null, hasSharedCopy: cache !== null, setup, join, signOut }),
-    [mode, link, status, cache, setup, join, signOut],
+    () => ({
+      mode,
+      link,
+      status: mode === 'sync' ? status : null,
+      hasSharedCopy: cache !== null,
+      setup,
+      join,
+      signOut,
+      resetHousehold,
+      signalLettersCleared,
+    }),
+    [mode, link, status, cache, setup, join, signOut, resetHousehold, signalLettersCleared],
   );
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }

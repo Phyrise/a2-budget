@@ -746,3 +746,39 @@ lettre.
 - **Coût** : une écoute de ma fiche, app visible seulement ; une écriture par lettre lue.
 - **App fermée** : rien sans Web Push (§8) ; le déclencheur serait l'écriture d'une part.
 
+
+## 22. V5.3 — Remise à zéro (mode développeur)
+
+Panneau DEV › « Remise à zéro » (`features/dev/DevReset.tsx`), chaque bouton confirmé par
+un second toucher « Sûr ? » (4 s). Pur : `sync/reset.ts` ; serveur : `sdk/reset.ts`.
+
+- **Lettres de la semaine** : les enregistrements du cercle de la semaine (parts des deux,
+  cercle à deux) sont retirés de l'état → suppression douce par le pont, chez les deux en
+  temps réel. Puis `lettersEpoch + 1` sur le foyer : chaque téléphone ramène sa marque
+  `circleSeen` (fiche et marque locale) au début de la semaine du cercle. Réécrite, la
+  lettre est reçue de nouveau. Invité : en local.
+- **Tout remettre à zéro** (connecté) : le **signal d'abord** sur `households/a2home` :
+  `resetEpoch + 1`, `resetAt` (heure du serveur), `resetBy` (UID), `resetting: true` ; puis
+  chaque collection (tâches, faits, courses, événements, mois, cercles, réglages,
+  checkpoints, meta, quêtes, activity, play) relue et supprimée par lots de 400 ; enfin
+  `resetting: false`. Le foyer, les fiches `memberState` (appartenance) et `push` restent.
+- **Chaque téléphone** écoute le document du foyer (1 lecture à l'ouverture, 1 par
+  changement). Compteur changé (vu du serveur) → `SyncContext` arrête la synchronisation,
+  efface les mémoires locales (`state/localMemories.ts` : quêtes, bocal, « lu »), écrit une
+  copie vide (`freshCacheAfterReset`, jamais relue) et remonte le store sur un **nouveau
+  lien** : l'ancien état n'est jamais comparé au nouveau, aucune écriture d'avant ne part.
+  Le nouveau runtime attend `resetting: false` (3 min au plus), puis relit tout. Les
+  compteurs vus sont gardés dans `a2-budget:sync:v1` (absents : adoptés sans rien effacer).
+- **Plancher** : le transport ne montre plus aucun document dont `syncedAt` < `resetAt`
+  (le cache du SDK peut encore en garder ; les écritures en attente restent). Un document
+  « removed » n'est jamais le signal.
+- **Bocal** : la migration unique ne recopie plus l'état local si le foyer a déjà été remis à
+  zéro (`resetEpoch` présent, lu dans la transaction).
+- **Règles** : signal bien formé (+ 1, heure du serveur, son UID) ; `resetting` ne repasse
+  qu'à faux ; `lettersEpoch` + 1 seulement ; suppressions permises à l'auteur du signal
+  pendant le vidage, 10 min au plus (`inReset` : une lecture du foyer par lot) ; jamais
+  `memberState` ni le foyer. Tests : `tests/rules/reset.test.ts`.
+- **Invité** : le « Tout effacer » des Réglages + les mémoires locales.
+- **Tests** : `sync/reset.test.ts` (signal, plancher, copie vide, aucune écriture d'avant),
+  `circleLetters.test.ts`, e2e invité `e2e/dev-reset.spec.ts`, QA deux téléphones
+  `e2e-sync/qa-reset.spec.ts`.

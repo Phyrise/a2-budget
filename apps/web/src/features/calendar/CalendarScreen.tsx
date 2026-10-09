@@ -110,12 +110,12 @@ export function CalendarScreen() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [catbus, setCatbus] = useState(0);
   const [showTasks, setShowTasks] = useShowTasks();
-  const { celebratingKey, toggle: toggleTask } = useTaskToggle();
+  const { celebratingKey, toggle: toggleTask, asking: askingWho, sheet: whoSheet } = useTaskToggle();
 
   useEffect(() => {
-    setForegroundSheet(sheet !== null);
+    setForegroundSheet(sheet !== null || askingWho);
     return () => setForegroundSheet(false);
-  }, [sheet, setForegroundSheet]);
+  }, [sheet, askingWho, setForegroundSheet]);
 
   useEffect(() => {
     if (highlightId === null) return;
@@ -292,6 +292,7 @@ export function CalendarScreen() {
       </section>
 
       <EventSheet state={sheet} onClose={() => setSheet(null)} onSaved={onSaved} onRemove={remove} />
+      {whoSheet}
       <CatbusRun run={catbus} />
     </>
   );

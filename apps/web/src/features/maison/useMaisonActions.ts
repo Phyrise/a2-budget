@@ -4,7 +4,7 @@
  * douce : lumière dans la forêt (plus forte pour une corvée), compagnon qui
  * réagit, petite réplique, toast annulable. Jamais de reproche.
  */
-import { isAnytimeTask, nextAssignee, type ChoreCompletion, type ChoreDoer, type HouseholdTask, type TaskAssignee } from '@a2/core';
+import { nextAssignee, type ChoreCompletion, type ChoreDoer, type HouseholdTask, type TaskAssignee } from '@a2/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
@@ -170,26 +170,18 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       whenSheetsClosed(() => fly(afterSheet.from()));
     }
     else fly(origin);
-    if (isAnytimeTask(task)) {
-      // V5.3 — Courses : la ligne reste ; on annule CE fait seulement.
-      toast.show({
-        message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
-        icon: 'check',
-        action: { label: 'Annuler', onClick: () => undoHomeCompletion(completionId) },
-      });
-    } else {
-      setLingering((m) => ({ ...m, [task.id]: completionId }));
-      later(() => {
-        handOffFocus(task.id);
-        dropLingering(task.id, completionId);
-      }, LINGER_MS);
-    }
+    // V5.4 — Courses comprises : la ligne quitte « à faire » (annulable dans « Fait aujourd'hui »).
+    setLingering((m) => ({ ...m, [task.id]: completionId }));
+    later(() => {
+      handOffFocus(task.id);
+      dropLingering(task.id, completionId);
+    }, LINGER_MS);
     const { context, speaker, mood } = checkContext({
       task,
       planned,
       who,
       explicit: doneBy !== undefined,
-      remaining: actionable.filter((t) => t.id !== task.id && !isAnytimeTask(t)).length,
+      remaining: actionable.filter((t) => t.id !== task.id).length,
       firstOfDay: doneTodayCount === 0,
       hour: new Date().getHours(),
     });
@@ -199,8 +191,12 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
 
   /** V5.3 — annuler un fait précis (Courses, « Fait aujourd'hui »). */
   const undoRun = (completionId: string) => {
-    if (undoHomeCompletion(completionId) || me === null) return;
     const c = snap.current.completions.find((x) => x.id === completionId);
+    if (undoHomeCompletion(completionId)) {
+      if (c !== undefined) dropLingering(c.taskId, completionId);
+      return;
+    }
+    if (me === null) return;
     if (c !== undefined) toast.show({ message: `C’est ${names[me === 'a' ? 'b' : 'a']} qui l’a cochée.`, icon: 'info' });
   };
 

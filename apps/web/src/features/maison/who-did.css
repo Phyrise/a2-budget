@@ -1,0 +1,53 @@
+/* « Qui l’a fait ? » — trois têtes, un toucher. */
+
+.who-did__choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+
+.who-did__choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 108px;
+  padding: 12px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(236, 230, 211, 0.05);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-soft), transform var(--dur-fast) var(--ease-soft);
+}
+
+.who-did__choice:hover {
+  background: rgba(236, 230, 211, 0.1);
+}
+
+.who-did__choice:active {
+  transform: scale(0.97);
+}
+
+.who-did__choice[data-who='a'] .who-did__name {
+  color: var(--who-a);
+}
+
+.who-did__choice[data-who='b'] .who-did__name {
+  color: var(--who-b);
+}
+
+.who-did__choice[data-who='both'] .who-did__name {
+  color: var(--who-both);
+}
+
+/* V5.4 — la personne la plus probable, mise en avant. */
+.who-did__choice.is-suggested {
+  border-color: rgba(221, 179, 106, 0.6);
+  background: rgba(221, 179, 106, 0.1);
+  color: var(--ivory-50);
+}

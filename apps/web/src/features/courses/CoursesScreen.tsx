@@ -10,8 +10,8 @@
  * animations sont différées : pendant le coup de balai, l'article coché est
  * encore dessiné dans son rayon, puis il apparaît dans le panier.
  *
- * V5.2 : la tâche Maison liée aux courses (GroceryTaskDone) — rappel dans le
- * bandeau ; panier vidé → « qui ? » → l'occurrence en cours est faite.
+ * V5.2 : la tâche Maison liée aux courses (GroceryTaskDone) — panier vidé
+ * → « qui ? » → les courses sont faites (V5.4 : plus de rappel en haut).
  */
 import { grocerySuggestions, groupGroceryItems, type GroceryItem } from '@a2/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -22,7 +22,7 @@ import { coursesTheme } from '../../themes/manifest';
 import { Button, Icon, fr, plural, useToast } from '../../ui';
 import { QuestSpot } from '../quests/QuestSpot';
 import { BasketStage } from './BasketStage';
-import { GroceryTaskPill, useGroceryTaskDone } from './GroceryTaskDone';
+import { useGroceryTaskDone } from './GroceryTaskDone';
 import { ItemRow, type RowMotion } from './ItemRow';
 import { ItemSheet } from './ItemSheet';
 import { AllInBasket, CoursesEmpty, KikiFlight, KikiGreeting } from './KikiScenes';
@@ -218,7 +218,6 @@ export function CoursesScreen() {
           Courses
         </h1>
         <p className="courses-banner__summary">{summary}</p>
-        <GroceryTaskPill view={groceryTask.view} onAsk={groceryTask.ask} />
       </div>
 
       <section className="screen-sheet courses" aria-labelledby="courses-title">

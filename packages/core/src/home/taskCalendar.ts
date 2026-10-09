@@ -20,7 +20,7 @@
  */
 
 import { addDays, isValidLocalDateKey, localDateKey, parseLocalDateKey } from './dates.js';
-import { findOccurrenceCompletion, hasCompletion, isDueOn, isSkipped, ONCE } from './occurrences.js';
+import { findOccurrenceCompletion, hasCompletion, isAnytimeTask, isDueOn, isSkipped, ONCE } from './occurrences.js';
 import type { ChoreCompletion, ChoreSkip, HouseholdTask } from './types.js';
 
 /** Fenêtre maximale parcourue (jours) : au-delà, la fin est tronquée. */
@@ -40,6 +40,7 @@ export interface TaskCalendarOccurrence {
 }
 
 function showsInCalendar(task: HouseholdTask): boolean {
+  if (isAnytimeTask(task)) return false; // V5.3 : Courses, sans échéance.
   if (task.recurrence === 'daily') return false;
   if (task.recurrence === 'weekly' && task.flexible === true) return false;
   return true;

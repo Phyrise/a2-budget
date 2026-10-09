@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { emptyAppState, validateAppState } from './appState.js';
-import { toggleTaskToday } from './choreActions.js';
-import { groceriesLeft, groceryTaskOf, groceryTaskStatus } from './groceryTask.js';
+import { toggleTaskToday, undoCompletion } from './choreActions.js';
+import { groceriesLeft, groceryTaskOf, lastGroceryRun } from './groceryTask.js';
+import { anytimeDueDate, dueDay, isAnytimeDueDate } from './occurrences.js';
+import { actionableTasksToday, isActionableToday } from './tasks.js';
+import { upcomingOccurrences } from './upcoming.js';
 import { taskOccurrencesBetween } from './taskCalendar.js';
 import { createTask, updateTask } from './taskEdit.js';
 import type { GroceryItem, HouseholdTask } from './types.js';
@@ -54,37 +57,77 @@ describe('groceryTaskOf / groceriesLeft', () => {
   });
 });
 
-describe('groceryTaskStatus', () => {
-  it('due aujourd’hui → open ; faite → prochaine dans 7 jours', () => {
-    const t = courses();
-    expect(groceryTaskStatus(t, [], [], NOW)).toEqual({ kind: 'open' });
-    const done = [{ id: 'k', taskId: 'c', dueDate: '2026-10-15', taskTitle: 'Courses', completedAt: NOW.toISOString(), assignee: 'both' as const }];
-    expect(groceryTaskStatus(t, done, [], NOW)).toEqual({ kind: 'next', date: '2026-10-22', daysFromNow: 7 });
-  });
-  it('souple : ouverte toute la semaine', () => {
-    expect(groceryTaskStatus(courses({ weeklyDay: 1, flexible: true }), [], [], NOW)).toEqual({ kind: 'open' });
-  });
-  it('un autre jour → prochaine échéance', () => {
-    expect(groceryTaskStatus(courses({ weeklyDay: 6 }), [], [], NOW)).toEqual({ kind: 'next', date: '2026-10-17', daysFromNow: 2 });
-  });
-  it('ponctuelle faite → none', () => {
-    const t = courses({ recurrence: 'none', weeklyDay: undefined });
-    const done = [{ id: 'k', taskId: 'c', dueDate: 'once', taskTitle: 'Courses', completedAt: NOW.toISOString(), assignee: 'both' as const }];
-    expect(groceryTaskStatus(t, done, [], NOW)).toEqual({ kind: 'none' });
-  });
-});
-
-describe('complétée comme dans Maison', () => {
-  it('toggleTaskToday avec « qui » → fait, forêt créditée, calendrier barré', () => {
+describe('V5.3 — tâche Courses permanente', () => {
+  const LATER = new Date(2026, 9, 15, 18, 30, 0);
+  const withTask = (task: HouseholdTask = courses()) => {
     const base = emptyAppState();
-    const state = { ...base, chores: { ...base.chores, tasks: [courses()] } };
-    const r = toggleTaskToday(state, 'c', NOW, 'done-1', { doneBy: 'b' });
+    return { ...base, chores: { ...base.chores, tasks: [task] } };
+  };
+
+  it('toujours actionnable, même un autre jour que son ancien jour fixe', () => {
+    const t = courses({ weeklyDay: 6 });
+    expect(isActionableToday(t, NOW, [])).toBe(true);
+    expect(actionableTasksToday([t], NOW, [], [])).toHaveLength(1);
+  });
+
+  it('deux courses le même jour : deux faits distincts, deux crédits, la ligne reste', () => {
+    const r1 = toggleTaskToday(withTask(), 'c', NOW, 'run-1', { doneBy: 'a' });
+    const r2 = toggleTaskToday(r1.state, 'c', LATER, 'run-2', { doneBy: 'b' });
+    expect(r1.completed && r2.completed).toBe(true);
+    const done = r2.state.chores.completions;
+    expect(done.map((c) => c.id)).toEqual(['run-1', 'run-2']);
+    expect(done[0]!.dueDate).toBe('2026-10-15~run-1');
+    expect(done[1]!.dueDate).toBe('2026-10-15~run-2');
+    expect(new Set(done.map((c) => c.dueDate)).size).toBe(2);
+    expect(r2.state.forest.lifetimeCare).toBe(2);
+    expect(isActionableToday(r2.state.chores.tasks[0]!, LATER, done)).toBe(true);
+    expect(lastGroceryRun(r2.state.chores.tasks[0]!, done)).toMatchObject({ completionId: 'run-2', who: 'b' });
+    expect(validateAppState(r2.state).ok).toBe(true);
+  });
+
+  it('annuler la seconde laisse la première (fait et crédit)', () => {
+    const r1 = toggleTaskToday(withTask(), 'c', NOW, 'run-1', { doneBy: 'a' });
+    const r2 = toggleTaskToday(r1.state, 'c', LATER, 'run-2', { doneBy: 'b' });
+    const u = undoCompletion(r2.state, 'run-2', LATER);
+    expect(u.completionId).toBe('run-2');
+    expect(u.state.chores.completions.map((c) => c.id)).toEqual(['run-1']);
+    expect(u.state.forest.creditLedger['c|2026-10-15~run-1']?.status).toBe('active');
+    expect(u.state.forest.creditLedger['c|2026-10-15~run-2']?.status).toBe('tombstoned');
+    expect(undoCompletion(u.state, 'run-2', LATER).state).toBe(u.state);
+    expect(validateAppState(u.state).ok).toBe(true);
+  });
+
+  it('jamais au Calendrier ni dans « À venir »', () => {
+    const t = courses();
+    expect(taskOccurrencesBetween([t], [], [], '2026-10-01', '2026-10-31')).toEqual([]);
+    expect(upcomingOccurrences([t], [], NOW, 30)).toEqual([]);
+  });
+
+  it('« pas aujourd’hui » ne la cache pas', () => {
+    const t = courses();
+    expect(isActionableToday(t, NOW, [], [{ id: 's', taskId: 'c', dueDate: '2026-10-15', at: NOW.toISOString() }])).toBe(true);
+  });
+
+  it('migration douce : tâche V5.2 (hebdo souple, déjà faite cette semaine) → encore à faire', () => {
+    const v52 = courses({ weeklyDay: 1, flexible: true });
+    const old = [{ id: 'k', taskId: 'c', dueDate: '2026-10-12', taskTitle: 'Courses', completedAt: '2026-10-13T09:00:00.000Z', assignee: 'both' as const }];
+    const state = { ...withTask(v52), chores: { tasks: [v52], completions: old } };
+    expect(validateAppState(state).ok).toBe(true);
+    expect(isActionableToday(v52, NOW, old)).toBe(true);
+    expect(lastGroceryRun(v52, old)?.completionId).toBe('k');
+    const r = toggleTaskToday(state, 'c', NOW, 'run-1');
     expect(r.completed).toBe(true);
-    expect(r.state.chores.completions[0]).toMatchObject({ taskId: 'c', doneBy: 'b' });
-    expect(r.state.forest).not.toEqual(state.forest);
-    const cal = taskOccurrencesBetween(r.state.chores.tasks, r.state.chores.completions, [], '2026-10-15', '2026-10-15');
-    expect(cal).toHaveLength(1);
-    expect(cal[0]!.done).toBe(true);
-    expect(groceryTaskStatus(r.state.chores.tasks[0]!, r.state.chores.completions, [], NOW).kind).toBe('next');
+    expect(r.state.chores.completions).toHaveLength(2);
+    expect(r.state.chores.completions[0]).toEqual(old[0]);
+  });
+
+  it('dueDate : forme sûre, jour lisible, validation stricte', () => {
+    expect(anytimeDueDate('2026-10-15', 'a|b c')).toBe('2026-10-15~abc');
+    expect(isAnytimeDueDate('2026-10-15~abc')).toBe(true);
+    expect(dueDay('2026-10-15~abc')).toBe('2026-10-15');
+    expect(dueDay('2026-10-15')).toBe('2026-10-15');
+    const base = emptyAppState();
+    const bad = { ...base, chores: { ...base.chores, tasks: [courses()], completions: [{ id: 'z', taskId: 'c', dueDate: '2026-13-40~z', taskTitle: 'Courses', completedAt: NOW.toISOString(), assignee: 'both' }] } };
+    expect(validateAppState(bad).ok).toBe(false);
   });
 });

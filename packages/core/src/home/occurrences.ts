@@ -15,6 +15,42 @@ import type { ChoreCompletion, ChoreSkip, HouseholdTask } from './types.js';
 /** Marque de dueDate pour une occurrence ponctuelle. */
 export const ONCE = 'once';
 
+/**
+ * V5.3 — tâche « à tout moment » (la tâche Courses, `groceries`) : jamais
+ * d'échéance, jamais « faite pour la semaine » ; on la fait autant de fois
+ * qu'on veut, même deux fois le même jour. Chaque fois est sa propre
+ * occurrence : dueDate = « YYYY-MM-DD~<id du fait> » (voir anytimeDueDate),
+ * pour que deux faits du même jour ne se fusionnent jamais (invité comme
+ * synchronisé). Une tâche Courses de V5.2 le devient sans migration : sa
+ * récurrence enregistrée est simplement ignorée ; ses anciens faits (datés)
+ * restent dans l'historique.
+ */
+export function isAnytimeTask(task: HouseholdTask): boolean {
+  return task.groceries === true;
+}
+
+/** Séparateur jour / id d'une occurrence « à tout moment ». */
+export const ANYTIME_SEPARATOR = '~';
+
+const ANYTIME_DUE = /^(\d{4}-\d{2}-\d{2})~[A-Za-z0-9_-]{1,80}$/;
+
+/** dueDate d'un fait « à tout moment » : jour local + id (caractères sûrs seulement). */
+export function anytimeDueDate(day: string, completionId: string): string {
+  const safe = completionId.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80) || 'x';
+  return `${day}${ANYTIME_SEPARATOR}${safe}`;
+}
+
+/** Vrai si `dueDate` a la forme « YYYY-MM-DD~id » (sans vérifier le jour). */
+export function isAnytimeDueDate(dueDate: string): boolean {
+  return ANYTIME_DUE.test(dueDate);
+}
+
+/** Jour « YYYY-MM-DD » d'une dueDate (la dueDate elle-même hors « à tout moment »). */
+export function dueDay(dueDate: string): string {
+  const m = ANYTIME_DUE.exec(dueDate);
+  return m ? m[1]! : dueDate;
+}
+
 /** Vrai si la tâche est une hebdomadaire souple (V3). */
 export function isFlexibleWeekly(task: HouseholdTask): boolean {
   return task.recurrence === 'weekly' && task.flexible === true;
@@ -53,6 +89,7 @@ export function skipDateFor(task: HouseholdTask, date: Date): string {
  * - récurrente : « ${taskId}|${scheduledLocalDate} »
  */
 export function creditKeyFor(task: HouseholdTask, scheduledLocalDate: string): string {
+  if (isAnytimeDueDate(scheduledLocalDate)) return `${task.id}|${scheduledLocalDate}`;
   if (task.recurrence === 'none') return `${task.id}|${ONCE}`;
   if (isFlexibleWeekly(task) && scheduledLocalDate !== ONCE) {
     try {
@@ -79,6 +116,7 @@ export function splitCreditKey(creditKey: string): [string, string] {
  * n'est pas faite : voir isActionableToday).
  */
 export function isDueOn(task: HouseholdTask, date: Date): boolean {
+  if (isAnytimeTask(task)) return true;
   switch (task.recurrence) {
     case 'none':
       return localDateKey(date) === task.createdAt;
@@ -121,6 +159,8 @@ export function findOccurrenceCompletion(
   completions: ChoreCompletion[],
   date: Date,
 ): ChoreCompletion | undefined {
+  // « À tout moment » : rien n'est jamais « déjà fait ».
+  if (isAnytimeTask(task)) return undefined;
   if (isFlexibleWeekly(task)) {
     const start = startOfWeek(date);
     const monday = localDateKey(start);
@@ -144,7 +184,7 @@ export function isSkipped(
   skips: readonly ChoreSkip[] | undefined,
   date: Date,
 ): boolean {
-  if (skips === undefined || skips.length === 0) return false;
+  if (skips === undefined || skips.length === 0 || isAnytimeTask(task)) return false;
   const dueDate = skipDateFor(task, date);
   // Hebdomadaire repassée en jour fixe : un « pas cette semaine » posé quand
   // elle était souple (daté du lundi) vaut encore pour la semaine.

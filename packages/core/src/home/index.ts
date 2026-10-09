@@ -53,6 +53,11 @@ export {
 
 export {
   ONCE,
+  ANYTIME_SEPARATOR,
+  anytimeDueDate,
+  dueDay,
+  isAnytimeDueDate,
+  isAnytimeTask,
   creditKeyFor,
   splitCreditKey,
   isDueOn,
@@ -79,7 +84,7 @@ export {
 } from './tasks.js';
 export type { TaskPatch, UpcomingOccurrence } from './tasks.js';
 
-export { toggleTaskToday } from './choreActions.js';
+export { toggleTaskToday, undoCompletion } from './choreActions.js';
 export type { ChoresAndForest, ToggleTaskResult } from './choreActions.js';
 
 // V3 « Prendre soin ensemble » — passages, équilibre, rituels, lanternes.
@@ -293,5 +298,5 @@ export {
 } from './quests.js';
 export type { QuestKind, QuestRole, QuestStatus, QuestTab, QuestsState, SharedQuest } from './quests.js';
 // V5.2 — lien Courses ↔ Maison.
-export { GROCERY_TASK_LOOKAHEAD_DAYS, groceryTaskOf, groceriesLeft, groceryTaskStatus } from './groceryTask.js';
-export type { GroceryTaskStatus } from './groceryTask.js';
+export { groceryTaskOf, groceriesLeft, lastGroceryRun } from './groceryTask.js';
+export type { GroceryRun } from './groceryTask.js';

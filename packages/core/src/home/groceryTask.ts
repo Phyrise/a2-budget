@@ -1,18 +1,18 @@
 /**
- * V5.2 — lien Courses ↔ Maison. Une tâche Maison marquée `groceries` est
- * « la tâche courses » : Maison y montre les articles restants, Courses
- * rappelle sa prochaine échéance et la complète (même geste que Maison,
- * `toggleTaskToday`) quand le panier est vidé.
+ * Lien Courses ↔ Maison. Une tâche Maison marquée `groceries` est « la tâche
+ * courses » : Maison y montre les articles restants, Courses la complète
+ * (même geste que Maison, `toggleTaskToday`) quand le panier est vidé.
+ *
+ * V5.3 : elle est PERMANENTE (« à tout moment », voir isAnytimeTask) —
+ * jamais d'échéance ni de case au Calendrier, jamais « faite pour la
+ * semaine » ; on la fait autant de fois qu'on veut, deux fois le même jour
+ * compris. Seul repère : la dernière fois (lastGroceryRun).
  *
  * Fonctions pures, sans exception.
  */
 
-import { isActionableToday } from './tasks.js';
-import { upcomingOccurrences } from './upcoming.js';
-import type { ChoreCompletion, ChoreSkip, GroceryItem, HouseholdTask } from './types.js';
-
-/** Horizon de recherche de la prochaine échéance (jours). */
-export const GROCERY_TASK_LOOKAHEAD_DAYS = 62;
+import { whoDid } from './tasks.js';
+import type { ChoreCompletion, GroceryItem, HouseholdTask, TaskAssignee } from './types.js';
 
 /** La tâche liée aux courses (la première, s'il y en avait plusieurs). */
 export function groceryTaskOf(tasks: readonly HouseholdTask[]): HouseholdTask | undefined {
@@ -26,23 +26,20 @@ export function groceriesLeft(items: readonly GroceryItem[]): number {
   return n;
 }
 
-/** Où en est la tâche courses. */
-export type GroceryTaskStatus =
-  /** Occurrence ouverte aujourd'hui (cette semaine pour une souple) : à compléter. */
-  | { kind: 'open' }
-  /** Rien d'ouvert aujourd'hui ; prochaine échéance « YYYY-MM-DD » (lundi pour une souple). */
-  | { kind: 'next'; date: string; daysFromNow: number }
-  /** Rien d'ouvert ni à venir (ponctuelle faite, ou au-delà de l'horizon). */
-  | { kind: 'none' };
+/** La dernière fois que les courses ont été faites. */
+export interface GroceryRun {
+  completionId: string;
+  /** Horodatage ISO. */
+  at: string;
+  who: TaskAssignee;
+}
 
-export function groceryTaskStatus(
-  task: HouseholdTask,
-  completions: readonly ChoreCompletion[],
-  skips: readonly ChoreSkip[] | undefined,
-  now: Date,
-): GroceryTaskStatus {
-  const list = completions as ChoreCompletion[];
-  if (isActionableToday(task, now, list, skips)) return { kind: 'open' };
-  const next = upcomingOccurrences([task], list, now, GROCERY_TASK_LOOKAHEAD_DAYS, skips ? { skips } : {})[0];
-  return next ? { kind: 'next', date: next.date, daysFromNow: next.daysFromNow } : { kind: 'none' };
+/** Dernier fait de la tâche (plus récent `completedAt`, puis id), ou undefined. */
+export function lastGroceryRun(task: HouseholdTask, completions: readonly ChoreCompletion[]): GroceryRun | undefined {
+  let last: ChoreCompletion | undefined;
+  for (const c of completions) {
+    if (c.taskId !== task.id) continue;
+    if (last === undefined || c.completedAt > last.completedAt || (c.completedAt === last.completedAt && c.id > last.id)) last = c;
+  }
+  return last === undefined ? undefined : { completionId: last.id, at: last.completedAt, who: whoDid(last) };
 }

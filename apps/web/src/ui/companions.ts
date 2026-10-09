@@ -91,6 +91,7 @@ export const COMPANIONS: Record<CompanionId, CompanionProfile> = {
     touchLabel: 'Caresser Teto',
     pokeMoods: { poke: 'curious', upset: 'idle' },
     caressMood: 'happy',
+    sounds: { poke: 'chirp', upset: 'hiss', caress: 'trill' },
     gait: 'scurry',
   },
   // Vieux chien du Château ambulant : content au toucher, s'effondre, blasé.
@@ -100,6 +101,7 @@ export const COMPANIONS: Record<CompanionId, CompanionProfile> = {
     touchLabel: 'Caresser Hin',
     pokeMoods: { poke: 'happy', upset: 'sleepy' },
     caressMood: 'happy',
+    sounds: { poke: 'huff', upset: 'sigh', caress: 'snuffle' },
     gait: 'waddle',
   },
 };

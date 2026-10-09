@@ -43,6 +43,14 @@
  * - `yawn`        Totoro bâille et s'étire → long souffle grave et doux.
  * - `squeak`      on touche une Noiraude → petit cri aigu « kyu ! ».
  * - `purr`        on caresse Jiji (avatar de l'autre, V5.2) → ronron grave.
+ *
+ * Teto et Hin (V5.6, compagnons au choix — registre ui/companions.ts) :
+ * - `chirp`       Teto touché → pépiement, deux notes vives ;
+ * - `hiss`        Teto agacé → petit crachotement ;
+ * - `trill`       Teto caressé → trille doux ;
+ * - `huff`        Hin touché → « hin » respiré, une fois ;
+ * - `sigh`        Hin agacé → « hin… hin », deux soupirs sifflants ;
+ * - `snuffle`     Hin caressé → long souffle satisfait.
  */
 export type SoundCue =
   | 'done'
@@ -70,7 +78,13 @@ export type SoundCue =
   | 'grumble'
   | 'yawn'
   | 'squeak'
-  | 'purr';
+  | 'purr'
+  | 'chirp'
+  | 'hiss'
+  | 'trill'
+  | 'huff'
+  | 'sigh'
+  | 'snuffle';
 
 /** Couleur du carillon : AL plus aérien, AC plus chaud, ensemble les deux. */
 export type SoundVoice = 'a' | 'b' | 'both' | 'none';
@@ -113,4 +127,10 @@ export const ALL_CUES: readonly SoundCue[] = [
   'yawn',
   'squeak',
   'purr',
+  'chirp',
+  'hiss',
+  'trill',
+  'huff',
+  'sigh',
+  'snuffle',
 ];

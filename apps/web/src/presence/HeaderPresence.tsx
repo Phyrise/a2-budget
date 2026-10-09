@@ -1,7 +1,7 @@
 /**
  * En-tête, mode connecté : coucou reçu → ton compagnon fait un petit saut
- * avec une bulle « ♡ » (et un son léger si les sons sont permis), où que tu
- * sois. Le compagnon de l'autre n'est plus ici : il vit sur la barre du bas
+ * avec une bulle « ♡ » (et un son léger si les sons sont permis : le son
+ * « touché » de ton compagnon, sinon une note de bois), où que tu sois. Le compagnon de l'autre n'est plus ici : il vit sur la barre du bas
  * quand l'autre est sur le même onglet (avatar/PartnerAvatar.tsx, V5.2).
  * Calme (« Immobile », mouvement réduit) : pose seulement, rien ne bouge.
  */
@@ -10,6 +10,7 @@ import { playCue } from '../app/sound/play';
 import { useShell } from '../app/ShellContext';
 import { HOUSEHOLD_NAMES } from '../sync/household';
 import { Companion, cx } from '../ui';
+import { companionProfile, useCompanionIds } from '../ui/companions';
 import { useLive } from './LiveContext';
 import './presence.css';
 
@@ -21,13 +22,17 @@ export function HeaderPresence() {
   const calm = prefs.forestMotion === 'still';
   const [heart, setHeart] = useState(false);
   const seen = useRef(pokesReceived);
+  // Lu au moment du coucou (pas une dépendance : le minuteur de la bulle reste).
+  const companions = useCompanionIds();
+  const ids = useRef(companions);
+  ids.current = companions;
 
   // Coucou reçu : petit saut + bulle ♡.
   useEffect(() => {
     if (pokesReceived === seen.current || me === null) return;
     seen.current = pokesReceived;
     setHeart(true);
-    playCue(me === 'b' ? 'crackle' : 'woodNote', { who: me });
+    playCue(companionProfile(ids.current[me]).sounds?.poke ?? 'woodNote', { who: me });
     const t = window.setTimeout(() => setHeart(false), HEART_MS);
     return () => window.clearTimeout(t);
   }, [pokesReceived, me]);

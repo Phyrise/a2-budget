@@ -25,6 +25,14 @@
   box-shadow: 0 0 10px 2px rgba(170, 150, 240, 0.24);
 }
 
+/* V5.6 — Hin, large et bas : plus large que la pastille pour remplir sa
+   hauteur (sinon une petite bande au ras du bas). Teto (oreilles hautes,
+   presque carré) tient tel quel. */
+.partner-head .companion--hin {
+  width: 27px;
+  margin-inline: -3.5px;
+}
+
 .presence {
   display: flex;
   align-items: flex-end;

@@ -1,8 +1,8 @@
 /**
  * V5.1 — la quête du jour, jamais annoncée ; V5.3 : posée DANS la scène de
  * l'onglet (près du bocal, entre deux rayons, à côté de Totoro…), selon son
- * emplacement (useQuestPlacement), repli sur le bord de la feuille. Un toucher = sa main posée (effet partiel, petite tête de Jiji
- * ou de Calcifer, vus des deux côtés) ; quand les deux ont aidé, petite fête
+ * emplacement (useQuestPlacement), repli sur le bord de la feuille. Un toucher = sa main posée (effet partiel, petite tête du
+ * compagnon choisi — Jiji, Calcifer, Teto ou Hin —, vue des deux côtés) ; quand les deux ont aidé, petite fête
  * commune (une fois par téléphone), puis l'objet s'en va. Pas réglée dans la
  * journée : à minuit, elle s'efface en douceur.
  *

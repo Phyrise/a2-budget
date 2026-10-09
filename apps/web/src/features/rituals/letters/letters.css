@@ -69,6 +69,11 @@
   pointer-events: none;
 }
 
+/* V5.6 — Hin, large et bas : élargi pour rester aussi lisible sur le cachet. */
+.envelope__head .companion--hin {
+  width: calc(var(--cmp-size) * 1.3);
+}
+
 .envelope.is-opened .envelope__flap {
   animation: envelope-flap 520ms var(--ease-soft) 120ms both;
 }

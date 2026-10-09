@@ -1,15 +1,17 @@
 /**
  * Les compagnons en fête (V4.3), dessinés en SVG autour de leur sprite :
- * - Jiji (AL) coiffé d'un petit chapeau pointu à rayures lilas et or,
- *   pompon crème, posé de travers entre ses oreilles ;
- * - Calcifer (AC) assis sur un gâteau à la crème, deux bougies qui
- *   vacillent de chaque côté : c'est lui, la grande flamme.
+ * - Jiji coiffé d'un petit chapeau pointu à rayures lilas et or, pompon
+ *   crème, posé de travers entre ses oreilles ;
+ * - Calcifer assis sur un gâteau à la crème, deux bougies qui vacillent de
+ *   chaque côté : c'est lui, la grande flamme ;
+ * - V5.6 : Teto (entre ses grandes oreilles) et Hin (sur sa tête basse, à
+ *   droite) reçoivent le même chapeau, posé à leur place (party.css).
+ * La fête d'une personne montre SON compagnon (choisi dans les Réglages).
  * Sprites détourés du manifest (mêmes images que <Companion>), repli dessiné
- * sinon. V5.6 : la mise en scène suit la personne fêtée (chapeau pour AL,
- * gâteau pour AC), le compagnon est celui qu'elle a choisi.
- * Toujours décoratif : le texte est porté par le parent.
+ * sinon. Toujours décoratif : le texte est porté par le parent.
  */
 import { useId } from 'react';
+import type { CompanionId } from '@a2/core';
 import { CompanionFigure, companionSprite } from '../../ui/Companion';
 import { useCompanionId } from '../../ui/companions';
 
@@ -92,8 +94,7 @@ function Cake() {
   );
 }
 
-function Figure({ who }: { who: 'a' | 'b' }) {
-  const id = useCompanionId(who);
+function Figure({ id, who }: { id: CompanionId; who: 'a' | 'b' }) {
   const src = companionSprite(id, 'happy');
   if (src) return <img className="party__sprite" src={src} alt="" draggable={false} decoding="async" data-companion={id} />;
   return (
@@ -103,25 +104,37 @@ function Figure({ who }: { who: 'a' | 'b' }) {
   );
 }
 
-/** Jiji (ou le compagnon d'AL) au chapeau pointu. */
-export function JijiParty() {
+/** Un compagnon au chapeau pointu (Jiji, Teto, Hin : place du chapeau dans party.css). */
+function HatParty({ id, who }: { id: CompanionId; who: 'a' | 'b' }) {
   return (
-    <span className="party-figure party-figure--a">
-      <Figure who="a" />
+    <span className={`party-figure party-figure--hat party-figure--${id}`} data-companion={id}>
+      <Figure id={id} who={who} />
       <PartyHat />
     </span>
   );
 }
 
-/** Calcifer (ou le compagnon d'AC) sur son gâteau, entre deux bougies. */
-export function CalciferParty() {
+/** Jiji au chapeau pointu. */
+export function JijiParty({ who = 'a' }: { who?: 'a' | 'b' }) {
+  return <HatParty id="jiji" who={who} />;
+}
+
+/** Calcifer sur son gâteau, entre deux bougies. */
+export function CalciferParty({ who = 'b' }: { who?: 'a' | 'b' }) {
   return (
-    <span className="party-figure party-figure--b">
+    <span className="party-figure party-figure--calcifer" data-companion="calcifer">
       <span className="party-figure__glow" />
       <span className="party-figure__flame">
-        <Figure who="b" />
+        <Figure id="calcifer" who={who} />
       </span>
       <Cake />
     </span>
   );
+}
+
+/** La personne fêtée, avec SON compagnon : Calcifer a son gâteau, les autres un chapeau. */
+export function CompanionParty({ who }: { who: 'a' | 'b' }) {
+  const id = useCompanionId(who);
+  if (id === 'calcifer') return <CalciferParty who={who} />;
+  return <HatParty id={id} who={who} />;
 }

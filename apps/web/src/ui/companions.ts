@@ -19,11 +19,9 @@
  * - SONS de Teto et Hin : `sounds` ci-dessous (nouveaux SoundCue dans
  *   app/sound/cues.ts + synthèse dans app/sound/companionVoices.ts). Sans son
  *   déclaré, rien ne joue (companionPoke.ts, caresse de PartnerAvatar.tsx).
- * - DÉMARCHES `scurry` (Teto) et `waddle` (Hin) : vitesses dans
- *   presence/avatar/avatarModel.ts (GAIT_SPEED), animation dans avatar.css
- *   (classes `is-trot` / `is-float` aujourd'hui ; avatarMotion renvoie
- *   « trot » pour scurry et waddle). En attendant : scurry = trot, waddle =
- *   trot plus lent.
+ * - DÉMARCHES (faites) : `scurry` (Teto : bonds, arrêts nets) et `waddle`
+ *   (Hin : lent, se couche souvent) dans presence/avatar/avatarModel.ts,
+ *   animations `is-scurry` / `is-halt` / `is-waddle` dans avatar.css.
  * - RÉPLIQUES de Teto et Hin : features/maison/companionLines.ts (`linesFor`) ;
  *   en attendant, celles du compagnon par défaut du rôle.
  * - ANIMATIONS au toucher de Teto et Hin : ui/companionPoke.css

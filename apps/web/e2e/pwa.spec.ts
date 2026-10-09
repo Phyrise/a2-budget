@@ -118,6 +118,13 @@ async function waitPrecacheReady(page: import('@playwright/test').Page): Promise
   }
 }
 
+/** Build de production (Firebase configuré) : l'accueil propose de se connecter ; on continue en invité. */
+async function enterAsGuest(page: import('@playwright/test').Page): Promise<void> {
+  const guest = page.getByRole('button', { name: 'Continuer en invité' });
+  await expect(page.locator('.app-nav').or(guest)).toBeVisible();
+  if (await guest.isVisible()) await guest.click();
+}
+
 test.describe('PWA', () => {
   test('hors ligne après préparation du cache', async ({ browser }) => {
     test.skip(!pwaReady, pwaSkipReason);
@@ -127,6 +134,7 @@ test.describe('PWA', () => {
     const page = await context.newPage();
 
     await page.goto(BASE);
+    await enterAsGuest(page);
     await expect(page.locator('.app-nav')).toBeVisible();
     await waitPrecacheReady(page);
 
@@ -165,6 +173,7 @@ test.describe('PWA', () => {
 
     // Version 1 : enregistrement + précache.
     await page.goto(BASE);
+    await enterAsGuest(page);
     await expect(page.locator('.app-nav')).toBeVisible();
     await waitPrecacheReady(page);
     expect(await page.title()).not.toContain('v2');

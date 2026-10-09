@@ -83,3 +83,32 @@ test('bocal partagé : la somme des gestes des deux, sans double compte', async 
   await expect(count(ac.page)).toHaveText('22');
   await closePhones(al, ac);
 });
+
+test('V5.6 : AL choisit Teto dans ses Réglages, AC voit Teto (tête, avatar) et ne peut plus le prendre', async ({ browser }) => {
+  const { al, ac } = await twoPhones(browser);
+  await go(ac.page, 'Budget');
+  await go(al.page, 'Maison');
+
+  // AL : seule sa carte propose le choix (connecté).
+  await al.page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  const settingsAl = al.page.getByRole('dialog', { name: 'Réglages', exact: true });
+  await expect(settingsAl.locator('.settings-person--b').getByRole('button', { name: /^Changer de compagnon/ })).toHaveCount(0);
+  await settingsAl.locator('.settings-person--a').getByRole('button', { name: /^Changer de compagnon/ }).click();
+  await settingsAl.getByRole('radio', { name: 'Teto', exact: true }).click();
+  await expect(settingsAl.locator('.settings-person--a .settings-person__companion')).toHaveText('avec Teto');
+
+  // Chez AC : la tête d'AL sur l'icône Maison est Teto.
+  await expect(navButton(ac.page, 'Maison').locator('.partner-head img')).toHaveAttribute('src', /teto-/);
+
+  // Même onglet : c'est Teto qui vient sur la barre du bas.
+  await go(ac.page, 'Maison');
+  await al.page.keyboard.press('Escape');
+  await expect(ac.page.getByTestId('partner-avatar')).toHaveAttribute('data-companion', 'teto');
+
+  // AC : Teto est pris, grisé dans son choix.
+  await ac.page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  const settingsAc = ac.page.getByRole('dialog', { name: 'Réglages', exact: true });
+  await settingsAc.locator('.settings-person--b').getByRole('button', { name: /^Changer de compagnon/ }).click();
+  await expect(settingsAc.getByRole('radio', { name: /^Teto/ })).toBeDisabled();
+  await closePhones(al, ac);
+});

@@ -746,3 +746,17 @@ lettre.
 - **Coût** : une écoute de ma fiche, app visible seulement ; une écriture par lettre lue.
 - **App fermée** : rien sans Web Push (§8) ; le déclencheur serait l'écriture d'une part.
 
+
+## V5.3 — tâche Courses « à tout moment »
+
+La tâche liée aux courses (`groceries: true`) est permanente : sans échéance,
+hors Calendrier et « À venir », jamais « faite » ni « pas aujourd'hui ». Chaque
+fois est sa propre occurrence : `dueDate = "YYYY-MM-DD~<id du fait>"`
+(`anytimeDueDate`, `dueDay` pour relire le jour). Comme toute l'identité des
+faits passe par `(taskId, dueDate)` — `liveCompletions`, `canUndo`, la clé de
+crédit `taskId|dueDate`, la validation —, deux courses du même jour (deux
+téléphones hors ligne compris) restent deux faits et deux crédits, jamais
+fusionnés en « fait ensemble ». Annuler vise un fait précis (`undoCompletion`,
+`undoHomeCompletion` côté store). Une tâche Courses de V5.2 le devient sans
+écriture : sa récurrence enregistrée est ignorée, ses anciens faits datés
+restent. Règles Firestore inchangées (elles ne lisent pas `dueDate`).

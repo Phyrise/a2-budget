@@ -69,6 +69,12 @@ export const SOUND_LABELS: Record<SoundCue, string> = {
   yawn: 'Totoro bâille',
   squeak: 'Cri de Noiraude',
   purr: 'Jiji ronronne',
+  chirp: 'Teto pépie',
+  hiss: 'Teto crache',
+  trill: 'Teto trille',
+  huff: 'Hin : « hin »',
+  sigh: 'Hin soupire',
+  snuffle: 'Hin, content',
 };
 
 function ChoiceRow<T>({

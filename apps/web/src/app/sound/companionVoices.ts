@@ -6,6 +6,9 @@
  * - kodama : « karakara », le cliquetis de bois des têtes qui claquent ;
  * - Calcifer : crépitement qui s'élève ; grognement de braise s'il s'agace ;
  * - Totoro : long bâillement grave et feutré.
+ * - Teto (V5.6) : pépiement de renard-écureuil, petit crachotement agacé,
+ *   trille doux à la caresse ;
+ * - Hin (V5.6) : « hin » respiré, double soupir sifflant, souffle satisfait.
  */
 import { breath, route, tone, type Bus } from './synth';
 
@@ -14,10 +17,12 @@ const N = {
   Gs2: 103.83,
   B2: 123.47,
   E3: 164.81,
+  Fs3: 185.0,
   Gs5: 830.61,
   B5: 987.77,
   Cs6: 1108.73,
   E6: 1318.51,
+  Gs6: 1661.22,
 } as const;
 
 /** Petit « toc » de bois creux (triangle très bref, partiel boisé en option). */
@@ -161,4 +166,107 @@ export function purr(bus: Bus, t: number, gentle: boolean): void {
   lfo.stop(t + len + 0.05);
   route(bus, out, 0.12, [src, lp, trem, lfo, depth], src);
   tone(bus, t, N.E2, { peak: 0.025 * level, attack: 0.2, hold: 0.5, decay: 1, wet: 0.1, type: 'triangle' });
+}
+
+/**
+ * Teto touché : pépiement de renard-écureuil, deux notes vives qui montent
+ * (chacune glisse vers le haut, très brève).
+ */
+export function chirp(bus: Bus, t: number, gentle: boolean): void {
+  tone(bus, t, N.B5, { peak: 0.045, attack: 0.005, decay: 0.08, glideTo: N.E6, glideTime: 0.03, wet: 0.2 });
+  tone(bus, t + 0.085, N.Cs6, { peak: 0.04, attack: 0.005, decay: 0.1, glideTo: N.Gs6, glideTime: 0.035, wet: 0.22 });
+  // Petit corps : la gorge, pas seulement le sifflet.
+  tone(bus, t, N.Gs5, { peak: 0.008, attack: 0.008, decay: 0.16, wet: 0.15, type: 'triangle' });
+  if (!gentle) tone(bus, t + 0.2, N.E6, { peak: 0.018, attack: 0.006, decay: 0.07, glideTo: N.Gs6, glideTime: 0.03, wet: 0.25 });
+}
+
+/**
+ * Teto agacé : petit crachotement (deux bouffées de bruit aigu, la seconde
+ * plus longue), comme un renard qui siffle entre ses dents.
+ */
+export function hiss(bus: Bus, t: number, gentle: boolean): void {
+  const shape: Array<readonly [number, number]> = gentle
+    ? [[0.012, 0.055], [0.1, 0.02], [0.2, 0]]
+    : [[0.01, 0.05], [0.06, 0.012], [0.09, 0.006], [0.11, 0.06], [0.24, 0.03], [0.38, 0]];
+  breath(bus, t, { type: 'highpass', sweep: [[0, 3200], [0.12, 4200], [0.38, 3600]], q: 0.8, shape, wet: 0.15 });
+  // Un peu de souffle plus bas : la bouche, pas un pneu.
+  breath(bus, t, { sweep: [[0, 1800], [0.3, 1400]], q: 1.4, shape: [[0.02, 0.025], [0.12, 0.03], [0.3, 0]], wet: 0.15 });
+}
+
+/** Teto caressé : trille doux, deux notes qui alternent vite et s'éteignent. */
+export function trill(bus: Bus, t: number, gentle: boolean): void {
+  const notes = gentle ? 5 : 9;
+  for (let i = 0; i < notes; i++) {
+    const fade = 1 - (i / notes) * 0.75;
+    tone(bus, t + i * 0.05, i % 2 === 0 ? N.Cs6 : N.E6, { peak: 0.026 * fade, attack: 0.01, decay: 0.09, wet: 0.3 });
+  }
+  tone(bus, t, N.Gs5, { peak: 0.01, attack: 0.04, hold: 0.2, decay: notes * 0.05 + 0.1, wet: 0.3, type: 'triangle' });
+}
+
+/**
+ * Le nez de Hin : une note grave nasale (dents de scie dans un filtre étroit
+ * vers 700 Hz) qui retombe un peu, très courte.
+ */
+function nasal(bus: Bus, t: number, f: number, len: number, level: number): void {
+  const { ctx } = bus;
+  const osc = ctx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(f * 1.06, t);
+  osc.frequency.exponentialRampToValueAtTime(f * 0.94, t + len);
+  const nose = ctx.createBiquadFilter();
+  nose.type = 'bandpass';
+  nose.Q.value = 4;
+  nose.frequency.setValueAtTime(760, t);
+  nose.frequency.exponentialRampToValueAtTime(560, t + len);
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0, t);
+  out.gain.linearRampToValueAtTime(0.09 * level, t + 0.03);
+  out.gain.setValueAtTime(0.09 * level, t + len * 0.4);
+  out.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  osc.connect(nose).connect(out);
+  osc.start(t);
+  osc.stop(t + len + 0.05);
+  route(bus, out, 0.15, [osc, nose], osc);
+}
+
+/** Un « hin » : souffle par le nez (bruit filtré, petit sifflement) + la note nasale. */
+function hinBreath(bus: Bus, t: number, f: number, len: number, level: number): void {
+  breath(bus, t, {
+    sweep: [[0, 900], [len * 0.35, 1400], [len, 700]],
+    q: 1.6,
+    shape: [[0.025, 0.07 * level], [len * 0.45, 0.045 * level], [len, 0]],
+    wet: 0.18,
+  });
+  // Le sifflement du vieux nez.
+  breath(bus, t + 0.02, { sweep: [[0, 2500], [len, 2200]], q: 9, shape: [[0.04, 0.03 * level], [len * 0.7, 0]], wet: 0.2 });
+  nasal(bus, t, f, len * 0.75, level);
+}
+
+/** Hin touché : « hin », une seule fois, sans s'émouvoir. */
+export function huff(bus: Bus, t: number, gentle: boolean): void {
+  hinBreath(bus, t, N.E3, 0.3, gentle ? 0.7 : 1);
+}
+
+/** Hin agacé : « hin… hin », deux soupirs sifflants, le second plus bas et plus long. */
+export function sigh(bus: Bus, t: number, gentle: boolean): void {
+  if (gentle) {
+    hinBreath(bus, t, N.E3, 0.42, 0.75);
+    return;
+  }
+  hinBreath(bus, t, N.Fs3, 0.36, 1);
+  hinBreath(bus, t + 0.52, N.E3, 0.6, 0.85);
+}
+
+/** Hin caressé : un long souffle satisfait par le nez, qui retombe lentement. */
+export function snuffle(bus: Bus, t: number, gentle: boolean): void {
+  const level = gentle ? 0.65 : 1;
+  breath(bus, t, {
+    type: 'lowpass',
+    sweep: [[0, 420], [0.3, 900], [1.05, 320]],
+    q: 0.8,
+    shape: [[0.22, 0.09 * level], [0.55, 0.06 * level], [1.05, 0]],
+    wet: 0.25,
+  });
+  breath(bus, t + 0.05, { sweep: [[0, 2300], [0.8, 2000]], q: 8, shape: [[0.25, 0.018 * level], [0.8, 0]], wet: 0.25 });
+  tone(bus, t + 0.04, N.E2, { peak: 0.03 * level, attack: 0.2, hold: 0.45, decay: 1.05, wet: 0.15, type: 'triangle' });
 }

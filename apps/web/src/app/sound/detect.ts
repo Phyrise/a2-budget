@@ -252,6 +252,12 @@ const LEAD_MS: Record<SoundCue, number> = {
   yawn: 900,
   squeak: 200,
   purr: 700,
+  chirp: 240,
+  hiss: 280,
+  trill: 460,
+  huff: 300,
+  sigh: 900,
+  snuffle: 800,
 };
 
 /** Importance (mouvement réduit : on ne garde que le plus marquant). */
@@ -282,6 +288,12 @@ const PRIORITY: Record<SoundCue, number> = {
   yawn: 2,
   squeak: 1,
   purr: 1,
+  chirp: 1,
+  hiss: 2,
+  trill: 1,
+  huff: 1,
+  sigh: 2,
+  snuffle: 1,
 };
 
 /**

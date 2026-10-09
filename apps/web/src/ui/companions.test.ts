@@ -36,7 +36,7 @@ describe('registre des compagnons (V5.6)', () => {
     expect(COMPANIONS.calcifer.sounds).toEqual({ poke: 'crackle', upset: 'grumble', caress: 'crackle' });
   });
 
-  it('Teto file, Hin se dandine ; leurs sons restent à écrire', () => {
+  it('Teto file, Hin se dandine', () => {
     expect(COMPANIONS.teto).toMatchObject({ name: 'Teto', touchLabel: 'Caresser Teto', pokeMoods: { poke: 'curious', upset: 'idle' }, gait: 'scurry' });
     expect(COMPANIONS.hin).toMatchObject({ name: 'Hin', touchLabel: 'Caresser Hin', pokeMoods: { poke: 'happy', upset: 'sleepy' }, gait: 'waddle' });
   });

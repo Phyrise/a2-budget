@@ -90,3 +90,15 @@ button.grocery-task-pill::after {
 .who-did__choice[data-who='both'] .who-did__name {
   color: var(--who-both);
 }
+
+/* V5.3 — repère de la dernière fois (« hier » + tête du compagnon). */
+.grocery-last {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.grocery-last .companion {
+  flex: none;
+}

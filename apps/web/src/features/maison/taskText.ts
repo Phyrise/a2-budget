@@ -3,7 +3,8 @@ import type { HouseholdTask, TaskAssignee } from '@a2/core';
 import type { Mood } from '../../world/types';
 import { WEEKDAYS, timeOfDay } from '../../ui';
 
-export function recurrenceLabel(task: Pick<HouseholdTask, 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'flexible'>): string {
+export function recurrenceLabel(task: Pick<HouseholdTask, 'recurrence' | 'weeklyDay' | 'monthlyDay' | 'flexible' | 'groceries'>): string {
+  if (task.groceries === true) return 'Quand il faut'; // V5.3 : Courses, à tout moment.
   switch (task.recurrence) {
     case 'none':
       return 'Une fois';

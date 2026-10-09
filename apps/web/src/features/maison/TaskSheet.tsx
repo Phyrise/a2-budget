@@ -10,6 +10,8 @@
  * on touche le champ pour écrire) ; « Une fois » par défaut.
  *
  * V5.2 : suggestion « Courses » (GroceryLink) — lie la tâche à la liste.
+ * Offerte tant qu'aucune tâche Courses n'existe (et sur celle-ci, pour la
+ * délier). V5.3 : la tâche Courses est permanente — pas de « Quand ? ».
  */
 import {
   isoWeekday,
@@ -137,10 +139,12 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
     }
     setGroceries(true);
     if (editing) return;
-    // Nouvelle tâche : un geste suffit (« Courses », dans la semaine).
+    // Nouvelle tâche : un geste suffit (« Courses », à tout moment). La
+    // récurrence enregistrée est ignorée (isAnytimeTask) ; « chaque jour »
+    // reste lisible par une version plus ancienne de l'app.
     if (title.trim() === '') setTitle('Courses');
-    setRecurrence('weekly');
-    setFlexible(true);
+    setRecurrence('daily');
+    setFlexible(false);
     if (error) setError(null);
   };
 
@@ -280,56 +284,63 @@ export function TaskSheet({ state, onClose }: { state: TaskSheetState; onClose: 
             columns={3}
             className="task-form__effort"
           />
-          <div className="task-form__group">
-            <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={4} className="task-form__when" />
-            {recurrence === 'weekly' && (
-              <Segmented
-                name="task-weekmode"
-                legend="Un jour précis ou dans la semaine"
-                legendVisible={false}
-                options={WEEK_MODES}
-                value={flexible ? 'flexible' : 'fixed'}
-                onChange={(value) => setFlexible(value === 'flexible')}
-                columns={2}
-                size="sm"
-                className="task-form__weekmode"
-              />
-            )}
-            {recurrence === 'weekly' && flexible && (
-              <p className="task-form__note">
-                <Icon name="leaf" size={16} />
-                <span>Une fois, le jour qui vous arrange. Pas de retard.</span>
-              </p>
-            )}
-            {recurrence === 'weekly' && !flexible && (
-              <Segmented
-                name="task-weekday"
-                legend="Quel jour&#8239;?"
-                legendVisible={false}
-                options={WEEKDAYS.map((d) => ({ value: String(d.iso), label: d.short, ariaLabel: d.long }))}
-                value={String(weeklyDay)}
-                onChange={(value) => setWeeklyDay(Number(value))}
-                columns={7}
-                size="sm"
-                className="task-form__days"
-              />
-            )}
-            {recurrence === 'monthly' && (
-              <div className="field">
-                <label className="field__label" htmlFor="task-monthday">
-                  Quel jour du mois&#8239;?
-                </label>
-                <select id="task-monthday" className="select" value={monthlyDay} onChange={(event) => setMonthlyDay(Number(event.target.value))}>
-                  {MONTH_DAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {d === 1 ? 'Le 1er' : `Le ${d}`}
-                    </option>
-                  ))}
-                </select>
-                {monthlyDay > 28 && <p className="field__hint">Les mois plus courts, ce sera le dernier jour.</p>}
-              </div>
-            )}
-          </div>
+          {groceries ? (
+            <p className="task-form__note">
+              <Icon name="leaf" size={16} />
+              <span>Toujours là. Autant de fois qu’il faut.</span>
+            </p>
+          ) : (
+            <div className="task-form__group">
+              <Segmented name="task-recurrence" legend="Quand&#8239;?" options={RECURRENCES} value={recurrence} onChange={setRecurrence} columns={4} className="task-form__when" />
+              {recurrence === 'weekly' && (
+                <Segmented
+                  name="task-weekmode"
+                  legend="Un jour précis ou dans la semaine"
+                  legendVisible={false}
+                  options={WEEK_MODES}
+                  value={flexible ? 'flexible' : 'fixed'}
+                  onChange={(value) => setFlexible(value === 'flexible')}
+                  columns={2}
+                  size="sm"
+                  className="task-form__weekmode"
+                />
+              )}
+              {recurrence === 'weekly' && flexible && (
+                <p className="task-form__note">
+                  <Icon name="leaf" size={16} />
+                  <span>Une fois, le jour qui vous arrange. Pas de retard.</span>
+                </p>
+              )}
+              {recurrence === 'weekly' && !flexible && (
+                <Segmented
+                  name="task-weekday"
+                  legend="Quel jour&#8239;?"
+                  legendVisible={false}
+                  options={WEEKDAYS.map((d) => ({ value: String(d.iso), label: d.short, ariaLabel: d.long }))}
+                  value={String(weeklyDay)}
+                  onChange={(value) => setWeeklyDay(Number(value))}
+                  columns={7}
+                  size="sm"
+                  className="task-form__days"
+                />
+              )}
+              {recurrence === 'monthly' && (
+                <div className="field">
+                  <label className="field__label" htmlFor="task-monthday">
+                    Quel jour du mois&#8239;?
+                  </label>
+                  <select id="task-monthday" className="select" value={monthlyDay} onChange={(event) => setMonthlyDay(Number(event.target.value))}>
+                    {MONTH_DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {d === 1 ? 'Le 1er' : `Le ${d}`}
+                      </option>
+                    ))}
+                  </select>
+                  {monthlyDay > 28 && <p className="field__hint">Les mois plus courts, ce sera le dernier jour.</p>}
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </Sheet>
       <ConfirmDialog

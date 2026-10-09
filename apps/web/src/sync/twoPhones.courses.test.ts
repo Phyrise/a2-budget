@@ -1,0 +1,87 @@
+/**
+ * V5.3 — tâche Courses permanente, deux téléphones (serveur en mémoire) :
+ * deux courses le même jour, hors ligne, restent deux faits (ni fusion ni
+ * « fait ensemble »), deux crédits ; chacun n'annule que la sienne.
+ */
+import { describe, expect, it } from 'vitest';
+import { createTask, liveFactsOfOccurrence, undoCompletion, type AppState } from '@a2/core';
+import { docsOf } from './docs';
+import { SyncEngine } from './engine';
+import { MemoryServer, MemoryTransport } from './memoryTransport';
+import { migrationOps } from './migration';
+import { NOW, at, resetTestIds, richState, testId, toggle } from './testFixtures';
+
+type Role = 'a' | 'b';
+
+function household() {
+  resetTestIds();
+  const server = new MemoryServer();
+  let clock = NOW;
+  const phone = (role: Role) => {
+    const transport = new MemoryTransport(server, role);
+    const engine = new SyncEngine(transport, { role, selectedMonth: '2026-10', now: () => clock, newId: () => testId('e') });
+    return {
+      transport,
+      engine,
+      get state(): AppState { return engine.state!; },
+      act(fn: (s: AppState) => AppState, when: Date) {
+        clock = when;
+        engine.commit(fn(engine.state!));
+      },
+    };
+  };
+  const a = phone('a');
+  a.transport.write(migrationOps(richState(), { now: NOW, role: 'a' }));
+  const b = phone('b');
+  return { server, a, b };
+}
+
+const courses = createTask({ id: 'courses', title: 'Courses', assignee: 'both', recurrence: 'daily', groceries: true }, '2026-10-08');
+const addCourses = (s: AppState): AppState => ({ ...s, chores: { ...s.chores, tasks: [...s.chores.tasks, courses] } });
+/** Comme SyncCore.canUndo : l'occurrence porte-t-elle un geste vivant de ce rôle ? */
+function canUndo(engine: SyncEngine, role: Role, dueDate: string): boolean {
+  const facts = docsOf(engine.knownDocs, 'completions').map(([id, data]) => ({ ...data, id }) as {
+    id: string; taskId: string; dueDate: string; role?: unknown;
+  });
+  const live = liveFactsOfOccurrence(facts, 'courses', dueDate);
+  return live.length === 0 || live.some((f) => f.role === role);
+}
+const runs = (s: AppState) => s.chores.completions.filter((c) => c.taskId === 'courses');
+
+describe('Courses à tout moment, deux téléphones', () => {
+  for (const order of [['a', 'b'], ['b', 'a']] as Role[][]) {
+    it(`deux courses le même jour hors ligne → deux faits, deux crédits (retour ${order.join(' puis ')})`, () => {
+      const h = household();
+      h.a.act(addCourses, at(9, 8));
+      h.a.transport.setOnline(false);
+      h.b.transport.setOnline(false);
+      h.a.act((s) => toggle(s, 'courses', at(9, 10), 'a'), at(9, 10));
+      h.b.act((s) => toggle(s, 'courses', at(9, 18), 'b'), at(9, 18));
+      for (const role of order) h[role].transport.setOnline(true);
+      expect(h.server.rejected).toEqual([]);
+      expect(h.a.state).toEqual(h.b.state);
+      const done = runs(h.a.state);
+      expect(done.map((c) => c.doneBy ?? c.assignee).sort()).toEqual(['a', 'b']);
+      expect(new Set(done.map((c) => c.dueDate)).size).toBe(2);
+      for (const c of done) expect(h.a.state.forest.creditLedger[`courses|${c.dueDate}`]?.status).toBe('active');
+    });
+  }
+
+  it('AC annule sa seconde course : celle d’AL reste, les deux téléphones d’accord', () => {
+    const h = household();
+    h.a.act(addCourses, at(9, 8));
+    h.a.act((s) => toggle(s, 'courses', at(9, 10), 'a'), at(9, 10));
+    h.b.act((s) => toggle(s, 'courses', at(9, 18), 'b'), at(9, 18));
+    expect(runs(h.a.state)).toHaveLength(2);
+    const mine = runs(h.b.state).find((c) => c.doneBy === 'b')!;
+    const theirs = runs(h.b.state).find((c) => c.doneBy !== 'b')!;
+    expect(canUndo(h.b.engine, 'b', mine.dueDate)).toBe(true);
+    expect(canUndo(h.b.engine, 'b', theirs.dueDate)).toBe(false);
+    h.b.act((s) => undoCompletion(s, mine.id, at(9, 18, 5)).state, at(9, 18, 5));
+    expect(h.server.rejected).toEqual([]);
+    expect(runs(h.a.state).map((c) => c.id)).toEqual([theirs.id]);
+    expect(h.a.state.forest.creditLedger[`courses|${theirs.dueDate}`]?.status).toBe('active');
+    expect(h.a.state.forest.creditLedger[`courses|${mine.dueDate}`]?.status).toBe('tombstoned');
+    expect(h.a.state).toEqual(h.b.state);
+  });
+});

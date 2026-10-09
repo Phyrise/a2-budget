@@ -32,6 +32,11 @@ import {
 
 export {
   ONCE,
+  ANYTIME_SEPARATOR,
+  anytimeDueDate,
+  dueDay,
+  isAnytimeDueDate,
+  isAnytimeTask,
   creditKeyFor,
   splitCreditKey,
   isDueOn,

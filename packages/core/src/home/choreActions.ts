@@ -17,7 +17,9 @@ import {
 } from './forest.js';
 import {
   addCompletion,
+  anytimeDueDate,
   creditKeyFor,
+  isAnytimeTask,
   findOccurrenceCompletion,
   isDueOn,
   isFlexibleWeekly,
@@ -73,6 +75,8 @@ export interface ToggleTaskResult<S extends ChoresAndForest> {
  * - La forêt est d'abord avancée au jour courant (advanceDay, idempotent).
  * - Tâche inconnue, récurrente non due aujourd'hui, ou occurrence passée
  *   (« pas aujourd'hui ») non faite → aucun changement.
+ * - V5.3, tâche « à tout moment » (Courses) : cocher ajoute toujours un fait
+ *   neuf (jamais de décoche ici : voir undoCompletion).
  */
 export function toggleTaskToday<S extends ChoresAndForest>(
   state: S,
@@ -109,7 +113,8 @@ export function toggleTaskToday<S extends ChoresAndForest>(
 
   if (isSkipped(task, state.chores.skips, now)) return unchanged;
   const forest = advanceDay(state.forest, day);
-  const dueDate = occurrenceDateFor(task, now);
+  // « À tout moment » (Courses) : chaque fois est une occurrence nouvelle.
+  const dueDate = isAnytimeTask(task) ? anytimeDueDate(day, completionId) : occurrenceDateFor(task, now);
   const key = creditKeyFor(task, dueDate);
   const added = addCompletion(
     state.chores.completions,
@@ -137,5 +142,33 @@ export function toggleTaskToday<S extends ChoresAndForest>(
     completed: true,
     completionId,
     doneBy: whoDid(created),
+  };
+}
+
+/**
+ * V5.3 — annule UN fait précis (par id) : retiré, crédit en tombstone. Pour
+ * la tâche « à tout moment », dont on peut avoir deux faits le même jour :
+ * annuler le second laisse le premier intact. Fait inconnu → aucun changement.
+ */
+export function undoCompletion<S extends ChoresAndForest>(
+  state: S,
+  completionId: string,
+  now: Date,
+): ToggleTaskResult<S> {
+  const existing = state.chores.completions.find((c) => c.id === completionId);
+  if (existing === undefined) return { state, completed: false, completionId: null };
+  const task = state.chores.tasks.find((t) => t.id === existing.taskId);
+  const key = task !== undefined ? creditKeyFor(task, existing.dueDate) : `${existing.taskId}|${existing.dueDate}`;
+  const completions = state.chores.completions.filter((c) => c.id !== completionId);
+  const forest = advanceDay(state.forest, localDateKey(now));
+  return {
+    state: {
+      ...state,
+      chores: { ...state.chores, completions },
+      forest: tombstoneCredit(forest, key).forest,
+    },
+    completed: false,
+    completionId,
+    doneBy: whoDid(existing),
   };
 }

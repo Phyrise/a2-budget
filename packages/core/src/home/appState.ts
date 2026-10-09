@@ -36,7 +36,7 @@ import {
   validateTaskCare,
 } from './careValidation.js';
 import { isIntInRange, isIsoTimestamp, isPlainObject, type Fail, type Ok } from './validationHelpers.js';
-import { ONCE, splitCreditKey } from './tasks.js';
+import { ONCE, dueDay, splitCreditKey } from './tasks.js';
 import type {
   AppState,
   ChoreCompletion,
@@ -242,7 +242,7 @@ function validateCompletions(value: unknown): Ok<ChoreCompletion[]> | Fail {
     if (!isAssignee(c.assignee)) return { ok: false, reason: 'completion-invalid-assignee' };
     if (
       typeof c.dueDate !== 'string' ||
-      (c.dueDate !== ONCE && !isValidLocalDateKey(c.dueDate))
+      (c.dueDate !== ONCE && !isValidLocalDateKey(dueDay(c.dueDate)))
     ) {
       return { ok: false, reason: 'completion-invalid-due-date' };
     }
@@ -316,6 +316,8 @@ function validateCreditLedger(value: unknown): Ok<CreditLedger> | Fail {
     } catch {
       return { ok: false, reason: 'credit-invalid-key' };
     }
+    // V5.3 : « YYYY-MM-DD~id » (tâche à tout moment) → on vérifie le jour.
+    dueDate = dueDay(dueDate);
     if (dueDate !== ONCE && !isValidLocalDateKey(dueDate)) {
       return { ok: false, reason: 'credit-invalid-key' };
     }

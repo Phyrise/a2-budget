@@ -1,8 +1,10 @@
 /**
- * V5.2 — lien Courses ↔ Maison (invité, 100 % local) : la tâche « Courses »
+ * Lien Courses ↔ Maison (invité, 100 % local). V5.2 : la tâche « Courses »
  * se crée d'un geste dans Maison, montre les articles restants et ouvre
- * Courses ; vider le panier demande « qui ? » et la tâche est faite dans
- * Maison et le Calendrier. Sans tâche liée, aucune question.
+ * Courses. V5.3 : elle est permanente — pas de « Quand ? », jamais au
+ * Calendrier ; chaque fois (panier vidé ou ligne cochée) demande « qui ? »
+ * et ajoute un fait, deux fois le même jour comprises ; la ligne reste.
+ * Sans tâche liée, aucune question.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { PHONE, goTo, openApp, persisted, sheet, trackErrors } from './helpers';
@@ -25,7 +27,7 @@ async function emptyBasket(page: Page, ...labels: string[]) {
 }
 
 test.describe('Courses ↔ Maison', () => {
-  test('tâche liée : compteur, « qui ? », faite dans Maison et le Calendrier', async ({ page }) => {
+  test('tâche Courses permanente : deux courses le même jour, la ligne reste', async ({ page }) => {
     const errors = trackErrors(page);
     await openApp(page, 'maison');
     await page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first().click();
@@ -34,16 +36,14 @@ test.describe('Courses ↔ Maison', () => {
     await chip.click();
     await expect(chip).toHaveAttribute('aria-pressed', 'true');
     await expect(dialog.locator('#task-title')).toHaveValue('Courses');
-    await expect(dialog.locator('#task-recurrence-weekly')).toBeChecked();
-    await expect(dialog.locator('#task-weekmode-flexible')).toBeChecked();
-    // Un jour précis (aujourd'hui par défaut) : visible dans le Calendrier.
-    await dialog.locator('#task-weekmode-fixed').check();
+    // Permanente : pas de « Quand ? ».
+    await expect(dialog.locator('#task-recurrence-weekly')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
     await expect(dialog).toBeHidden();
 
     const row = page.locator('.task-list:not(.task-list--done) .task-row').filter({ hasText: 'Courses' });
     await expect(row.getByRole('button', { name: 'Liste de courses : vide' })).toBeVisible();
-    // Une seule tâche liée : la suggestion n'est plus offerte.
+    // Une tâche Courses existe : la suggestion n'est plus offerte ailleurs.
     await page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first().click();
     await expect(dialog.getByRole('button', { name: 'Liée à la liste de courses' })).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();
@@ -51,11 +51,13 @@ test.describe('Courses ↔ Maison', () => {
 
     await row.getByRole('button', { name: 'Liste de courses : vide' }).click();
     await expect(page.locator('#courses-title')).toBeVisible();
-    await expect(page.locator('#grocery-task-pill')).toContainText('Aujourd’hui');
+    const pill = page.locator('#grocery-task-pill');
+    await expect(pill).toBeVisible();
     await quickAdd(page, 'Pain', 'Lait');
     await goTo(page, 'Maison');
     await expect(row.getByRole('button', { name: /^Liste de courses : 2\s+articles$/ })).toBeVisible();
 
+    // 1re fois : panier vidé → « qui ? » → Calcifer.
     await goTo(page, 'Courses');
     await emptyBasket(page, 'Pain');
     const who = sheet(page, 'Qui ?');
@@ -64,21 +66,48 @@ test.describe('Courses ↔ Maison', () => {
     await who.locator('.who-did__choice[data-who="b"]').click();
     await expect(who).toBeHidden();
     await expect(page.locator('.toast')).toContainText('Fait : Courses');
-    await expect(page.locator('#grocery-task-pill')).not.toHaveClass(/is-open/);
+    // La pastille reste, avec le repère de la dernière fois.
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText('aujourd’hui');
+
+    // 2e fois le même jour : panier vidé → Jiji.
+    await emptyBasket(page, 'Lait');
+    await expect(who).toBeVisible({ timeout: 10_000 });
+    await who.locator('.who-did__choice[data-who="a"]').click();
+    await expect(who).toBeHidden();
+
+    // 3e fois depuis Maison : cocher la ligne → « qui ? » → ensemble ; la ligne reste.
+    await goTo(page, 'Maison');
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('aujourd’hui');
+    await row.getByRole('checkbox', { name: 'Courses' }).click();
+    await expect(who).toBeVisible();
+    await who.locator('.who-did__choice[data-who="both"]').click();
+    await expect(who).toBeHidden();
+    await expect(page.locator('.toast').filter({ hasText: 'Fait : Courses' })).toBeVisible();
+    await page.waitForTimeout(1600);
+    await expect(row).toBeVisible();
+    await expect(row.getByRole('checkbox', { name: 'Courses' })).toHaveAttribute('aria-checked', 'false');
 
     const state = await persisted(page);
     const task = state.chores.tasks.find((t: { groceries?: boolean }) => t.groceries === true);
     expect(task.title).toBe('Courses');
     const done = state.chores.completions.filter((c: { taskId: string }) => c.taskId === task.id);
-    expect(done).toHaveLength(1);
-    expect(done[0].doneBy).toBe('b');
-    expect(state.forest.lifetimeCare).toBeGreaterThan(0);
+    expect(done).toHaveLength(3);
+    expect(new Set(done.map((c: { dueDate: string }) => c.dueDate)).size).toBe(3);
+    expect(done.map((c: { doneBy?: string; assignee: string }) => c.doneBy ?? c.assignee)).toEqual(['b', 'a', 'both']);
+    expect(state.forest.lifetimeCare).toBe(3);
 
-    await goTo(page, 'Maison');
-    await expect(page.locator('.task-list--done .task-row').filter({ hasText: 'Courses' })).toBeVisible();
+    // Annuler la dernière (toast) : les deux premières restent.
+    await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
+    await expect
+      .poll(async () => (await persisted(page)).chores.completions.filter((c: { taskId: string }) => c.taskId === task.id).length)
+      .toBe(2);
+    await expect(row).toBeVisible();
+
+    // Jamais au Calendrier.
     await goTo(page, 'Calendrier');
-    const cal = page.locator('.cal-day-panel .cal-task', { hasText: 'Courses' });
-    await expect(cal).toHaveClass(/is-done/);
+    await expect(page.locator('.cal-day-panel .cal-task', { hasText: 'Courses' })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 

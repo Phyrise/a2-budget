@@ -3,7 +3,7 @@
  */
 
 import { addDays, isoWeekday, localDateKey } from './dates.js';
-import { hasCompletion, isDueOn, isFlexibleWeekly } from './occurrences.js';
+import { hasCompletion, isAnytimeTask, isDueOn, isFlexibleWeekly } from './occurrences.js';
 import type { ChoreCompletion, ChoreSkip, HouseholdTask } from './types.js';
 
 /** Une occurrence à venir (non cochable). */
@@ -46,7 +46,7 @@ export function upcomingOccurrences(
     const key = localDateKey(date);
     const monday = isoWeekday(date) === 1;
     for (const task of tasks) {
-      if (task.recurrence === 'none') continue;
+      if (task.recurrence === 'none' || isAnytimeTask(task)) continue;
       if (task.recurrence === 'daily' && !includeDaily) continue;
       if (isFlexibleWeekly(task) && !monday) continue;
       if (!isDueOn(task, date)) continue;

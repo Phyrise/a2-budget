@@ -77,3 +77,15 @@ export function trackErrors(page: Page): string[] {
   page.on('pageerror', (err) => errors.push(err.message));
   return errors;
 }
+
+/**
+ * V5.4 — cocher une tâche ouvre « Qui ? » : choisit `who`, sinon la
+ * personne mise en avant (la personne prévue), et attend la fermeture.
+ */
+export async function pickWho(page: Page, who?: 'a' | 'b' | 'both') {
+  const dialog = sheet(page, 'Qui ?');
+  await expect(dialog).toBeVisible();
+  const choice = who ? dialog.locator(`.who-did__choice[data-who="${who}"]`) : dialog.locator('.who-did__choice.is-suggested');
+  await choice.click();
+  await expect(dialog).toBeHidden();
+}

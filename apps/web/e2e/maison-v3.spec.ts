@@ -4,7 +4,7 @@
  * d'équilibre. Contre le build de production (`pnpm preview`).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, openApp, persisted, sheet } from './helpers';
+import { PHONE, openApp, persisted, pickWho, sheet } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -65,6 +65,7 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect.poll(async () => (await persisted(page)).chores.tasks[0]).toMatchObject({ rotation: true, effort: 2, assignee: 'a' });
 
     await page.getByRole('checkbox', { name: 'Sortir les poubelles', exact: true }).click();
+    await pickWho(page);
     await expect(row).toHaveCount(0, { timeout: 5_000 });
     const completion = (await persisted(page)).chores.completions[0];
     expect(completion.assignee).toBe('a');
@@ -74,39 +75,52 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(next.locator('.companion--b')).toHaveCount(1);
   });
 
-  test('« AC l’a fait » et « C’est AC qui l’a fait » : doneBy, coup de main, merci', async ({ page }) => {
+  test('cocher → « Qui ? » : la personne prévue en avant, coup de main, historique et équilibre', async ({ page }) => {
     await openApp(page, 'maison');
     await addTask(page, 'Appeler le plombier', 'unassigned', 'none');
-    await addTask(page, 'Arroser les plantes', 'a', 'daily');
-    await addTask(page, 'Ranger l’entrée', 'b', 'daily');
+    await addTask(page, 'Arroser les plantes', 'b', 'daily', { effort: 3 });
 
-    // Tâche libre : quelqu'un s'en occupe → coché, doneBy enregistré, merci de l'autre compagnon.
-    let menu = await openMenu(page, 'Appeler le plombier');
-    await expect(menu.getByRole('group', { name: /Marquer comme fait, par qui/ })).toBeVisible();
-    await menu.getByRole('button', { name: /^AC l’a fait/ }).click();
-    // La bulle est éphémère (≥ 2,8 s) : la vérifier avant le départ de la ligne.
+    // Fermer « Qui ? » sans choisir : rien n'est coché.
+    const who = sheet(page, 'Qui ?');
+    await page.getByRole('checkbox', { name: 'Appeler le plombier', exact: true }).click();
+    await expect(who).toBeVisible();
+    await expect(who.locator('.who-did__choice.is-suggested')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(who).toBeHidden();
+    await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(1);
+    expect((await persisted(page)).chores.completions).toHaveLength(0);
+
+    // Tâche libre : AC s'en est occupé → doneBy, merci de Jiji.
+    await page.getByRole('checkbox', { name: 'Appeler le plombier', exact: true }).click();
+    await pickWho(page, 'b');
     await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
-    await expect(menu).toBeHidden();
     await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(0, { timeout: 5_000 });
     await expect
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Appeler le plombier'))
       .toMatchObject({ assignee: 'unassigned', doneBy: 'b' });
 
-    // Tâche d'AL faite par AC : coup de main visible, Jiji remercie.
-    menu = await openMenu(page, 'Arroser les plantes');
-    await menu.getByRole('button', { name: /C’est AC qui l’a fait/ }).click();
-    await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
+    // Tâche d'AC, faite par AL : AC est mis en avant, AL choisi.
+    await page.getByRole('checkbox', { name: 'Arroser les plantes', exact: true }).click();
+    await expect(who.locator('.who-did__choice.is-suggested')).toHaveAttribute('data-who', 'b');
+    await pickWho(page, 'a');
     await expect(todayRow(page, 'Arroser les plantes')).toHaveCount(0, { timeout: 5_000 });
     await expect
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Arroser les plantes'))
-      .toMatchObject({ assignee: 'a', doneBy: 'b' });
+      .toMatchObject({ assignee: 'b', doneBy: 'a' });
     await page.getByRole('button', { name: /Fait aujourd’hui/ }).click();
     const doneRow = page.locator('.task-list--done .task-row').filter({ hasText: 'Arroser les plantes' });
     await expect(doneRow).toContainText('coup de main');
-    await expect(doneRow).toContainText('AC');
+    await expect(doneRow).toContainText('AL');
 
-    // La bulle est éphémère et n'intercepte rien.
-    await expect(page.locator('.cbubble')).toHaveCount(0, { timeout: 6_000 });
+    // Équilibre : la corvée pèse du côté d'AL, qui l'a faite.
+    await expect(page.locator('.balance .balance__title')).toHaveText('AL a beaucoup porté : et si AC prenait le relais ?');
+
+    // Historique : AL.
+    await page.getByRole('button', { name: 'Historique de la maison', exact: true }).click();
+    const history = sheet(page, 'Historique de la maison');
+    const entry = history.locator('.history-entry').filter({ hasText: 'Arroser les plantes' });
+    await expect(entry.locator('.history-entry__meta')).toContainText('AL');
+    await expect(entry.locator('.companion--a')).toHaveCount(1);
   });
 
   test('« Pas aujourd’hui » : sans pénalité, annulable, replié, « Pas cette semaine » pour une souple', async ({ page }) => {
@@ -160,6 +174,7 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(todayRow(page, 'Arroser les plantes').locator('.chore-badge')).toHaveCount(0);
 
     await page.getByRole('checkbox', { name: 'Nettoyer le four', exact: true }).click();
+    await pickWho(page);
     await expect(page.locator('.task-row.is-chore.is-leaving')).toHaveCount(1);
     await expect(page.locator('.perch .companion__figure[data-mood="proud"]')).toHaveCount(2);
     await expect(page.locator('.cbubble__name')).toHaveText('Calcifer');

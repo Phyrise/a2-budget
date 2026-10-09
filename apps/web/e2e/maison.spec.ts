@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, closeSheet, openApp, persisted, sheet } from './helpers';
+import { PHONE, closeSheet, openApp, persisted, pickWho, sheet } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -53,6 +53,7 @@ test.describe('Maison — parcours', () => {
     // Cocher : coche instantanée, puis la tâche rejoint « Fait aujourd’hui ».
     const check = page.getByRole('checkbox', { name: 'Arroser le basilic', exact: true });
     await check.click();
+    await pickWho(page);
     await expect(check).toHaveAttribute('aria-checked', 'true');
     await expect(row).toHaveCount(0, { timeout: 5_000 });
     const done = page.getByRole('button', { name: /Fait aujourd’hui/ });
@@ -69,6 +70,7 @@ test.describe('Maison — parcours', () => {
 
     // Recocher puis recharger : le fait est conservé.
     await page.getByRole('checkbox', { name: 'Arroser le basilic', exact: true }).click();
+    await pickWho(page);
     await expect(todayRow(page, 'Arroser le basilic')).toHaveCount(0, { timeout: 5_000 });
     await page.reload();
     await expect(page.locator('.screen-sheet')).toBeVisible();

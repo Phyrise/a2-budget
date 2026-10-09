@@ -163,11 +163,12 @@ function MaisonHistory() {
           <ul className="history-day__list">
             {g.items.map((c) => (
               <li key={c.id} className="history-entry">
-                <Companion who={c.assignee} size={30} />
+                {/* V5.4 — qui l'a vraiment fait (doneBy), sinon la personne prévue. */}
+                <Companion who={c.doneBy ?? c.assignee} size={30} />
                 <span className="history-entry__text">
                   <span className="history-entry__title">{c.taskTitle}</span>
                   <span className="history-entry__meta">
-                    {assigneeName(c.assignee, names)} · {clockTime(new Date(c.completedAt))}
+                    {assigneeName(c.doneBy ?? c.assignee, names)} · {clockTime(new Date(c.completedAt))}
                   </span>
                 </span>
               </li>

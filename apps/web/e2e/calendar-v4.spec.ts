@@ -7,7 +7,7 @@
  */
 import { addDays, addEvent, createTask, emptyAppState, isoWeekday, localDateKey, validateAppState, type AppState } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
-import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, trackErrors } from './helpers';
+import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, pickWho, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -80,6 +80,14 @@ test.describe('Calendrier V4', () => {
 
     const box = plants.getByRole('checkbox');
     await box.click();
+    // V5.4 : « Qui ? » d'abord ; fermer sans choisir ne coche rien.
+    const who = page.getByRole('dialog', { name: 'Qui ?', exact: true });
+    await expect(who).toBeVisible();
+    await who.getByRole('button', { name: 'Fermer', exact: true }).click();
+    await expect(who).toBeHidden();
+    await expect(box).toHaveAttribute('aria-checked', 'false');
+    await box.click();
+    await pickWho(page, 'b');
     await expect(box).toHaveAttribute('aria-checked', 'true');
     await expect(plants).toHaveClass(/is-done/);
     await expect(page.locator('.toast')).toContainText('Fait : Arroser les plantes');

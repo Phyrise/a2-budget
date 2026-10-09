@@ -3,11 +3,12 @@
  * se crée d'un geste dans Maison, montre les articles restants et ouvre
  * Courses. V5.3 : elle est permanente — pas de « Quand ? », jamais au
  * Calendrier ; chaque fois (panier vidé ou ligne cochée) demande « qui ? »
- * et ajoute un fait, deux fois le même jour comprises ; la ligne reste.
- * Sans tâche liée, aucune question.
+ * et ajoute un fait, deux fois le même jour comprises. V5.4 : faite, elle
+ * quitte « à faire » ; un article ajouté ensuite la ramène ; plus de rappel
+ * dans le bandeau de Courses. Sans tâche liée, aucune question.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, goTo, openApp, persisted, sheet, trackErrors } from './helpers';
+import { PHONE, goTo, openApp, persisted, pickWho, sheet, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -27,7 +28,7 @@ async function emptyBasket(page: Page, ...labels: string[]) {
 }
 
 test.describe('Courses ↔ Maison', () => {
-  test('tâche Courses permanente : deux courses le même jour, la ligne reste', async ({ page }) => {
+  test('tâche Courses : faite → quitte « à faire », un article ajouté la ramène', async ({ page }) => {
     const errors = trackErrors(page);
     await openApp(page, 'maison');
     await page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first().click();
@@ -51,8 +52,8 @@ test.describe('Courses ↔ Maison', () => {
 
     await row.getByRole('button', { name: 'Liste de courses : vide' }).click();
     await expect(page.locator('#courses-title')).toBeVisible();
-    const pill = page.locator('#grocery-task-pill');
-    await expect(pill).toBeVisible();
+    // V5.4 : plus de rappel de la tâche dans le bandeau.
+    await expect(page.locator('.grocery-task-pill')).toHaveCount(0);
     await quickAdd(page, 'Pain', 'Lait');
     await goTo(page, 'Maison');
     await expect(row.getByRole('button', { name: /^Liste de courses : 2\s+articles$/ })).toBeVisible();
@@ -66,28 +67,40 @@ test.describe('Courses ↔ Maison', () => {
     await who.locator('.who-did__choice[data-who="b"]').click();
     await expect(who).toBeHidden();
     await expect(page.locator('.toast')).toContainText('Fait : Courses');
-    // La pastille reste, avec le repère de la dernière fois.
-    await expect(pill).toBeVisible();
-    await expect(pill).toContainText('aujourd’hui');
 
-    // 2e fois le même jour : panier vidé → Jiji.
+    // Maison : plus dans « à faire », mais dans « Fait aujourd’hui ».
+    await goTo(page, 'Maison');
+    await expect(row).toHaveCount(0);
+    const doneList = page.getByRole('button', { name: /Fait aujourd’hui/ });
+    await expect(doneList).toContainText('1');
+
+    // Un article ajouté après : elle revient.
+    await goTo(page, 'Courses');
+    await quickAdd(page, 'Beurre');
+    await goTo(page, 'Maison');
+    await expect(row).toHaveCount(1);
+
+    // 2e fois depuis Maison : cocher → « qui ? » → ensemble ; la ligne s'en va.
+    await row.getByRole('checkbox', { name: 'Courses' }).click();
+    await pickWho(page, 'both');
+    await expect(row).toHaveCount(0, { timeout: 5_000 });
+    await expect(doneList).toContainText('2');
+
+    // Annuler la dernière (« Fait aujourd’hui ») la ramène ; la première reste.
+    await doneList.click();
+    await page.getByRole('checkbox', { name: 'Courses (annuler)' }).first().click();
+    await expect(row).toHaveCount(1);
+    await expect(doneList).toContainText('1');
+    await row.getByRole('checkbox', { name: 'Courses' }).click();
+    await pickWho(page, 'both');
+    await expect(row).toHaveCount(0, { timeout: 5_000 });
+
+    // 3e fois le même jour, depuis Courses : Jiji.
+    await goTo(page, 'Courses');
     await emptyBasket(page, 'Lait');
     await expect(who).toBeVisible({ timeout: 10_000 });
     await who.locator('.who-did__choice[data-who="a"]').click();
     await expect(who).toBeHidden();
-
-    // 3e fois depuis Maison : cocher la ligne → « qui ? » → ensemble ; la ligne reste.
-    await goTo(page, 'Maison');
-    await expect(row).toBeVisible();
-    await expect(row).toContainText('aujourd’hui');
-    await row.getByRole('checkbox', { name: 'Courses' }).click();
-    await expect(who).toBeVisible();
-    await who.locator('.who-did__choice[data-who="both"]').click();
-    await expect(who).toBeHidden();
-    await expect(page.locator('.toast').filter({ hasText: 'Fait : Courses' })).toBeVisible();
-    await page.waitForTimeout(1600);
-    await expect(row).toBeVisible();
-    await expect(row.getByRole('checkbox', { name: 'Courses' })).toHaveAttribute('aria-checked', 'false');
 
     const state = await persisted(page);
     const task = state.chores.tasks.find((t: { groceries?: boolean }) => t.groceries === true);
@@ -95,15 +108,7 @@ test.describe('Courses ↔ Maison', () => {
     const done = state.chores.completions.filter((c: { taskId: string }) => c.taskId === task.id);
     expect(done).toHaveLength(3);
     expect(new Set(done.map((c: { dueDate: string }) => c.dueDate)).size).toBe(3);
-    expect(done.map((c: { doneBy?: string; assignee: string }) => c.doneBy ?? c.assignee)).toEqual(['b', 'a', 'both']);
-    expect(state.forest.lifetimeCare).toBe(3);
-
-    // Annuler la dernière (toast) : les deux premières restent.
-    await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
-    await expect
-      .poll(async () => (await persisted(page)).chores.completions.filter((c: { taskId: string }) => c.taskId === task.id).length)
-      .toBe(2);
-    await expect(row).toBeVisible();
+    expect(done.map((c: { doneBy?: string; assignee: string }) => c.doneBy ?? c.assignee)).toEqual(['b', 'both', 'a']);
 
     // Jamais au Calendrier.
     await goTo(page, 'Calendrier');
@@ -113,7 +118,6 @@ test.describe('Courses ↔ Maison', () => {
 
   test('sans tâche liée : vider le panier ne demande rien', async ({ page }) => {
     await openApp(page, 'courses');
-    await expect(page.locator('#grocery-task-pill')).toHaveCount(0);
     await quickAdd(page, 'Riz');
     await emptyBasket(page, 'Riz');
     await expect(page.locator('.toast')).toContainText('rangé', { timeout: 10_000 });

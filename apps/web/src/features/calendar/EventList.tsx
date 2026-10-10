@@ -1,7 +1,8 @@
 /**
  * Lignes d'événements : un événement (nature, titre, heure, lieu, pour qui,
  * première ligne de la note), la liste d'un jour, et « À venir » groupé par
- * jour (« Demain », « Samedi 10 octobre »). Toucher un événement ouvre son
+ * jour (« Demain », « Samedi 10 octobre », « Jeudi 19 août 2027 » pour
+ * une autre année). Toucher un événement ouvre son
  * édition. Les anniversaires sont mis en valeur (« Anniversaire de Léa »,
  * âge seulement si l'année est connue). V4 : les tâches de la maison du
  * jour suivent les événements, en lignes légères (TaskLine).
@@ -160,7 +161,7 @@ export function AgendaList({ days, today, ...rest }: AgendaProps & { days: Agend
           <li key={day.date} className="cal-upcoming__day">
             <h3 className="cal-upcoming__when">
               <span className="cal-upcoming__heading">{heading}</span>
-              {relative && <span className="cal-upcoming__date">{dayMonth(parseLocalDateKey(day.date))}</span>}
+              {relative && <span className="cal-upcoming__date">{dayMonth(parseLocalDateKey(day.date), today)}</span>}
             </h3>
             <DayAgenda events={day.events} tasks={day.tasks} dayForSpeech={heading.toLowerCase()} {...rest} />
           </li>

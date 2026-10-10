@@ -156,4 +156,30 @@ test.describe('Calendrier — parcours', () => {
     await expect(row).toBeVisible();
     expect((await persisted(page)).calendar.events).toHaveLength(1);
   });
+
+  test('« À venir » : l’année seulement pour l’année suivante', async ({ page }) => {
+    const errors = trackErrors(page);
+    // Le 20 décembre : l'anniversaire d'AC (27 décembre) est annoncé, cette année.
+    await page.clock.setFixedTime(new Date('2026-12-20T10:00:00'));
+    await openCalendar(page);
+    await page.getByRole('button', { name: /^Ajouter un événement/ }).click();
+    const dialog = sheet(page, 'Nouvel événement');
+    await expect(dialog).toBeVisible();
+    await dialog.locator('#event-title').fill('Dîner du Nouvel An chinois');
+    await dialog.locator('#event-date').fill('2027-01-08');
+    await expect(dialog.locator('#event-date-hint')).toHaveText('Vendredi 8 janvier 2027');
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
+    await expect(dialog).toBeHidden();
+
+    const upcoming = page.locator('.cal-upcoming-section');
+    const headings = upcoming.locator('.cal-upcoming__heading');
+    await expect(headings.filter({ hasText: 'Vendredi 8 janvier 2027' })).toHaveCount(1);
+    await expect(headings.filter({ hasText: /^Dimanche 27 décembre$/ })).toHaveCount(1);
+    await expect(upcoming.getByRole('button', { name: /Dîner du Nouvel An chinois/ })).toHaveAttribute('aria-label', /vendredi 8 janvier 2027/);
+    await expect(upcoming.getByRole('button', { name: /Anniversaire d’AC/ })).toHaveAttribute('aria-label', /dimanche 27 décembre,/);
+    // Mobile : le titre tient sur la largeur.
+    const overflow = await upcoming.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(overflow).toBe(false);
+    expect(errors).toEqual([]);
+  });
 });

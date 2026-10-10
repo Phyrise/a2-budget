@@ -207,7 +207,7 @@ export function EventSheet({
               />
               {!errors.date && /^\d{4}-\d{2}-\d{2}$/.test(v.date) && (
                 <p className="field__hint" id="event-date-hint">
-                  {longDate(parseLocalDateKey(v.date))}
+                  {longDate(parseLocalDateKey(v.date), new Date())}
                   {v.yearly ? ', puis chaque année' : ''}
                   {v.yearly && v.date.endsWith('-02-29') ? ' (le 28\u00a0février les années sans 29)' : ''}
                 </p>

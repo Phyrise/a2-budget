@@ -105,24 +105,25 @@ async function weeklyGoal(page: Page): Promise<{ level: string; arc: string | nu
  * vol a alors été vu au moment du clic ; faux sans WebGL (clic simple, seul
  * l'état est vérifié).
  */
-async function armUndoInFlight(page: Page, selector: string, withText?: string): Promise<boolean> {
+async function armUndoInFlight(page: Page, selector: string, withText?: string, minK = 0): Promise<boolean> {
   const flyingAtUndo = await page.evaluate(
-    async ({ selector, withText }) => {
-      const e = (window as unknown as { __worldEngine?: { lights: { flying(n: number): { id: string }[] } } }).__worldEngine;
+    async ({ selector, withText, minK }) => {
+      const e = (window as unknown as { __worldEngine?: { lights: { flying(n: number): { id: string; k: number }[] } } }).__worldEngine;
       const find = () =>
         Array.from(document.querySelectorAll<HTMLElement>(selector)).find(
           (el) => withText === undefined || (el.parentElement?.textContent ?? '').includes(withText),
         );
-      const flying = () => (e ? e.lights.flying(performance.now() / 1000).map((f) => f.id) : []);
+      // `minK` : attendre que le vol soit avancé (0..1) — annulation juste avant l'atterrissage.
+      const flying = () => (e ? e.lights.flying(performance.now() / 1000).filter((f) => f.k >= minK).map((f) => f.id) : []);
       const t0 = performance.now();
       while (performance.now() - t0 < 15_000 && (find() === undefined || (e !== undefined && flying().length === 0))) {
-        await new Promise((r) => setTimeout(r, 10));
+        await new Promise((r) => requestAnimationFrame(() => r(undefined)));
       }
       const ids = flying();
       find()?.click();
       return e ? ids : null;
     },
-    { selector, withText },
+    { selector, withText, minK },
   );
   if (flyingAtUndo === null) return false;
   expect(flyingAtUndo, 'la luciole vole au moment de l’annulation').toHaveLength(1);
@@ -213,6 +214,19 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     await goTo(page, 'Maison');
     expect(await weeklyGoal(page)).toEqual(before);
     expect(errors).toEqual([]);
+  });
+
+  test('Calendrier (ordinateur) : « Annuler » juste avant l’atterrissage, la forêt figée finit le fondu', async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    await openSeeded(page, 'calendar');
+    const box = page.locator('.cal-day-panel .cal-task', { hasText: 'Arroser les plantes' }).getByRole('checkbox');
+    await box.click();
+    // Fondu (1,6 s) plus long que le reste du vol : la scène figée doit le finir après l'atterrissage.
+    const undo = armUndoInFlight(page, '.toast .toast__action', 'Une luciole de plus', 0.5);
+    await pickWho(page, 'b');
+    const flying = await undo;
+    await expectUndoneState(page, 't-plantes');
+    await expectNoForestLight(page, flying);
   });
 
   test('Calendrier : décoché à la case, « Annuler » du toast ne recoche pas', async ({ page }) => {

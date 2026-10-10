@@ -189,6 +189,12 @@ export class DayLights {
     return false;
   }
 
+  /** Une lumière s'éteint encore (annulée) : la scène, même figée, la dessine jusqu'au bout. */
+  get fading(): boolean {
+    for (const l of this.lights.values()) if (l.dying !== null) return true;
+    return false;
+  }
+
   /** Vrai si une animation est en cours (vol, fondu). */
   busy(now: number): boolean {
     for (const l of this.lights.values()) {

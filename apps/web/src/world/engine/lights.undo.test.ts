@@ -124,4 +124,14 @@ describe('tâche annulée : la luciole quitte la forêt', () => {
     run(lights, 5, 8);
     expect(lights.size).toBe(1);
   });
+
+  it('fondu en cours signalé (scène figée : le moteur dessine jusqu’à la suppression)', () => {
+    const lights = new DayLights(anchors);
+    lights.sync([{ id: 'c1', who: 'a' }], 0, false);
+    expect(lights.fading).toBe(false);
+    lights.sync([], 10, true);
+    expect(lights.fading).toBe(true);
+    lights.update(10 + 5);
+    expect(lights.fading).toBe(false);
+  });
 });

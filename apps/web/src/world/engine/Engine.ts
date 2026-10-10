@@ -361,7 +361,8 @@ export class WorldEngine {
   private isBusy(n: number): boolean {
     const transitions =
       this.growStart >= 0 || this.lutMix(n) < 1 || this.lights.busy(n) || this.gust > 0.02 || this.rayBoost > 0.02 || this.lantern.busy(n) || this.stone.busy(n);
-    if (!this.animated) return transitions && this.cfg.motion === 'still' && this.cfg.live;
+    // Scène figée : une luciole annulée en fin de vol finit son fondu (sinon elle resterait à demi allumée).
+    if (!this.animated) return (transitions && this.cfg.motion === 'still' && this.cfg.live) || this.lights.fading;
     return transitions || this.spirits.busy(n) || this.seasons.busy(n) || Math.abs(this.pointer.tx - this.pointer.x) + Math.abs(this.pointer.ty - this.pointer.y) > 1e-4;
   }
 

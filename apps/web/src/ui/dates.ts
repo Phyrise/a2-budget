@@ -6,7 +6,9 @@ import { addDays, localDateKey, parseLocalDateKey } from '@a2/core';
 
 const weekdayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' });
 const dayMonthFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' });
+const dayMonthYearFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 const longFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const longYearFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 export function capitalize(text: string): string {
@@ -18,14 +20,22 @@ function firstOrdinal(text: string): string {
   return text.replace(/(^|\s)1(?=\s)/u, (_match, before: string) => `${before}1er`);
 }
 
-/** « Samedi 3 octobre », « Jeudi 1er octobre ». */
-export function longDate(date: Date): string {
-  return capitalize(firstOrdinal(longFmt.format(date)));
+/** L'année est à dire : une date d'une autre année que `today` (si donné). */
+function otherYear(date: Date, today: Date | undefined): boolean {
+  return today !== undefined && date.getFullYear() !== today.getFullYear();
 }
 
-/** « 3 octobre », « 1er octobre ». */
-export function dayMonth(date: Date): string {
-  return firstOrdinal(dayMonthFmt.format(date));
+/**
+ * « Samedi 3 octobre », « Jeudi 1er octobre » ; avec `today`, l'année
+ * s'ajoute pour une autre année : « Jeudi 19 août 2027 ».
+ */
+export function longDate(date: Date, today?: Date): string {
+  return capitalize(firstOrdinal((otherYear(date, today) ? longYearFmt : longFmt).format(date)));
+}
+
+/** « 3 octobre », « 1er octobre » ; avec `today`, « 1er janvier 2027 » pour une autre année. */
+export function dayMonth(date: Date, today?: Date): string {
+  return firstOrdinal((otherYear(date, today) ? dayMonthYearFmt : dayMonthFmt).format(date));
 }
 
 /** « Lundi ». */

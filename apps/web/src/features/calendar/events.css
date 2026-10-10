@@ -220,6 +220,7 @@
 
 .cal-upcoming__when {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
   margin: 0 2px 8px;

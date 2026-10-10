@@ -32,7 +32,7 @@ function shiftMonthKeepingDay(key: string, delta: number): string {
 }
 
 function dayLabel(key: string, todayKey: string, occurrences: CalendarOccurrence[], tasks: TaskItem[], couple: boolean): string {
-  const parts = [longDate(parseLocalDateKey(key))];
+  const parts = [longDate(parseLocalDateKey(key), parseLocalDateKey(todayKey))];
   if (key === todayKey) parts.push('aujourd’hui');
   if (couple) parts.push('anniversaire du couple');
   if (occurrences.length === 0 && tasks.length === 0) parts.push('rien de prévu');

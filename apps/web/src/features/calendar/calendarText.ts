@@ -117,11 +117,11 @@ export function whoLabel(who: CalendarWho, names: { a: string; b: string }): str
   return 'Ensemble';
 }
 
-/** « Aujourd’hui », « Demain », « Samedi 10 octobre ». */
+/** « Aujourd’hui », « Demain », « Samedi 10 octobre », « Jeudi 19 août 2027 » (autre année). */
 export function dayHeading(dateKey: string, today: Date): string {
   if (dateKey === localDateKey(today)) return 'Aujourd’hui';
   if (dateKey === localDateKey(addDays(today, 1))) return 'Demain';
-  return longDate(parseLocalDateKey(dateKey));
+  return longDate(parseLocalDateKey(dateKey), today);
 }
 
 /** Dans une phrase : « aujourd’hui », « demain », « le samedi 10 octobre ». */

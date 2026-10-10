@@ -241,9 +241,10 @@ export class DayLights {
       out.push(x, y, l.depth, s, s, 0, r, g, b, alpha * flick * glowK * (1 + flash), GLOW);
       if (flash > 0) {
         const fs = s * 5 * (1.2 - flash * 0.4) * big;
-        out.push(x, y, l.depth, fs, fs, 0, r, g, b, flash * 0.35 * glowK, GLOW);
+        out.push(x, y, l.depth, fs, fs, 0, r, g, b, flash * 0.35 * glowK * fadeOut, GLOW);
       }
-      if (l.strong) this.shower(out, l, now, r, g, b, glowK, aspect);
+      // Annulée juste après l'atterrissage : l'éclat et la pluie s'éteignent avec elle.
+      if (l.strong) this.shower(out, l, now, r, g, b, glowK * fadeOut, aspect);
     }
   }
 

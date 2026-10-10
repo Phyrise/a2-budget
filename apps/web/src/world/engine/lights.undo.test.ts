@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BillboardWriter } from './batch';
-import { FLIGHT } from './flight';
+import { FLIGHT, FLIGHT_STRONG } from './flight';
 import { DayLights } from './lights';
 
 const anchors = [{ x: 0.4, y: 0.7, depth: 0.6 }];
@@ -64,6 +64,21 @@ describe('tâche annulée : la luciole quitte la forêt', () => {
     lights.sync([], 12, true);
     run(lights, 12, 14);
     expect(lights.size).toBe(0);
+  });
+
+  it('corvée annulée juste après l’atterrissage : éclat et pluie s’éteignent avec elle', () => {
+    const land = (cancel: boolean) => {
+      const lights = new DayLights(anchors);
+      lights.pulse('c1', 'b', FROM, 10, true);
+      lights.sync([{ id: 'c1', who: 'b' }], 10.02, true);
+      run(lights, 10, 10 + FLIGHT_STRONG + 0.05);
+      expect(lights.landed).toHaveLength(1);
+      if (cancel) lights.sync([], 10 + FLIGHT_STRONG + 0.05, true);
+      return lights;
+    };
+    const t = 10 + FLIGHT_STRONG + 0.05 + 1.2; // fondu aux trois quarts
+    const kept = glow(land(false), t);
+    expect(glow(land(true), t)).toBeLessThan(kept * 0.4);
   });
 
   it('vol réservé (feuille) puis annulé avant l’envol : le pulse ne crée aucune lumière', () => {

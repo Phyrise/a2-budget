@@ -195,6 +195,7 @@ par une fonction pure et testée `diffToOps(prev, next, ctx)` :
 | complétion ou « pas aujourd'hui » ajouté | création du fait |
 | complétion ou « pas aujourd'hui » retiré | `undoneAt` sur le fait |
 | article passé du panier à l'historique | `deletedAt` + fait `groceryHistory` (même lot) |
+| vidage annulé (achat retiré sous le plafond) | `undoneAt` sur SON fait `groceryHistory` ; l'article revient sous un id neuf |
 | `forest.paused` basculé | fait `forestEvents` |
 | autres champs de `forest` | rien (dérivés) |
 
@@ -797,6 +798,14 @@ fusionnés en « fait ensemble ». Annuler vise un fait précis (`undoCompletion
 `undoHomeCompletion` côté store). Une tâche Courses de V5.2 le devient sans
 écriture : sa récurrence enregistrée est ignorée, ses anciens faits datés
 restent. Règles Firestore inchangées (elles ne lisent pas `dueDate`).
+
+V5.8 — « Annuler » après « Vider le panier » annule tout le geste : le fait
+Courses (`undoHomeCompletion`), les achats de ce vidage (`undoneAt` sur les
+faits `groceryHistory` de ce téléphone, `undoClearGroceries`) et remet les
+articles cochés à leur place. Ils reviennent sous des **ids neufs** : l'id
+d'un achat est celui de l'article, et un fait annulé ne se recrée pas
+(`factCreate` exige un document absent) ; revider ensuite crée donc des
+achats neufs. Le kompeitō donné reste (voulu).
 
 ## 24. V5.7 — compagnon lié au compte
 

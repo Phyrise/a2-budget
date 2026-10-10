@@ -4,12 +4,21 @@
  * « fait ensemble »), deux crédits ; chacun n'annule que la sienne.
  */
 import { describe, expect, it } from 'vitest';
-import { createTask, liveFactsOfOccurrence, undoCompletion, type AppState } from '@a2/core';
+import {
+  clearDoneGroceries,
+  clearedGroceries,
+  createTask,
+  liveFactsOfOccurrence,
+  toggleGroceryItem,
+  undoClearGroceries,
+  undoCompletion,
+  type AppState,
+} from '@a2/core';
 import { docsOf } from './docs';
 import { SyncEngine } from './engine';
 import { MemoryServer, MemoryTransport } from './memoryTransport';
 import { migrationOps } from './migration';
-import { NOW, at, resetTestIds, richState, testId, toggle } from './testFixtures';
+import { NOW, addGrocery, at, resetTestIds, richState, testId, toggle } from './testFixtures';
 
 type Role = 'a' | 'b';
 
@@ -82,6 +91,43 @@ describe('Courses à tout moment, deux téléphones', () => {
     expect(runs(h.a.state).map((c) => c.id)).toEqual([theirs.id]);
     expect(h.a.state.forest.creditLedger[`courses|${theirs.dueDate}`]?.status).toBe('active');
     expect(h.a.state.forest.creditLedger[`courses|${mine.dueDate}`]?.status).toBe('tombstoned');
+    expect(h.a.state).toEqual(h.b.state);
+  });
+});
+
+describe('Annuler « Vider le panier », deux téléphones', () => {
+  it('articles revenus, achats et fait Courses annulés chez les deux ; revider passe', () => {
+    const h = household();
+    h.a.act(addCourses, at(9, 8));
+    h.a.act((s) => addGrocery(addGrocery(s, 'Pain', at(9, 9), 'a'), 'Lait', at(9, 9), 'a'), at(9, 9));
+    const ids = h.a.state.groceries.items.filter((i) => i.label === 'Pain' || i.label === 'Lait').map((i) => i.id);
+    h.a.act((s) => ({ ...s, groceries: { ...s.groceries, items: ids.reduce((items, id) => toggleGroceryItem(items, id, at(9, 10)), s.groceries.items) } }), at(9, 10));
+    const historyBefore = h.a.state.groceries.history ?? [];
+    const receipt = clearedGroceries(h.a.state.groceries);
+    h.a.act((s) => ({ ...s, groceries: clearDoneGroceries(s.groceries, at(9, 11)) }), at(9, 11));
+    h.a.act((s) => toggle(s, 'courses', at(9, 11), 'a'), at(9, 11));
+    expect(runs(h.b.state)).toHaveLength(1);
+    expect(h.b.state.groceries.items.some((i) => i.label === 'Pain')).toBe(false);
+    const run = runs(h.a.state)[0]!;
+
+    // Annuler : tout le geste.
+    h.a.act((s) => undoCompletion(s, run.id, at(9, 12)).state, at(9, 12));
+    h.a.act((s) => ({ ...s, groceries: undoClearGroceries(s.groceries, receipt, receipt.map((_, i) => `n${i}`)) }), at(9, 12));
+    expect(h.server.rejected).toEqual([]);
+    for (const phone of [h.a, h.b]) {
+      expect(runs(phone.state)).toEqual([]);
+      expect(phone.state.groceries.items.filter((i) => i.done).map((i) => i.label).sort()).toEqual(
+        receipt.map((c) => c.item.label).sort(),
+      );
+      expect(phone.state.groceries.history ?? []).toEqual(historyBefore);
+    }
+    expect(h.a.state.forest.creditLedger[`courses|${run.dueDate}`]?.status).toBe('tombstoned');
+    expect(h.a.state).toEqual(h.b.state);
+
+    // Revider : nouveaux achats (ids neufs), aucun refus.
+    h.a.act((s) => ({ ...s, groceries: clearDoneGroceries(s.groceries, at(9, 13)) }), at(9, 13));
+    expect(h.server.rejected).toEqual([]);
+    expect(h.b.state.groceries.history?.slice(0, receipt.length).map((p) => p.id).sort()).toEqual(receipt.map((_, i) => `n${i}`).sort());
     expect(h.a.state).toEqual(h.b.state);
   });
 });

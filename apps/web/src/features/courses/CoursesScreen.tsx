@@ -12,6 +12,7 @@
  *
  * V5.2 : la tâche Maison liée aux courses (GroceryTaskDone) — panier vidé
  * → « qui ? » → les courses sont faites (V5.4 : plus de rappel en haut).
+ * V5.8 : vider le panier est annulable (articles, historique et fait Maison).
  */
 import { grocerySuggestions, groupGroceryItems, type GroceryItem } from '@a2/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -34,7 +35,8 @@ import './courses-kiki.css';
 import { SootStage } from '../../creatures/soot';
 
 export function CoursesScreen() {
-  const { appState, today, addGrocery, toggleGrocery, removeGrocery, restoreGrocery, clearDoneGroceries } = useApp();
+  const { appState, today, addGrocery, toggleGrocery, removeGrocery, restoreGrocery, clearDoneGroceries, undoClearGroceries } =
+    useApp();
   const { setForegroundSheet } = useShell();
   const toast = useToast();
   const [text, setText] = useState('');
@@ -182,8 +184,11 @@ export function CoursesScreen() {
   }, []);
 
   const clearBasket = () => {
-    const n = clearDoneGroceries();
+    const cleared = clearDoneGroceries();
+    const n = cleared.length;
     if (n <= 0) return;
+    // « Annuler » remet les articles au panier (et leurs achats hors de l'historique).
+    const undo = () => undoClearGroceries(cleared);
     const reduced = prefersReducedMotion();
     const message = `${plural(n, 'article')} rangé${n > 1 ? 's' : ''} dans l’historique`;
     const askWho = groceryTask.ask;
@@ -193,8 +198,8 @@ export function CoursesScreen() {
       () => {
         flightTimer.current = null;
         setFlight(null);
-        toast.show({ message, icon: 'check' });
-        askWho();
+        // Tâche Courses : « qui ? » d'abord, son toast annule tout le geste.
+        if (!askWho(undo)) toast.show({ message, icon: 'check', action: { label: 'Annuler', onClick: undo } });
       },
       reduced ? 700 : FLIGHT_MS,
     );

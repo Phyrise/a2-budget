@@ -27,6 +27,15 @@ async function emptyBasket(page: Page, ...labels: string[]) {
   await page.getByRole('button', { name: 'Vider le panier' }).click();
 }
 
+/** Maison : crée la tâche Courses liée à la liste. */
+async function addGroceryTask(page: Page) {
+  await page.getByRole('button', { name: 'Ajouter une tâche', exact: true }).first().click();
+  const dialog = sheet(page, 'Nouvelle tâche');
+  await dialog.getByRole('button', { name: 'Liée à la liste de courses' }).click();
+  await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
 test.describe('Courses ↔ Maison', () => {
   test('tâche Courses : faite → quitte « à faire », un article ajouté la ramène', async ({ page }) => {
     const errors = trackErrors(page);
@@ -116,11 +125,77 @@ test.describe('Courses ↔ Maison', () => {
     expect(errors).toEqual([]);
   });
 
+  test('Annuler après « Vider le panier » : articles, historique et fait Maison reviennent', async ({ page }) => {
+    const errors = trackErrors(page);
+    await openApp(page, 'maison');
+    await addGroceryTask(page);
+    await goTo(page, 'Courses');
+    await quickAdd(page, 'Pain', 'Lait', 'Œufs');
+    await emptyBasket(page, 'Pain', 'Lait');
+    await pickWho(page, 'a');
+    const toast = page.locator('.toast');
+    await expect(toast).toContainText('Fait : Courses');
+    await expect(page.locator('.item-row')).toHaveCount(1);
+    let state = await persisted(page);
+    expect(state.chores.completions).toHaveLength(1);
+    expect(state.groceries.history.map((p: { label: string }) => p.label).sort()).toEqual(['Lait', 'Pain']);
+
+    await toast.getByRole('button', { name: 'Annuler' }).click();
+    // Les articles reviennent au panier, cochés, dans leur ordre.
+    await expect(page.locator('.item-list--basket .item-row')).toHaveCount(2);
+    await expect(page.getByRole('checkbox', { name: 'Pain', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Lait', exact: true })).toBeChecked();
+    await expect(page.getByRole('checkbox', { name: 'Œufs', exact: true })).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Vider le panier' })).toBeVisible();
+    state = await persisted(page);
+    expect(state.groceries.items.map((i: { label: string; done: boolean }) => `${i.label}:${i.done}`)).toEqual(['Pain:true', 'Lait:true', 'Œufs:false']);
+    expect(state.groceries.history ?? []).toEqual([]);
+    expect(state.chores.completions).toEqual([]);
+
+    // Maison : la tâche est de nouveau « à faire », plus rien dans « Fait aujourd’hui ».
+    await goTo(page, 'Maison');
+    await expect(page.locator('.task-list:not(.task-list--done) .task-row').filter({ hasText: 'Courses' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: /Fait aujourd’hui/ })).toHaveCount(0);
+
+    // Revider ensuite fonctionne comme avant.
+    await goTo(page, 'Courses');
+    await page.getByRole('button', { name: 'Vider le panier' }).click();
+    await pickWho(page, 'b');
+    await expect(toast).toContainText('Fait : Courses');
+    state = await persisted(page);
+    expect(state.chores.completions).toHaveLength(1);
+    expect(state.groceries.history).toHaveLength(2);
+    expect(errors).toEqual([]);
+  });
+
+  test('« Qui ? » fermé sans choisir : « Panier vidé » reste annulable', async ({ page }) => {
+    await openApp(page, 'maison');
+    await addGroceryTask(page);
+    await goTo(page, 'Courses');
+    await quickAdd(page, 'Riz');
+    await emptyBasket(page, 'Riz');
+    const who = sheet(page, 'Qui ?');
+    await expect(who).toBeVisible({ timeout: 10_000 });
+    await who.getByRole('button', { name: 'Fermer', exact: true }).click();
+    await expect(who).toBeHidden();
+    const toast = page.locator('.toast');
+    await expect(toast).toContainText('Panier vidé');
+    await toast.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Riz', exact: true })).toBeChecked();
+    const state = await persisted(page);
+    expect(state.groceries.history ?? []).toEqual([]);
+    expect(state.chores.completions).toEqual([]);
+  });
+
   test('sans tâche liée : vider le panier ne demande rien', async ({ page }) => {
     await openApp(page, 'courses');
     await quickAdd(page, 'Riz');
     await emptyBasket(page, 'Riz');
     await expect(page.locator('.toast')).toContainText('rangé', { timeout: 10_000 });
     await expect(sheet(page, 'Qui ?')).toHaveCount(0);
+    // Annulable : le riz revient au panier.
+    await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Riz', exact: true })).toBeChecked();
+    expect((await persisted(page)).groceries.history ?? []).toEqual([]);
   });
 });

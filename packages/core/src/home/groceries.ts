@@ -576,6 +576,51 @@ export function clearDoneGroceries(state: GroceriesState, now: Date): GroceriesS
   };
 }
 
+/** Article rangé par « Vider le panier » : de quoi le remettre à sa place. */
+export interface ClearedGrocery {
+  item: GroceryItem;
+  /** Position dans la liste avant le vidage. */
+  index: number;
+}
+
+/** Articles cochés que « Vider le panier » va ranger (à garder pour « Annuler »). Pur. */
+export function clearedGroceries(state: GroceriesState): ClearedGrocery[] {
+  const out: ClearedGrocery[] = [];
+  state.items.forEach((item, index) => {
+    if (item.done) out.push({ item, index });
+  });
+  return out;
+}
+
+/**
+ * Annule « Vider le panier » : chaque article encore rangé dans l'historique
+ * (achat de même id) en ressort et revient dans la liste, coché, à sa place
+ * d'origine (bornée). Il revient sous un id neuf (`newIds`, dans l'ordre) :
+ * en mode synchronisé, l'ancien id reste celui de l'achat annulé (un fait
+ * ne se recrée pas) et de l'article supprimé. Rien à annuler (déjà fait,
+ * achat disparu) → même référence d'état.
+ */
+export function undoClearGroceries(
+  state: GroceriesState,
+  cleared: readonly ClearedGrocery[],
+  newIds: readonly string[],
+): GroceriesState {
+  const history = state.history ?? [];
+  const archived = new Set(history.map((p) => p.id));
+  const back = cleared
+    .map((c, i) => ({ ...c, id: newIds[i] }))
+    .filter((c): c is ClearedGrocery & { id: string } => c.id !== undefined && archived.has(c.item.id))
+    .sort((x, y) => x.index - y.index);
+  if (back.length === 0) return state;
+  const items = state.items.slice();
+  for (const c of back) {
+    const at = Math.max(0, Math.min(items.length, Math.floor(c.index)));
+    items.splice(at, 0, { ...c.item, id: c.id });
+  }
+  const out = new Set(back.map((c) => c.item.id));
+  return { ...state, items, history: history.filter((p) => !out.has(p.id)) };
+}
+
 /**
  * Derniers achats, plus récent d'abord : articles actuellement au panier
  * (datés de `doneAt`) puis historique. Pour la feuille Historique.

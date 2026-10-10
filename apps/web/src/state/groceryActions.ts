@@ -9,12 +9,15 @@ import { useCallback, useMemo } from 'react';
 import {
   addGroceryItem,
   clearDoneGroceries as coreClearDoneGroceries,
+  clearedGroceries,
   forgetGroceryCategory,
   rememberGroceryCategory,
   removeGroceryItem,
   restoreGroceryItem,
   toggleGroceryItem,
+  undoClearGroceries as coreUndoClearGroceries,
   updateGroceryItem,
+  type ClearedGrocery,
   type GroceryAuthor,
   type GroceryItem,
   type GroceryItemPatch,
@@ -55,8 +58,17 @@ export interface GroceryActions {
    * même article) ; null l'oublie.
    */
   updateGrocery: (id: string, patch: GroceryItemPatch) => void;
-  /** « Vider le panier » : archive les articles cochés dans l'historique. Retourne leur nombre. */
-  clearDoneGroceries: () => number;
+  /**
+   * « Vider le panier » : archive les articles cochés dans l'historique.
+   * Retourne les articles rangés (vide : rien à vider), à passer à
+   * `undoClearGroceries` pour annuler.
+   */
+  clearDoneGroceries: () => ClearedGrocery[];
+  /**
+   * Annule un vidage : les articles reviennent cochés à leur place (ids
+   * neufs), leurs achats quittent l'historique. Faux si rien à annuler.
+   */
+  undoClearGroceries: (cleared: readonly ClearedGrocery[]) => boolean;
 }
 
 export function useGroceryActions(transact: Transact, me: Role | null): GroceryActions {
@@ -144,18 +156,29 @@ export function useGroceryActions(transact: Transact, me: Role | null): GroceryA
     [transact],
   );
 
-  const clearDoneGroceries = useCallback((): number => {
+  const clearDoneGroceries = useCallback((): ClearedGrocery[] => {
     const now = new Date();
-    return transact((s) => {
+    return transact<ClearedGrocery[]>((s) => {
       const groceries = coreClearDoneGroceries(s.groceries, now);
       return groceries === s.groceries
-        ? { state: s, result: 0 }
-        : { state: { ...s, groceries }, result: s.groceries.items.length - groceries.items.length };
-    }, 0);
+        ? { state: s, result: [] }
+        : { state: { ...s, groceries }, result: clearedGroceries(s.groceries) };
+    }, []);
   }, [transact]);
 
+  const undoClearGroceries = useCallback(
+    (cleared: readonly ClearedGrocery[]): boolean => {
+      const ids = cleared.map(() => newId());
+      return transact((s) => {
+        const groceries = coreUndoClearGroceries(s.groceries, cleared, ids);
+        return groceries === s.groceries ? { state: s, result: false } : { state: { ...s, groceries }, result: true };
+      }, false);
+    },
+    [transact],
+  );
+
   return useMemo(
-    () => ({ addGrocery, toggleGrocery, removeGrocery, restoreGrocery, updateGrocery, clearDoneGroceries }),
-    [addGrocery, toggleGrocery, removeGrocery, restoreGrocery, updateGrocery, clearDoneGroceries],
+    () => ({ addGrocery, toggleGrocery, removeGrocery, restoreGrocery, updateGrocery, clearDoneGroceries, undoClearGroceries }),
+    [addGrocery, toggleGrocery, removeGrocery, restoreGrocery, updateGrocery, clearDoneGroceries, undoClearGroceries],
   );
 }

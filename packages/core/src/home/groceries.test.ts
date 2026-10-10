@@ -5,6 +5,7 @@ import {
   addGroceryItem,
   categorizeGrocery,
   clearDoneGroceries,
+  clearedGroceries,
   groceryKey,
   grocerySuggestions,
   groupGroceryItems,
@@ -14,6 +15,7 @@ import {
   recentGroceryPurchases,
   removeGroceryItem,
   toggleGroceryItem,
+  undoClearGroceries,
   updateGroceryItem,
 } from './groceries.js';
 import type { GroceriesState, GroceryItem, GroceryPurchase } from './types.js';
@@ -324,6 +326,31 @@ describe('clearDoneGroceries (vider le panier) + historique', () => {
     const next = clearDoneGroceries({ ...state, history }, LATER);
     expect(next.history).toHaveLength(GROCERY_HISTORY_MAX);
     expect(next.history![0]!.id).toBe('g3');
+  });
+
+  it('Annuler le vidage : articles cochés à leur place (ids neufs), achats retirés', () => {
+    const old: GroceryPurchase = { id: 'h0', label: 'Riz', boughtAt: NOW.toISOString() };
+    const before: GroceriesState = { ...state, history: [old] };
+    const cleared = clearedGroceries(before);
+    expect(cleared.map((c) => [c.item.id, c.index])).toEqual([['g1', 0], ['g3', 2]]);
+    const emptied = clearDoneGroceries(before, LATER);
+    const frozen = structuredClone(emptied);
+    const undone = undoClearGroceries(emptied, cleared, ['n1', 'n3']);
+    expect(undone.items.map((i) => `${i.id}:${i.label}:${i.done}`)).toEqual(['n1:Lait:true', 'g2:Pain:false', 'n3:Lessive:true']);
+    expect(undone.items[2]).toEqual({ ...state.items[2], id: 'n3' });
+    expect(undone.history).toEqual([old]);
+    expect(emptied).toEqual(frozen); // pur
+    // Une seconde fois : plus rien à annuler.
+    expect(undoClearGroceries(undone, cleared, ['x1', 'x3'])).toBe(undone);
+  });
+
+  it('Annuler le vidage après d’autres gestes : place bornée, achat disparu ignoré', () => {
+    const cleared = clearedGroceries(state);
+    const emptied = clearDoneGroceries(state, LATER);
+    const later: GroceriesState = { items: [], history: emptied.history!.filter((p) => p.id !== 'g1') };
+    const undone = undoClearGroceries(later, cleared, ['n1', 'n3']);
+    expect(undone.items.map((i) => i.id)).toEqual(['n3']);
+    expect(undone.history).toEqual([]);
   });
 
   it('recentGroceryPurchases fusionne panier et historique, plus récent d’abord', () => {

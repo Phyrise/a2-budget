@@ -4,6 +4,8 @@ import {
   advanceDay,
   localDateKey,
   clearDoneGroceries,
+  clearedGroceries,
+  undoClearGroceries,
   prunePaidExpenses,
   recordBalanceCorrection,
   removeEvent,
@@ -131,9 +133,19 @@ describe('diffToOps — écritures minimales, et la projection redonne l’état
     expect(removed).toEqual([{ kind: 'update', collection: 'groceries', id, fields: [[['deletedAt'], iso], [['updatedAt'], iso]] }]);
     const restored = p.act((s) => ({ ...s, groceries: { ...s.groceries, items: restoreGroceryItem(s.groceries.items, item, index) } }));
     expect(restored[0]).toMatchObject({ kind: 'set', collection: 'groceries', id });
+    const receipt = clearedGroceries(p.state.groceries);
     const cleared = p.act((s) => ({ ...s, groceries: clearDoneGroceries(s.groceries, NOW) }));
     expect(cleared.map((op) => `${op.kind} ${op.collection}`).sort()).toEqual([
       'create groceryHistory', 'create groceryHistory', 'update groceries', 'update groceries',
+    ]);
+    // Annuler le vidage : ses achats annulés (faits), les articles recréés sous des ids neufs.
+    const undone = p.act((s) => ({ ...s, groceries: undoClearGroceries(s.groceries, receipt, ['u1', 'u2']) }));
+    expect(undone.map((op) => `${op.kind} ${op.collection}/${op.id}`).sort()).toEqual([
+      'create groceries/u1', 'create groceries/u2',
+      ...receipt.map((c) => `update groceryHistory/${c.item.id}`),
+    ].sort());
+    expect(fieldsOf(undone.find((op) => op.collection === 'groceryHistory'))).toEqual([
+      [['undoneAt'], iso], [['undoneDay'], localDateKey(NOW)], [['undoneBy'], 'a'],
     ]);
   });
 

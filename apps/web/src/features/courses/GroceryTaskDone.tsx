@@ -5,7 +5,9 @@
  * - `GroceryLast` : repère de la dernière fois (« hier » + tête), ligne Maison ;
  * - `useGroceryTaskDone` : une complétion de plus à chaque fois (geste de
  *   Maison `toggleHomeTask` : forêt, équilibre, historique) + kompeitō,
- *   luciole et toast « Annuler » (annule CE fait seulement).
+ *   luciole et toast « Annuler » : annule CE fait ET le vidage du panier
+ *   (V5.8 : les articles reviennent) ; « qui ? » fermé sans choisir →
+ *   toast « Panier vidé » annulable.
  * Sans tâche liée : rien n'est affiché, aucune question.
  */
 import { addDays, groceryTaskOf, lastGroceryRun, localDateKey, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
@@ -56,7 +58,10 @@ export function GroceryLast({ last, size = 16 }: { last: GroceryRun; size?: numb
   );
 }
 
-/** Feuille « qui ? » + geste de Maison. `ask()` l'ouvre dès qu'une tâche Courses existe. */
+/**
+ * Feuille « qui ? » + geste de Maison. `ask(undoClear)` l'ouvre dès qu'une
+ * tâche Courses existe (faux sinon) ; `undoClear` annule le vidage du panier.
+ */
 export function useGroceryTaskDone() {
   const { toggleHomeTask, undoHomeCompletion, me } = useApp();
   const world = useWorld();
@@ -65,23 +70,40 @@ export function useGroceryTaskDone() {
   const { task } = view;
   const [asking, setAsking] = useState(false);
   const timers = useRef<number[]>([]);
+  // Annulation du vidage en attente de la réponse à « qui ? ».
+  const undoClearRef = useRef<(() => void) | null>(null);
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
   const canAsk = task !== undefined;
-  const ask = useCallback(() => {
-    if (canAsk) setAsking(true);
-  }, [canAsk]);
+  const ask = useCallback(
+    (undoClear: () => void): boolean => {
+      if (!canAsk) return false;
+      undoClearRef.current = undoClear;
+      setAsking(true);
+      return true;
+    },
+    [canAsk],
+  );
 
   const whenSheetsClosed = (fn: () => void, waited = 0) => {
     if (waited >= SHEET_WAIT_MS || document.querySelector('dialog[open]') === null) fn();
     else timers.current.push(window.setTimeout(() => whenSheetsClosed(fn, waited + 40), 40));
   };
 
+  /** Personne n'est choisi : le vidage reste annulable. */
+  const emptied = (undoClear: () => void) =>
+    toast.show({ message: 'Panier vidé', icon: 'check', action: { label: 'Annuler', onClick: undoClear } });
+
   const pick = (who: ChoreDoer) => {
     setAsking(false);
+    const undoClear = undoClearRef.current ?? (() => undefined);
+    undoClearRef.current = null;
     if (!task) return;
     const result = toggleHomeTask(task, { doneBy: who });
-    if (!result.completed || result.completionId === null) return;
+    if (!result.completed || result.completionId === null) {
+      emptied(undoClear);
+      return;
+    }
     const completionId = result.completionId;
     playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
     world.expectPulse(completionId);
@@ -94,8 +116,21 @@ export function useGroceryTaskDone() {
     toast.show({
       message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
       icon: 'check',
-      action: { label: 'Annuler', onClick: () => undoHomeCompletion(completionId) },
+      action: {
+        label: 'Annuler',
+        onClick: () => {
+          undoHomeCompletion(completionId);
+          undoClear();
+        },
+      },
     });
+  };
+
+  const close = () => {
+    setAsking(false);
+    const undoClear = undoClearRef.current;
+    undoClearRef.current = null;
+    if (undoClear !== null) emptied(undoClear);
   };
 
   return {
@@ -103,7 +138,7 @@ export function useGroceryTaskDone() {
     canAsk,
     ask,
     sheet: (
-      <WhoDidSheet open={asking} onPick={pick} onClose={() => setAsking(false)} title={task?.title} suggested={likelyDoer(task?.assignee, me)} />
+      <WhoDidSheet open={asking} onPick={pick} onClose={close} title={task?.title} suggested={likelyDoer(task?.assignee, me)} />
     ),
   };
 }

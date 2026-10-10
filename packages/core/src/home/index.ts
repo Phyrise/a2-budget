@@ -144,6 +144,8 @@ export {
   restoreGroceryItem,
   updateGroceryItem,
   clearDoneGroceries,
+  clearedGroceries,
+  undoClearGroceries,
   recentGroceryPurchases,
   grocerySuggestions,
   groupGroceryItems,
@@ -155,7 +157,7 @@ export {
   forgetGroceryCategory,
   validateGroceryMemory,
 } from './groceryMemory.js';
-export type { GroceryItemPatch, GrocerySuggestion, GroceryGroup } from './groceries.js';
+export type { ClearedGrocery, GroceryItemPatch, GrocerySuggestion, GroceryGroup } from './groceries.js';
 
 export {
   VITALITY_MAX,

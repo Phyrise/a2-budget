@@ -10,6 +10,7 @@
  * | objet retiré                                 | deletedAt (suppression douce)    |
  * | fait ajouté                                  | create du fait                   |
  * | complétion / « pas aujourd'hui » retiré      | annulation de SES faits vivants de l'occurrence |
+ * | achat retiré sous le plafond (vidage annulé) | annulation de son propre fait d'achat |
  * | lanterne / achat sorti par le plafond        | rien (élagage, pas une annulation) |
  * | `forest.paused` basculé                      | fait forestEvents                |
  * | autres champs de la forêt                    | rien (dérivés) ; jalons relevés  |
@@ -19,6 +20,7 @@
  */
 
 import {
+  GROCERY_HISTORY_MAX,
   liveFactsOfOccurrence,
   localDateKey,
   milestonesOf,
@@ -136,6 +138,12 @@ function removedOps(spec: ListSpec, id: string, prev: AppState, next: AppState, 
   if (spec.collection === 'skips' && (next.chores.skips ?? []).length < SKIPS_MAX) {
     const s = (prev.chores.skips ?? []).find((x) => x.id === id);
     return s === undefined ? [] : occurrenceUndo('skips', s, ctx);
+  }
+  // « Vider le panier » annulé : l'historique raccourcit (le plafond, lui,
+  // remplace sans raccourcir). On n'annule que ses propres achats vivants.
+  if (spec.collection === 'groceryHistory' && (next.groceries.history ?? []).length < GROCERY_HISTORY_MAX) {
+    const own = ctx.docs.get(docKey('groceryHistory', id));
+    return own !== undefined && own.undoneAt === undefined && own.role === ctx.role ? undoOps('groceryHistory', [id], ctx) : [];
   }
   return []; // lanternes, achats, passages au-delà du plafond : élagage, pas une annulation
 }

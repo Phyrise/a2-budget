@@ -168,8 +168,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
         engine.cleanups.push(mod.bindKodamaTouch(engine, kodamaSound));
         const live = engine;
         previewRef.current = () => mod.previewKodama(live, kodamaSound);
-        // QA (serveur de dev uniquement) : inspection du moteur par Playwright.
-        if (import.meta.env.DEV) (window as unknown as { __worldEngine?: WorldEngine }).__worldEngine = engine;
+        // QA (serveur de dev et build e2e, jamais en production) : inspection du moteur par Playwright.
+        if (import.meta.env.DEV || import.meta.env.MODE === 'e2e') (window as unknown as { __worldEngine?: WorldEngine }).__worldEngine = engine;
         engine.setState(latest.current.state);
         engine.seasons.hourOverride = hourRef.current;
         if (focusRef.current.progress !== null) engine.focus(focusRef.current.progress, focusRef.current.who);

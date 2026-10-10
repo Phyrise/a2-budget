@@ -1,4 +1,14 @@
-import { LANTERNS, addFocusSession, defaultAnniversaries, emptyAppState, withAnniversaries, type AppState } from '@a2/core';
+import {
+  LANTERNS,
+  addFocusSession,
+  createTask,
+  defaultAnniversaries,
+  emptyAppState,
+  toggleTaskToday,
+  undoCompletion,
+  withAnniversaries,
+  type AppState,
+} from '@a2/core';
 import { describe, expect, it } from 'vitest';
 import { applyPreview, lanternModelOf, toWorldState } from './worldState';
 
@@ -62,5 +72,23 @@ describe('worldState — matsuri de l’anniversaire du couple (V4.3)', () => {
     expect(applyPreview(base, { festival: true }).festival).toBe(true);
     const fete = toWorldState(withAnniversaries(emptyAppState()), new Date('2026-10-19T10:00:00'));
     expect(applyPreview(fete, { festival: false }).festival).toBe(false);
+  });
+});
+
+describe('worldState — tâche annulée', () => {
+  it('la luciole du fait annulé quitte les lumières du jour ; les autres restent', () => {
+    const s = emptyAppState();
+    s.chores.tasks = [
+      createTask({ id: 'd1', title: 'Vaisselle', assignee: 'a', recurrence: 'daily' }, '2026-10-01'),
+      createTask({ id: 'd2', title: 'Linge', assignee: 'b', recurrence: 'daily' }, '2026-10-01'),
+    ];
+    const one = toggleTaskToday(s, 'd1', NOW, 'c1').state;
+    const two = toggleTaskToday(one, 'd2', NOW, 'c2').state;
+    const ids = (a: AppState) => toWorldState(a, NOW).lights.map((l) => l.id);
+    expect(ids(two)).toEqual(['c1', 'c2']);
+    // Décocher (Maison, Calendrier) …
+    expect(ids(toggleTaskToday(two, 'd2', NOW, 'c3').state)).toEqual(['c1']);
+    // … ou annuler ce fait précis (toast « Annuler »).
+    expect(ids(undoCompletion(two, 'c1', NOW).state)).toEqual(['c2']);
   });
 });

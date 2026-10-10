@@ -12,10 +12,13 @@ import { pulseStart } from './pulse';
  * même si la coquille vient de figer la scène (`live: false` : feuille
  * ouverte, liste défilée qui recouvre la forêt) : il la réveille jusqu'à
  * l'atterrissage (Engine.animated). Seuls le bandeau et le mouvement
- * « immobile » posent la lumière sans vol (fondu).
+ * « immobile » posent la lumière sans vol (fondu). Un vol réservé dont la
+ * tâche a été annulée entre-temps ne part pas (DayLights.takeCancelled).
  */
 export function pulseLight(e: WorldEngine, opts: PulseOptions) {
   e.lights.unreserve(opts.id);
+  // Tâche annulée pendant que la feuille se fermait : aucune lumière.
+  if (e.lights.takeCancelled(opts.id)) return;
   const from = pulseStart(e.canvas, e.framing, opts.fromClientX, opts.fromClientY);
   const n = now();
   if (e.canFly) e.lights.pulse(opts.id, opts.who, from, n, opts.strong === true);

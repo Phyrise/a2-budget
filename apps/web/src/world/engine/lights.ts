@@ -6,6 +6,8 @@
  * flight.ts). Une lumière retirée de l'état s'éteint en fondu.
  * Pulse fort (corvée) : lumière plus grande et plus chaude, vol et traînée plus
  * longs, petite pluie de lumière autour de l'ancre à l'atterrissage.
+ * Tâche annulée (même en plein vol) : la luciole s'éteint en fondu là où elle
+ * est, sans atterrir ni célébrer ; un vol réservé puis annulé ne part jamais.
  */
 import type { ScenePoint, WorldLight, Who } from '../types';
 import { GLOW, type BillboardWriter } from './batch';
@@ -64,6 +66,12 @@ export class DayLights {
    * échéance (secondes, horloge du moteur).
    */
   private reserved = new Map<string, number>();
+  /** Ids de l'état au dernier `sync` (lumières du jour). */
+  private stateIds = new Set<string>();
+  /** Vols réservés déjà vus dans l'état (une disparition = tâche annulée). */
+  private reservedSeen = new Set<string>();
+  /** Vols réservés puis annulés avant l'envol : leur `pulse` est ignoré. */
+  private cancelled = new Set<string>();
 
   /** Réserve le vol de `id` jusqu'à `until` (voir `reserved`). */
   reserve(id: string, until: number) {
@@ -72,7 +80,13 @@ export class DayLights {
 
   /** Libère une réservation ; vrai si elle existait encore. */
   unreserve(id: string): boolean {
+    this.reservedSeen.delete(id);
     return this.reserved.delete(id);
+  }
+
+  /** Vrai (une seule fois) si le vol réservé de `id` a été annulé avant l'envol. */
+  takeCancelled(id: string): boolean {
+    return this.cancelled.delete(id);
   }
 
   /** Vrai si `id` attend son vol (QA, tests). */
@@ -103,6 +117,7 @@ export class DayLights {
   /** Aligne les lumières sur l'état (nouvelles : fondu ; disparues : extinction). */
   sync(list: WorldLight[], now: number, animate: boolean) {
     const ids = new Set(list.map((l) => l.id));
+    this.stateIds = ids;
     for (const l of list) {
       const cur = this.lights.get(l.id);
       if (cur) {
@@ -111,13 +126,23 @@ export class DayLights {
         if (cur.dying !== null) cur.dying = null;
         continue;
       }
-      if (this.isReserved(l.id, now)) continue;
-      this.reserved.delete(l.id);
+      if (this.isReserved(l.id, now)) {
+        this.reservedSeen.add(l.id);
+        continue;
+      }
+      this.unreserve(l.id);
       const a = this.anchorFor(l.id);
       this.lights.set(l.id, {
         id: l.id, who: l.who, ...a, phase: (hashString(l.id) % 1000) / 159,
         born: animate ? now : now - FADE_IN, dying: null, inState: true, flight: null, landedFlash: -10, strong: false,
       });
+    }
+    // Vol réservé, vu dans l'état puis retiré (annulé avant l'envol) : il ne partira pas.
+    for (const id of this.reservedSeen) {
+      if (!ids.has(id)) {
+        this.unreserve(id);
+        this.cancelled.add(id);
+      }
     }
     for (const cur of this.lights.values()) {
       if (!ids.has(cur.id) && cur.inState) {
@@ -128,11 +153,14 @@ export class DayLights {
   }
 
   pulse(id: string, who: Who, from: { x: number; y: number } | null, now: number, strong = false) {
-    this.reserved.delete(id);
+    this.unreserve(id);
+    if (this.takeCancelled(id)) return;
     const a = this.anchorFor(id);
     let l = this.lights.get(id);
     if (!l) {
-      l = { id, who, ...a, phase: (hashString(id) % 1000) / 159, born: now, dying: null, inState: false, flight: null, landedFlash: -10, strong };
+      // Vol réservé : l'état la contient déjà (sinon ORPHAN l'éteindrait après l'atterrissage).
+      const inState = this.stateIds.has(id);
+      l = { id, who, ...a, phase: (hashString(id) % 1000) / 159, born: now, dying: null, inState, flight: null, landedFlash: -10, strong };
       this.lights.set(id, l);
     }
     l.who = who;
@@ -173,8 +201,11 @@ export class DayLights {
     for (const l of this.lights.values()) {
       if (l.flight && now - l.flight.start >= l.flight.dur) {
         l.flight = null;
-        l.landedFlash = now;
-        this.landed.push({ x: l.x, y: l.y, depth: l.depth, strong: l.strong });
+        // Annulée en vol : pas d'atterrissage (ni éclat, ni souffle, ni kodama).
+        if (l.dying === null) {
+          l.landedFlash = now;
+          this.landed.push({ x: l.x, y: l.y, depth: l.depth, strong: l.strong });
+        }
       }
       if (!l.inState && l.dying === null && !l.flight && now - l.landedFlash > ORPHAN) l.dying = now;
       if (l.dying !== null && now - l.dying > FADE_OUT) this.lights.delete(l.id);
@@ -190,12 +221,13 @@ export class DayLights {
       const g = base[1] + (WARM[1] - base[1]) * warm;
       const b = base[2] + (WARM[2] - base[2]) * warm;
       const big = l.strong ? 1.45 : 1;
-      let alpha = Math.min(1, (now - l.born) / FADE_IN);
-      if (l.dying !== null) alpha *= Math.max(0, 1 - (now - l.dying) / FADE_OUT);
+      const fadeOut = l.dying !== null ? Math.max(0, 1 - (now - l.dying) / FADE_OUT) : 1;
+      const alpha = Math.min(1, (now - l.born) / FADE_IN) * fadeOut;
       const flick = 0.85 + 0.1 * Math.sin(t * 1.7 + l.phase) + 0.05 * Math.sin(t * 4.3 + l.phase * 2);
       const glowK = (0.75 + 0.35 * night) * intensity;
       if (l.flight) {
-        this.emitFlight(out, l, l.flight, now, r, g, b, glowK, big);
+        // Annulée en plein vol : la tête, la traînée et les étincelles s'éteignent ensemble.
+        this.emitFlight(out, l, l.flight, now, r, g, b, glowK * fadeOut, big);
         continue;
       }
       const hover = Math.sin(t * 0.6 + l.phase) * 0.004;

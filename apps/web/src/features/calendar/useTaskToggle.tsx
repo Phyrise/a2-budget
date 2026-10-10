@@ -6,6 +6,8 @@
  * « Annuler ». Décocher ne dit rien de plus que la case elle-même.
  * V5.4 : cocher demande d'abord « qui ? » (WhoDidSheet) ; fermer sans
  * choisir ne coche rien. Kompeitō et luciole partent après le choix.
+ * V5.9 : « Annuler » retire ce fait précis (undoHomeCompletion) : luciole
+ * éteinte, soin retiré de l'objectif de la semaine, jamais une recoche.
  */
 import type { ChoreDoer } from '@a2/core';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -28,7 +30,7 @@ export function useTaskToggle(): {
   asking: boolean;
   sheet: ReactNode;
 } {
-  const { toggleHomeTask, me } = useApp();
+  const { toggleHomeTask, undoHomeCompletion, me } = useApp();
   const world = useWorld();
   const toast = useToast();
   const [celebratingKey, setCelebratingKey] = useState<string | null>(null);
@@ -79,7 +81,8 @@ export function useTaskToggle(): {
     toast.show({
       message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
       icon: 'check',
-      action: { label: 'Annuler', onClick: () => toggleHomeTask(task) },
+      // Annule CE fait précis : déjà décoché à la case, « Annuler » ne recoche rien.
+      action: { label: 'Annuler', onClick: () => undoHomeCompletion(completionId) },
     });
   };
 

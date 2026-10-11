@@ -80,8 +80,8 @@ Visite suivante, jusqu'à l'écran : 0,40 s à ×1 ; 4,5 s à ×4 (1re peinture 
 À ×1 : Maison 10 % du fil, 61 images/s, GPU 11 % ; les autres onglets < 1 %.
 
 - **La forêt** est le seul coût continu : 1 boucle rAF, toile 487×660 (≈ 1,25 px/pt), 28 textures
-  ≈ **40 Mio de mémoire GPU** (plus grande 1536×2304 + mipmaps), restent chargées sur les
-  autres onglets. « Immobile » : 24 textures ≈ 44 Mio + toile 975×1320 (≈ 15 Mio).
+  ≈ **40 Mio de mémoire GPU** (plus grande 1536×2304 + mipmaps), restaient chargées sur les
+  autres onglets (*V5.10 : rendues après 60 s, piste 6*). « Immobile » : 24 textures ≈ 44 Mio + toile 975×1320 (≈ 15 Mio).
 - **« Immobile » n'arrête pas tout** : deux animations CSS infinies restent sur Maison,
   `ritual-breathe` (box-shadow de la carte du cercle, ≈ 21 points de fil à ×4) et
   `weekly-goal-breathe` (opacité d'un élément SVG, ≈ 15 points). Toutes deux repeignent à
@@ -135,7 +135,7 @@ les 25 jours (≈ 1 500 lectures/téléphone après 1 an), point de reprise mens
 1 suppression). Stockage : ≈ 0,6 Mio/an (≈ 1,5 Mio avec index) pour 1 Gio. Transfert :
 ≈ 20 à 50 Mio/mois pour 10 Gio. L'app elle-même est servie par GitHub Pages, pas Firebase.
 
-## 5. Gros postes et pistes (aucune appliquée)
+## 5. Gros postes et pistes
 
 1. **Deux animations CSS sous « Immobile »** (≈ 37 % du fil à ×4) : les couper sous
    `forestMotion: still` ou passer à une opacité sur une couche à part (composée). Petit
@@ -156,6 +156,24 @@ les 25 jours (≈ 1 500 lectures/téléphone après 1 an), point de reprise mens
    en cours en 1536 px et le reste à la demande → ≈ −3 Mio. Effort moyen.
 6. **Textures** (40 Mio GPU, gardées hors Maison) : les libérer hors Maison coûterait un
    rechargement au retour ; à garder tant que la mémoire tient.
+   *V5.10 : fait (téléphone et tablette seulement ; ordinateur inchangé).* Sous le bandeau
+   peint de Budget / Courses / Calendrier (24 svh + 72 px, opaque, puis la feuille), la toile
+   ne dessine plus rien, même doigt qui bouge ou redimensionnement (avant : ≈ 14 im/s avec un
+   doigt qui bouge, réveils du moteur en variante « banner »). Après **60 s** sur un autre
+   onglet, ou **30 s** app en arrière-plan, le moteur est détruit et son contexte WebGL
+   rendu (`WEBGL_lose_context`) ; au retour sur Maison il est recréé sous la peinture fixe,
+   puis fondu vers la toile. Ouverte directement sur un autre onglet : rien n'est chargé
+   avant Maison. Logique pure : `apps/web/src/world/rest.ts` ; DEV › Saisons › Rendu ›
+   Textures (« libérées »). Mesures (`perf-probe.mjs runtime --only release`, ×4 sauf mention) :
+
+   | | avant | après |
+   |---|---|---|
+   | Courses + doigt, ≤ 60 s | 14–15 im/s, 1 boucle rAF, 24 textures ≈ 44 Mio + toile 15 Mio | **0 im/s**, 0 rAF, mémoire gardée |
+   | Courses + doigt, > 60 s | idem | **0 texture, 0 toile** ; RSS GPU −13 à −15 Mio, rendu −17 Mio (Chrome Mac) |
+   | retour sur Maison (toile en fondu) | 0,44 s | 2,0 s à ×4, **0,6 à 1,1 s à ×1** (peinture fixe pendant ce temps) |
+
+   Six allers-retours de suite : toujours 1 contexte WebGL vivant, 1 moteur en mémoire,
+   écouteurs et nœuds DOM stables. Allers-retours rapides (< délai) : rien n'est rechargé.
 7. **localStorage d'AL** : `backup-pre-sync` double `state:v1` (≈ 320 k car.) ; garder
    une seule copie figée. Petit effort, à faire avec soin (règle « jamais perdre »).
 

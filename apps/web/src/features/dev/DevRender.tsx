@@ -3,7 +3,8 @@
  * et plafond (essai « 30 images/s » des Réglages), densité, palier. Relu
  * toutes les 500 ms, seulement quand la section est ouverte. Le panneau fige
  * la forêt : les images/s sont celles de la dernière animation. Forêt
- * démontée (ou sans WebGL) : « — ».
+ * démontée (ou sans WebGL) : « — » ; mémoire rendue (téléphone, hors Maison
+ * depuis un moment, world/rest.ts) : « libérées ».
  */
 import { useEffect, useState } from 'react';
 import type { EngineStats } from '../../world/engine';
@@ -15,7 +16,7 @@ import { useDevSectionOpen } from './DevSection';
 const DASH = '—';
 
 export function DevRender() {
-  const { handleRef } = useWorld();
+  const { handleRef, presentation } = useWorld();
   const open = useDevSectionOpen();
   const [stats, setStats] = useState<EngineStats | null>(null);
 
@@ -37,6 +38,11 @@ export function DevRender() {
         <Row label="Images/s" value={s && s.rate > 0 ? Math.round(s.rate) : DASH} hint="réelles, dernière animation" />
         <Row label="Cible / plafond" value={s ? `${s.targetFps} / ${s.maxFps}` : DASH} />
         <Row label="Densité · palier" value={s ? `${s.dpr.toFixed(2)} · ${s.tier}` : DASH} />
+        <Row
+          label="Textures"
+          value={s ? `${Math.round(s.memoryMB)} Mio` : presentation.released ? 'libérées' : DASH}
+          hint={s && presentation.hidden ? 'cachée, sans images' : undefined}
+        />
       </dl>
     </section>
   );

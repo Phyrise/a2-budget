@@ -5,10 +5,11 @@
  * `--swgl`. Mode invité, foyer réaliste (perf-household.mjs).
  *
  *   node scripts/perf-probe.mjs runtime [--port 4274] [--dist dist] [--seconds 10]
- *        [--idle 60] [--months 6] [--cpu 4] [--swgl] [--only tabs,idle,hidden,still,anims,reduced,storage]
+ *        [--idle 60] [--months 6] [--cpu 4] [--swgl] [--only tabs,idle,hidden,release,still,anims,reduced,storage]
  *
  * Étapes : premier chargement (réseau, précache), visite suivante, chaque
- * onglet, repos 60 s, arrière-plan, « Immobile », mouvement réduit, stockage.
+ * onglet, repos 60 s, arrière-plan, forêt cachée puis libérée (Courses, doigt
+ * qui bouge, 60 s ; retour sur Maison), « Immobile », mouvement réduit, stockage.
  * Chiffres : part du fil principal occupée (Performance.getMetrics
  * TaskDuration / durée), CPU des processus rendu et GPU (SystemInfo), images/s
  * où l'app a dessiné, tas JS, nœuds DOM, boucles rAF, minuteurs, textures.
@@ -226,6 +227,40 @@ export async function runtime(args) {
       result.windows.push(await measure(ctx, `arrière-plan (${tab})`, o.seconds));
       await page.evaluate(() => window.__perfHidden(false));
     }
+  }
+  if (want('release')) {
+    // Forêt sous le bandeau de Courses : un doigt qui bouge (défilement, gestes)
+    // réveillait le moteur à chaque événement ; puis mémoire rendue après 60 s.
+    const finger = async (label) => {
+      let on = true;
+      const loop = (async () => {
+        for (let i = 0; on; i += 1) {
+          await page.mouse.move(100 + (i % 20) * 10, 500 + (i % 7) * 12).catch(() => {});
+          await sleep(50);
+        }
+      })();
+      const r = await measure(ctx, label, o.seconds);
+      on = false;
+      await loop;
+      return r;
+    };
+    await goTo(page, 'Maison');
+    await sleep(4_000);
+    await goTo(page, 'Courses');
+    await sleep(2_000);
+    result.windows.push(await finger('Courses + doigt (≤ 60 s)'));
+    await sleep(Math.max(0, 64_000 - 2_000 - o.seconds * 1000));
+    result.windows.push(await finger('Courses + doigt (> 60 s)'));
+    const t0 = Date.now();
+    await goTo(page, 'Maison');
+    await page.waitForFunction(() => {
+      const c = document.querySelector('.living-forest canvas');
+      return c !== null && Number(getComputedStyle(c).opacity) > 0;
+    }, null, { timeout: 20_000 });
+    result.release = { msToCanvas: Date.now() - t0 };
+    console.log(`  retour sur Maison : toile en fondu après ${result.release.msToCanvas} ms`);
+    await sleep(4_000);
+    result.windows.push(await measure(ctx, 'Maison (retour)', o.seconds));
   }
   const variant = async (label, setup) => {
     await setup();

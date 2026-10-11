@@ -20,6 +20,7 @@
 import { useMemo } from 'react';
 import { useShell } from '../../app/ShellContext';
 import { useApp } from '../../state/store';
+import { kikiPost, postGateNow } from '../rituals/letters/kikiDelivery';
 import { Button, Sheet, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
 import { DevAvatar } from './DevAvatar';
@@ -45,7 +46,7 @@ function openNoiraudesLab(): void {
 const CLOSE_MS = 280;
 
 export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { appState, today } = useApp();
+  const { appState, today, me } = useApp();
   const { setModule } = useShell();
   const { preview, playGuardian, rattleKodama } = useWorld();
   const toast = useToast();
@@ -55,6 +56,13 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
     onClose();
     setModule('maison');
     if (then) window.setTimeout(then, CLOSE_MS + 420);
+  };
+
+  // Aperçu de la livraison : la feuille se ferme (couche du dessus), puis Kiki passe.
+  const previewKikiPost = () => {
+    onClose();
+    const from = me === 'a' ? 'b' : 'a';
+    window.setTimeout(() => kikiPost.deliver(from, postGateNow()), CLOSE_MS);
   };
 
   const copy = async () => {
@@ -111,7 +119,7 @@ export function DevPanel({ open, onClose }: { open: boolean; onClose: () => void
               <DevRender />
             </DevSection>
             <DevSection id="previews" title="Aperçus et sons">
-              <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} />
+              <DevPreviews onShowForest={() => showForest()} onGuardian={() => showForest(playGuardian)} onKikiPost={previewKikiPost} />
             </DevSection>
             <DevSection id="numbers" title="Chiffres">
               <DevNumbers data={data} />

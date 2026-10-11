@@ -1,8 +1,9 @@
 /**
  * Lettres du cercle (V5.2), monté une fois dans l'app : calcule la lettre
  * non lue de l'autre, la marque lue (partagée entre mes appareils), montre
- * un toast « ✉ » quand une lettre arrive pendant que l'app est ouverte, et
- * porte la feuille de lecture (ouvrable de partout).
+ * un toast « ✉ » quand une lettre arrive pendant que l'app est ouverte (et
+ * Kiki la livre en traversant l'écran, V5.10 : kikiDelivery.ts), et porte la
+ * feuille de lecture (ouvrable de partout).
  *
  * - Invité (un seul téléphone pour deux) : aucune lettre, aucun appel.
  * - Connecté : une écoute de MA fiche `memberState/{rôle}` seulement quand
@@ -18,6 +19,7 @@ import { loadFirebaseSession } from '../../../sync/firebase/loader';
 import { useToast } from '../../../ui';
 import { ritualWeek, type Names } from '../ritualText';
 import { LetterSheet } from './LetterSheet';
+import { letterArrived, kikiPost, postGateNow } from './kikiDelivery';
 import { laterMark, letters, readLocalSeen, useLetters, writeLocalSeen } from './letterStore';
 import type { LetterChannel } from './letterTypes';
 import './letters.css';
@@ -110,20 +112,24 @@ export function LetterWatcher() {
     letters.setUnread(unread);
   }, [unread]);
 
-  // Une lettre arrive (ou est complétée) pendant que l'app est ouverte : « ✉ ».
+  // Une lettre arrive (ou est complétée) pendant que l'app est ouverte : « ✉ »,
+  // et Kiki l'apporte (sauf calme, arrière-plan ou déjà en vol).
   const lastKey = useRef<string | null | undefined>(undefined);
   const key = unread === null ? null : `${unread.id}|${unread.heldAt}`;
   useEffect(() => {
     if (!settled) return;
     const before = lastKey.current;
     lastKey.current = key;
-    if (before === undefined || key === null || key === before || reading !== null) return;
+    if (!letterArrived(before, key) || reading !== null || unread === null) return;
+    kikiPost.deliver(unread.author ?? (me === 'a' ? 'b' : 'a'), postGateNow());
     toast.show({
       message: <span className="letter-toast" aria-label="Une lettre">✉</span>,
       action: { label: 'Lire', onClick: () => letters.open() },
       duration: 5000,
       priority: 'low',
     });
+    // `unread` et `me` suivent `key` (même lettre) : seule la clé déclenche.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, settled, reading, toast]);
 
   const markRead = useCallback(

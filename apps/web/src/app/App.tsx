@@ -57,6 +57,7 @@ import { useApp } from '../state/store';
 import { WorldBackdrop } from './WorldBackdrop';
 import { LiveProvider } from '../presence/LiveContext';
 import { PartnerAvatar } from '../presence/avatar/PartnerAvatar';
+import { KikiPost } from '../features/rituals/letters/KikiPost';
 import { LetterWatcher } from '../features/rituals/letters/LetterWatcher';
 
 function Screen({ module }: { module: ModuleId }) {
@@ -172,6 +173,7 @@ function Shell() {
       <BirthdayParty />
       <QuestRewards />
       <LetterWatcher />
+      <KikiPost />
 
       <Sheet open={sheet === 'history'} onClose={closeSheet} title={HISTORY_TITLES[module]} size="full">
         {module === 'calendar' ? <CalendarHistory /> : <HistorySheetContent />}

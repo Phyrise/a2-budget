@@ -1,0 +1,91 @@
+/* Kiki apporte la lettre (V5.10) : traversée sous l'en-tête, de droite à
+   gauche (sens du sprite), l'enveloppe pendue à sa main. Durée : KIKI_POST_MS. */
+
+.kiki-post {
+  position: fixed;
+  top: calc(var(--header-h, 60px) - 12px);
+  left: 0;
+  right: 0;
+  z-index: 70;
+  height: 170px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Avance : une seule courbe douce, de hors-champ à droite à hors-champ à gauche. */
+.kiki-post__path {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  width: 140px;
+  height: 120px;
+  animation: kiki-post-cross 3000ms cubic-bezier(0.32, 0.08, 0.62, 0.94) forwards;
+}
+
+/* Ondulation : trois demi-vagues pendant la traversée, légère inclinaison. */
+.kiki-post__bob {
+  position: absolute;
+  inset: 0;
+  animation: kiki-post-bob 1000ms ease-in-out 3 alternate both;
+}
+
+.kiki-post__kiki {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100px;
+  max-width: none;
+  user-select: none;
+}
+
+/* L'enveloppe pend à la main de Kiki (≈ un tiers du sprite) et se balance. */
+.kiki-post__letter {
+  position: absolute;
+  top: 66px;
+  left: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 0;
+  animation: kiki-post-swing 750ms ease-in-out infinite alternate;
+}
+
+.kiki-post__string {
+  width: 1.2px;
+  height: 12px;
+  background: rgba(243, 231, 204, 0.7);
+}
+
+@keyframes kiki-post-cross {
+  0% {
+    transform: translateX(calc(100vw + 16px));
+  }
+  100% {
+    transform: translateX(-170px);
+  }
+}
+
+@keyframes kiki-post-bob {
+  0% {
+    transform: translateY(12px) rotate(2deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(-2deg);
+  }
+}
+
+@keyframes kiki-post-swing {
+  0% {
+    transform: rotate(7deg);
+  }
+  100% {
+    transform: rotate(-5deg);
+  }
+}
+
+/* Filet : le déclenchement ne fait déjà pas voler Kiki en mouvement réduit. */
+@media (prefers-reduced-motion: reduce) {
+  .kiki-post {
+    display: none;
+  }
+}

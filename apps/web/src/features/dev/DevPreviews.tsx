@@ -1,7 +1,8 @@
 /**
  * Mode développeur — les aperçus : surcharges NON PERSISTANTES de ce que
  * montre la forêt (WorldContext.setPreview, jamais écrites dans les
- * données), gardien, lanterne, et chaque petit son à écouter.
+ * données), gardien, lanterne, Kiki qui apporte une lettre, et chaque
+ * petit son à écouter.
  */
 import type { ReactNode } from 'react';
 import { soundEngine, type SoundCue } from '../../app/sound';
@@ -120,7 +121,15 @@ function Section({ id, title, lead, children }: { id: string; title: string; lea
   );
 }
 
-export function DevPreviews({ onShowForest, onGuardian }: { onShowForest: () => void; onGuardian: () => void }) {
+export function DevPreviews({
+  onShowForest,
+  onGuardian,
+  onKikiPost,
+}: {
+  onShowForest: () => void;
+  onGuardian: () => void;
+  onKikiPost: () => void;
+}) {
   const { preview, setPreview, previewActive } = useWorld();
   const set = <K extends keyof WorldPreview>(key: K, value: WorldPreview[K] | undefined) =>
     setPreview((prev) => {
@@ -151,6 +160,14 @@ export function DevPreviews({ onShowForest, onGuardian }: { onShowForest: () => 
           </Button>
           <Button size="sm" variant="ghost" icon="undo" onClick={() => setPreview(null)} disabled={!previewActive}>
             Revenir au réel
+          </Button>
+        </div>
+      </Section>
+
+      <Section id="dev-kiki-post" title="Lettres" lead="Kiki traverse l’écran avec une lettre de l’autre (rien en « Immobile »).">
+        <div className="dev-actions">
+          <Button size="sm" variant="quiet" icon="sparkle" onClick={onKikiPost}>
+            Kiki apporte une lettre
           </Button>
         </div>
       </Section>

@@ -272,6 +272,10 @@ export {
 } from './anniversaries.js';
 export type { Anniversaries, FeteKind, MonthDay } from './anniversaries.js';
 
+// V5.10 — calendrier vers Google Agenda / Calendrier (copies, sans synchro).
+export { ICS_UID_DOMAIN, googleCalendarUrl, escapeIcsText, foldIcsLine, eventsToIcs, icsFilename } from './ics.js';
+export type { CalendarExportOptions, IcsOptions } from './ics.js';
+
 export {
   migrateV1toV2,
   emptyAppState,

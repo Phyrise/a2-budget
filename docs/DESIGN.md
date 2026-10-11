@@ -79,6 +79,12 @@ Ordre vertical :
 - Export / import JSON avec explication simple (« données enregistrées sur cet
   appareil ») et avertissement sobre (données personnelles ; effacer les
   données du navigateur supprime l'historique).
+- Calendrier → agenda (V5.10) : « Exporter le calendrier (.ics) » (événements
+  + anniversaires de A et B ; pas celui du couple, mensuel) et, dans la
+  feuille d'un événement, le lien « Mon agenda » (Google Agenda prérempli).
+  Ce sont des COPIES, sans synchro : un événement modifié ou supprimé dans A²
+  ne change pas dans Google / Calendrier (UID stables : selon l'agenda, un
+  réimport met à jour plutôt que de doubler).
 - Explication brève : les valeurs par défaut s'appliquent aux nouveaux mois ;
   bouton « Appliquer au mois affiché ».
 

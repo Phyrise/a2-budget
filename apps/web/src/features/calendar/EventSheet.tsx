@@ -5,13 +5,16 @@
  * naissance facultative pour afficher l'âge). À l'ajout (V4, seul point
  * d'entrée), une phrase en tête (« dîner chez Léa samedi 20h ») remplit
  * titre, jour, heure et nature au fil de la frappe. Suppression : le parent
- * retire l'événement et propose « Annuler » dans un toast.
+ * retire l'événement et propose « Annuler » dans un toast. V5.10 : un
+ * événement existant (tel qu'enregistré) se copie dans Google Agenda par
+ * un lien discret « Mon agenda » (copie, pas de synchro).
  */
-import { parseLocalDateKey, type ActiveCalendarKind, type CalendarEvent, type CalendarWho } from '@a2/core';
+import { googleCalendarUrl, parseLocalDateKey, type ActiveCalendarKind, type CalendarEvent, type CalendarWho } from '@a2/core';
 import { useRef, useState } from 'react';
 import { useApp } from '../../state/store';
 import { Button, Companion, Icon, Segmented, Sheet, TextField, cx, longDate } from '../../ui';
 import { Switch } from '../../ui/Switch';
+import { displayTitle } from './calendarText';
 import { applySentence, initialValues, reasonMessage, toDraft, validate, type EventFormValues, type EventSheetState, type FieldErrors } from './eventForm';
 import { KINDS, KindArt, kindStyle } from './kinds';
 import { SentenceField } from './SentenceField';
@@ -323,6 +326,19 @@ export function EventSheet({
             <p className="field__error cal-form__error" role="alert">
               {formError}
             </p>
+          )}
+
+          {editing && (
+            <a
+              className="btn btn--ghost btn--sm event-sheet__agenda"
+              href={googleCalendarUrl(editing, new Date(), { titleOf: displayTitle })}
+              target="_blank"
+              rel="noopener"
+              aria-label="Mon agenda : copier dans Google Agenda (nouvel onglet)"
+            >
+              <Icon name="calendar" size={18} />
+              <span className="btn__label">Mon agenda</span>
+            </a>
           )}
         </form>
       )}

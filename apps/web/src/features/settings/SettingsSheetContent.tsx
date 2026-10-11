@@ -4,12 +4,13 @@
  * autre — connecté, seulement sur sa propre carte), compte (V5, seulement si Firebase est configuré :
  * connecté avec Google ou invité), anniversaires (V4.3, au crayon), taux communs au
  * curseur (globaux : mois courant et suivants), dépenses récurrentes
- * (nouveaux mois), préférences (forêt vivante / immobile, sons), sauvegarde,
+ * (nouveaux mois), préférences (forêt vivante / immobile, sons), sauvegarde
+ * (V5.10 : + calendrier en .ics, anniversaires de A et B compris),
  * recommencer à zéro, à propos.
  * Plus de réserve, d'« Appliquer au mois affiché » ni de pause ici (la pause
  * reste dans l'en-tête, avec la lune).
  */
-import type { CompanionId, PersonSettings } from '@a2/core';
+import { eventsToIcs, icsFilename, withAnniversaryEvents, type CompanionId, type PersonSettings } from '@a2/core';
 import { useState, type ReactNode } from 'react';
 import { AccountPanel } from '../../account/AccountPanel';
 import { useSync } from '../../account/SyncContext';
@@ -18,6 +19,7 @@ import { useShell } from '../../app/ShellContext';
 import { exportFilename } from '../../state/exportImport';
 import { saveFile } from '../../ui/download';
 import { useApp } from '../../state/store';
+import { displayTitle } from '../calendar/calendarText';
 import {
   AmountInput,
   Button,
@@ -186,7 +188,7 @@ const MOTION_HELP: Record<ForestChoice, string> = {
 };
 
 export function SettingsSheetContent() {
-  const { state, updateRecurringExpense, removeRecurringExpense, addRecurringExpense, exportJson, confirmReset } = useApp();
+  const { state, appState, updateRecurringExpense, removeRecurringExpense, addRecurringExpense, exportJson, confirmReset } = useApp();
   const { prefs, updatePrefs } = useShell();
   const { mode, link } = useSync();
   const [adding, setAdding] = useState(false);
@@ -199,6 +201,14 @@ export function SettingsSheetContent() {
   const doExport = () => {
     const json = exportJson();
     if (json !== '') saveFile(json, exportFilename());
+  };
+
+  // Copie du calendrier (événements + anniversaires de A et B) pour Google / Calendrier.
+  const doExportIcs = () => {
+    const now = new Date();
+    const names = { a: settings.personA.name, b: settings.personB.name };
+    const events = withAnniversaryEvents(appState?.calendar?.events ?? [], appState?.anniversaries, names);
+    saveFile(eventsToIcs(events, { now, titleOf: displayTitle }), icsFilename(now), 'text/calendar');
   };
 
   return (
@@ -270,6 +280,9 @@ export function SettingsSheetContent() {
         <div className="settings__backup">
           <Button variant="quiet" icon="download" onClick={doExport}>
             Exporter une sauvegarde
+          </Button>
+          <Button variant="quiet" icon="calendar" onClick={doExportIcs}>
+            Exporter le calendrier (.ics)
           </Button>
           {/* Copie commune : un import ou un effacement toucherait aussi les données de l'autre. */}
           {mode !== 'sync' && <ImportControl />}

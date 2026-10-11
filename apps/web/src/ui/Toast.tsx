@@ -4,6 +4,9 @@
  * V5.10 : plusieurs actions courtes (« C'était AC · Ensemble · Annuler »),
  * sur une rangée sous le message ; une action peut en montrer un autre
  * (correction) : il remplace alors celui-ci au lieu de se fermer.
+ * Remplacé depuis une de SES actions, le message garde son nœud (clé
+ * stable) : le focus revient sur sa première action et la pause (survol,
+ * focus) tient — au clavier, on reste dans le toast.
  * Fermeture d'un glissé (horizontal ou vers le bas, voir swipeDismiss.ts) ou
  * par la petite croix ; la fermeture automatique attend la fin d'un glissé,
  * et (V5.10) que le pointeur ou le focus quitte le message.
@@ -38,15 +41,20 @@ export interface ToastOptions {
    * jamais un message affiché (ex. une annulation) : elle attend son tour.
    */
   priority?: 'normal' | 'low';
+  /** Repère du sujet (ex. une complétion) : `dismiss(tag)` ne ferme que ce message. */
+  tag?: string;
 }
 
 interface ToastItem extends ToastOptions {
   id: number;
+  /** Clé du nœud : gardée quand le message est remplacé depuis une de ses actions. */
+  key: number;
 }
 
 interface ToastContextValue {
   show: (options: ToastOptions) => void;
-  dismiss: () => void;
+  /** Ferme le message affiché ; avec `tag`, seulement s'il porte ce repère. */
+  dismiss: (tag?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -61,6 +69,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const currentRef = useRef<ToastItem | null>(null);
   const pendingRef = useRef<ToastOptions | null>(null);
   const toastEl = useRef<HTMLDivElement | null>(null);
+  // Une action du message en cours s'exécute (un show() la remplace sur place).
+  const runningRef = useRef(false);
+  // Le focus était dans le message remplacé : le rendre à sa première action.
+  const refocusRef = useRef(false);
 
   // Hauteur occupée par le message (--toast-lift) : la bulle flottante d'un
   // compagnon s'empile au-dessus au lieu d'être recouverte.
@@ -85,15 +97,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       return;
     }
     idRef.current += 1;
-    const item = { ...options, id: idRef.current };
+    const replacing = runningRef.current ? currentRef.current : null;
+    const item = { ...options, id: idRef.current, key: replacing?.key ?? idRef.current };
     currentRef.current = item;
     setLeaving(false);
     setHeld(false);
-    setHovered(false);
+    // Remplacé depuis ses actions : le pointeur ou le focus y est encore.
+    if (replacing === null) setHovered(false);
     setToast(item);
   }, []);
 
-  const dismiss = useCallback(() => setLeaving(true), []);
+  useLayoutEffect(() => {
+    if (!refocusRef.current) return;
+    refocusRef.current = false;
+    const el = toastEl.current;
+    (el?.querySelector<HTMLElement>('.toast__action') ?? el?.querySelector<HTMLElement>('.toast__close'))?.focus();
+  }, [toast]);
+
+  const dismiss = useCallback((tag?: string) => {
+    if (tag !== undefined && currentRef.current?.tag !== tag) return;
+    setLeaving(true);
+  }, []);
   const swipe = useSwipeDismiss<HTMLDivElement>({ onDismiss: dismiss, onDragChange: setHeld });
 
   useEffect(() => {
@@ -118,11 +142,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [leaving, show]);
 
   const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
+  const close = () => dismiss();
 
   /** Une action, puis fermeture — sauf si elle a montré un autre message (qui remplace). */
   const run = (item: ToastItem, a: ToastAction) => {
-    a.onClick();
+    const hadFocus = toastEl.current?.contains(document.activeElement) ?? false;
+    runningRef.current = true;
+    try {
+      a.onClick();
+    } finally {
+      runningRef.current = false;
+    }
     if (currentRef.current?.id === item.id) setLeaving(true);
+    else if (hadFocus && currentRef.current?.key === item.key) refocusRef.current = true;
   };
   const actions = toast?.actions ?? [];
   const many = actions.length > 0;
@@ -132,7 +164,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-region" role="status" aria-live="polite">
         {toast && (
-          <div key={toast.id} ref={toastEl} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, many && 'toast--choices', leaving && 'is-leaving')}
+          <div key={toast.key} ref={toastEl} className={cx('toast', `toast--${toast.tone ?? 'neutral'}`, many && 'toast--choices', leaving && 'is-leaving')}
             {...swipe}
             onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(true)}
             onPointerLeave={() => setHovered(false)}
@@ -146,7 +178,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 {toast.action.label}
               </button>
             )}
-            <button type="button" className="toast__close" aria-label="Fermer" onClick={dismiss}>
+            <button type="button" className="toast__close" aria-label="Fermer" onClick={close}>
               <Icon name="close" size={16} strokeWidth={2} />
             </button>
             {many && (

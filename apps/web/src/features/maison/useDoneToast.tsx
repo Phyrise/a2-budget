@@ -12,6 +12,9 @@ import { useApp } from '../../state/store';
 import { Companion, useToast } from '../../ui';
 import { doneMessage, otherChoices, type DoneSubject } from './doneToastText';
 
+/** Repère du toast d'UNE complétion : `toast.dismiss(doneToastTag(id))` ne ferme que lui. */
+export const doneToastTag = (completionId: string) => `done:${completionId}`;
+
 export interface DoneToastOptions {
   completionId: string;
   who: ChoreDoer;
@@ -32,6 +35,7 @@ export function useDoneToast(): (opts: DoneToastOptions) => void {
     function showDone(opts: DoneToastOptions) {
       const names = { a: nameA, b: nameB };
       toast.show({
+        tag: doneToastTag(opts.completionId),
         message: doneMessage(opts.who, me, names, opts.subject),
         visual: (
           <span className="done-toast__who" data-who={opts.who}>

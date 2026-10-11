@@ -5,7 +5,7 @@
  * (ordinateur), une lueur de rizière sur la ligne. Décocher ne dit rien de
  * plus que la case elle-même.
  * V5.10 : cocher attribue tout de suite à la personne prévue (expectedDoer) ;
- * toast « Fait par toi » (useDoneToast) : « C'était AC », « Ensemble »
+ * toast « Fait par toi » (useDoneToast), fermé si on décoche ce fait : « C'était AC », « Ensemble »
  * (l'auteur change, soin gardé) ou « Annuler » (V5.9 : ce fait précis,
  * undoHomeCompletion — luciole éteinte, soin retiré, jamais une recoche).
  * Appui long sur la case : la feuille « Qui ? » complète (WhoDidSheet) ;
@@ -15,8 +15,9 @@ import { expectedDoer, type ChoreDoer } from '@a2/core';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
+import { useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
-import { useDoneToast } from '../maison/useDoneToast';
+import { doneToastTag, useDoneToast } from '../maison/useDoneToast';
 import { WhoDidSheet, likelyDoer } from '../maison/WhoDidSheet';
 import type { TaskItem } from './taskAgenda';
 
@@ -37,6 +38,7 @@ export function useTaskToggle(): {
   const { toggleHomeTask, undoHomeCompletion, me } = useApp();
   const world = useWorld();
   const doneToast = useDoneToast();
+  const toast = useToast();
   const [celebratingKey, setCelebratingKey] = useState<string | null>(null);
   const [asking, setAsking] = useState<{ item: TaskItem; origin: Origin } | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -78,8 +80,11 @@ export function useTaskToggle(): {
 
   const toggle = (item: TaskItem, origin: Origin) => {
     if (!item.checkable) return;
-    // Décocher : sans question.
-    if (item.done) toggleHomeTask(item.task);
+    // Décocher : sans question ; le toast de CE fait (s'il est affiché) n'a plus d'objet.
+    if (item.done) {
+      const result = toggleHomeTask(item.task);
+      if (!result.completed && result.completionId !== null) toast.dismiss(doneToastTag(result.completionId));
+    }
     else check(item, origin, expectedDoer(item.who, me), false);
   };
 

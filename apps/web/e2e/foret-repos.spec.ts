@@ -31,7 +31,7 @@ function seeded(): AppState {
   return state;
 }
 
-async function open(page: Page, prefs: Record<string, unknown> = {}) {
+async function open(page: Page, prefs: Record<string, unknown> = {}, module = 'maison') {
   await page.addInitScript(
     ({ key, ui, value, delays, prefs }) => {
       (window as unknown as { __forestRestDelays: unknown }).__forestRestDelays = delays;
@@ -62,7 +62,7 @@ async function open(page: Page, prefs: Record<string, unknown> = {}) {
     },
     { key: STORAGE_KEY, ui: UI_KEY, value: JSON.stringify(seeded()), delays: DELAYS, prefs },
   );
-  await page.goto(`${APP}?module=maison`);
+  await page.goto(`${APP}?module=${module}`);
   await expect(page.locator('.screen-sheet')).toBeVisible();
 }
 
@@ -82,7 +82,11 @@ function engine(page: Page): Promise<Engine> {
 /** Toile montrée (fondu peinture → toile terminé ou en cours). */
 async function canvasShown(page: Page) {
   await expect
-    .poll(() => page.evaluate(() => Number(getComputedStyle(document.querySelector('.living-forest canvas') ?? document.body).opacity)), { timeout: 15_000 })
+    .poll(() => page.evaluate(() => {
+      const canvas = document.querySelector('.living-forest canvas');
+      // Toile absente : pas montrée (et non l'opacité de <body>).
+      return canvas ? Number(getComputedStyle(canvas).opacity) : 0;
+    }), { timeout: 15_000 })
     .toBeGreaterThan(0.5);
 }
 
@@ -183,6 +187,25 @@ test.describe('Forêt cachée hors Maison', () => {
     });
     expect(cfg).toEqual({ maxFps: 30, motion: 'still' });
     expect(await liveContexts(page)).toBe(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('téléphone : ouverte directement sur Courses, ni toile ni moteur chargé avant Maison', async ({ page }) => {
+    await page.setViewportSize(PHONE);
+    const errors = trackErrors(page);
+    const engineChunks: string[] = [];
+    page.on('request', (r) => {
+      if (/\/engine[-.][^/]*\.js/.test(r.url())) engineChunks.push(r.url());
+    });
+    await open(page, {}, 'courses');
+    await expect(page.locator('#courses-title')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await expect(page.locator('.living-forest canvas')).toHaveCount(0);
+    expect(engineChunks).toEqual([]);
+    expect(await engine(page)).toBeNull();
+    // Premier passage sur Maison : la forêt se charge.
+    await goTo(page, 'Maison');
+    await expect(page.locator('.living-forest canvas')).toHaveCount(1);
     expect(errors).toEqual([]);
   });
 

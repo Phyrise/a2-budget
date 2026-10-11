@@ -10,7 +10,7 @@
  *   reviennent).
  * Sans tâche liée : rien n'est affiché, aucune question.
  */
-import { addDays, expectedDoer, groceryTaskOf, lastGroceryRun, localDateKey, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
+import { addDays, expectedDoer, groceryTaskOf, lastGroceryRun, localDateKey, nextAssignee, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
 import { useCallback, useMemo } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
@@ -64,7 +64,8 @@ export function GroceryLast({ last, size = 16 }: { last: GroceryRun; size?: numb
  * « C'était AC », « Ensemble » et « Annuler » (= CE fait ET le vidage).
  */
 export function useGroceryTaskDone() {
-  const { toggleHomeTask, undoHomeCompletion, me } = useApp();
+  const { toggleHomeTask, undoHomeCompletion, me, appState } = useApp();
+  const completions = appState?.chores.completions;
   const world = useWorld();
   const toast = useToast();
   const doneToast = useDoneToast();
@@ -74,7 +75,8 @@ export function useGroceryTaskDone() {
   const done = useCallback(
     (undoClear: () => void): boolean => {
       if (!task) return false;
-      const planned = expectedDoer(task.assignee, me);
+      // Le tour réel (« Tour à tour » : celui ou celle dont c'est le tour), comme Maison.
+      const planned = expectedDoer(nextAssignee(task, completions ?? []), me);
       const result = toggleHomeTask(task, { doneBy: planned });
       if (!result.completed || result.completionId === null) {
         toast.show({ message: 'Panier vidé', icon: 'check', action: { label: 'Annuler', onClick: undoClear } });
@@ -98,7 +100,7 @@ export function useGroceryTaskDone() {
       });
       return true;
     },
-    [task, me, toggleHomeTask, undoHomeCompletion, world, toast, doneToast],
+    [task, completions, me, toggleHomeTask, undoHomeCompletion, world, toast, doneToast],
   );
 
   return { view, done };

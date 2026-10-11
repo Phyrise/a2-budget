@@ -227,7 +227,7 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     await expectNoForestLight(page, flying);
   });
 
-  test('Calendrier : décoché à la case, « Annuler » du toast ne recoche pas', async ({ page }) => {
+  test('Calendrier : décoché à la case, le toast (et son « Annuler ») se ferme, rien n’est recoché', async ({ page }) => {
     await page.setViewportSize(PHONE);
     await openSeeded(page, 'calendar');
     const box = page.locator('.cal-day-panel .cal-task', { hasText: 'Arroser les plantes' }).getByRole('checkbox');
@@ -237,7 +237,8 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     await box.click();
     await expect(box).toHaveAttribute('aria-checked', 'false');
     await expect.poll(async () => (await persisted(page)).chores.completions.length).toBe(0);
-    await page.locator('.toast').getByRole('button', { name: 'Annuler' }).click();
+    // V5.10 : le toast de ce fait n'a plus d'objet — plus de bouton sans effet.
+    await expect(page.locator('.toast').getByRole('button', { name: 'Annuler' })).toHaveCount(0);
     await expect(box).toHaveAttribute('aria-checked', 'false');
     expect((await persisted(page)).chores.completions).toEqual([]);
   });

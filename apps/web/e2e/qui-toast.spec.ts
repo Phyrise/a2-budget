@@ -6,7 +6,7 @@
  * l'objectif de la semaine ; la luciole change de couleur. Appui long sur
  * la case, ou « Qui l'a fait ? » du menu ⋯ : la feuille complète.
  */
-import { addDays, createTask, emptyAppState, localDateKey, type AppState } from '@a2/core';
+import { addDays, createTask, emptyAppState, isoWeekday, localDateKey, type AppState } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
 import { APP, PHONE, STORAGE_KEY, UI_KEY, doneToast, goTo, longPress, persisted, pickInSheet, sheet, trackErrors } from './helpers';
 
@@ -15,6 +15,7 @@ test.use({ viewport: PHONE });
 function seeded(): AppState {
   const created = localDateKey(addDays(new Date(), -10));
   const s = emptyAppState();
+
   return {
     ...s,
     chores: {
@@ -29,7 +30,20 @@ function seeded(): AppState {
   };
 }
 
-async function openSeeded(page: Page, module: 'maison' | 'courses' = 'maison') {
+/** Calendrier : une seule tâche à date fixe, aujourd'hui. */
+function seededCalendar(): AppState {
+  const created = localDateKey(addDays(new Date(), -10));
+  const s = emptyAppState();
+  return {
+    ...s,
+    chores: {
+      ...s.chores,
+      tasks: [createTask({ id: 't-plantes', title: 'Arroser les plantes', assignee: 'b', recurrence: 'weekly', weeklyDay: isoWeekday(new Date()) }, created)],
+    },
+  };
+}
+
+async function openSeeded(page: Page, module: 'maison' | 'courses' | 'calendar' = 'maison') {
   await page.addInitScript(
     ({ key, ui, value, module }) => {
       if (sessionStorage.getItem('qui-seeded')) return;
@@ -37,10 +51,11 @@ async function openSeeded(page: Page, module: 'maison' | 'courses' = 'maison') {
       localStorage.setItem(ui, JSON.stringify({ module, guardianSeen: true, offlineAnnounced: true }));
       sessionStorage.setItem('qui-seeded', '1');
     },
-    { key: STORAGE_KEY, ui: UI_KEY, value: JSON.stringify(seeded()), module },
+    { key: STORAGE_KEY, ui: UI_KEY, value: JSON.stringify(module === 'calendar' ? seededCalendar() : seeded()), module },
   );
   await page.goto(`${APP}?module=${module}`);
-  await expect(page.locator('.screen-sheet')).toBeVisible();
+  if (module === 'calendar') await expect(page.locator('#calendar-title')).toBeVisible();
+  else await expect(page.locator('.screen-sheet')).toBeVisible();
 }
 
 const box = (page: Page, title: string) => page.getByRole('checkbox', { name: title, exact: true });
@@ -160,5 +175,83 @@ test.describe('« Qui l’a fait ? » par toast', () => {
     expect(state.chores.completions).toEqual([]);
     expect(state.groceries.history ?? []).toEqual([]);
     await goTo(page, 'Maison');
+  });
+
+  test('clavier : « C’était AC » corrige sans sortir du toast (même nœud, focus gardé, pause tenue)', async ({ page }) => {
+    await openSeeded(page);
+    await box(page, 'Vaisselle').click();
+    const toast = doneToast(page);
+    await expect(toast).toContainText('Fait par AL');
+    const node = await toast.elementHandle();
+    await toast.getByRole('button', { name: 'C’est AC qui l’a fait' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(doneToast(page)).toContainText('Fait par AC');
+    // Même nœud (pas remonté), focus sur la première action du message à jour.
+    expect(await node!.evaluate((el) => el.isConnected)).toBe(true);
+    await expect.poll(() => page.evaluate(() => document.activeElement?.closest('.toast') !== null)).toBe(true);
+    await expect(doneToast(page).locator('.toast__action').first()).toBeFocused();
+    // Toujours au clavier : la correction suivante, sans revenir au toast.
+    await page.keyboard.press('Enter');
+    await expect(doneToast(page)).toContainText('Fait par AL');
+    await expect(doneToast(page).locator('.toast__action').first()).toBeFocused();
+    // Focus dedans : la pause tient au-delà des 6 s habituelles.
+    await page.waitForTimeout(7000);
+    await expect(doneToast(page)).toBeVisible();
+  });
+
+  test('appui long : le clic de fin envoyé sur le fond de la feuille ne la ferme pas', async ({ page }) => {
+    await openSeeded(page);
+    const target = box(page, 'Vaisselle');
+    const b = (await target.boundingBox())!;
+    const at = { clientX: b.x + b.width / 2, clientY: b.y + b.height / 2, pointerType: 'touch', isPrimary: true, bubbles: true };
+    await target.dispatchEvent('pointerdown', at);
+    const who = sheet(page, 'Qui ?');
+    await expect(who).toBeVisible();
+    // iOS Safari : le relâché, puis le clic de fin… sur le fond du <dialog>.
+    await target.dispatchEvent('pointerup', at);
+    await who.dispatchEvent('click', { ...at, detail: 1 });
+    await page.waitForTimeout(300);
+    await expect(who).toBeVisible();
+    await expect(target).toHaveAttribute('aria-checked', 'false');
+    // Un vrai clic sur le fond, ensuite, ferme toujours la feuille.
+    await page.waitForTimeout(600);
+    await who.dispatchEvent('click', { detail: 1 });
+    await expect(who).toBeHidden();
+    expect((await persisted(page)).chores.completions).toHaveLength(0);
+  });
+
+  test('Maison : décocher pendant l’envol ferme SON toast, jamais celui d’une autre tâche', async ({ page }) => {
+    await openSeeded(page);
+    await box(page, 'Vaisselle').click();
+    await expect(doneToast(page)).toContainText('Fait par AL');
+    // Décochée tout de suite (la ligne s'attarde, en mouvement : clic direct) : son toast part.
+    await box(page, 'Vaisselle').dispatchEvent('click', { detail: 1 });
+    await expect(box(page, 'Vaisselle')).toHaveAttribute('aria-checked', 'false');
+    await expect(doneToast(page)).toHaveCount(0);
+
+    // Vaisselle puis les draps, coup sur coup (la ligne de la vaisselle s'attarde ~1,3 s).
+    await page.evaluate(() => {
+      const check = (name: string) => document.querySelector<HTMLButtonElement>(`[role="checkbox"][aria-label="${name}"]`)!.click();
+      check('Vaisselle');
+      check('Changer les draps');
+    });
+    await expect(doneToast(page)).toContainText('Fait ensemble');
+    // Vaisselle décochée pendant son envol : le toast des draps reste.
+    await box(page, 'Vaisselle').dispatchEvent('click', { detail: 1 });
+    await expect(box(page, 'Vaisselle')).toHaveAttribute('aria-checked', 'false');
+    await page.waitForTimeout(400);
+    await expect(doneToast(page)).toContainText('Fait ensemble');
+  });
+
+  test('Calendrier : décocher une tâche juste cochée ferme son toast', async ({ page }) => {
+    await openSeeded(page, 'calendar');
+    const target = page.locator('.cal-day-panel .cal-task', { hasText: 'Arroser les plantes' }).getByRole('checkbox');
+    await target.click();
+    await expect(target).toHaveAttribute('aria-checked', 'true');
+    await expect(doneToast(page)).toContainText('Fait par AC');
+    await target.click();
+    await expect(target).toHaveAttribute('aria-checked', 'false');
+    await expect(doneToast(page)).toHaveCount(0);
+    expect((await persisted(page)).chores.completions).toHaveLength(0);
   });
 });

@@ -9,12 +9,19 @@ export type CheckTone = 'a' | 'b' | 'both' | 'unassigned' | 'neutral';
  * centre de la case au clavier — pour lancer la lumière depuis la case.
  * V5.10 : `onLongPress` — appui long tactile (LONG_PRESS_MS, doigt
  * immobile) qui remplace la coche (le clic qui suit est ignoré).
+ * La feuille ouverte doigt posé, iOS Safari peut envoyer le clic de fin sur
+ * son fond (qui la fermerait) : après un appui long, le prochain clic est
+ * avalé au niveau du document (capture, une fois, ≈ SWALLOW_MS après le relâché).
  */
 const LONG_PRESS_MS = 450;
 /** Au-delà (px), le doigt fait défiler : pas d'appui long. */
 const LONG_PRESS_SLOP = 10;
 /** Retard du minuteur (ms) au-delà duquel on laisse d'abord passer les événements en attente. */
 const LATE_MS = 80;
+/** Fenêtre (ms) après le relâché pendant laquelle le clic de fin est avalé. */
+const SWALLOW_MS = 500;
+/** Doigt jamais relevé (événement perdu) : on cesse d'attendre. */
+const SWALLOW_MAX_MS = 10_000;
 
 export const Checkbox = forwardRef<
   HTMLButtonElement,
@@ -34,11 +41,44 @@ export const Checkbox = forwardRef<
 >(function Checkbox({ checked, label, onToggle, tone = 'neutral', className, disabled, size = 'md', describedBy, onLongPress }, ref) {
   const press = useRef<{ timer: number; x: number; y: number } | null>(null);
   const fired = useRef(false);
+  const unswallow = useRef<(() => void) | null>(null);
   const cancel = () => {
     if (press.current !== null) window.clearTimeout(press.current.timer);
     press.current = null;
   };
-  useEffect(() => cancel, []);
+  useEffect(
+    () => () => {
+      cancel();
+      unswallow.current?.();
+    },
+    [],
+  );
+  /** Avale le prochain clic, où qu'il tombe (fond de la feuille compris). */
+  const swallowNextClick = () => {
+    unswallow.current?.();
+    let timer = window.setTimeout(() => done(), SWALLOW_MAX_MS);
+    const eat = (event: Event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      done();
+    };
+    const arm = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => done(), SWALLOW_MS);
+    };
+    const done = () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('click', eat, true);
+      document.removeEventListener('pointerup', arm, true);
+      document.removeEventListener('pointercancel', arm, true);
+      if (unswallow.current === done) unswallow.current = null;
+      fired.current = false;
+    };
+    document.addEventListener('click', eat, true);
+    document.addEventListener('pointerup', arm, true);
+    document.addEventListener('pointercancel', arm, true);
+    unswallow.current = done;
+  };
   const down = (event: PointerEvent<HTMLButtonElement>) => {
     fired.current = false;
     // Geste tactile (doigt, stylet) : à la souris, le menu ⋯ ou le toast suffisent.
@@ -60,6 +100,7 @@ export const Checkbox = forwardRef<
       if (press.current === null) return;
       press.current = null;
       fired.current = true;
+      swallowNextClick();
       onLongPress({ x, y });
     };
     press.current = { x, y, timer: window.setTimeout(settle, LONG_PRESS_MS) };

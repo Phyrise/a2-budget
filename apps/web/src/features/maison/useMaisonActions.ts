@@ -14,7 +14,7 @@ import type { CompanionMood, Who } from '../../world/types';
 import { useWorld } from '../../world/WorldContext';
 import type { BubbleContext, Speaker } from './companionLines';
 import type { Names, Origin } from './TaskRow';
-import { useDoneToast } from './useDoneToast';
+import { doneToastTag, useDoneToast } from './useDoneToast';
 import { speakerFor, useCompanionVoice } from './useCompanionVoice';
 
 const LINGER_MS = 1300;
@@ -162,8 +162,9 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
     if (result.completionId === null) return;
     const completionId = result.completionId;
     if (!result.completed) {
-      // Décochée pendant l'envol : son toast « Fait par toi » n'a plus d'objet.
-      if (lingering[task.id] !== undefined) toast.dismiss();
+      // Décochée pendant l'envol : son toast « Fait par toi » n'a plus d'objet
+      // (seulement s'il est encore affiché — pas celui d'une autre tâche).
+      toast.dismiss(doneToastTag(completionId));
       dropLingering(task.id);
       return;
     }

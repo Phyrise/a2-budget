@@ -71,8 +71,12 @@ const WorldContext = createContext<WorldContextValue | null>(null);
 export function WorldProvider({ children }: { children: ReactNode }) {
   const { appState, today } = useApp();
   const handleRef = useRef<LivingForestHandle | null>(null);
+  // Démarre « libérée » : rien (toile, import du moteur) avant que la coquille
+  // ait publié la vraie présentation — ouverte directement sur Courses au
+  // téléphone, la forêt ne se charge pas pour rien ; sur Maison ou à
+  // l'ordinateur, le moteur part au rendu suivant.
   const [presentation, setPresentationState] = useState<WorldPresentation>({
-    variant: 'hero', live: true, motion: 'full', maxFps: 60, hidden: false, released: false,
+    variant: 'hero', live: true, motion: 'full', maxFps: 60, hidden: false, released: true,
   });
   const [preview, setPreview] = useState<WorldPreview | null>(null);
   const realState = useMemo(() => (appState ? toWorldState(appState, today) : null), [appState, today]);

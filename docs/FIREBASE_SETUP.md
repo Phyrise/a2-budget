@@ -12,7 +12,7 @@ l'app **et** dans les règles de la base (la vraie protection) :
 | Compte | Rôle |
 |---|---|
 | `arthur.longuefosse@gmail.com` | AL (`a`, Jiji) |
-| `alexia.chaval@free.fr` | AC (`b`, Calcifer) |
+| `alexia.tutorat@gmail.com` | AC (`b`, Calcifer) |
 
 Pas d'invitation, pas de code : un autre compte Google peut ouvrir la
 fenêtre de connexion, mais l'app lui dit « Ce compte n'est pas invité » et

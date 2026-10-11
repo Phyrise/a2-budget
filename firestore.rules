@@ -14,7 +14,7 @@ service cloud.firestore {
     function roleByEmail() {
       return {
         'arthur.longuefosse@gmail.com': 'a',
-        'blabladodo24@gmail.com': 'b'
+        'alexia.tutorat@gmail.com': 'b'
       };
     }
     function signedIn() { return request.auth != null; }

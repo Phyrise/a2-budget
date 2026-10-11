@@ -162,7 +162,7 @@ async function main() {
 
   const ac = await phone(false);
   await ac.page.goto(url);
-  await signIn(ac.page, 'blabladodo24@gmail.com');
+  await signIn(ac.page, 'alexia.tutorat@gmail.com');
   await ac.page.getByRole('button', { name: 'La rejoindre' }).click();
   await synced(ac.page);
   await ac.net.drain();

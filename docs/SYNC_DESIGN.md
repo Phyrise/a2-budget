@@ -307,7 +307,7 @@ vérifie) : le bloc « liste blanche » en tête de `firestore.rules` (la vraie 
 | E-mail | Rôle |
 |---|---|
 | `arthur.longuefosse@gmail.com` | `a` (AL) |
-| `alexia.chaval@free.fr` | `b` (AC) |
+| `alexia.tutorat@gmail.com` | `b` (AC) |
 
 N'importe quel compte Google peut se connecter au projet (Firebase Auth ne filtre pas) ; un
 autre compte voit « Ce compte n'est pas invité », il est déconnecté, et la base lui refuse

@@ -52,7 +52,7 @@
     };
     proto.createTexture = function () {
       const t = orig.createTexture.call(this);
-      textures.set(t, { w: 0, h: 0, mip: false, bpp: 4 });
+      textures.set(t, { w: 0, h: 0, mip: false, bpp: 4, gl: this });
       canvases.add(this.canvas);
       return t;
     };
@@ -128,7 +128,8 @@
 
   w.__perf = {
     take() {
-      const tex = [...textures.values()].filter((t) => t.w > 0);
+      // Contexte perdu ou toile retirée (forêt libérée) : ses textures ne comptent plus.
+      const tex = [...textures.values()].filter((t) => t.w > 0 && !t.gl.isContextLost() && t.gl.canvas?.isConnected !== false);
       const gpu = tex.reduce((s, t) => s + t.w * t.h * t.bpp * (t.mip ? 4 / 3 : 1), 0);
       const live = [...canvases].filter((c) => c && c.isConnected);
       const anims = document.getAnimations().filter((a) => a.playState === 'running' && !a.effect?.target?.closest?.('[hidden]'));

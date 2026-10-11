@@ -7,6 +7,9 @@
  * <img> reprennent exactement le cadrage du moteur (engine/framing.ts).
  * Le moteur (OGL + shaders) est importé paresseusement. Sans WebGL, ou après
  * une perte de contexte non récupérée : peinture fixe + voile de brume CSS.
+ * Toile cachée (`hidden`) : plus aucune image. Mémoire rendue (`released`) :
+ * moteur détruit, contexte WebGL perdu volontairement, toile retirée ; la
+ * peinture <img> reprend la place, et le moteur revient par le même fondu.
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { framingFor, imageBoxStyle, type Framing } from './engine/framing';
@@ -54,10 +57,10 @@ const layer: CSSProperties = { position: 'absolute', inset: 0, pointerEvents: 'n
 const BASE_CSS = ':where(.living-forest){position:relative;display:block;width:100%;height:100%;}';
 
 /** Props propres à l'app (hors contrat) : manifest, lanternes, plafond de cadence (Réglages › « 30 images/s »). */
-type ForestExtras = { manifest?: WorldManifest; lanterns?: LanternArtSource | null; maxFps?: MaxFps };
+type ForestExtras = { manifest?: WorldManifest; lanterns?: LanternArtSource | null; maxFps?: MaxFps; hidden?: boolean; released?: boolean };
 
 export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & ForestExtras>(function LivingForest(
-  { state, variant = 'hero', live, motion = 'full', className = '', onReady, onKodama, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS, maxFps = 60 },
+  { state, variant = 'hero', live, motion = 'full', className = '', onReady, onKodama, manifest = defaultManifest, lanterns = DEFAULT_LANTERNS, maxFps = 60, hidden = false, released = false },
   ref,
 ) {
   const reduced = usePrefersReducedMotion();
@@ -74,6 +77,12 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
   const hourRef = useRef<number | null>(null);
   const latest = useRef({ state, variant, live: effLive, motion: effMotion, maxFps });
   latest.current = { state, variant, live: effLive, motion: effMotion, maxFps };
+  // Visibilité réelle : dans l'écran (IntersectionObserver) et non recouverte (coquille).
+  const intersectingRef = useRef(true);
+  const hiddenRef = useRef(hidden);
+  hiddenRef.current = hidden;
+  const releasedRef = useRef(released);
+  releasedRef.current = released;
   const variantRef = useRef(variant);
   variantRef.current = variant;
   const readyRef = useRef(false);
@@ -114,10 +123,15 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
     return () => ro.disconnect();
   }, [manifest, variant]);
 
-  // Création du moteur (import dynamique), recréé après une perte de contexte.
+  // Création du moteur (import dynamique), recréé après une perte de contexte
+  // ou au retour après une libération.
   useEffect(() => {
     const canvas = canvasRef.current;
     const box = boxRef.current;
+    if (released) {
+      setCanvasShown(false);
+      return;
+    }
     if (!canvas || !box || mode === 'fallback') return;
     let cancelled = false;
     let engine: WorldEngine | null = null;
@@ -159,6 +173,8 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
             },
           },
         );
+        // Déjà recouverte : rien n'est dessiné avant le retour.
+        if (hiddenRef.current) engine.setVisible(false);
         engine.resize(Math.max(1, r.width), Math.max(1, r.height));
         await engine.init(cur.state);
         if (cancelled) return;
@@ -173,8 +189,12 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
         engine.setState(latest.current.state);
         engine.seasons.hourOverride = hourRef.current;
         if (focusRef.current.progress !== null) engine.focus(focusRef.current.progress, focusRef.current.who);
+        engine.setVisible(intersectingRef.current && !hiddenRef.current);
         const io = new IntersectionObserver((entries) => {
-          for (const en of entries) engine?.setVisible(en.isIntersecting);
+          for (const en of entries) {
+            intersectingRef.current = en.isIntersecting;
+            engine?.setVisible(en.isIntersecting && !hiddenRef.current);
+          }
         });
         io.observe(box);
         cleanupIo = () => io.disconnect();
@@ -188,14 +208,19 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
       canvas.removeEventListener('webglcontextrestored', onRestored);
       cleanupIo();
       engine?.destroy();
+      // Libération : le contexte WebGL est rendu tout de suite (sans attendre le
+      // ramasse-miettes : les navigateurs mobiles limitent le nombre de contextes).
+      if (engine && releasedRef.current && !engine.isLost) engine.gl.getExtension('WEBGL_lose_context')?.loseContext();
       if (engineRef.current === engine) {
         engineRef.current = null;
         previewRef.current = null;
       }
+      const w = window as unknown as { __worldEngine?: WorldEngine };
+      if (engine && w.__worldEngine === engine) delete w.__worldEngine;
     };
-    // Recréé seulement pour un nouveau canvas ou un autre manifest.
+    // Recréé seulement pour un nouveau canvas, un autre manifest ou au retour d'une libération.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasKey, manifest]);
+  }, [canvasKey, manifest, released]);
 
   // Trop de pertes de contexte : on reste sur la peinture fixe.
   useEffect(() => {
@@ -209,6 +234,11 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
   useEffect(() => {
     engineRef.current?.configure({ variant, live: effLive, motion: effMotion, maxFps });
   }, [variant, effLive, effMotion, maxFps]);
+
+  // Recouverte par la coquille : arrêt net (aucune image, même aux redimensionnements) ; reprise au retour.
+  useEffect(() => {
+    engineRef.current?.setVisible(intersectingRef.current && !hidden);
+  }, [hidden]);
 
   useImperativeHandle(
     ref,
@@ -284,11 +314,13 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
           })}
         />
         {mode === 'fallback' ? <ForestMist still={effMotion === 'still'} /> : null}
-        <canvas
-          key={canvasKey}
-          ref={canvasRef}
-          style={{ ...layer, width: '100%', height: '100%', display: 'block', opacity: canvasShown && mode === 'webgl' ? 1 : 0, transition: 'opacity 800ms ease' }}
-        />
+        {released ? null : (
+          <canvas
+            key={canvasKey}
+            ref={canvasRef}
+            style={{ ...layer, width: '100%', height: '100%', display: 'block', opacity: canvasShown && mode === 'webgl' ? 1 : 0, transition: 'opacity 800ms ease' }}
+          />
+        )}
       </div>
     </div>
   );

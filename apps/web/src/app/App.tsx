@@ -13,7 +13,9 @@
  *   panneau des valeurs cachées, aperçus non persistants de la forêt
  *   (bandeau « Aperçu »), tout effacé en quittant le mode.
  * - Le contenu défile par-dessus : fenêtre sur la forêt (--world-h) puis la
- *   feuille encre. La scène se fige quand elle est recouverte ou masquée.
+ *   feuille encre. La scène se fige quand elle est recouverte ou masquée ;
+ *   sur téléphone hors Maison, elle ne dessine plus rien et sa mémoire
+ *   graphique est rendue après un délai (world/rest.ts).
  * - En-tête (marque + Historique / lune de pause sur Maison / Réglages),
  *   pilule de navigation (effacée seulement pendant que le clavier est
  *   ouvert), feuilles globales, indicateur d'enregistrement, mise à jour PWA,
@@ -54,6 +56,7 @@ import { useKeyboardOpen } from './useKeyboardOpen';
 import { useNoZoom } from './noZoom';
 import { useForgetPreviewSeason, useSeasonPrefetch } from './seasonPrefetch';
 import { useApp } from '../state/store';
+import { REST_DELAYS, forestRest, type RestDelays, type RestInput } from '../world/rest';
 import { WorldBackdrop } from './WorldBackdrop';
 import { LiveProvider } from '../presence/LiveContext';
 import { PartnerAvatar } from '../presence/avatar/PartnerAvatar';
@@ -104,6 +107,32 @@ function usePageVisible(): boolean {
   return visible;
 }
 
+/** Délais de repos ; build e2e et dev : `window.__forestRestDelays` les raccourcit (tests). */
+function restDelays(): RestDelays {
+  if (!import.meta.env.DEV && import.meta.env.MODE !== 'e2e') return REST_DELAYS;
+  return (window as unknown as { __forestRestDelays?: RestDelays }).__forestRestDelays ?? REST_DELAYS;
+}
+
+/**
+ * Forêt cachée (téléphone hors Maison, arrière-plan) : plus d'images, puis
+ * mémoire rendue après le délai. Ouverte directement sur un autre onglet :
+ * rien n'est chargé avant le premier passage sur Maison.
+ */
+function useForestRest(input: RestInput): { draw: boolean; released: boolean } {
+  const { draw, releaseMs } = forestRest(input, restDelays());
+  const [released, setReleased] = useState(!draw);
+  useEffect(() => {
+    if (draw) {
+      setReleased(false);
+      return;
+    }
+    if (releaseMs === null) return;
+    const t = window.setTimeout(() => setReleased(true), releaseMs);
+    return () => window.clearTimeout(t);
+  }, [draw, releaseMs]);
+  return { draw, released };
+}
+
 function Shell() {
   const { module, sheet, closeSheet, prefs, isDesktop, foregroundSheet } = useShell();
   const { setPresentation, setPreview, realState, preview } = useWorld();
@@ -130,9 +159,12 @@ function Shell() {
     showsLivingForest(module, isDesktop) && visible && !covered && sheet === null && !(foregroundSheet && !isDesktop);
   const motion = reducedMotion ? 'still' : prefs.forestMotion;
   const maxFps = prefs.forestFps30 ? 30 : 60;
+  const rest = useForestRest({ desktop: isDesktop, forestShown: showsLivingForest(module, isDesktop), pageVisible: visible });
+  const hidden = !rest.draw;
+  const released = rest.released;
   useEffect(() => {
-    setPresentation({ variant, live, motion, maxFps });
-  }, [setPresentation, variant, live, motion, maxFps]);
+    setPresentation({ variant, live, motion, maxFps, hidden, released });
+  }, [setPresentation, variant, live, motion, maxFps, hidden, released]);
 
   // Quitter le mode développeur efface tout aperçu (la vraie forêt revient).
   useEffect(() => {

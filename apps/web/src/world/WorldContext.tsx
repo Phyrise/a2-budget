@@ -36,6 +36,10 @@ export interface WorldPresentation {
   motion: WorldMotion;
   /** Plafond de cadence (Réglages › « 30 images/s »). */
   maxFps: MaxFps;
+  /** Toile entièrement recouverte (bandeau peint, arrière-plan) : plus aucune image. */
+  hidden: boolean;
+  /** Mémoire graphique rendue (moteur détruit, recréé au retour). */
+  released: boolean;
 }
 
 interface WorldContextValue {
@@ -67,14 +71,20 @@ const WorldContext = createContext<WorldContextValue | null>(null);
 export function WorldProvider({ children }: { children: ReactNode }) {
   const { appState, today } = useApp();
   const handleRef = useRef<LivingForestHandle | null>(null);
-  const [presentation, setPresentationState] = useState<WorldPresentation>({ variant: 'hero', live: true, motion: 'full', maxFps: 60 });
+  const [presentation, setPresentationState] = useState<WorldPresentation>({
+    variant: 'hero', live: true, motion: 'full', maxFps: 60, hidden: false, released: false,
+  });
   const [preview, setPreview] = useState<WorldPreview | null>(null);
   const realState = useMemo(() => (appState ? toWorldState(appState, today) : null), [appState, today]);
   const state = useMemo(() => (realState ? applyPreview(realState, preview) : null), [realState, preview]);
   const previewActive = isPreviewActive(preview);
 
   const setPresentation = useCallback((p: WorldPresentation) => {
-    setPresentationState((prev) => (prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion && prev.maxFps === p.maxFps ? prev : p));
+    setPresentationState((prev) =>
+      prev.variant === p.variant && prev.live === p.live && prev.motion === p.motion && prev.maxFps === p.maxFps && prev.hidden === p.hidden && prev.released === p.released
+        ? prev
+        : p,
+    );
   }, []);
   const pulse = useCallback<WorldContextValue['pulse']>((opts) => handleRef.current?.pulse(opts), []);
   const expectPulse = useCallback((id: string) => handleRef.current?.expectPulse?.(id), []);
@@ -121,6 +131,8 @@ export function WorldStage({ className, onKodama }: { className?: string; onKoda
       live={presentation.live}
       motion={presentation.motion}
       maxFps={presentation.maxFps}
+      hidden={presentation.hidden}
+      released={presentation.released}
       className={className}
       onKodama={onKodama}
     />

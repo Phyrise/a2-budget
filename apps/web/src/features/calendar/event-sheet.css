@@ -210,3 +210,10 @@
 .cal-sentence__input:focus {
   outline: none;
 }
+
+/* V5.10 — copie vers Google Agenda : lien discret, en bas du formulaire. */
+.event-sheet__agenda {
+  align-self: flex-start;
+  margin-top: -8px;
+  text-decoration: none;
+}

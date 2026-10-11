@@ -1,10 +1,11 @@
 /**
- * Gestes de la clairière et leurs retours : cocher (avec « qui l'a fait »),
+ * Gestes de la clairière et leurs retours : cocher (V5.10 : attribué tout
+ * de suite à la personne prévue, toast « Fait par toi » pour corriger),
  * « pas aujourd'hui », remettre, pause. Chaque geste reçoit une réponse
  * douce : lumière dans la forêt (plus forte pour une corvée), compagnon qui
  * réagit, petite réplique, toast annulable. Jamais de reproche.
  */
-import { nextAssignee, type ChoreCompletion, type ChoreDoer, type HouseholdTask, type TaskAssignee } from '@a2/core';
+import { expectedDoer, nextAssignee, type ChoreCompletion, type ChoreDoer, type HouseholdTask, type TaskAssignee } from '@a2/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
@@ -13,6 +14,7 @@ import type { CompanionMood, Who } from '../../world/types';
 import { useWorld } from '../../world/WorldContext';
 import type { BubbleContext, Speaker } from './companionLines';
 import type { Names, Origin } from './TaskRow';
+import { useDoneToast } from './useDoneToast';
 import { speakerFor, useCompanionVoice } from './useCompanionVoice';
 
 const LINGER_MS = 1300;
@@ -98,6 +100,7 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
   const { toggleHomeTask, undoHomeCompletion, skipToday, unskipToday, toggleHomePause, me } = useApp();
   const world = useWorld();
   const toast = useToast();
+  const doneToast = useDoneToast();
   const voice = useCompanionVoice(names);
   const [lingering, setLingering] = useState<Record<string, string>>({});
   const [reaction, setReaction] = useState<Reaction | null>(null);
@@ -136,14 +139,20 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
   /**
    * Cocher / décocher. La lumière (pulse) part de la case cochée tant que la
    * ligne est encore là (elle reste LINGER_MS avant de quitter la liste).
-   * Depuis le menu ⋯, `afterSheet` attend que la feuille se soit vraiment
-   * fermée (plus aucun <dialog open>) — la forêt redevient vivante, la case
-   * n'est plus sous la feuille — puis `from` remesure la case. D'ici là, le
-   * vol est réservé (`world.expectPulse`) : pas de lumière posée d'avance.
+   * V5.10 : sans `doneBy`, le geste est attribué à la personne prévue
+   * (expectedDoer) et un toast propose de corriger ou d'annuler. Depuis la
+   * feuille « Qui ? » (appui long, menu ⋯), `afterSheet` attend que la
+   * feuille se soit vraiment fermée (plus aucun <dialog open>) — la forêt
+   * redevient vivante, la case n'est plus sous la feuille — puis `from`
+   * remesure la case. D'ici là, le vol est réservé (`world.expectPulse`).
    */
-  const toggle = (task: HouseholdTask, origin: Origin, doneBy?: ChoreDoer, afterSheet?: { from: () => Origin }) => {
+  const toggle = (task: HouseholdTask, origin: Origin, opts: { doneBy?: ChoreDoer; afterSheet?: { from: () => Origin } } = {}) => {
     const { actionable, completions, doneTodayCount } = snap.current;
     const planned = nextAssignee(task, completions);
+    const { afterSheet } = opts;
+    const explicit = opts.doneBy !== undefined;
+    // Le choix de la feuille, sinon la personne prévue (ignoré pour décocher).
+    const doneBy = opts.doneBy ?? expectedDoer(planned, me);
     const result = toggleHomeTask(task, doneBy !== undefined ? { doneBy } : undefined);
     if (result.othersGesture === true && me !== null) {
       // V5 : on ne décoche pas le geste de l'autre ; on dit simplement qui l'a fait.
@@ -153,11 +162,15 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
     if (result.completionId === null) return;
     const completionId = result.completionId;
     if (!result.completed) {
+      // Décochée pendant l'envol : son toast « Fait par toi » n'a plus d'objet.
+      if (lingering[task.id] !== undefined) toast.dismiss();
       dropLingering(task.id);
       return;
     }
     playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
-    const who = (result.doneBy ?? planned) as Who;
+    const doer: ChoreDoer =
+      result.doneBy === 'a' || result.doneBy === 'b' || result.doneBy === 'both' ? result.doneBy : expectedDoer(planned, me);
+    const who: Who = doer;
     const fly = (o: Origin) => {
       if (import.meta.env.DEV) tracePulse(task.id, o);
       world.pulse({ id: completionId, who, fromClientX: o.x, fromClientY: o.y, ...(task.effort === 3 ? { strong: true } : {}) });
@@ -176,17 +189,32 @@ export function useMaisonActions(names: Names, snapshot: Snapshot) {
       handOffFocus(task.id);
       dropLingering(task.id, completionId);
     }, LINGER_MS);
+    const remaining = actionable.filter((t) => t.id !== task.id).length;
+    const firstOfDay = doneTodayCount === 0;
+    doneToast({
+      completionId,
+      who: doer,
+      undo: () => undoRun(completionId),
+      // Corrigé depuis le toast : la réplique d'un coup de main (« Merci ! ») ou une simple réaction.
+      onReassign: (w) => {
+        const c = checkContext({ task, planned, who: w, explicit: true, remaining, firstOfDay, hour: new Date().getHours() });
+        if (c.context !== 'help' && c.context !== 'claim') return react(w, 'happy');
+        react(c.speaker, c.mood);
+        voice.say(c.context, c.speaker, { quiet: true });
+      },
+    });
     const { context, speaker, mood } = checkContext({
       task,
       planned,
       who,
-      explicit: doneBy !== undefined,
-      remaining: actionable.filter((t) => t.id !== task.id).length,
-      firstOfDay: doneTodayCount === 0,
+      explicit,
+      remaining,
+      firstOfDay,
       hour: new Date().getHours(),
     });
     react(mood === 'proud' ? 'both' : speaker, mood);
-    voice.say(context, speaker);
+    // Le toast annonce déjà le geste : la bulle reste visuelle.
+    voice.say(context, speaker, { quiet: true });
   };
 
   /** V5.3 — annuler un fait précis (Courses, « Fait aujourd'hui »). */

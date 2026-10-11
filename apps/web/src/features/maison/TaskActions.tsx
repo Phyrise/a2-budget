@@ -5,6 +5,9 @@
  *
  * V5.4 : « qui l'a fait ? » se dit en cochant (WhoDidSheet) ; les anciens
  * « AL l'a fait / C'est AC qui l'a fait » du menu faisaient doublon.
+ * V5.10 : cocher attribue tout de suite (toast pour corriger) ; « Qui l'a
+ * fait ? » ouvre la feuille complète — l'appui long sur la case, au clavier
+ * et au lecteur d'écran.
  */
 import type { HouseholdTask, TaskAssignee } from '@a2/core';
 import { useState } from 'react';
@@ -29,6 +32,8 @@ export interface TaskActionsProps {
   onLantern: (task: HouseholdTask, minutes: number) => void;
   /** Une lanterne brûle déjà : on n'en allume pas une seconde. */
   lanternBusy: boolean;
+  /** V5.10 — cocher en disant qui l'a fait (absent : déjà faite). */
+  onWho?: (task: HouseholdTask) => void;
 }
 
 const NB = '\u202f';
@@ -73,7 +78,7 @@ function LanternChoice({ task, busy, onLantern }: { task: HouseholdTask; busy: b
   );
 }
 
-export function TaskActions({ task, open, turn, names, onClose, onSkip, onEdit, onLantern, lanternBusy }: TaskActionsProps) {
+export function TaskActions({ task, open, turn, names, onClose, onSkip, onEdit, onLantern, lanternBusy, onWho }: TaskActionsProps) {
   const week = task?.recurrence === 'weekly' && task.flexible === true;
   const rotating = task?.rotation === true && (turn === 'a' || turn === 'b');
   const description = task
@@ -87,6 +92,15 @@ export function TaskActions({ task, open, turn, names, onClose, onSkip, onEdit, 
       {task && (
         <>
           <ActionList label="Actions">
+            {onWho && (
+              <ActionItem
+                tone="soft"
+                icon={<Icon name="check" size={20} />}
+                label="Qui l’a fait ?"
+                hint="cocher en le disant"
+                onClick={() => onWho(task)}
+              />
+            )}
             <LanternChoice key={task.id} task={task} busy={lanternBusy} onLantern={onLantern} />
             {task.groceries !== true && (
               <ActionItem

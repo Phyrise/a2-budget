@@ -11,7 +11,8 @@ import type { Names } from './EventList';
 import type { TaskItem } from './taskAgenda';
 import './tasks.css';
 
-export type TaskToggle = (item: TaskItem, origin: { x: number; y: number }) => void;
+/** `ask` (V5.10, appui long) : la feuille « Qui ? » avant de cocher. */
+export type TaskToggle = (item: TaskItem, origin: { x: number; y: number }, opts?: { ask?: boolean }) => void;
 
 function statusWords(item: TaskItem): string {
   if (item.done) return 'faite';
@@ -40,7 +41,14 @@ export function TaskLine({
       data-date={item.date}
     >
       {item.checkable ? (
-        <Checkbox checked={item.done} label={label} tone={item.done ? 'neutral' : who} size="sm" onToggle={(origin) => onToggle(item, origin)} />
+        <Checkbox
+          checked={item.done}
+          label={label}
+          tone={item.done ? 'neutral' : who}
+          size="sm"
+          onToggle={(origin) => onToggle(item, origin)}
+          onLongPress={item.done ? undefined : (origin) => onToggle(item, origin, { ask: true })}
+        />
       ) : (
         <span className="cal-task__mark" aria-hidden="true">
           {item.done && <Icon name="check" size={13} strokeWidth={2.4} />}

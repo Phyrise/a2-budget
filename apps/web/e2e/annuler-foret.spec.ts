@@ -97,7 +97,8 @@ async function weeklyGoal(page: Page): Promise<{ level: string; arc: string | nu
 }
 
 /**
- * Annule PENDANT le vol : à armer AVANT de répondre à « Qui ? ». Dans la
+ * Annule PENDANT le vol : à armer AVANT de cocher (V5.10 : la luciole part
+ * aussitôt, plus de feuille « Qui ? »). Dans la
  * page, attend que la luciole vole et que le bouton d'annulation
  * (`selector`, dont le parent contient `withText` si fourni) existe, puis
  * clique aussitôt — sans les allers-retours lents du test, le vol (≈1,7 s)
@@ -158,10 +159,9 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     expect(before.level).toBe('resting');
 
     const check = page.getByRole('checkbox', { name: 'Arroser le basilic', exact: true });
-    await check.click();
     // Décocher la case pendant que la luciole vole (la ligne s'attarde).
     const undo = armUndoInFlight(page, '.task-list:not(.task-list--done) [role="checkbox"][aria-label="Arroser le basilic"][aria-checked="true"]');
-    await pickWho(page, 'a');
+    await check.click();
     const flying = await undo;
     await expect(check).toHaveAttribute('aria-checked', 'false');
     await expectUndoneState(page, 't-basilic');
@@ -204,9 +204,8 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     const before = await weeklyGoal(page);
     await goTo(page, 'Calendrier');
     const box = page.locator('.cal-day-panel .cal-task', { hasText: 'Arroser les plantes' }).getByRole('checkbox');
+    const undo = armUndoInFlight(page, '.toast [data-action="undo"]');
     await box.click();
-    const undo = armUndoInFlight(page, '.toast .toast__action', 'Une luciole de plus');
-    await pickWho(page, 'b');
     const flying = await undo;
     await expect(box).toHaveAttribute('aria-checked', 'false');
     await expectUndoneState(page, 't-plantes');
@@ -220,10 +219,9 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     await page.setViewportSize(DESKTOP);
     await openSeeded(page, 'calendar');
     const box = page.locator('.cal-day-panel .cal-task', { hasText: 'Arroser les plantes' }).getByRole('checkbox');
-    await box.click();
     // Fondu (1,6 s) plus long que le reste du vol : la scène figée doit le finir après l'atterrissage.
-    const undo = armUndoInFlight(page, '.toast .toast__action', 'Une luciole de plus', 0.5);
-    await pickWho(page, 'b');
+    const undo = armUndoInFlight(page, '.toast [data-action="undo"]', undefined, 0.5);
+    await box.click();
     const flying = await undo;
     await expectUndoneState(page, 't-plantes');
     await expectNoForestLight(page, flying);
@@ -254,9 +252,8 @@ test.describe('Annuler une tâche : la forêt suit', () => {
     await input.fill('Pain');
     await input.press('Enter');
     await page.getByRole('checkbox', { name: 'Pain', exact: true }).click();
+    const undo = armUndoInFlight(page, '.toast [data-action="undo"]');
     await page.getByRole('button', { name: 'Vider le panier' }).click();
-    const undo = armUndoInFlight(page, '.toast .toast__action', 'Une luciole de plus');
-    await pickWho(page, 'a');
     const flying = await undo;
     await expect(page.getByRole('checkbox', { name: 'Pain', exact: true })).toBeChecked();
     await expectUndoneState(page, 't-courses');

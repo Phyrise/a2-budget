@@ -2,13 +2,15 @@
  * Lien Courses ↔ Maison (invité, 100 % local). V5.2 : la tâche « Courses »
  * se crée d'un geste dans Maison, montre les articles restants et ouvre
  * Courses. V5.3 : elle est permanente — pas de « Quand ? », jamais au
- * Calendrier ; chaque fois (panier vidé ou ligne cochée) demande « qui ? »
- * et ajoute un fait, deux fois le même jour comprises. V5.4 : faite, elle
- * quitte « à faire » ; un article ajouté ensuite la ramène ; plus de rappel
- * dans le bandeau de Courses. Sans tâche liée, aucune question.
+ * Calendrier ; chaque fois (panier vidé ou ligne cochée) ajoute un fait,
+ * deux fois le même jour comprises. V5.4 : faite, elle quitte « à faire » ;
+ * un article ajouté ensuite la ramène ; plus de rappel dans le bandeau de
+ * Courses. V5.10 : plus de feuille « qui ? » — attribuée tout de suite à la
+ * personne prévue, toast « Courses faites … » pour corriger ou annuler.
+ * Sans tâche liée, aucune question.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, goTo, openApp, persisted, pickWho, sheet, trackErrors } from './helpers';
+import { PHONE, doneToast, goTo, openApp, persisted, pickWho, sheet, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -67,15 +69,13 @@ test.describe('Courses ↔ Maison', () => {
     await goTo(page, 'Maison');
     await expect(row.getByRole('button', { name: /^Liste de courses : 2\s+articles$/ })).toBeVisible();
 
-    // 1re fois : panier vidé → « qui ? » → Calcifer.
+    // 1re fois : panier vidé → faite tout de suite (ensemble, la personne prévue) → « C'était AC ».
     await goTo(page, 'Courses');
     await emptyBasket(page, 'Pain');
-    const who = sheet(page, 'Qui ?');
-    await expect(who).toBeVisible({ timeout: 10_000 });
-    await expect(who.locator('.companion')).toHaveCount(3);
-    await who.locator('.who-did__choice[data-who="b"]').click();
-    await expect(who).toBeHidden();
-    await expect(page.locator('.toast')).toContainText('Fait : Courses');
+    await expect(doneToast(page)).toContainText('Courses faites ensemble', { timeout: 10_000 });
+    await expect(sheet(page, 'Qui ?')).toHaveCount(0);
+    await pickWho(page, 'b');
+    await expect(doneToast(page)).toContainText('Courses faites par AC');
 
     // Maison : plus dans « à faire », mais dans « Fait aujourd’hui ».
     await goTo(page, 'Maison');
@@ -89,7 +89,7 @@ test.describe('Courses ↔ Maison', () => {
     await goTo(page, 'Maison');
     await expect(row).toHaveCount(1);
 
-    // 2e fois depuis Maison : cocher → « qui ? » → ensemble ; la ligne s'en va.
+    // 2e fois depuis Maison : cocher → ensemble ; la ligne s'en va.
     await row.getByRole('checkbox', { name: 'Courses' }).click();
     await pickWho(page, 'both');
     await expect(row).toHaveCount(0, { timeout: 5_000 });
@@ -107,9 +107,8 @@ test.describe('Courses ↔ Maison', () => {
     // 3e fois le même jour, depuis Courses : Jiji.
     await goTo(page, 'Courses');
     await emptyBasket(page, 'Lait');
-    await expect(who).toBeVisible({ timeout: 10_000 });
-    await who.locator('.who-did__choice[data-who="a"]').click();
-    await expect(who).toBeHidden();
+    await expect(doneToast(page)).toBeVisible({ timeout: 10_000 });
+    await pickWho(page, 'a');
 
     const state = await persisted(page);
     const task = state.chores.tasks.find((t: { groceries?: boolean }) => t.groceries === true);
@@ -132,9 +131,9 @@ test.describe('Courses ↔ Maison', () => {
     await goTo(page, 'Courses');
     await quickAdd(page, 'Pain', 'Lait', 'Œufs');
     await emptyBasket(page, 'Pain', 'Lait');
+    const toast = doneToast(page);
+    await expect(toast).toContainText('Courses faites', { timeout: 10_000 });
     await pickWho(page, 'a');
-    const toast = page.locator('.toast');
-    await expect(toast).toContainText('Fait : Courses');
     await expect(page.locator('.item-row')).toHaveCount(1);
     let state = await persisted(page);
     expect(state.chores.completions).toHaveLength(1);
@@ -160,31 +159,30 @@ test.describe('Courses ↔ Maison', () => {
     // Revider ensuite fonctionne comme avant.
     await goTo(page, 'Courses');
     await page.getByRole('button', { name: 'Vider le panier' }).click();
+    await expect(toast).toContainText('Courses faites', { timeout: 10_000 });
     await pickWho(page, 'b');
-    await expect(toast).toContainText('Fait : Courses');
     state = await persisted(page);
     expect(state.chores.completions).toHaveLength(1);
     expect(state.groceries.history).toHaveLength(2);
     expect(errors).toEqual([]);
   });
 
-  test('« Qui ? » fermé sans choisir : « Panier vidé » reste annulable', async ({ page }) => {
+  test('« C’était AC » après le vidage : l’auteur change, le panier reste vidé', async ({ page }) => {
     await openApp(page, 'maison');
     await addGroceryTask(page);
     await goTo(page, 'Courses');
     await quickAdd(page, 'Riz');
     await emptyBasket(page, 'Riz');
-    const who = sheet(page, 'Qui ?');
-    await expect(who).toBeVisible({ timeout: 10_000 });
-    await who.getByRole('button', { name: 'Fermer', exact: true }).click();
-    await expect(who).toBeHidden();
-    const toast = page.locator('.toast');
-    await expect(toast).toContainText('Panier vidé');
-    await toast.getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.getByRole('checkbox', { name: 'Riz', exact: true })).toBeChecked();
+    const toast = doneToast(page);
+    await expect(toast).toContainText('Courses faites ensemble', { timeout: 10_000 });
+    const id = (await persisted(page)).chores.completions[0].id;
+    await toast.getByRole('button', { name: 'C’est AC qui l’a fait' }).click();
+    await expect(doneToast(page)).toContainText('Courses faites par AC');
     const state = await persisted(page);
-    expect(state.groceries.history ?? []).toEqual([]);
-    expect(state.chores.completions).toEqual([]);
+    expect(state.chores.completions).toHaveLength(1);
+    expect(state.chores.completions[0]).toMatchObject({ id, doneBy: 'b' });
+    expect(state.groceries.history.map((p: { label: string }) => p.label)).toEqual(['Riz']);
+    await expect(page.locator('.item-row')).toHaveCount(0);
   });
 
   test('sans tâche liée : vider le panier ne demande rien', async ({ page }) => {

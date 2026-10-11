@@ -290,7 +290,8 @@ testées par `pnpm test:rules` (`tests/rules`). En résumé :
   l'e-mail), jamais déjà annulée ; une seule mise à jour possible, l'annulation (`undoneAt`
   texte, `undoneDay` « YYYY-MM-DD », `undoneBy` = soi, `devOverride`) ; annuler le fait de
   l'autre exige `devOverride: true` (la trace du mode développeur, §9) ; jamais supprimés
-  (sauf `groceryHistory` et `activity`, élagués).
+  (sauf `groceryHistory` et `activity`, élagués). V5.10 : seconde mise à jour permise,
+  la correction de l'auteur d'une complétion (`factReassign`, §25).
 - Objets : jamais créés supprimés ; `deletedAt` = heure du serveur ; purge définitive
   seulement 30 jours après `deletedAt`.
 - `checkpoints/{jour}` : `day` = id ; le drapeau `genesis` ne change pas ; la genèse ne se
@@ -846,3 +847,31 @@ achats neufs. Le kompeitō donné reste (voulu).
   `e2e-sync/companion.spec.ts` (rechargement, réglages changés par l'autre,
   réglages réécrits sans compagnon, nouvel appareil, reprise V5.6, remise à zéro).
 
+## 25. V5.10 — « Qui l'a fait ? » sans feuille (toast de correction)
+
+- **Geste** : cocher fait tout de suite, attribué à la personne prévue
+  (`expectedDoer` de @a2/core : l'assigné(e) `'a'`/`'b'`, « ensemble » pour
+  `'both'`, sinon le rôle de la session, A en invité). Un toast « Fait par
+  toi » propose les autres choix et « Annuler ». Appui long sur la case (ou
+  « Qui l'a fait ? » du menu ⋯) : l'ancienne feuille complète, avant de cocher.
+- **Corriger n'est pas annuler** : `reassignCompletion` (pur) change `doneBy`
+  du fait — même id, même `completedAt`, forêt intacte (le crédit reste
+  `active` ; annuler puis recocher l'aurait « tombstoné »), kompeitō pas
+  redonné. `doneBy` n'est gardé que s'il diffère de `assignee` (forme
+  d'`addCompletion`) ; revenir à l'assigné(e) le retire. La luciole change de
+  couleur (`lights.sync` met à jour `who`), l'équilibre, l'historique et
+  « Fait aujourd'hui » suivent.
+- **Pont** (`diffToOps`) : `doneBy` d'une complétion connue qui change → une
+  mise à jour de ce seul champ (`DELETE_FIELD` s'il disparaît), seulement sur
+  **son propre fait vivant** (`role` = soi, pas d'`undoneAt`) ; sinon rien
+  n'est écrit. Le store refuse d'emblée le geste de l'autre (`canUndo`).
+- **Règles** (`factReassign`, à recoller dans la console) : collection
+  `completions`, document existant, non annulé, `role` = son rôle ;
+  `doneBy` change réellement et seuls `doneBy`, `updatedBy`, `syncedAt`
+  changent ; `doneBy` absent ou dans `'a' | 'b' | 'both'`. Testé dans
+  `tests/rules/data.test.ts` ; le faux serveur (`sync/apply.ts`) applique la
+  même règle.
+- **Conflits** : `doneBy` d'un fait n'est écrit que par son auteur ; deux
+  corrections successives, la dernière arrivée gagne (champ d'un seul
+  document). La fusion « fait ensemble » de deux faits d'une même occurrence
+  (`liveCompletions`) reste calculée à la lecture.

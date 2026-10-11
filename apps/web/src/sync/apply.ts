@@ -30,7 +30,8 @@ export interface ApplyOptions {
   /**
    * Règles du serveur (firestore.rules) : faits non modifiables hors
    * annulation, annulés une seule fois et seulement par leur auteur (sauf
-   * `devOverride`) ; pas de mise à jour d'un absent.
+   * `devOverride`) ; V5.10 : l'auteur d'une complétion vivante peut en
+   * corriger `doneBy` ; pas de mise à jour d'un absent.
    */
   rules?: boolean;
   /** Rôle de l'auteur du lot (règles : on n'annule que ses propres faits). */
@@ -77,6 +78,18 @@ function undoRefusal(current: DocData, op: WriteOp & { fields: readonly FieldWri
   return null;
 }
 
+/** V5.10 — correction de l'auteur : une complétion, le seul champ `doneBy`. */
+function isReassign(op: WriteOp & { fields: readonly FieldWrite[] }): boolean {
+  return op.collection === 'completions' && op.fields.length > 0 && op.fields.every(([path]) => path.length === 1 && path[0] === 'doneBy');
+}
+
+function reassignRefusal(current: DocData, fields: readonly FieldWrite[], author: string | undefined): string | null {
+  if (current.undoneAt !== undefined) return 'already-undone';
+  if (author !== undefined && current.role !== author) return 'not-yours';
+  const ok = fields.every(([, value]) => isDeleteField(value) || value === 'a' || value === 'b' || value === 'both');
+  return ok ? null : 'bad-doer';
+}
+
 /** Nouvel état d'un document après une opération (undefined : inchangé ; string : refus). */
 function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean, author?: string): DocData | undefined | string {
   switch (op.kind) {
@@ -92,7 +105,10 @@ function nextDoc(current: DocData | undefined, op: WriteOp, rules: boolean, auth
         const refusal = questUpdateRefusal(current, op.fields, author);
         if (refusal !== null) return refusal;
       }
-      if (rules && isFact(op)) {
+      if (rules && isFact(op) && isReassign(op)) {
+        const refusal = reassignRefusal(current, op.fields, author);
+        if (refusal !== null) return refusal;
+      } else if (rules && isFact(op)) {
         if (!onlyUndo(op.fields)) return 'fact-immutable';
         const refusal = undoRefusal(current, op, author);
         if (refusal !== null) return refusal;

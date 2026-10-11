@@ -1,27 +1,26 @@
 /**
  * Lien Courses ↔ Maison, côté Courses (V5.2 ; V5.3 : tâche permanente ;
- * V5.4 : plus de rappel dans le bandeau, seulement « qui ? » après « Vider
- * le panier ») :
+ * V5.4 : plus de rappel dans le bandeau ; V5.10 : plus de feuille « qui ? »,
+ * un toast pour corriger) :
  * - `GroceryLast` : repère de la dernière fois (« hier » + tête), ligne Maison ;
  * - `useGroceryTaskDone` : une complétion de plus à chaque fois (geste de
  *   Maison `toggleHomeTask` : forêt, équilibre, historique) + kompeitō,
- *   luciole et toast « Annuler » : annule CE fait ET le vidage du panier
- *   (V5.8 : les articles reviennent) ; « qui ? » fermé sans choisir →
- *   toast « Panier vidé » annulable.
+ *   luciole et toast « Courses faites par toi » : corriger qui (soin gardé)
+ *   ou « Annuler » : CE fait ET le vidage du panier (V5.8 : les articles
+ *   reviennent).
  * Sans tâche liée : rien n'est affiché, aucune question.
  */
-import { addDays, groceryTaskOf, lastGroceryRun, localDateKey, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { addDays, expectedDoer, groceryTaskOf, lastGroceryRun, localDateKey, type ChoreDoer, type GroceryRun, type HouseholdTask } from '@a2/core';
+import { useCallback, useMemo } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
-import { Companion, dayMonth, fr, useToast, weekdayName } from '../../ui';
+import { Companion, dayMonth, useToast, weekdayName } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
-import { WhoDidSheet, likelyDoer } from '../maison/WhoDidSheet';
+import { useDoneToast } from '../maison/useDoneToast';
 import './grocery-task.css';
 
 /** D'où part la luciole : le titre du bandeau (le panier vient d'être vidé). */
 const ORIGIN_SELECTOR = '#courses-title';
-const SHEET_WAIT_MS = 900;
 
 export interface GroceryTaskView {
   task: HouseholdTask | undefined;
@@ -59,86 +58,48 @@ export function GroceryLast({ last, size = 16 }: { last: GroceryRun; size?: numb
 }
 
 /**
- * Feuille « qui ? » + geste de Maison. `ask(undoClear)` l'ouvre dès qu'une
- * tâche Courses existe (faux sinon) ; `undoClear` annule le vidage du panier.
+ * Geste de Maison après « Vider le panier ». `done(undoClear)` coche la
+ * tâche Courses dès qu'elle existe (faux sinon) : attribuée tout de suite à
+ * la personne prévue (V5.10), toast « Courses faites par toi » avec
+ * « C'était AC », « Ensemble » et « Annuler » (= CE fait ET le vidage).
  */
 export function useGroceryTaskDone() {
   const { toggleHomeTask, undoHomeCompletion, me } = useApp();
   const world = useWorld();
   const toast = useToast();
+  const doneToast = useDoneToast();
   const view = useGroceryTask();
   const { task } = view;
-  const [asking, setAsking] = useState(false);
-  const timers = useRef<number[]>([]);
-  // Annulation du vidage en attente de la réponse à « qui ? ».
-  const undoClearRef = useRef<(() => void) | null>(null);
-  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
 
-  const canAsk = task !== undefined;
-  const ask = useCallback(
+  const done = useCallback(
     (undoClear: () => void): boolean => {
-      if (!canAsk) return false;
-      undoClearRef.current = undoClear;
-      setAsking(true);
-      return true;
-    },
-    [canAsk],
-  );
-
-  const whenSheetsClosed = (fn: () => void, waited = 0) => {
-    if (waited >= SHEET_WAIT_MS || document.querySelector('dialog[open]') === null) fn();
-    else timers.current.push(window.setTimeout(() => whenSheetsClosed(fn, waited + 40), 40));
-  };
-
-  /** Personne n'est choisi : le vidage reste annulable. */
-  const emptied = (undoClear: () => void) =>
-    toast.show({ message: 'Panier vidé', icon: 'check', action: { label: 'Annuler', onClick: undoClear } });
-
-  const pick = (who: ChoreDoer) => {
-    setAsking(false);
-    const undoClear = undoClearRef.current ?? (() => undefined);
-    undoClearRef.current = null;
-    if (!task) return;
-    const result = toggleHomeTask(task, { doneBy: who });
-    if (!result.completed || result.completionId === null) {
-      emptied(undoClear);
-      return;
-    }
-    const completionId = result.completionId;
-    playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
-    world.expectPulse(completionId);
-    whenSheetsClosed(() => {
+      if (!task) return false;
+      const planned = expectedDoer(task.assignee, me);
+      const result = toggleHomeTask(task, { doneBy: planned });
+      if (!result.completed || result.completionId === null) {
+        toast.show({ message: 'Panier vidé', icon: 'check', action: { label: 'Annuler', onClick: undoClear } });
+        return true;
+      }
+      const completionId = result.completionId;
+      const who: ChoreDoer = result.doneBy === 'a' || result.doneBy === 'b' || result.doneBy === 'both' ? result.doneBy : planned;
+      playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
       const r = document.querySelector(ORIGIN_SELECTOR)?.getBoundingClientRect();
       const x = r ? r.left + r.width / 2 : window.innerWidth / 2;
       const y = r ? r.top + r.height / 2 : window.innerHeight / 3;
       world.pulse({ id: completionId, who, fromClientX: x, fromClientY: y, ...(task.effort === 3 ? { strong: true } : {}) });
-    });
-    toast.show({
-      message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
-      icon: 'check',
-      action: {
-        label: 'Annuler',
-        onClick: () => {
+      doneToast({
+        completionId,
+        who,
+        subject: 'groceries',
+        undo: () => {
           undoHomeCompletion(completionId);
           undoClear();
         },
-      },
-    });
-  };
+      });
+      return true;
+    },
+    [task, me, toggleHomeTask, undoHomeCompletion, world, toast, doneToast],
+  );
 
-  const close = () => {
-    setAsking(false);
-    const undoClear = undoClearRef.current;
-    undoClearRef.current = null;
-    if (undoClear !== null) emptied(undoClear);
-  };
-
-  return {
-    view,
-    canAsk,
-    ask,
-    sheet: (
-      <WhoDidSheet open={asking} onPick={pick} onClose={close} title={task?.title} suggested={likelyDoer(task?.assignee, me)} />
-    ),
-  };
+  return { view, done };
 }

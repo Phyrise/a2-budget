@@ -141,3 +141,19 @@ Ordre vertical :
   son gâteau, Jiji, Teto et Hin portent le chapeau pointu (posé entre les
   oreilles de Teto, sur la tête basse de Hin) ; kompeitō pour AL, étincelles
   pour AC.
+
+## « Qui l'a fait ? » — toast de correction (V5.10)
+
+- **Un toucher suffit** : cocher (Maison, Calendrier) ou « Vider le panier »
+  (Courses) fait tout de suite, attribué à la personne prévue ; ligne,
+  luciole et kompeitō partent sans attendre.
+- **Toast** (5–6 s, une seule bannière à la fois) : tête du compagnon,
+  « Fait par toi » / « Fait par AC » / « Fait ensemble » (« Courses faites
+  … » dans Courses), puis une rangée de choix courts : les autres personnes
+  (« C'était AC », « C'était moi », « Ensemble ») et « Annuler » (ambre, à
+  droite). Cibles ≥ 44 px ; la rangée passe à la ligne plutôt que de
+  déborder à 390 px. Survolé ou focus dedans, le toast attend.
+- **Corriger** remontre le toast à jour (on peut se reprendre) ; dans
+  Maison, un « Merci ! » du compagnon quand c'était un coup de main.
+- **Feuille complète** : appui long tactile (≈ 450 ms) sur la case, sans
+  cocher ; au clavier et au lecteur d'écran, « Qui l'a fait ? » du menu ⋯.

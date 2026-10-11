@@ -10,6 +10,7 @@
  * | objet retiré                                 | deletedAt (suppression douce)    |
  * | fait ajouté                                  | create du fait                   |
  * | complétion / « pas aujourd'hui » retiré      | annulation de SES faits vivants de l'occurrence |
+ * | `doneBy` d'une complétion changé (V5.10)     | update de `doneBy` seul (SON fait vivant) |
  * | achat retiré sous le plafond (vidage annulé) | annulation de son propre fait d'achat |
  * | lanterne / achat sorti par le plafond        | rien (élagage, pas une annulation) |
  * | `forest.paused` basculé                      | fait forestEvents                |
@@ -148,6 +149,18 @@ function removedOps(spec: ListSpec, id: string, prev: AppState, next: AppState, 
   return []; // lanternes, achats, passages au-delà du plafond : élagage, pas une annulation
 }
 
+/**
+ * V5.10 — « C'était AC » : seul `doneBy` d'un fait de complétion change
+ * (jamais l'annulation). Seulement son propre fait vivant (règles :
+ * factReassign) ; `doneBy` absent = l'assignee du fait.
+ */
+function reassignOps(id: string, old: DocData, data: DocData, ctx: DiffContext): WriteOp[] {
+  if (jsonEqual(old.doneBy, data.doneBy)) return [];
+  const own = ctx.docs.get(docKey('completions', id));
+  if (own === undefined || own.undoneAt !== undefined || own.role !== ctx.role) return [];
+  return [{ kind: 'update', collection: 'completions', id, fields: [[['doneBy'], data.doneBy ?? DELETE_FIELD]] }];
+}
+
 function addedOp(spec: ListSpec, id: string, data: DocData, ctx: DiffContext): WriteOp {
   const at = ctx.now.toISOString();
   if (spec.fact) return { kind: 'create', collection: spec.collection, id, data: { ...data, role: ctx.role } };
@@ -169,6 +182,7 @@ function listOps(spec: ListSpec, prev: AppState, next: AppState, ctx: DiffContex
     const old = before.get(key);
     if (old === undefined && spec.collection === QUESTS) ops.push(...questAddedOps(id, data, ctx.now.toISOString()));
     else if (old === undefined) ops.push(addedOp(spec, id, data, ctx));
+    else if (spec.collection === 'completions') ops.push(...reassignOps(id, old, data, ctx));
     else if (!spec.fact) {
       const fields = diffFields(old, data);
       if (fields.length > 0) {

@@ -172,3 +172,32 @@ export function undoCompletion<S extends ChoresAndForest>(
     doneBy: whoDid(existing),
   };
 }
+
+/**
+ * V5.10 — « Qui l'a fait ? » sans feuille : la personne prévue d'un geste
+ * coché d'un toucher. L'assigné(e) ('a', 'b' ou « ensemble ») ; sinon soi
+ * (rôle du compte connecté), A en invité. Pur.
+ */
+export function expectedDoer(planned: TaskAssignee | undefined, me: 'a' | 'b' | null): ChoreDoer {
+  if (planned === 'a' || planned === 'b' || planned === 'both') return planned;
+  return me ?? 'a';
+}
+
+/**
+ * V5.10 — corrige l'auteur d'UN fait (toast « C'était AC ») sans l'annuler :
+ * même id, même heure, la forêt ne bouge pas (crédit gardé, rien de
+ * redonné). `doneBy` n'est gardé que s'il diffère de l'assignee du fait
+ * (comme addCompletion). Fait inconnu ou auteur inchangé → même état. Pur.
+ */
+export function reassignCompletion<S extends ChoresAndForest>(
+  state: S,
+  completionId: string,
+  doneBy: ChoreDoer,
+): { state: S; changed: boolean } {
+  const existing = state.chores.completions.find((c) => c.id === completionId);
+  if (existing === undefined || whoDid(existing) === doneBy) return { state, changed: false };
+  const { doneBy: _old, ...rest } = existing;
+  const next: ChoreCompletion = doneBy === existing.assignee ? rest : { ...rest, doneBy };
+  const completions = state.chores.completions.map((c) => (c.id === completionId ? next : c));
+  return { state: { ...state, chores: { ...state.chores, completions } }, changed: true };
+}

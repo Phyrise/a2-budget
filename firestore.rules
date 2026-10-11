@@ -124,9 +124,21 @@ service cloud.firestore {
             && (resource.data.get('role', null) == myRole() || incoming().get('devOverride', false) == true);
         }
 
+        // V5.10 — « C'était AC » : l'auteur d'une complétion vivante corrige
+        // qui l'a faite (doneBy seul ; absent = la personne prévue).
+        function factReassign() {
+          return coll == 'completions'
+            && resource != null
+            && !('undoneAt' in resource.data)
+            && resource.data.get('role', null) == myRole()
+            && changedKeys().hasAny(['doneBy'])
+            && changedKeys().hasOnly(['doneBy', 'updatedBy', 'syncedAt'])
+            && (!('doneBy' in incoming()) || incoming().doneBy in ['a', 'b', 'both']);
+        }
+
         allow read: if isMember(hid) && (isObjectColl() || isFactColl());
         allow create, update: if isMember(hid) && stamped()
-          && (objectWrite() || factCreate() || factUndo());
+          && (objectWrite() || factCreate() || factUndo() || factReassign());
         allow delete: if isMember(hid)
           && ((isObjectColl()   // purge 30 jours après la suppression douce
                && resource.data.deletedAt < request.time - duration.value(30, 'd'))

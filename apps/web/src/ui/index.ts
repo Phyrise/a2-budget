@@ -25,7 +25,7 @@ export type { CheckTone } from './Checkbox';
 export { Companion } from './Companion';
 export { Disclosure } from './Disclosure';
 export { ToastProvider, useToast } from './Toast';
-export type { ToastOptions } from './Toast';
+export type { ToastAction, ToastOptions } from './Toast';
 export { EmptyState } from './EmptyState';
 export * from './format';
 export * from './dates';

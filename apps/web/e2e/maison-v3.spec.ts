@@ -4,7 +4,7 @@
  * d'équilibre. Contre le build de production (`pnpm preview`).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { PHONE, openApp, persisted, pickWho, sheet } from './helpers';
+import { PHONE, doneToast, longPress, openApp, persisted, pickInSheet, pickWho, sheet } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -75,14 +75,14 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(next.locator('.companion--b')).toHaveCount(1);
   });
 
-  test('cocher → « Qui ? » : la personne prévue en avant, coup de main, historique et équilibre', async ({ page }) => {
+  test('cocher → toast « Fait par … », appui long → « Qui ? » : coup de main, historique et équilibre', async ({ page }) => {
     await openApp(page, 'maison');
     await addTask(page, 'Appeler le plombier', 'unassigned', 'none');
     await addTask(page, 'Arroser les plantes', 'b', 'daily', { effort: 3 });
 
-    // Fermer « Qui ? » sans choisir : rien n'est coché.
+    // V5.10 — appui long : la feuille « Qui ? » ; la fermer sans choisir ne coche rien.
     const who = sheet(page, 'Qui ?');
-    await page.getByRole('checkbox', { name: 'Appeler le plombier', exact: true }).click();
+    await longPress(page, page.getByRole('checkbox', { name: 'Appeler le plombier', exact: true }));
     await expect(who).toBeVisible();
     await expect(who.locator('.who-did__choice.is-suggested')).toHaveCount(0);
     await page.keyboard.press('Escape');
@@ -90,8 +90,9 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(1);
     expect((await persisted(page)).chores.completions).toHaveLength(0);
 
-    // Tâche libre : AC s'en est occupé → doneBy, merci de Jiji.
+    // Tâche libre : AC s'en est occupé (correction depuis le toast) → doneBy, merci de Jiji.
     await page.getByRole('checkbox', { name: 'Appeler le plombier', exact: true }).click();
+    await expect(doneToast(page)).toContainText('Fait par AL');
     await pickWho(page, 'b');
     await expect(page.locator('.cbubble__name')).toHaveText('Jiji');
     await expect(todayRow(page, 'Appeler le plombier')).toHaveCount(0, { timeout: 5_000 });
@@ -99,10 +100,10 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Appeler le plombier'))
       .toMatchObject({ assignee: 'unassigned', doneBy: 'b' });
 
-    // Tâche d'AC, faite par AL : AC est mis en avant, AL choisi.
-    await page.getByRole('checkbox', { name: 'Arroser les plantes', exact: true }).click();
+    // Tâche d'AC, faite par AL (feuille de l'appui long) : AC est mis en avant, AL choisi.
+    await longPress(page, page.getByRole('checkbox', { name: 'Arroser les plantes', exact: true }));
     await expect(who.locator('.who-did__choice.is-suggested')).toHaveAttribute('data-who', 'b');
-    await pickWho(page, 'a');
+    await pickInSheet(page, 'a');
     await expect(todayRow(page, 'Arroser les plantes')).toHaveCount(0, { timeout: 5_000 });
     await expect
       .poll(async () => (await persisted(page)).chores.completions.find((c: any) => c.taskTitle === 'Arroser les plantes'))
@@ -174,10 +175,11 @@ test.describe('Maison V3 — prendre soin ensemble', () => {
     await expect(todayRow(page, 'Arroser les plantes').locator('.chore-badge')).toHaveCount(0);
 
     await page.getByRole('checkbox', { name: 'Nettoyer le four', exact: true }).click();
-    await pickWho(page);
+    // V5.10 : la ligne part aussitôt (plus de feuille à fermer).
     await expect(page.locator('.task-row.is-chore.is-leaving')).toHaveCount(1);
     await expect(page.locator('.perch .companion__figure[data-mood="proud"]')).toHaveCount(2);
     await expect(page.locator('.cbubble__name')).toHaveText('Calcifer');
+    await pickWho(page);
     await expect.poll(async () => (await persisted(page)).chores.tasks.find((t: any) => t.title === 'Nettoyer le four')?.effort).toBe(3);
 
     // AC a porté une corvée : phrase bienveillante, jamais de chiffre, et une

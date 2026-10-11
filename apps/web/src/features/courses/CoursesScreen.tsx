@@ -191,15 +191,15 @@ export function CoursesScreen() {
     const undo = () => undoClearGroceries(cleared);
     const reduced = prefersReducedMotion();
     const message = `${plural(n, 'article')} rangé${n > 1 ? 's' : ''} dans l’historique`;
-    const askWho = groceryTask.ask;
+    const taskDone = groceryTask.done;
     setFlight({ reduced });
     if (flightTimer.current !== null) window.clearTimeout(flightTimer.current);
     flightTimer.current = window.setTimeout(
       () => {
         flightTimer.current = null;
         setFlight(null);
-        // Tâche Courses : « qui ? » d'abord, son toast annule tout le geste.
-        if (!askWho(undo)) toast.show({ message, icon: 'check', action: { label: 'Annuler', onClick: undo } });
+        // Tâche Courses : faite tout de suite, son toast corrige qui ou annule tout le geste.
+        if (!taskDone(undo)) toast.show({ message, icon: 'check', action: { label: 'Annuler', onClick: undo } });
       },
       reduced ? 700 : FLIGHT_MS,
     );
@@ -335,7 +335,6 @@ export function CoursesScreen() {
 
       {flight && <KikiFlight reduced={flight.reduced} />}
       <ItemSheet item={editing} onClose={() => setEditing(null)} onRemove={remove} />
-      {groceryTask.sheet}
     </>
   );
 }

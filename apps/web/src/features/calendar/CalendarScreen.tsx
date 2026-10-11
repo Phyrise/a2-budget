@@ -54,6 +54,7 @@ import { SootStage } from '../../creatures/soot';
 import { useShowTasks } from './calendarPrefs';
 import { TasksFilter } from './TasksFilter';
 import { agendaDays, byDate, taskItemsBetween, tasksCount, type TaskItem } from './taskAgenda';
+import type { TaskToggle } from './TaskLine';
 import { useTaskToggle } from './useTaskToggle';
 import './calendar.css';
 
@@ -110,7 +111,7 @@ export function CalendarScreen() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [catbus, setCatbus] = useState(0);
   const [showTasks, setShowTasks] = useShowTasks();
-  const { celebratingKey, toggle: toggleTask, asking: askingWho, sheet: whoSheet } = useTaskToggle();
+  const { celebratingKey, toggle: toggleTask, askWho, asking: askingWho, sheet: whoSheet } = useTaskToggle();
 
   useEffect(() => {
     setForegroundSheet(sheet !== null || askingWho);
@@ -222,7 +223,9 @@ export function CalendarScreen() {
   const away = !isCurrentMonth || selected !== todayKey;
   const { month } = monthLabel(monthKey);
   const selectedInMonth = selected !== null && selected.startsWith(monthKey);
-  const agenda = { names, highlightId, celebratingKey, onOpen: openEdit, onToggleTask: toggleTask };
+  // V5.10 — appui long sur la case : « Qui ? » avant de cocher.
+  const onToggleTask: TaskToggle = (item, origin, opts) => (opts?.ask === true ? askWho(item, origin) : toggleTask(item, origin));
+  const agenda = { names, highlightId, celebratingKey, onOpen: openEdit, onToggleTask };
   const monthMeta = [monthEventCount > 0 ? eventsCount(monthEventCount) : null, monthTaskCount > 0 ? tasksCount(monthTaskCount) : null]
     .filter(Boolean)
     .join(' · ');

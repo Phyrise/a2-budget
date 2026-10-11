@@ -2,19 +2,21 @@
  * Cocher une tâche de la maison depuis le Calendrier (V4) : même geste que
  * dans Maison — `toggleHomeTask` (occurrence du jour, ou ponctuelle), la
  * luciole s'envole depuis la case vers la forêt quand elle est visible
- * (ordinateur), une lueur de rizière sur la ligne, un toast doux avec
- * « Annuler ». Décocher ne dit rien de plus que la case elle-même.
- * V5.4 : cocher demande d'abord « qui ? » (WhoDidSheet) ; fermer sans
- * choisir ne coche rien. Kompeitō et luciole partent après le choix.
- * V5.9 : « Annuler » retire ce fait précis (undoHomeCompletion) : luciole
- * éteinte, soin retiré de l'objectif de la semaine, jamais une recoche.
+ * (ordinateur), une lueur de rizière sur la ligne. Décocher ne dit rien de
+ * plus que la case elle-même.
+ * V5.10 : cocher attribue tout de suite à la personne prévue (expectedDoer) ;
+ * toast « Fait par toi » (useDoneToast) : « C'était AC », « Ensemble »
+ * (l'auteur change, soin gardé) ou « Annuler » (V5.9 : ce fait précis,
+ * undoHomeCompletion — luciole éteinte, soin retiré, jamais une recoche).
+ * Appui long sur la case : la feuille « Qui ? » complète (WhoDidSheet) ;
+ * la fermer sans choisir ne coche rien.
  */
-import type { ChoreDoer } from '@a2/core';
+import { expectedDoer, type ChoreDoer } from '@a2/core';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { playGive } from '../../creatures/play';
 import { useApp } from '../../state/store';
-import { fr, useToast } from '../../ui';
 import { useWorld } from '../../world/WorldContext';
+import { useDoneToast } from '../maison/useDoneToast';
 import { WhoDidSheet, likelyDoer } from '../maison/WhoDidSheet';
 import type { TaskItem } from './taskAgenda';
 
@@ -27,12 +29,14 @@ type Origin = { x: number; y: number };
 export function useTaskToggle(): {
   celebratingKey: string | null;
   toggle: (item: TaskItem, origin: Origin) => void;
+  /** Appui long : « Qui ? » avant de cocher. */
+  askWho: (item: TaskItem, origin: Origin) => void;
   asking: boolean;
   sheet: ReactNode;
 } {
   const { toggleHomeTask, undoHomeCompletion, me } = useApp();
   const world = useWorld();
-  const toast = useToast();
+  const doneToast = useDoneToast();
   const [celebratingKey, setCelebratingKey] = useState<string | null>(null);
   const [asking, setAsking] = useState<{ item: TaskItem; origin: Origin } | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -51,39 +55,42 @@ export function useTaskToggle(): {
     else waits.current.push(window.setTimeout(() => whenSheetsClosed(fn, waited + 40), 40));
   }, []);
 
-  const toggle = useCallback(
-    (item: TaskItem, origin: Origin) => {
-      if (!item.checkable) return;
-      // Décocher : sans question.
-      if (item.done) toggleHomeTask(item.task);
-      else setAsking({ item, origin });
-    },
-    [toggleHomeTask],
-  );
-
-  const pick = (doneBy: ChoreDoer) => {
-    const pending = asking;
-    setAsking(null);
-    if (pending === null) return;
-    const { item, origin } = pending;
+  /** Coche avec un auteur ; `fromSheet` : le vol attend la fermeture de la feuille. */
+  const check = (item: TaskItem, origin: Origin, doneBy: ChoreDoer, fromSheet: boolean) => {
     const task = item.task;
     const result = toggleHomeTask(task, { doneBy });
     if (result.completionId === null || !result.completed) return;
     const completionId = result.completionId;
+    const who: ChoreDoer = result.doneBy === 'a' || result.doneBy === 'b' || result.doneBy === 'both' ? result.doneBy : doneBy;
     playGive(1, 'soin'); // Un kompeitō au bocal du Budget (jamais retiré).
-    world.expectPulse(completionId);
-    whenSheetsClosed(() =>
-      world.pulse({ id: completionId, who: result.doneBy ?? doneBy, fromClientX: origin.x, fromClientY: origin.y, ...(task.effort === 3 ? { strong: true } : {}) }),
-    );
+    const fly = () =>
+      world.pulse({ id: completionId, who, fromClientX: origin.x, fromClientY: origin.y, ...(task.effort === 3 ? { strong: true } : {}) });
+    if (fromSheet) {
+      world.expectPulse(completionId);
+      whenSheetsClosed(fly);
+    } else fly();
     window.clearTimeout(timer.current);
     setCelebratingKey(item.key);
     timer.current = window.setTimeout(() => setCelebratingKey(null), GLOW_MS);
-    toast.show({
-      message: fr(`Fait : ${task.title}. Une luciole de plus dans la forêt.`),
-      icon: 'check',
-      // Annule CE fait précis : déjà décoché à la case, « Annuler » ne recoche rien.
-      action: { label: 'Annuler', onClick: () => undoHomeCompletion(completionId) },
-    });
+    // Annule CE fait précis : déjà décoché à la case, « Annuler » ne recoche rien.
+    doneToast({ completionId, who, undo: () => undoHomeCompletion(completionId) });
+  };
+
+  const toggle = (item: TaskItem, origin: Origin) => {
+    if (!item.checkable) return;
+    // Décocher : sans question.
+    if (item.done) toggleHomeTask(item.task);
+    else check(item, origin, expectedDoer(item.who, me), false);
+  };
+
+  const askWho = (item: TaskItem, origin: Origin) => {
+    if (item.checkable && !item.done) setAsking({ item, origin });
+  };
+
+  const pick = (doneBy: ChoreDoer) => {
+    const pending = asking;
+    setAsking(null);
+    if (pending !== null) check(pending.item, pending.origin, doneBy, true);
   };
 
   const sheet = (
@@ -96,5 +103,5 @@ export function useTaskToggle(): {
     />
   );
 
-  return { celebratingKey, toggle, asking: asking !== null, sheet };
+  return { celebratingKey, toggle, askWho, asking: asking !== null, sheet };
 }

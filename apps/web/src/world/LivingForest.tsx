@@ -227,7 +227,10 @@ export const LivingForest = forwardRef<LivingForestHandle, LivingForestProps & F
     if (canvasKey > 3) setMode('fallback');
   }, [canvasKey]);
 
-  useEffect(() => {
+  // Avant la prochaine image (V5.10) : une luciole lancée au moment de cocher
+  // est dans l'état du moteur avant qu'un « Annuler » ne puisse être touché ;
+  // sinon, annulée trop tôt, elle finirait son vol en orpheline.
+  useLayoutEffect(() => {
     engineRef.current?.setState(state);
   }, [state]);
 

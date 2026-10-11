@@ -84,7 +84,7 @@ export {
 } from './tasks.js';
 export type { TaskPatch, UpcomingOccurrence } from './tasks.js';
 
-export { toggleTaskToday, undoCompletion } from './choreActions.js';
+export { expectedDoer, reassignCompletion, toggleTaskToday, undoCompletion } from './choreActions.js';
 export type { ChoresAndForest, ToggleTaskResult } from './choreActions.js';
 
 // V3 « Prendre soin ensemble » — passages, équilibre, rituels, lanternes.

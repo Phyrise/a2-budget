@@ -51,6 +51,7 @@ export function TaskRow({
   names,
   mood,
   onToggle,
+  onAskWho,
   onMenu,
   last,
 }: {
@@ -64,6 +65,8 @@ export function TaskRow({
   names: Names;
   mood: CompanionMood;
   onToggle: (task: HouseholdTask, origin: Origin) => void;
+  /** V5.10 — appui long sur la case : la feuille « Qui ? » complète. */
+  onAskWho?: (task: HouseholdTask) => void;
   onMenu: (task: HouseholdTask) => void;
 }) {
   const uid = useId();
@@ -78,6 +81,7 @@ export function TaskRow({
         label={task.title}
         tone={turn}
         onToggle={(origin) => onToggle(task, origin)}
+        onLongPress={onAskWho && !checked ? () => onAskWho(task) : undefined}
         className={celebrating ? 'is-celebrating' : undefined}
         describedBy={metaId}
       />

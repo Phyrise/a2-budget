@@ -7,7 +7,7 @@
  */
 import { addDays, addEvent, createTask, emptyAppState, isoWeekday, localDateKey, validateAppState, type AppState } from '@a2/core';
 import { expect, test, type Page } from '@playwright/test';
-import { APP, PHONE, STORAGE_KEY, UI_KEY, persisted, pickWho, trackErrors } from './helpers';
+import { APP, PHONE, STORAGE_KEY, UI_KEY, doneToast, longPress, persisted, pickWho, trackErrors } from './helpers';
 
 test.use({ viewport: PHONE });
 
@@ -79,18 +79,19 @@ test.describe('Calendrier V4', () => {
     await expect(page.locator('.cal-day.is-today .cal-day__task')).toHaveCount(1);
 
     const box = plants.getByRole('checkbox');
-    await box.click();
-    // V5.4 : « Qui ? » d'abord ; fermer sans choisir ne coche rien.
+    // V5.10 : appui long → « Qui ? » complet ; fermer sans choisir ne coche rien.
+    await longPress(page, box);
     const who = page.getByRole('dialog', { name: 'Qui ?', exact: true });
     await expect(who).toBeVisible();
     await who.getByRole('button', { name: 'Fermer', exact: true }).click();
     await expect(who).toBeHidden();
     await expect(box).toHaveAttribute('aria-checked', 'false');
+    // Un toucher : coché tout de suite, attribué à la personne prévue (AC).
     await box.click();
-    await pickWho(page, 'b');
     await expect(box).toHaveAttribute('aria-checked', 'true');
     await expect(plants).toHaveClass(/is-done/);
-    await expect(page.locator('.toast')).toContainText('Fait : Arroser les plantes');
+    await expect(doneToast(page)).toContainText('Fait par AC');
+    await pickWho(page, 'b');
     const state = await persisted(page);
     expect(state.chores.completions.some((c: { taskId: string }) => c.taskId === 't-plantes')).toBe(true);
     // Toujours affichée, barrée.

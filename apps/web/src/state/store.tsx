@@ -25,6 +25,7 @@ import {
   deleteTask,
   toggleTaskToday,
   undoCompletion,
+  reassignCompletion,
   isoWeekday,
   pauseForest,
   resumeForest,
@@ -174,6 +175,12 @@ export interface AppContextValue extends CareActions, CalendarActions, BudgetAct
    * ses propres gestes. Faux si rien n'a changé.
    */
   undoHomeCompletion: (completionId: string) => boolean;
+  /**
+   * V5.10 — corrige qui a fait UN fait (toast « C'était AC ») sans l'annuler :
+   * la forêt garde son soin, la luciole change de couleur. Synchronisé :
+   * seulement ses propres gestes. Faux si rien n'a changé.
+   */
+  reassignHomeCompletion: (completionId: string, doneBy: ChoreDoer) => boolean;
   /** « Mettre la maison en pause » / « Réveiller la forêt ». */
   toggleHomePause: () => void;
 
@@ -784,6 +791,20 @@ export function AppProvider({
     [transact],
   );
 
+  const reassignHomeCompletion = useCallback(
+    (completionId: string, doneBy: ChoreDoer): boolean => {
+      const live = latestRef.current?.chores.completions.find((c) => c.id === completionId);
+      if (live === undefined) return false;
+      const link = syncRef.current;
+      if (link !== undefined && !link.canUndo('completions', live.taskId, live.dueDate)) return false;
+      return transact((s) => {
+        const r = reassignCompletion(s, completionId, doneBy);
+        return { state: r.state, result: r.changed };
+      }, false);
+    },
+    [transact],
+  );
+
   const toggleHomePause = useCallback(() => {
     const day = localDateKey(new Date());
     const toggle = (s: AppState): AppState => ({ ...s, forest: s.forest.paused ? resumeForest(s.forest, day) : pauseForest(advanceDay(s.forest, day), day) });
@@ -855,6 +876,7 @@ export function AppProvider({
       deleteHomeTask,
       toggleHomeTask,
       undoHomeCompletion,
+      reassignHomeCompletion,
       toggleHomePause,
       ...care,
       ...calendar,
@@ -896,6 +918,7 @@ export function AppProvider({
       deleteHomeTask,
       toggleHomeTask,
       undoHomeCompletion,
+      reassignHomeCompletion,
       toggleHomePause,
       care,
       calendar,

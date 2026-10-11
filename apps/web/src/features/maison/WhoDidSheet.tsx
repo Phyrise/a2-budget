@@ -4,6 +4,8 @@
  * libellés = prénoms des Réglages. La personne la plus probable
  * (prévue, sinon soi) est mise en avant et reçoit le focus. Fermer sans
  * choisir : rien n'est coché.
+ * V5.10 : cocher n'ouvre plus cette feuille (toast « Fait par toi » pour
+ * corriger) ; elle reste pour l'appui long sur la case et le menu ⋯.
  */
 import type { ChoreDoer, TaskAssignee } from '@a2/core';
 import { useRef } from 'react';

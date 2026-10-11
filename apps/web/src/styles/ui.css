@@ -308,6 +308,10 @@ dialog.sheet[data-state='closing']::backdrop {
 .check {
   --tone: var(--moss-300);
   position: relative;
+  /* Appui long (V5.10) : pas de bulle « copier » ni de sélection. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   display: grid;
   place-items: center;
   flex: none;
@@ -920,6 +924,43 @@ dialog.sheet[data-state='closing']::backdrop {
 .toast__close:hover {
   background: rgba(236, 230, 211, 0.08);
   color: var(--ivory-100);
+}
+
+.toast__visual {
+  display: grid;
+  flex: none;
+  place-items: center;
+  margin: -4px 0 -4px -4px;
+}
+
+/* V5.10 — plusieurs actions : message (et croix) en haut, rangée de choix
+   courts dessous ; elle passe à la ligne plutôt que de déborder (390 px). */
+.toast--choices {
+  flex-wrap: wrap;
+  row-gap: 4px;
+  padding-bottom: 8px;
+}
+
+.toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.toast__actions .toast__action {
+  flex: 1 1 auto;
+  padding: 0 12px;
+  background: rgba(236, 230, 211, 0.08);
+  color: var(--ivory-100);
+  font-weight: 600;
+}
+
+.toast__actions .toast__action:last-child {
+  flex-grow: 0;
+  background: rgba(221, 179, 106, 0.14);
+  color: var(--amber-300);
 }
 
 @keyframes toast-in {

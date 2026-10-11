@@ -107,6 +107,31 @@ describe('faits : ajout seulement, annulation douce', () => {
   });
 });
 
+describe('V5.10 — « C’était AC » : corriger l’auteur de son fait', () => {
+  it('l’auteur change doneBy (ou le retire) sur sa complétion vivante', async () => {
+    const ref = doc(al(), `${HH}/completions/al`);
+    await assertSucceeds(updateDoc(ref, { doneBy: 'b', ...stamp(ARTHUR.uid) }));
+    await assertSucceeds(updateDoc(ref, { doneBy: 'both', ...stamp(ARTHUR.uid) }));
+    await assertSucceeds(updateDoc(ref, { doneBy: deleteField(), ...stamp(ARTHUR.uid) }));
+  });
+
+  it('pas le fait de l’autre, pas un fait annulé, pas d’autre champ', async () => {
+    await assertFails(updateDoc(doc(al(), `${HH}/completions/ac`), { doneBy: 'a', ...stamp(ARTHUR.uid) }));
+    const ref = doc(al(), `${HH}/completions/al`);
+    await assertFails(updateDoc(ref, { doneBy: 'b', completedAt: '2026-10-09T09:00:00.000Z', ...stamp(ARTHUR.uid) }));
+    await assertFails(updateDoc(ref, { doneBy: 'b', role: 'b', ...stamp(ARTHUR.uid) }));
+    await assertFails(updateDoc(ref, { doneBy: 'x', ...stamp(ARTHUR.uid) }));
+    await assertFails(updateDoc(ref, { doneBy: 'b' }));
+    await assertFails(updateDoc(ref, { ...stamp(ARTHUR.uid) }));
+    await assertSucceeds(updateDoc(ref, undo(ARTHUR)));
+    await assertFails(updateDoc(ref, { doneBy: 'b', ...stamp(ARTHUR.uid) }));
+  });
+
+  it('seulement les complétions (pas les autres faits)', async () => {
+    await assertFails(updateDoc(doc(ac(), `${HH}/groceryHistory/h1`), { doneBy: 'a', ...stamp(ALEXIA.uid) }));
+  });
+});
+
 describe('objets : dernier qui écrit gagne, suppression douce', () => {
   it('modification champ par champ par l’un ou l’autre', async () => {
     await assertSucceeds(updateDoc(doc(al(), `${HH}/groceries/fresh`), { label: 'lait d’avoine', ...stamp(ARTHUR.uid) }));

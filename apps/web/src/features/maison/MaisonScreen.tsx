@@ -4,9 +4,10 @@
  * (useWorld().pulse, plus forte pour une corvée) + réaction et réplique du
  * compagnon. Menu ⋯ : qui s'en charge, allumer une lanterne (minuteur doux :
  * la lanterne de pierre s'allume dans la forêt, un bandeau garde le temps),
- * « pas aujourd'hui », modifier. V5.4 : cocher demande « qui ? » (WhoDidSheet)
- * pour toutes les tâches ; la ligne Courses quitte « à faire » une fois faite
- * (groceryRunDue).
+ * « pas aujourd'hui », modifier. V5.4 : la ligne Courses quitte « à faire »
+ * une fois faite (groceryRunDue). V5.10 : cocher attribue tout de suite à la
+ * personne prévue (toast « Fait par toi » pour corriger) ; appui long sur la
+ * case ou « Qui l'a fait ? » du menu ⋯ : la feuille complète (WhoDidSheet).
  * Les tâches restantes ne sont jamais représentées dans la forêt ; aucun
  * score, aucune compétition : le partage se lit dans une carte qualitative.
  * La pause se met depuis l'en-tête ou les Réglages ; ici, seulement la carte
@@ -68,7 +69,7 @@ export function MaisonScreen() {
   const lanternBusy = lanternPhase === 'running' || lanternPhase === 'paused';
   const [sheet, setSheet] = useState<TaskSheetState>(null);
   const [menu, setMenu] = useState<{ task: HouseholdTask; open: boolean; turn: TaskAssignee } | null>(null);
-  // V5.4 — cocher demande « qui ? » ; rien n'est coché tant qu'on n'a pas choisi.
+  // Feuille « Qui ? » (appui long, menu ⋯) : rien n'est coché tant qu'on n'a pas choisi.
   const [asking, setAsking] = useState<{ task: HouseholdTask; turn: TaskAssignee } | null>(null);
   const perchRef = useRef<HTMLDivElement>(null);
   const perchVisible = useInView(perchRef);
@@ -161,6 +162,11 @@ export function MaisonScreen() {
     startLantern({ minutes, who: lanternWhoFor(turn), taskId: task.id, label: task.title }, isDesktop);
     focusTitleIfLost();
   };
+  const onMenuWho = (task: HouseholdTask) => {
+    const turn = menu?.turn ?? nextAssignee(task, completions);
+    closeMenu();
+    window.setTimeout(() => setAsking({ task, turn }), SHEET_SWAP_MS);
+  };
   const onMenuEdit = (task: HouseholdTask) => {
     closeMenu();
     window.setTimeout(() => setSheet({ mode: 'edit', task }), SHEET_SWAP_MS);
@@ -225,8 +231,9 @@ export function MaisonScreen() {
                     onToggle={(t, origin) => {
                       // Décocher pendant l'envol : sans question (Courses : CE fait seulement).
                       if (celebrating) return isAnytimeTask(t) ? actions.undoRun(lingering[t.id]!) : actions.toggle(t, origin);
-                      setAsking({ task: t, turn: nextAssignee(t, completions) });
+                      actions.toggle(t, origin);
                     }}
+                    onAskWho={(t) => setAsking({ task: t, turn: nextAssignee(t, completions) })}
                     last={isAnytimeTask(task) ? lastGroceryRun(task, completions) : undefined}
                     onMenu={(t) => setMenu({ task: t, open: true, turn: nextAssignee(t, completions) })}
                   />
@@ -303,6 +310,7 @@ export function MaisonScreen() {
         onEdit={onMenuEdit}
         onLantern={onMenuLantern}
         lanternBusy={lanternBusy}
+        onWho={menu !== null && actionableIds.has(menu.task.id) && lingering[menu.task.id] === undefined ? onMenuWho : undefined}
       />
       <TaskSheet state={sheet} onClose={() => setSheet(null)} />
       <WhoDidSheet
@@ -315,7 +323,7 @@ export function MaisonScreen() {
           setAsking(null);
           // La coche est immédiate ; la luciole s'envole de la case une fois la
           // feuille fermée (sinon elle partirait de sous la feuille, forêt figée).
-          if (task && actionableIds.has(task.id)) actions.toggle(task, checkCenter(task.id), who, { from: () => checkCenter(task.id) });
+          if (task && actionableIds.has(task.id)) actions.toggle(task, checkCenter(task.id), { doneBy: who, afterSheet: { from: () => checkCenter(task.id) } });
         }}
       />
     </>
